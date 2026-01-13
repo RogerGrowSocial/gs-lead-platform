@@ -1,15 +1,24 @@
 console.log('🚀 Server.js starting...')
-console.log('📦 Loading dotenv...')
-const dotenvStart = Date.now()
-// Use dotenv with explicit path to avoid searching
-require("dotenv").config({ path: '.env' })
-const dotenvTime = Date.now() - dotenvStart
-if (dotenvTime > 500) {
-  console.log(`⚠️  dotenv loaded (${dotenvTime}ms - slow! Check .env file size)`)
+
+// Check if running on Vercel (serverless) or locally
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
+
+// Only load dotenv locally (Vercel uses environment variables directly)
+if (!isVercel) {
+  console.log('📦 Loading dotenv...')
+  const dotenvStart = Date.now()
+  // Use dotenv with explicit path to avoid searching
+  require("dotenv").config({ path: '.env' })
+  const dotenvTime = Date.now() - dotenvStart
+  if (dotenvTime > 500) {
+    console.log(`⚠️  dotenv loaded (${dotenvTime}ms - slow! Check .env file size)`)
+  } else {
+    console.log(`✅ dotenv loaded (${dotenvTime}ms)`)
+  }
+  process.stdout.write('✅ dotenv loaded\n')
 } else {
-  console.log(`✅ dotenv loaded (${dotenvTime}ms)`)
+  console.log('✅ Running on Vercel - using environment variables directly')
 }
-process.stdout.write('✅ dotenv loaded\n')
 
 console.log('📝 About to define requireWithRetry function...')
 

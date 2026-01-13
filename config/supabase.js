@@ -1,5 +1,10 @@
 const { createClient } = require('@supabase/supabase-js')
-require('dotenv').config()
+
+// Only load dotenv locally (Vercel uses environment variables directly)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
+if (!isVercel) {
+  require('dotenv').config()
+}
 
 // CRITICAL: Validate environment variables before creating clients
 // This prevents silent failures and provides clear error messages
@@ -8,13 +13,13 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl) {
-  throw new Error('SUPABASE_URL environment variable is required. Check your .env file.');
+  throw new Error('SUPABASE_URL environment variable is required. Check your .env file or Vercel environment variables.');
 }
 if (!supabaseAnonKey) {
-  throw new Error('SUPABASE_ANON_KEY environment variable is required. Check your .env file.');
+  throw new Error('SUPABASE_ANON_KEY environment variable is required. Check your .env file or Vercel environment variables.');
 }
 if (!supabaseServiceKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required. Check your .env file.');
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required. Check your .env file or Vercel environment variables.');
 }
 
 // Initialize Supabase client for regular operations
