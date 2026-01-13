@@ -1598,10 +1598,8 @@ app.use((err, req, res, next) => {
 
 console.log('✅ All middleware and routes configured')
 
-// Check if running on Vercel (serverless) or locally
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
-
 // Validate critical environment variables before exporting
+// Note: isVercel is already declared at the top of the file
 if (isVercel) {
   console.log('🚀 Running on Vercel (serverless mode)')
   const requiredVars = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'APP_URL', 'BASE_URL', 'SESSION_SECRET']
