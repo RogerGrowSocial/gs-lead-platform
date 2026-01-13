@@ -1,8 +1,21 @@
+// Wrap entire server initialization in try-catch for better error reporting
+try {
 console.log('🚀 Server.js starting...')
 
 // Check if running on Vercel (serverless) or locally
 // Must be defined early so it can be used throughout the file
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
+
+if (isVercel) {
+  console.log('🌐 Detected Vercel environment')
+  console.log('📋 Environment check:')
+  console.log('   VERCEL:', process.env.VERCEL)
+  console.log('   VERCEL_ENV:', process.env.VERCEL_ENV)
+  console.log('   NODE_ENV:', process.env.NODE_ENV)
+  console.log('   SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Set' : '❌ MISSING')
+  console.log('   SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✅ Set' : '❌ MISSING')
+  console.log('   SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ MISSING')
+}
 
 // Only load dotenv locally (Vercel uses environment variables directly)
 if (!isVercel) {
@@ -1603,7 +1616,18 @@ if (isVercel) {
 
 // Export app for Vercel serverless functions
 // ALWAYS export app - Vercel needs this, local dev uses app.listen()
-module.exports = app
+// Wrap in try-catch to catch any initialization errors
+try {
+  module.exports = app
+  if (isVercel) {
+    console.log('✅ App exported successfully for Vercel')
+  }
+} catch (error) {
+  console.error('❌ Error exporting app:', error.message)
+  console.error(error.stack)
+  // Still export app even if there's an error (might be a warning)
+  module.exports = app
+}
 
 if (!isVercel) {
   // Local development: start server with app.listen()
@@ -1763,4 +1787,29 @@ if (require.main !== module && !isVercel) {
   module.exports.supabase = supabase
   module.exports.requireAuth = requireAuth
   module.exports.isAdmin = isAdmin
+}
+
+} catch (initError) {
+  // Catch any errors during server initialization
+  console.error('❌ CRITICAL ERROR during server initialization:')
+  console.error('   Message:', initError.message)
+  console.error('   Stack:', initError.stack)
+  
+  // Create a minimal error app that at least returns errors properly
+  const express = require('express')
+  const errorApp = express()
+  
+  errorApp.use((req, res) => {
+    res.status(500).json({
+      error: 'Server initialization failed',
+      message: initError.message,
+      details: isVercel ? 'Check Vercel logs for full error details' : 'Check server logs'
+    })
+  })
+  
+  // Export error app so Vercel doesn't completely fail
+  module.exports = errorApp
+  
+  // Re-throw so it's visible in logs
+  throw initError
 }
