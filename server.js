@@ -1554,126 +1554,137 @@ app.use((err, req, res, next) => {
 })
 
 console.log('✅ All middleware and routes configured')
-console.log(`🚀 Starting server on port ${PORT}...`)
-console.log(`📝 About to call app.listen()...`)
-const listenStart = Date.now()
-app.listen(PORT, async () => {
-  const listenTime = Date.now() - listenStart
-  console.log(`⏱️  app.listen() took ${listenTime}ms to complete`)
-  console.log(`✅ Server draait op http://localhost:${PORT}`)
-  console.log(`🚀 Server is ready to accept connections!`)
-  
-  // Start background services asynchronously (non-blocking)
-  // These will start in the background and won't block server startup
-  
-  // Start risk assessment worker (listens to database triggers) - non-blocking
-  // Add timeout to prevent hanging if database connection is slow
-  Promise.race([
-    startRiskAssessmentWorker(),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Risk assessment worker start timeout after 15s')), 15000)
-    )
-  ]).catch(error => {
-    console.error('⚠️ Failed to start risk assessment worker:', error.message)
-    console.error('   Risk assessments will still work via route handlers')
-    console.error('   This is normal if database is not yet reachable')
-  })
-  
-  // Start billing cron job (non-blocking, after server starts)
-  // This was moved here because it makes a database query which can timeout
-  // if network isn't ready (especially after laptop wake)
-  // Add timeout to prevent hanging forever
-  Promise.race([
-    billingCron.start(),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Billing cron start timeout after 10s')), 10000)
-    )
-  ]).catch(error => {
-    console.error('⚠️ Failed to start billing cron job:', error.message)
-    console.error('   Billing cron job will retry on next server restart')
-    console.error('   This is normal if database is not yet reachable')
-  })
-  
-  // Load all cron jobs lazily after server starts (non-blocking, skip heavy ones)
-  const loadCronJobs = async () => {
-    // Load lightweight cron jobs first
-    const lightweightJobs = [
-      { name: 'mailSyncJobs', path: './cron/mailSyncJobs' },
-      { name: 'subscriptionNotifications', path: './cron/subscriptionNotifications' }
-    ]
+
+// Check if running on Vercel (serverless) or locally
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
+
+// Export app for Vercel serverless functions
+if (isVercel) {
+  console.log('🚀 Running on Vercel (serverless mode)')
+  module.exports = app
+} else {
+  // Local development: start server with app.listen()
+  console.log(`🚀 Starting server on port ${PORT}...`)
+  console.log(`📝 About to call app.listen()...`)
+  const listenStart = Date.now()
+  app.listen(PORT, async () => {
+    const listenTime = Date.now() - listenStart
+    console.log(`⏱️  app.listen() took ${listenTime}ms to complete`)
+    console.log(`✅ Server draait op http://localhost:${PORT}`)
+    console.log(`🚀 Server is ready to accept connections!`)
     
-    for (const job of lightweightJobs) {
-      try {
-        console.log(`📦 Loading ${job.name}...`)
-        const startTime = Date.now()
-        requireWithRetry(job.path)
-        const loadTime = Date.now() - startTime
-        if (loadTime > 500) {
-          console.log(`✅ ${job.name} loaded (${loadTime}ms - slow!)`)
-        } else {
-          console.log(`✅ ${job.name} loaded`)
+    // Start background services asynchronously (non-blocking)
+    // These will start in the background and won't block server startup
+    
+    // Start risk assessment worker (listens to database triggers) - non-blocking
+    // Add timeout to prevent hanging if database connection is slow
+    Promise.race([
+      startRiskAssessmentWorker(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Risk assessment worker start timeout after 15s')), 15000)
+      )
+    ]).catch(error => {
+      console.error('⚠️ Failed to start risk assessment worker:', error.message)
+      console.error('   Risk assessments will still work via route handlers')
+      console.error('   This is normal if database is not yet reachable')
+    })
+    
+    // Start billing cron job (non-blocking, after server starts)
+    // This was moved here because it makes a database query which can timeout
+    // if network isn't ready (especially after laptop wake)
+    // Add timeout to prevent hanging forever
+    Promise.race([
+      billingCron.start(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Billing cron start timeout after 10s')), 10000)
+      )
+    ]).catch(error => {
+      console.error('⚠️ Failed to start billing cron job:', error.message)
+      console.error('   Billing cron job will retry on next server restart')
+      console.error('   This is normal if database is not yet reachable')
+    })
+    
+    // Load all cron jobs lazily after server starts (non-blocking, skip heavy ones)
+    const loadCronJobs = async () => {
+      // Load lightweight cron jobs first
+      const lightweightJobs = [
+        { name: 'mailSyncJobs', path: './cron/mailSyncJobs' },
+        { name: 'subscriptionNotifications', path: './cron/subscriptionNotifications' }
+      ]
+      
+      for (const job of lightweightJobs) {
+        try {
+          console.log(`📦 Loading ${job.name}...`)
+          const startTime = Date.now()
+          requireWithRetry(job.path)
+          const loadTime = Date.now() - startTime
+          if (loadTime > 500) {
+            console.log(`✅ ${job.name} loaded (${loadTime}ms - slow!)`)
+          } else {
+            console.log(`✅ ${job.name} loaded`)
+          }
+        } catch (error) {
+          console.error(`⚠️ Failed to load ${job.name}:`, error.message)
         }
-      } catch (error) {
-        console.error(`⚠️ Failed to load ${job.name}:`, error.message)
+      }
+      
+      // Load heavy cron jobs later with delays (they require Google Ads client)
+      const heavyJobs = [
+        { name: 'leadFlowIntelligenceJobs', path: './cron/leadFlowIntelligenceJobs', delay: 5000 },
+        { name: 'partnerMarketingJobs', path: './cron/partnerMarketingJobs', delay: 10000 },
+        { name: 'googleAdsPerformanceImportJob', path: './cron/googleAdsPerformanceImportJob', delay: 15000 }
+      ]
+      
+      // Load heavy jobs with delays to avoid blocking
+      for (const job of heavyJobs) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, job.delay))
+          console.log(`📦 Loading ${job.name}...`)
+          const startTime = Date.now()
+          requireWithRetry(job.path)
+          const loadTime = Date.now() - startTime
+          if (loadTime > 500) {
+            console.log(`✅ ${job.name} loaded (${loadTime}ms - slow!)`)
+          } else {
+            console.log(`✅ ${job.name} loaded`)
+          }
+        } catch (error) {
+          console.error(`⚠️ Failed to load ${job.name}:`, error.message)
+        }
       }
     }
     
-    // Load heavy cron jobs later with delays (they require Google Ads client)
-    const heavyJobs = [
-      { name: 'leadFlowIntelligenceJobs', path: './cron/leadFlowIntelligenceJobs', delay: 5000 },
-      { name: 'partnerMarketingJobs', path: './cron/partnerMarketingJobs', delay: 10000 },
-      { name: 'googleAdsPerformanceImportJob', path: './cron/googleAdsPerformanceImportJob', delay: 15000 }
-    ]
+    // Load cron jobs asynchronously (don't block server startup)
+    const cronJobsPromise = loadCronJobs().catch(err => {
+      console.error('⚠️ Error loading cron jobs:', err.message)
+    })
     
-    // Load heavy jobs with delays to avoid blocking
-    for (const job of heavyJobs) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, job.delay))
-        console.log(`📦 Loading ${job.name}...`)
-        const startTime = Date.now()
-        requireWithRetry(job.path)
-        const loadTime = Date.now() - startTime
-        if (loadTime > 500) {
-          console.log(`✅ ${job.name} loaded (${loadTime}ms - slow!)`)
-        } else {
-          console.log(`✅ ${job.name} loaded`)
+    // Pre-load internalCampaignsRoutes in background (non-blocking)
+    const internalCampaignsPromise = new Promise(resolve => {
+      setTimeout(() => {
+        try {
+          getInternalCampaignsRoutes()
+        } catch (error) {
+          console.error('⚠️ Error pre-loading internalCampaignsRoutes:', error.message)
+        } finally {
+          resolve()
         }
-      } catch (error) {
-        console.error(`⚠️ Failed to load ${job.name}:`, error.message)
-      }
+      }, 2000)
+    })
+    
+    // Emit a final boot-up note once all background initializers completed
+    Promise.allSettled([cronJobsPromise, internalCampaignsPromise]).then(() => {
+      console.log('✅ Finalized full server bootup')
+    })
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is al in gebruik. Probeer een andere poort.`)
+    } else {
+      console.error('❌ Server error:', err)
     }
-  }
-  
-  // Load cron jobs asynchronously (don't block server startup)
-  const cronJobsPromise = loadCronJobs().catch(err => {
-    console.error('⚠️ Error loading cron jobs:', err.message)
+    process.exit(1)
   })
-  
-  // Pre-load internalCampaignsRoutes in background (non-blocking)
-  const internalCampaignsPromise = new Promise(resolve => {
-    setTimeout(() => {
-      try {
-        getInternalCampaignsRoutes()
-      } catch (error) {
-        console.error('⚠️ Error pre-loading internalCampaignsRoutes:', error.message)
-      } finally {
-        resolve()
-      }
-    }, 2000)
-  })
-  
-  // Emit a final boot-up note once all background initializers completed
-  Promise.allSettled([cronJobsPromise, internalCampaignsPromise]).then(() => {
-    console.log('✅ Finalized full server bootup')
-  })
-}).on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is al in gebruik. Probeer een andere poort.`)
-  } else {
-    console.error('❌ Server error:', err)
-  }
-  process.exit(1)
-})
+}
 
 // Catch unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -1701,7 +1712,7 @@ process.on('SIGINT', async () => {
 
 // Authenticatie middleware exporteren voor gebruik in andere modules
 // Alleen exporteren als dit bestand wordt geïmporteerd, niet als het direct wordt uitgevoerd
-if (require.main !== module) {
+if (require.main !== module && !isVercel) {
   module.exports = {
     supabase,
     requireAuth,
