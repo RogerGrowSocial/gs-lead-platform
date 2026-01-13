@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "installCommand": "npm install",
+  "buildCommand": "echo 'No build step needed'",
   "builds": [
     {
       "src": "server.js",
