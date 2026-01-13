@@ -1,0 +1,326 @@
+<%
+  // Variables are already passed from the route, just use them directly
+  const invoiceData = typeof invoice !== 'undefined' ? invoice : {};
+  const customerData = typeof customer !== 'undefined' ? customer : {};
+  const creatorData = typeof creator !== 'undefined' ? creator : null;
+  const canEditInvoiceData = typeof canEditInvoice !== 'undefined' ? canEditInvoice : false;
+  
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+  
+  const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined) return '€0,00';
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+  
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'paid': { label: 'Betaald', class: 'status-badge status-paid' },
+      'pending': { label: 'In afwachting', class: 'status-badge status-pending' },
+      'overdue': { label: 'Achterstallig', class: 'status-badge status-overdue' },
+      'draft': { label: 'Concept', class: 'status-badge status-draft' },
+      'cancelled': { label: 'Geannuleerd', class: 'status-badge status-cancelled' },
+      'invalid': { label: 'Ongeldig', class: 'status-badge status-invalid' }
+    };
+    const statusInfo = statusMap[status] || { label: status, class: 'status-badge' };
+    return `<span class="${statusInfo.class}">${statusInfo.label}</span>`;
+  };
+  
+  const customerName = customerData.name || customerData.company_name || 'Onbekend';
+  const invoiceNumber = invoiceData.invoice_number || invoiceData.id;
+%>
+<%- include('../layouts/admin', {
+  title: `Factuur ${invoiceNumber} - ${customerName}`,
+  activeMenu: 'customers',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  showBackButton: true,
+  backButtonUrl: `/admin/customers/${customerData.id}`,
+  backButtonText: 'Terug naar klant',
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : [],
+  scripts: typeof scripts !== 'undefined' ? scripts : [],
+  body: `
+  <div class="user-detail-page" data-invoice-id="${invoiceData.id}">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Invoice Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div class="user-info-avatar-section" style="flex: 1;">
+              <span class="user-avatar-large-new" aria-hidden="true" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+              </span>
+              <div class="user-info-name-section" style="flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <h1 class="user-info-name-new" style="flex: 1; margin: 0;">${invoiceNumber}</h1>
+                  ${canEditInvoiceData ? `
+                  <button type="button" onclick="openEditInvoiceModal()" class="edit-employee-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color='#6b7280'" onmouseout="this.style.color='#9ca3af'">
+                    <i class="fas fa-pencil-alt" style="font-size: 18px;"></i>
+                  </button>
+                  ` : ''}
+                </div>
+                <div class="user-info-badges-container">
+                  ${getStatusBadge(invoiceData.status)}
+                  <span class="user-role-badge-new" style="background: #f3f4f6; color: #374151;">
+                    <i class="fas fa-calendar" style="margin-right: 4px;"></i>
+                    ${formatDate(invoiceData.invoice_date)}
+                  </span>
+                  ${invoiceData.due_date ? `
+                  <span class="user-role-badge-new" style="background: #fef3c7; color: #92400e;">
+                    <i class="fas fa-clock" style="margin-right: 4px;"></i>
+                    Vervalt: ${formatDate(invoiceData.due_date)}
+                  </span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Invoice Details Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Factuurdetails</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Factuurnummer</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">${invoiceNumber}</p>
+              </div>
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Factuurdatum</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">${formatDate(invoiceData.invoice_date)}</p>
+              </div>
+              ${invoiceData.due_date ? `
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Vervaldatum</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">${formatDate(invoiceData.due_date)}</p>
+              </div>
+              ` : ''}
+              ${invoiceData.order_number ? `
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Ordernummer</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">${invoiceData.order_number}</p>
+              </div>
+              ` : ''}
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Status</p>
+                <div style="margin-top: 0.25rem;">${getStatusBadge(invoiceData.status)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Line Items Card -->
+        ${invoiceData.line_items && invoiceData.line_items.length > 0 ? `
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Factuurregels</h3>
+            <div style="margin-top: 1rem;">
+              <table class="payments-table" style="width: 100%;">
+                <thead>
+                  <tr class="table-header-row">
+                    <th class="table-header-cell">Omschrijving</th>
+                    <th class="table-header-cell" style="text-align: right;">Aantal</th>
+                    <th class="table-header-cell" style="text-align: right;">Prijs</th>
+                    <th class="table-header-cell" style="text-align: right;">BTW</th>
+                    <th class="table-header-cell" style="text-align: right;">Totaal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${invoiceData.line_items.map(item => {
+                    const hasVat = item.has_vat !== false;
+                    const subtotal = item.subtotal || (item.quantity * item.unit_price);
+                    const vatAmount = item.vat_amount || (hasVat ? subtotal * 0.21 : 0);
+                    const total = item.total || (subtotal + vatAmount);
+                    return `
+                    <tr class="table-body-row">
+                      <td class="table-cell">${item.description || '-'}</td>
+                      <td class="table-cell" style="text-align: right;">${item.quantity || 1}</td>
+                      <td class="table-cell" style="text-align: right;">${formatCurrency(item.unit_price || 0)}</td>
+                      <td class="table-cell" style="text-align: right;">
+                        ${hasVat ? formatCurrency(vatAmount) : 'Geen BTW'}
+                      </td>
+                      <td class="table-cell" style="text-align: right; font-weight: 600;">${formatCurrency(total)}</td>
+                    </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+        
+        <!-- Totals Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Totaaloverzicht</h3>
+            <div style="margin-top: 1rem; padding: 1.5rem; background: #f9fafb; border-radius: 8px;">
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">Subtotaal (excl. BTW):</span>
+                  <span style="font-weight: 500; color: #374151; font-size: 0.875rem;">${formatCurrency(invoiceData.subtotal || 0)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">BTW (21%):</span>
+                  <span style="font-weight: 500; color: #374151; font-size: 0.875rem;">${formatCurrency(invoiceData.vat_total || 0)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 1px solid #e5e7eb; margin-top: 0.25rem;">
+                  <span style="font-weight: 600; color: #374151; font-size: 1rem;">Totaal (incl. BTW):</span>
+                  <span style="font-weight: 700; color: #111827; font-size: 1.25rem;">${formatCurrency(invoiceData.total || invoiceData.amount)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb;">
+                  <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">Openstaand bedrag:</span>
+                  <span style="font-weight: 600; color: ${invoiceData.outstanding_amount > 0 ? '#dc2626' : '#10b981'}; font-size: 0.875rem;">${formatCurrency(invoiceData.outstanding_amount || 0)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${invoiceData.notes ? `
+        <!-- Notes Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Notities</h3>
+            <p style="margin-top: 0.75rem; color: #374151; line-height: 1.6;">${invoiceData.notes}</p>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+      
+      <!-- Right Column (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Customer Info Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Klant</h3>
+            <div style="margin-top: 1rem;">
+              <div style="margin-bottom: 1rem;">
+                <a href="/admin/customers/${customerData.id}" style="text-decoration: none; color: #2563eb; font-weight: 600; font-size: 1rem;">
+                  ${customerName}
+                </a>
+              </div>
+              ${customerData.email ? `
+              <div style="margin-bottom: 0.5rem; color: #6b7280; font-size: 0.875rem;">
+                <i class="fas fa-envelope" style="margin-right: 0.5rem;"></i>
+                ${customerData.email}
+              </div>
+              ` : ''}
+              ${customerData.phone ? `
+              <div style="margin-bottom: 0.5rem; color: #6b7280; font-size: 0.875rem;">
+                <i class="fas fa-phone" style="margin-right: 0.5rem;"></i>
+                ${customerData.phone}
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Metadata Card -->
+        <div class="user-card" style="margin-top: 16px;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Metadata</h3>
+            <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <label class="info-label">Aangemaakt</label>
+                <span class="info-value">${formatDate(invoiceData.created_at)}</span>
+              </div>
+              ${invoiceData.updated_at && invoiceData.updated_at !== invoiceData.created_at ? `
+              <div>
+                <label class="info-label">Laatst bijgewerkt</label>
+                <span class="info-value">${formatDate(invoiceData.updated_at)}</span>
+              </div>
+              ` : ''}
+              ${creatorData ? `
+              <div>
+                <label class="info-label">Aangemaakt door</label>
+                <span class="info-value">${creatorData.first_name && creatorData.last_name ? `${creatorData.first_name} ${creatorData.last_name}` : creatorData.company_name || creatorData.email || 'Onbekend'}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Edit Invoice Modal -->
+  <div id="editInvoiceModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 700px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Factuur bewerken</h2>
+        <button class="modal-close" onclick="closeEditInvoiceModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="editInvoiceForm" style="padding: 1.5rem;">
+        <div id="editInvoiceFormError" class="gs-error" style="display: none; margin-bottom: 1.5rem;"></div>
+        
+        <div class="gs-form-grid">
+          <div class="gs-field">
+            <label class="gs-label">Factuurdatum *</label>
+            <input type="date" id="editInvoiceDate" name="invoice_date" class="gs-form-input" required />
+          </div>
+          
+          <div class="gs-field">
+            <label class="gs-label">Vervaldatum</label>
+            <input type="date" id="editDueDate" name="due_date" class="gs-form-input" />
+          </div>
+          
+          <div class="gs-field">
+            <label class="gs-label">Ordernummer</label>
+            <input type="text" id="editOrderNumber" name="order_number" class="gs-form-input" placeholder="Optioneel" />
+          </div>
+          
+          <div class="gs-field">
+            <label class="gs-label">Status *</label>
+            <select id="editInvoiceStatus" name="status" class="gs-form-input" required>
+              <option value="pending">In afwachting</option>
+              <option value="paid">Betaald</option>
+              <option value="overdue">Achterstallig</option>
+              <option value="draft">Concept</option>
+              <option value="cancelled">Geannuleerd</option>
+            </select>
+          </div>
+          
+          <div class="gs-field">
+            <label class="gs-label">Openstaand bedrag (€)</label>
+            <input type="number" id="editOutstandingAmount" name="outstanding_amount" class="gs-form-input" step="0.01" min="0" placeholder="0.00" />
+            <p class="gs-hint">Wordt automatisch 0 bij status "Betaald"</p>
+          </div>
+        </div>
+        
+        <div class="gs-form-group" style="margin-top: 1.5rem;">
+          <label class="gs-form-label">Notities</label>
+          <textarea id="editInvoiceNotes" name="notes" class="gs-form-input" rows="3" placeholder="Optionele notities bij deze factuur..."></textarea>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closeEditInvoiceModal()" class="gs-btn gs-btn--ghost">Annuleren</button>
+          <button type="submit" class="gs-btn gs-btn--primary">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    window.invoiceData = ${JSON.stringify(invoiceData)};
+    window.customerData = ${JSON.stringify(customerData)};
+    window.canEditInvoice = ${canEditInvoiceData};
+  </script>
+  `
+}) %>
+

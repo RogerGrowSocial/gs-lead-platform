@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nieuwe inlog vanaf nieuw apparaat - GrowSocial</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 0;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .security-badge {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            text-align: center;
+        }
+        .info-box {
+            background-color: #F9FAFB;
+            border-left: 4px solid #3B82F6;
+            padding: 16px;
+            border-radius: 6px;
+            margin: 16px 0;
+        }
+        .info-row {
+            padding: 8px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #111827;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #EA5d0d !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            text-decoration: none !important;
+            padding: 12px 24px;
+            border-radius: 6px;
+            margin: 16px 0;
+            font-weight: 500;
+            text-align: center;
+            border: none !important;
+        }
+        .button:hover {
+            background-color: #d4500b !important;
+        }
+        .alert-box {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 16px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 16px;
+        }
+        h1 {
+            color: #111827;
+            font-size: 24px;
+            margin: 0 0 16px 0;
+        }
+        p {
+            color: #374151;
+            margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; color: #EA5d0d;">GrowSocial</h1>
+        </div>
+        
+        <div class="content">
+            <div class="security-badge">
+                🔒 Nieuwe inlog gedetecteerd
+            </div>
+            
+            <h1>Nieuwe inlog vanaf nieuw apparaat</h1>
+            
+            <p>Beste {{first_name}},</p>
+            
+            <p>Er is zojuist ingelogd op je GrowSocial account vanaf een nieuw apparaat of locatie.</p>
+            
+            <div class="info-box">
+                <div class="info-row">
+                    <div class="info-label">Datum en tijd</div>
+                    <div class="info-value">{{login_time}}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Locatie</div>
+                    <div class="info-value">{{location}}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Apparaat</div>
+                    <div class="info-value">{{device}}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Browser</div>
+                    <div class="info-value">{{browser}}</div>
+                </div>
+            </div>
+            
+            <div class="alert-box">
+                <p style="margin: 0; color: #92400E;"><strong>Was dit niet jij?</strong></p>
+                <p style="margin: 10px 0 0 0; color: #92400E;">Als je deze inlog niet hebt gedaan, wijzig dan direct je wachtwoord en controleer je accountinstellingen.</p>
+            </div>
+            
+            <a href="{{dashboard_url}}" class="button" style="color: #ffffff !important; -webkit-text-fill-color: #ffffff !important;">Ga naar accountinstellingen</a>
+            
+            <p>Met vriendelijke groet,<br>Het GrowSocial Team</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>GrowSocial B.V.</strong></p>
+            <p>Monseigneur Bekkersplein 2, 5076 AV Haaren</p>
+            <p>BTW: NL860638285B01 | KvK: 76478793</p>
+            <p>Tel: 0132340434 | Email: info@growsocialmedia.nl</p>
+        </div>
+    </div>
+</body>
+</html>
+

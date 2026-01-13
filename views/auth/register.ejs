@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registreren | GrowSocial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #fff;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .gs-auth-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+    .gs-logo-badge {
+      background: linear-gradient(135deg, #ea5d0d 0%, #ff7c2a 100%);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 0.5rem;
+      margin: 0 auto 1rem auto;
+      box-shadow: 0 4px 24px 0 rgba(234,93,13,0.10);
+      letter-spacing: 1px;
+    }
+    .gs-brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #222;
+      text-align: center;
+      margin-bottom: 0.15rem;
+    }
+    .gs-brand-sub {
+      color: #6b7280;
+      font-size: 0.95rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+    }
+    .gs-auth-card {
+      background: rgba(255,255,255,0.8);
+      border: 1px solid #f3f4f6;
+      border-radius: 1.25rem;
+      box-shadow: 0 8px 32px 0 rgba(31, 41, 55, 0.10);
+      max-width: 320px;
+      width: 100%;
+      padding: 1.25rem 0.75rem 1rem 0.75rem;
+      margin: 0 auto;
+      backdrop-filter: blur(6px);
+      position: relative;
+    }
+    .gs-auth-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #222;
+      text-align: center;
+      margin-bottom: 0.15rem;
+    }
+    .gs-auth-subtitle {
+      color: #6b7280;
+      font-size: 0.92rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+    .gs-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0 1.5rem 0;
+      color: #bdbdbd;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .gs-divider::before, .gs-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .gs-divider span {
+      padding: 0 1rem;
+      background: #fff;
+      color: #bdbdbd;
+    }
+    .gs-form-group {
+      margin-bottom: 1rem;
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+    }
+    .gs-form-label {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.35rem;
+      display: block;
+    }
+    .gs-form-input {
+      width: 100%;
+      max-width: 100%;
+      height: 36px;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0 0.65rem 0 2rem;
+      font-size: 0.95rem;
+      color: #222;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .gs-form-input:focus {
+      border-color: #ea5d0d;
+      box-shadow: 0 0 0 2px rgba(234,93,13,0.10);
+    }
+    .gs-input-icon {
+      position: absolute;
+      left: 0.7rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #bdbdbd;
+      font-size: 1rem;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+    .gs-form-input:focus ~ .gs-input-icon {
+      color: #ea5d0d;
+    }
+    .gs-password-toggle {
+      position: absolute;
+      right: 0.7rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6b7280;
+      font-size: 0.9rem;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.2s;
+    }
+    .gs-password-toggle:hover {
+      color: #374151;
+    }
+    .gs-form-group input[type="password"],
+    .gs-form-group input[type="text"] {
+      padding-right: 2.5rem;
+    }
+    .gs-form-row {
+      margin-bottom: 1rem;
+    }
+    .gs-checkbox-label {
+      font-size: 0.95rem;
+      color: #6b7280;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .gs-link {
+      color: #ea5d0d;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s;
+      font-size: 0.95rem;
+    }
+    .gs-link:hover {
+      color: #ff7c2a;
+      text-decoration: underline;
+    }
+    .gs-auth-btn {
+      width: 100%;
+      height: 38px;
+      background: #ea5d0d;
+      color: #fff;
+      font-weight: 600;
+      font-size: 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 8px rgba(234,93,13,0.10);
+      margin-top: 0.25rem;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .gs-auth-btn:hover {
+      background: #d35400;
+      box-shadow: 0 4px 16px rgba(234,93,13,0.15);
+      transform: translateY(-2px);
+    }
+    .gs-auth-footer {
+      text-align: center;
+      margin-top: 1rem;
+      color: #6b7280;
+      font-size: 0.97rem;
+    }
+    .gs-auth-footer .gs-link {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .gs-terms {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: #bdbdbd;
+    }
+    .gs-terms .gs-link {
+      color: #ea5d0d;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 600px) {
+      .gs-auth-card {
+        padding: 1rem 0.25rem 1rem 0.25rem;
+        max-width: 98vw;
+      }
+    }
+    form {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 4px;
+      box-shadow: 0 1px 2px rgba(60,64,67,.08), 0 1.5px 6px rgba(60,64,67,.08);
+      font-weight: 500;
+      font-size: 1.08rem;
+      color: #444;
+      padding: 0 24px;
+      height: 44px;
+      width: 100%;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      outline: none;
+    }
+    .google-btn img {
+      width: 22px;
+      height: 22px;
+      margin-right: 8px;
+    }
+    .google-btn span {
+      font-family: Roboto, Arial, sans-serif;
+      font-size: 1.08rem;
+      font-weight: 500;
+      color: #444;
+      letter-spacing: 0.01em;
+    }
+    .google-btn:focus, .google-btn:hover {
+      border-color: #bcbcbc;
+      box-shadow: 0 2px 8px rgba(60,64,67,.16);
+      background: #fafbfc;
+    }
+  </style>
+</head>
+<body>
+  <div class="gs-auth-container">
+    <div class="gs-auth-card">
+      <div style="width:48px;height:48px;margin:0 auto 1.25rem auto;display:flex;align-items:center;justify-content:center;">
+        <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial logo" style="width:100%;height:100%;object-fit:contain;display:block;border-radius:0.5rem;">
+      </div>
+      <div class="gs-auth-title">Account aanmaken</div>
+      <div class="gs-auth-subtitle">Maak een nieuw account aan om te beginnen</div>
+      <% if (error) { %>
+        <div class="auth-error" style="color:#dc2626; background:#fff0f0; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; font-weight:500;">
+          <%= error %>
+        </div>
+      <% } %>
+      <% if (success) { %>
+        <div class="auth-success" style="color:#059669; background:#f0fdf4; border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; font-weight:500;">
+          <%= success %>
+          <div id="resendEmailSection" style="margin-top:1rem; padding-top:1rem; border-top:1px solid #bbf7d0;">
+            <button id="resendEmailBtn" type="button" data-email="<%= (typeof userEmail !== 'undefined' && userEmail) ? userEmail : ((typeof formData !== 'undefined' && formData && formData.email) ? formData.email : '') %>" style="width:100%; padding:0.5rem; background:#059669; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.9rem; cursor:pointer; transition:background 0.2s;">
+              <i class="fa-solid fa-envelope" style="margin-right:0.5rem;"></i>
+              <span id="resendBtnText">E-mail opnieuw verzenden</span>
+            </button>
+            <div id="resendStatus" style="margin-top:0.5rem; font-size:0.85rem; display:none;"></div>
+          </div>
+        </div>
+      <% } %>
+      <form action="/register" method="POST" autocomplete="on">
+        <div class="gs-form-group">
+          <input type="email" id="email" name="email" class="gs-form-input" placeholder="Voer je e-mailadres in" required autocomplete="email" value="<%= formData ? formData.email : '' %>">
+          <span class="gs-input-icon"><i class="fa-solid fa-envelope"></i></span>
+        </div>
+        <div class="gs-form-group">
+          <input type="password" id="password" name="password" class="gs-form-input" placeholder="Voer je wachtwoord in" required minlength="8" autocomplete="new-password">
+          <span class="gs-input-icon"><i class="fa-solid fa-lock"></i></span>
+          <span class="gs-password-toggle" id="passwordToggle"><i class="fa-solid fa-eye"></i></span>
+        </div>
+        <div class="gs-form-group" id="confirmPasswordGroup" style="display:none;">
+          <input type="password" id="confirmPassword" name="confirmPassword" class="gs-form-input" placeholder="Bevestig je wachtwoord" required minlength="8" autocomplete="new-password">
+          <span class="gs-input-icon"><i class="fa-solid fa-lock"></i></span>
+          <span class="gs-password-toggle" id="confirmPasswordToggle"><i class="fa-solid fa-eye"></i></span>
+        </div>
+        <button type="submit" class="gs-auth-btn group">Registreren <span style="transition:transform 0.2s; display:inline-block; margin-left:0.5rem;">→</span></button>
+      </form>
+      <div class="gs-divider"><span>Of ga verder met</span></div>
+      <a href="/auth/google" class="google-btn" style="text-decoration:none;display:block;margin-bottom:1.25rem;padding:0;box-shadow:none;border:none;background:none;">
+        <div style="display:flex;align-items:center;justify-content:center;width:100%;height:44px;background:#fff;border:1px solid #dadce0;border-radius:4px;box-shadow:0 1px 2px rgba(60,64,67,.08),0 1.5px 6px rgba(60,64,67,.08);transition:box-shadow 0.2s,border-color 0.2s;">
+          <img src="/img/google-logo.svg" alt="Google" style="width:22px;height:22px;margin-right:16px;margin-left:8px;">
+          <span style="font-family:Roboto,Arial,sans-serif;font-size:0.98rem;font-weight:500;color:#444;letter-spacing:0.01em;">Registreren met Google</span>
+        </div>
+      </a>
+      <div class="gs-auth-footer">
+        Al een account? <a href="/login" class="gs-link">Inloggen</a>
+      </div>
+    </div>
+    <div class="gs-terms" style="text-align:center;margin-top:1.5rem;font-size:12px;color:#bdbdbd;">
+      Door een account te registreren, ga je akkoord met onze <a href="#" class="gs-link" style="color:#2563eb;font-weight:500;font-size:12px;text-decoration:underline;transition:color 0.2s;">Servicevoorwaarden</a> en <a href="#" class="gs-link" style="color:#2563eb;font-weight:500;font-size:12px;text-decoration:underline;transition:color 0.2s;">Privacybeleid</a>
+    </div>
+  </div>
+  <script>
+    // Password toggle functionality
+    const passwordToggle = document.getElementById('passwordToggle');
+    const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const confirmGroup = document.getElementById('confirmPasswordGroup');
+
+    // Toggle password visibility for main password field
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', function() {
+        const icon = this.querySelector('i');
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text';
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
+        } else {
+          passwordInput.type = 'password';
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
+        }
+      });
+    }
+
+    // Toggle password visibility for confirm password field
+    if (confirmPasswordToggle && confirmPasswordInput) {
+      confirmPasswordToggle.addEventListener('click', function() {
+        const icon = this.querySelector('i');
+        if (confirmPasswordInput.type === 'password') {
+          confirmPasswordInput.type = 'text';
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
+        } else {
+          confirmPasswordInput.type = 'password';
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
+        }
+      });
+    }
+
+    // Show confirm password only when password has at least 1 character
+    if (passwordInput && confirmGroup) {
+      passwordInput.addEventListener('input', function() {
+        if (this.value.length > 0) {
+          confirmGroup.style.display = '';
+        } else {
+          confirmGroup.style.display = 'none';
+          if (confirmPasswordInput) {
+            confirmPasswordInput.value = '';
+          }
+        }
+      });
+    }
+
+    // Resend email verification with countdown
+    // Check if resend button exists on page
+    (function() {
+      const resendBtn = document.getElementById('resendEmailBtn');
+      if (!resendBtn) {
+        // Button doesn't exist, skip initialization
+        return;
+      }
+      
+      const resendBtnText = document.getElementById('resendBtnText');
+      const resendStatus = document.getElementById('resendStatus');
+
+      // Ensure button is interactable by default
+      resendBtn.disabled = false;
+      resendBtn.style.opacity = '1';
+      resendBtn.style.cursor = 'pointer';
+      
+      // Determine email from data attribute or form (no EJS control flow inside JS)
+      const emailInput = document.querySelector('input[name="email"]');
+      let emailValue = (resendBtn.getAttribute('data-email') || '').trim();
+      if (!emailValue && emailInput) {
+        emailValue = (emailInput.value || '').trim();
+      }
+      
+      if (!emailValue) {
+        console.error('Cannot resend email: email is not available');
+        // Disable button if no email
+        resendBtn.disabled = true;
+        resendBtn.style.opacity = '0.5';
+        resendBtn.style.cursor = 'not-allowed';
+        return;
+      }
+      
+      let userEmail = emailValue;
+      
+      let countdown = 15; // 15 seconds cooldown between resends
+      let countdownInterval = null;
+      let isCooldown = false;
+
+      // Check if there's a stored countdown time
+      const storedTime = sessionStorage.getItem('resendEmailCooldown');
+      if (storedTime) {
+        const remaining = Math.floor((parseInt(storedTime) - Date.now()) / 1000);
+        if (remaining > 0) {
+          countdown = remaining;
+          isCooldown = true;
+          startCountdown();
+        }
+      }
+
+      function startCountdown() {
+        isCooldown = true;
+        resendBtn.disabled = true;
+        resendBtn.style.opacity = '0.6';
+        resendBtn.style.cursor = 'not-allowed';
+        
+        // Store cooldown end time
+        sessionStorage.setItem('resendEmailCooldown', Date.now() + (countdown * 1000));
+
+        countdownInterval = setInterval(() => {
+          countdown--;
+          
+          // Format countdown display
+          const minutes = Math.floor(countdown / 60);
+          const seconds = countdown % 60;
+          if (countdown >= 60) {
+            resendBtnText.textContent = `Opnieuw verzenden (${minutes}m ${seconds}s)`;
+          } else {
+            resendBtnText.textContent = `Opnieuw verzenden (${countdown}s)`;
+          }
+          
+          if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            resendBtn.disabled = false;
+            resendBtn.style.opacity = '1';
+            resendBtn.style.cursor = 'pointer';
+            resendBtnText.textContent = 'E-mail opnieuw verzenden';
+            isCooldown = false;
+            sessionStorage.removeItem('resendEmailCooldown');
+          }
+        }, 1000);
+      }
+
+      resendBtn.addEventListener('click', async function() {
+        if (isCooldown) return;
+        // Re-evaluate email in case user filled it after load
+        if ((!userEmail || userEmail.length === 0) && emailInput) {
+          userEmail = (emailInput.value || '').trim();
+        }
+        if (!userEmail) {
+          resendStatus.style.display = 'block';
+          resendStatus.style.color = '#dc2626';
+          resendStatus.style.background = '#fff0f0';
+          resendStatus.style.padding = '0.5rem';
+          resendStatus.style.borderRadius = '6px';
+          resendStatus.style.fontSize = '0.85rem';
+          resendStatus.textContent = '✗ Vul je e-mailadres in om de e-mail opnieuw te verzenden.';
+          if (emailInput) emailInput.focus();
+          return;
+        }
+
+        resendBtn.disabled = true;
+        resendBtnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:0.5rem;"></i>Verzenden...';
+        resendStatus.style.display = 'none';
+
+        try {
+          const response = await fetch('/auth/resend-verification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: userEmail })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            resendStatus.style.display = 'block';
+            resendStatus.style.color = '#059669';
+            resendStatus.style.background = '#f0fdf4';
+            resendStatus.style.padding = '0.5rem';
+            resendStatus.style.borderRadius = '6px';
+            resendStatus.style.fontSize = '0.85rem';
+            resendStatus.textContent = '✓ ' + data.message;
+            
+            // Start countdown (15s window after a successful resend)
+            countdown = 15;
+            startCountdown();
+          } else {
+            // Detect short security cooldown and show friendly info message (not red)
+            const isCooldown = data && (data.code === 'cooldown' || /security purposes/i.test(String(data.error || '')));
+            if (isCooldown) {
+              // Determine seconds from server or parse from message
+              let seconds = parseInt(data.cooldownSeconds || 0, 10);
+              if (!seconds || Number.isNaN(seconds)) {
+                const m = String(data.error || '').match(/(\d+)\s*seconds?/i);
+                seconds = m ? parseInt(m[1], 10) : 60;
+              }
+
+              resendStatus.style.display = 'block';
+              resendStatus.style.color = '#075985';
+              resendStatus.style.background = '#e0f2fe';
+              resendStatus.style.padding = '0.5rem';
+              resendStatus.style.borderRadius = '6px';
+              resendStatus.style.fontSize = '0.85rem';
+              resendStatus.textContent = `ℹ️ Om misbruik te voorkomen kun je dit over ${seconds} seconden opnieuw proberen.`;
+
+              // Restart countdown based on server-provided seconds
+              countdown = seconds;
+              startCountdown();
+            } else {
+              // Generic error (keep red styling)
+              resendStatus.style.display = 'block';
+              resendStatus.style.color = '#dc2626';
+              resendStatus.style.background = '#fff0f0';
+              resendStatus.style.padding = '0.5rem';
+              resendStatus.style.borderRadius = '6px';
+              resendStatus.style.fontSize = '0.85rem';
+              resendStatus.textContent = '✗ ' + (data.error || 'Er is een fout opgetreden');
+
+              resendBtn.disabled = false;
+              resendBtnText.innerHTML = '<i class="fa-solid fa-envelope" style="margin-right:0.5rem;"></i>E-mail opnieuw verzenden';
+            }
+          }
+        } catch (error) {
+          console.error('Resend error:', error);
+          resendStatus.style.display = 'block';
+          resendStatus.style.color = '#dc2626';
+          resendStatus.style.background = '#fff0f0';
+          resendStatus.style.padding = '0.5rem';
+          resendStatus.style.borderRadius = '6px';
+          resendStatus.style.fontSize = '0.85rem';
+          resendStatus.textContent = '✗ Er is een fout opgetreden. Probeer het later opnieuw.';
+          
+          resendBtn.disabled = false;
+          resendBtnText.innerHTML = '<i class="fa-solid fa-envelope" style="margin-right:0.5rem;"></i>E-mail opnieuw verzenden';
+        }
+      });
+
+      // Initialize countdown if needed
+      if (isCooldown) {
+        resendBtnText.textContent = `Opnieuw verzenden (${countdown}s)`;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Groningen",
+        "code": "GR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[6.2, 53.6], [7.4, 53.6], [7.4, 53.0], [6.2, 53.0], [6.2, 53.6]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Friesland",
+        "code": "FR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.0, 53.6], [6.2, 53.6], [6.2, 52.8], [5.0, 52.8], [5.0, 53.6]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Drenthe",
+        "code": "DR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[6.2, 53.0], [7.0, 53.0], [7.0, 52.5], [6.2, 52.5], [6.2, 53.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Overijssel",
+        "code": "OV"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.8, 52.5], [7.0, 52.5], [7.0, 52.0], [5.8, 52.0], [5.8, 52.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Flevoland",
+        "code": "FL"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.0, 52.5], [5.8, 52.5], [5.8, 52.3], [5.0, 52.3], [5.0, 52.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gelderland",
+        "code": "GE"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.0, 52.0], [6.5, 52.0], [6.5, 51.5], [5.0, 51.5], [5.0, 52.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Utrecht",
+        "code": "UT"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[4.8, 52.2], [5.3, 52.2], [5.3, 51.9], [4.8, 51.9], [4.8, 52.2]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Noord-Holland",
+        "code": "NH"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[4.3, 52.8], [5.0, 52.8], [5.0, 52.2], [4.3, 52.2], [4.3, 52.8]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Zuid-Holland",
+        "code": "ZH"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[4.0, 52.2], [5.0, 52.2], [5.0, 51.6], [4.0, 51.6], [4.0, 52.2]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Zeeland",
+        "code": "ZE"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[3.2, 51.6], [4.2, 51.6], [4.2, 51.2], [3.2, 51.2], [3.2, 51.6]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Noord-Brabant",
+        "code": "NB"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[4.0, 51.8], [6.0, 51.8], [6.0, 51.2], [4.0, 51.2], [4.0, 51.8]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Limburg",
+        "code": "LI"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[5.5, 51.5], [6.2, 51.5], [6.2, 50.7], [5.5, 50.7], [5.5, 51.5]]]
+      }
+    }
+  ]
+}
+

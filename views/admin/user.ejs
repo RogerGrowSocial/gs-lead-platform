@@ -1,0 +1,1062 @@
+<%
+  // Get user data from userData (passed from route) or user (fallback)
+  var user = typeof userData !== 'undefined' ? userData : (typeof user !== 'undefined' ? user : {})
+  
+  var formatCurrency = function(amount) {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount)
+  }
+  
+  var formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  var formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }
+    return d.toLocaleString('nl-NL', options)
+  }
+
+  var formatLastLogin = function(iso) {
+    if (!iso) return 'Nog niet ingelogd'
+    var d = new Date(iso)
+    var now = new Date()
+    var diffMs = now - d
+    var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Vandaag'
+    if (diffDays === 1) return 'Gisteren'
+    if (diffDays < 7) return diffDays + ' dagen geleden'
+    if (diffDays < 30) {
+      var weeks = Math.floor(diffDays / 7)
+      return weeks === 1 ? '1 week geleden' : weeks + ' weken geleden'
+    }
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  var hasPaymentMethod = user.has_payment_method === 1 || (user.payment_method && user.payment_method !== '')
+  var status = user.status || 'active'
+  var isAdmin = user.is_admin ? true : false
+  var isCustomer = !isAdmin && (user.role === 'customer' || !user.role || user.role_id === null || (user.role_id && typeof user.role_id === 'string' && user.role_id.includes('customer')))
+  
+  // Get initials for avatar
+  var initials = ''
+  if (user.first_name && user.first_name.length > 0) {
+    initials = user.first_name.charAt(0).toUpperCase()
+    if (user.last_name && user.last_name.length > 0) {
+      initials += user.last_name.charAt(0).toUpperCase()
+    }
+  } else if (user.email && user.email.length > 0) {
+    initials = user.email.charAt(0).toUpperCase()
+  } else if (user.company_name && user.company_name.length > 0) {
+    initials = user.company_name.charAt(0).toUpperCase()
+  } else {
+    initials = 'U'
+  }
+
+  // Get user name for display
+  var userName = user.name || (user.first_name && user.last_name 
+    ? user.first_name + ' ' + user.last_name
+    : (user.email && user.email.split('@')[0]) || 'Gebruiker')
+
+  // AI Risk data
+  var aiRiskScore = (user.ai_risk_score !== null && user.ai_risk_score !== undefined) ? user.ai_risk_score : null
+  var aiRiskLevel = user.ai_risk_level || 'medium'
+  var aiRiskExplanation = user.ai_risk_explanation || 'Geen aanvullende informatie beschikbaar.'
+  var requiresManualReview = user.requires_manual_review || false
+  // Badge class based on score percentage (not risk level)
+  var badgeClass = aiRiskScore >= 70 ? 'high' : aiRiskScore >= 40 ? 'medium' : 'low'
+  var aiRiskStrokeColor = badgeClass === 'low' ? '#dc2626' : badgeClass === 'medium' ? '#fe9800' : '#16a34a'
+  var isNew = user.is_new || false
+  var isBlocked = user.is_suspended || false
+
+  // Stats
+  var stats = user.stats || { total_spent: 0, leads_bought: 0, total_orders: 0 }
+  var userPhone = user.phone || user.phone_number || user.mobile || ''
+  var userLocation = ''
+  if (user.postal_code || user.city) {
+    var locationParts = []
+    if (user.postal_code) locationParts.push(user.postal_code)
+    if (user.city) locationParts.push(user.city)
+    userLocation = locationParts.join(' ')
+  } else if (user.street || user.country) {
+    var altLocationParts = []
+    if (user.street) altLocationParts.push(user.street)
+    if (user.country) altLocationParts.push(user.country)
+    userLocation = altLocationParts.join(', ')
+  }
+  userLocation = userLocation.trim()
+  var hasUserLocation = userLocation.length > 0
+  var hasUserPhone = !!userPhone
+  var hasCompanyName = !!(user.company_name && user.company_name.trim().length)
+  var displayEmail = user.email || '-'
+  
+  // Prepare include options
+  var pageTitle = userName + ' - Users | GrowSocial Admin'
+%>
+<%- include('../layouts/admin', {
+  title: pageTitle,
+  activeMenu: 'users',
+  user: user,
+  showBackButton: true,
+  backButtonUrl: '/admin/users',
+  backButtonText: 'Terug naar users',
+  body: `
+  <div class="user-detail-page">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- User Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div class="user-info-avatar-section">
+              <span class="user-avatar-large-new" aria-hidden="true">
+                ${initials}
+              </span>
+              <div class="user-info-name-section">
+                <h1 class="user-info-name-new">${userName}</h1>
+                <div class="user-info-badges-container">
+                  <span class="user-role-badge-new ${isAdmin ? 'is-admin' : 'is-user'}">
+                    ${isAdmin ? `
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                      </svg>
+                    ` : `
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    `}
+                    ${isAdmin ? 'Admin' : 'User'}
+                  </span>
+                  ${isBlocked ? `
+                    <span class="user-status-badge-new is-blocked">Geblokkeerd</span>
+                  ` : `
+                    <span class="user-status-badge-new is-active">Actief</span>
+                  `}
+                  ${isNew ? `
+                    <span class="user-status-badge-new is-new">Nieuw</span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+            ${hasCompanyName ? `
+              <div class="user-info-company-section">
+                <div class="user-info-company-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M10 6h4"></path>
+                    <path d="M10 10h4"></path>
+                    <path d="M10 14h4"></path>
+                    <path d="M10 18h4"></path>
+                  </svg>
+                </div>
+                <span class="user-info-company-name">${user.company_name}</span>
+              </div>
+              <div class="user-info-company-divider"></div>
+            ` : ''}
+            <div class="user-info-contact-section">
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </svg>
+                <span class="user-info-contact-text">${displayEmail}</span>
+              </div>
+              ${hasUserPhone ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <span class="user-info-contact-text">${userPhone}</span>
+                </div>
+              ` : ''}
+              ${hasUserLocation ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin">
+                    <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span class="user-info-contact-text">${userLocation}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+        <!-- Manual Review Warning -->
+        ${requiresManualReview && !isBlocked ? `
+          <div class="user-card">
+            <div class="user-card-content">
+              <div class="user-warning-card-new">
+                <div class="user-warning-icon-new">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="user-warning-content-new">
+                  <p class="user-warning-title-new">Deze gebruiker is gemarkeerd voor handmatige controle</p>
+                  <p class="user-warning-text-new">
+                    Controleer de gegevens en AI analyse voordat je de gebruiker goedkeurt of blokkeert.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- AI Trust Score Card (only for customers) -->
+        ${isCustomer && aiRiskScore !== null && aiRiskScore !== undefined ? `
+          <div class="trust-score-kpi-card">
+            <!-- Header: AI Trust Score + Company Name + Risk Badge -->
+            <div class="trust-score-header">
+              <div class="trust-score-header-left">
+                <div class="trust-score-ai-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width: 16px; height: 16px;">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path d="M20 3v4"></path>
+                    <path d="M22 5h-4"></path>
+                    <path d="M4 17v2"></path>
+                    <path d="M5 18H3"></path>
+                  </svg>
+                </div>
+                <span class="trust-score-kpi-title">AI Trust Score</span>
+                <h3 class="trust-score-company-name">${user.company_name || 'Geen bedrijfsnaam'}</h3>
+              </div>
+              <span class="trust-score-status-badge trust-status-${badgeClass}">
+                ${aiRiskScore >= 70 ? `
+                  <i class="fas fa-check-circle"></i> Hoog
+                ` : aiRiskScore >= 40 ? `
+                  <i class="fas fa-exclamation-circle"></i> Gemiddeld
+                ` : `
+                  <i class="fas fa-times-circle"></i> Laag
+                `}
+              </span>
+            </div>
+
+            <!-- Main Content: Gauge + Description -->
+            <div class="trust-score-main-content">
+              <!-- Left: Gauge -->
+              <div class="trust-score-gauge-container">
+                <div class="trust-score-gauge-wrapper">
+                  <svg class="trust-score-gauge" viewBox="0 0 120 120" style="transform: rotate(-90deg); transform-origin: center;">
+                    <circle cx="60" cy="60" r="48" stroke="#e5e7eb" stroke-width="10" fill="none"></circle>
+                    <circle cx="60" cy="60" r="48" stroke="${aiRiskStrokeColor}" stroke-width="10" fill="none" stroke-linecap="round" class="trust-score-gauge-progress" data-score="${aiRiskScore}"></circle>
+                  </svg>
+                  <div class="trust-score-gauge-value">
+                    <span class="trust-score-gauge-number score-${badgeClass}">${aiRiskScore}</span>
+                    <span class="trust-score-gauge-percent">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Description -->
+              <div class="trust-score-description-container">
+                <p class="trust-score-kpi-description">${aiRiskExplanation}</p>
+                ${requiresManualReview && !isBlocked ? `
+                  <div class="user-actions-buttons">
+                    <form method="POST" action="/admin/api/users/${user.id}/approve" onsubmit="return handleApprove(event)">
+                      <button type="submit" class="btn-approve-new">
+                        Goedkeuren
+                      </button>
+                    </form>
+                    <button type="button" class="btn-block-new" onclick="openBlockModal()">
+                      Blokkeren
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+        ${isCustomer && (aiRiskScore === null || aiRiskScore === undefined) ? `
+          <!-- No Risk Analyse Yet -->
+          <div class="trust-score-kpi-card trust-score-kpi-card-empty">
+            <!-- Header: AI Trust Score + Company Name (no status badge) -->
+            <div class="trust-score-header">
+              <div class="trust-score-header-left">
+                <div class="trust-score-ai-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width: 16px; height: 16px;">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path d="M20 3v4"></path>
+                    <path d="M22 5h-4"></path>
+                    <path d="M4 17v2"></path>
+                    <path d="M5 18H3"></path>
+                  </svg>
+                </div>
+                <span class="trust-score-kpi-title">AI Trust Score</span>
+                <h3 class="trust-score-company-name">${user.company_name || 'Geen bedrijfsnaam'}</h3>
+              </div>
+            </div>
+
+            <!-- Main Content: Empty Gauge + Description -->
+            <div class="trust-score-main-content">
+              <!-- Left: Empty Gauge -->
+              <div class="trust-score-gauge-container">
+                <div class="trust-score-gauge-wrapper">
+                  <svg class="trust-score-gauge" viewBox="0 0 120 120" style="transform: rotate(-90deg); transform-origin: center;">
+                    <circle cx="60" cy="60" r="48" stroke="#e5e7eb" stroke-width="10" fill="none"></circle>
+                  </svg>
+                  <div class="trust-score-gauge-value">
+                    <span class="trust-score-gauge-number">—</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Description + Button -->
+              <div class="trust-score-description-container">
+                <p class="trust-score-kpi-description">
+                  Er is nog geen automatische betrouwbaarheidsanalyse uitgevoerd voor deze gebruiker. <br>
+                  Klik op de knop hieronder om een analyse uit te voeren.
+                </p>
+                <button onclick="openRiskAssessmentModal('${user.id}')" class="btn-approve-new">
+                  <i class="fas fa-shield-alt"></i>
+                  Risicoanalyse Uitvoeren
+                </button>
+                ${requiresManualReview && !isBlocked ? `
+                  <div class="user-actions-buttons">
+                    <form method="POST" action="/admin/api/users/${user.id}/approve" onsubmit="return handleApprove(event)">
+                      <button type="submit" class="btn-approve-new">
+                        Goedkeuren
+                      </button>
+                    </form>
+                    <button type="button" class="btn-block-new" onclick="openBlockModal()">
+                      Blokkeren
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Prestaties Card (alleen voor customers, horizontale layout) -->
+        ${isCustomer ? `
+        <div class="user-card">
+          <div class="user-card-content">
+            <div class="user-card-header-with-action">
+              <h3 class="user-card-title-small">Prestaties</h3>
+              <button class="performance-test-btn" onclick="testPerformanceSystem('${user.id}')" title="Test performance systeem">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="performance-stats-container" class="user-performance-stats-container">
+              <div class="performance-loading">
+                <p class="user-empty-text">Prestaties laden...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Risk Analyse Modal -->
+        <div id="riskAssessmentModal" class="risk-assessment-modal" style="display: none;">
+          <div class="risk-assessment-modal-overlay" onclick="closeRiskAssessmentModal()"></div>
+          <div class="risk-assessment-modal-content">
+            <div class="risk-assessment-modal-header">
+              <div class="risk-assessment-modal-title-container">
+                <div class="trust-score-ai-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width:16px;height:16px;">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path d="M20 3v4"></path>
+                    <path d="M22 5h-4"></path>
+                    <path d="M4 17v2"></path>
+                    <path d="M5 18H3"></path>
+                  </svg>
+                </div>
+                <h2 class="risk-assessment-modal-title">Risk Analyse Uitvoeren</h2>
+              </div>
+              <button class="risk-assessment-modal-close" onclick="closeRiskAssessmentModal()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="risk-assessment-modal-body">
+              <p class="risk-assessment-modal-text">
+                Weet je zeker dat je een nieuwe risk analyse wilt uitvoeren voor deze gebruiker? 
+                Dit kan enkele seconden duren.
+              </p>
+              <div class="risk-assessment-modal-actions">
+                <button class="risk-assessment-modal-btn risk-assessment-modal-btn-cancel" onclick="closeRiskAssessmentModal()">
+                  Annuleren
+                </button>
+                <button class="risk-assessment-modal-btn risk-assessment-modal-btn-confirm" id="riskAssessmentConfirmBtn" onclick="confirmRiskAssessment()">
+                  <i class="fas fa-sync-alt"></i>
+                  Analyse Uitvoeren
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- Company Details Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Bedrijfsgegevens</h3>
+            <div class="user-company-grid">
+              <div class="user-company-item">
+                <p class="user-company-label">KvK nummer</p>
+                <p class="user-company-value">${user.coc_number || '-'}</p>
+              </div>
+              <div class="user-company-item">
+                <p class="user-company-label">BTW nummer</p>
+                <p class="user-company-value">${user.vat_number || '-'}</p>
+              </div>
+              <div class="user-company-item user-company-item-full">
+                <p class="user-company-label">Adres</p>
+                <p class="user-company-value">${user.street || '-'}${(user.street && (user.postal_code || user.city)) ? ', ' : ''}${user.postal_code || ''} ${user.city || ''}</p>
+              </div>
+              ${user.website ? `
+                <div class="user-company-item user-company-item-full">
+                  <p class="user-company-label">Website</p>
+                  <a href="${user.website}" target="_blank" rel="noopener noreferrer" class="user-company-link">
+                    ${user.website}
+                    <i class="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="user-tabs-container">
+          <div class="user-tabs-header">
+            <button class="user-tab-btn user-tab-active" data-tab="activity">Activiteit</button>
+            <button class="user-tab-btn" data-tab="orders">Bestellingen</button>
+          </div>
+          <div class="user-tab-content" id="tab-activity">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Recente Activiteit</h3>
+                <div class="user-activity-list">
+                  ${(() => {
+                    var activities = typeof user.activities !== 'undefined' ? user.activities : [];
+                    var activityItems = '';
+                    
+                    // Show max 5 activities
+                    var activitiesToShow = activities.slice(0, 5);
+                    
+                    if (activitiesToShow.length === 0) {
+                      // Show last login if no activities
+                      if (user.last_sign_in_at) {
+                        activityItems += `
+                          <div class="user-activity-item">
+                            <div class="user-activity-icon">
+                              <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <div class="user-activity-content">
+                              <p class="user-activity-title">Ingelogd op platform</p>
+                              <p class="user-activity-date">${formatDateTime(user.last_sign_in_at)}</p>
+                            </div>
+                          </div>
+                        `;
+                      } else {
+                        activityItems += `
+                          <p class="user-empty-text">Geen activiteit gevonden.</p>
+                        `;
+                      }
+                    } else {
+                      activitiesToShow.forEach(function(activity) {
+                        var icon = 'fa-clock';
+                        if (activity.category === 'authentication') icon = 'fa-sign-in-alt';
+                        else if (activity.category === 'billing') icon = 'fa-credit-card';
+                        else if (activity.category === 'user_management') icon = 'fa-user';
+                        else if (activity.category === 'payment') icon = 'fa-money-bill';
+                        else if (activity.type === 'error') icon = 'fa-exclamation-triangle';
+                        else if (activity.type === 'success') icon = 'fa-check-circle';
+                        
+                        activityItems += `
+                          <div class="user-activity-item">
+                            <div class="user-activity-icon">
+                              <i class="fas ${icon}"></i>
+                            </div>
+                            <div class="user-activity-content">
+                              <p class="user-activity-title">${activity.title || activity.message || 'Activiteit'}</p>
+                              <p class="user-activity-date">${formatDateTime(activity.created_at)}</p>
+                            </div>
+                          </div>
+                        `;
+                      });
+                    }
+                    
+                    return activityItems;
+                  })()}
+                </div>
+                ${(() => {
+                  var activities = typeof user.activities !== 'undefined' ? user.activities : [];
+                  // Always show link if there are any activities (even if less than 5, user can see all)
+                  if (activities.length > 0 || user.last_sign_in_at) {
+                    return `
+                      <a href="/admin/settings/activities?user_id=${user.id}" class="user-activity-view-all">
+                        Bekijk alle activiteit >
+                      </a>
+                    `;
+                  }
+                  return '';
+                })()}
+              </div>
+            </div>
+          </div>
+          <div class="user-tab-content" id="tab-orders" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Bestellingen</h3>
+                <p class="user-empty-text">Geen bestellingen gevonden.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Quick Stats Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Snelle Statistieken</h3>
+            <div class="user-stats-list-new">
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal besteed</p>
+                <p class="user-stat-value-new">${formatCurrency(stats.total_spent)}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Leads gekocht</p>
+                <p class="user-stat-value-new">${stats.leads_bought}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Bestellingen</p>
+                <p class="user-stat-value-new">${stats.total_orders}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Info Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title">Account Informatie</h3>
+            
+            <div class="user-info-list">
+              <div class="user-info-item">
+                <p class="user-info-label">Account aangemaakt</p>
+                <p class="user-info-value">${formatDateTime(user.created_at)}</p>
+              </div>
+              
+              <div class="user-info-item">
+                <p class="user-info-label">Laatste login</p>
+                <p class="user-info-value">
+                  ${user.last_sign_in_at ? formatDateTime(user.last_sign_in_at) : 'Nooit ingelogd'}
+                </p>
+              </div>
+              
+              <div class="user-info-item">
+                <p class="user-info-label">User ID</p>
+                <p class="user-info-value user-info-mono">${user.id ? user.id.substring(0, 8) : '-'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Status Card -->
+        ${requiresManualReview ? `
+          <div class="user-card user-card-verification">
+            <div class="user-card-content">
+              <div class="user-verification-header">
+                <i class="fas fa-shield-alt"></i>
+                <h3 class="user-card-title-small">Verificatie Status</h3>
+              </div>
+              <p class="user-verification-text-new">
+                Deze gebruiker heeft een lage trust score. Controleer alle gegevens zorgvuldig voordat je de account goedkeurt.
+              </p>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  </div>
+
+  <!-- Block Modal -->
+  <div id="blockModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeBlockModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Gebruiker blokkeren</h3>
+        <button class="modal-close" onclick="closeBlockModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <p class="modal-text">
+          Weet je zeker dat je <strong>${userName}</strong> wilt blokkeren? 
+          Deze gebruiker kan daarna niet meer inloggen op het platform.
+        </p>
+        
+        <form method="POST" action="/admin/api/users/${user.id}/block" onsubmit="return handleBlock(event)">
+          <div class="form-group">
+            <label for="block_reason" class="form-label">Reden (optioneel)</label>
+            <textarea 
+              id="block_reason" 
+              name="reason" 
+              class="form-textarea" 
+              rows="3"
+              placeholder="Waarom wordt deze gebruiker geblokkeerd?"
+            ></textarea>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" onclick="closeBlockModal()">
+              Annuleren
+            </button>
+            <button type="submit" class="btn-danger">
+              <i class="fas fa-ban"></i>
+              Blokkeren
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  ${isCustomer ? `
+  <script>
+  // Load performance stats when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    loadPerformanceStats('${user.id}');
+  });
+
+  async function loadPerformanceStats(partnerId) {
+    const container = document.getElementById('performance-stats-container');
+    if (!container) return;
+    
+    try {
+      container.innerHTML = '<div class="performance-loading"><p class="user-empty-text">Prestaties laden...</p></div>';
+      
+      const response = await fetch('/api/admin/ai-router/performance-debug?partner_id=' + partnerId, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Fout bij ophalen prestaties');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const { performanceScore, metrics, stats } = result.data;
+        
+        // Format performance stats HTML (horizontale layout)
+        let html = '<div class="user-performance-stats-horizontal">' +
+          '<div class="performance-overview-horizontal">' +
+            '<div class="performance-total-score-horizontal">' +
+              '<p class="performance-score-label">Totaal Prestatie Score</p>' +
+              '<div class="performance-score-value-wrapper">' +
+                '<p class="performance-score-value">' + Math.round(performanceScore.totalScore || 0) + '</p>' +
+                '<p class="performance-score-max">/ 100</p>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="performance-metrics-grid">' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<circle cx="12" cy="12" r="10"></circle>' +
+                    '<polyline points="12 6 12 12 16 14"></polyline>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Reactiesnelheid</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.responseSpeed.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Gem. response</span>' +
+                  '<span class="detail-value">' + (metrics.responseSpeed.avg_first_response_time_minutes_30d ? Math.round(metrics.responseSpeed.avg_first_response_time_minutes_30d) + ' min' : '-') + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Binnen 1u</span>' +
+                  '<span class="detail-value">' + Math.round(metrics.responseSpeed.pct_contacted_within_1h_30d || 0) + '%</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Binnen 24u</span>' +
+                  '<span class="detail-value">' + Math.round(metrics.responseSpeed.pct_contacted_within_24h_30d || 0) + '%</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">AI Trust Score</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + (metrics.aiTrust.ai_trust_score !== null && metrics.aiTrust.ai_trust_score !== undefined ? metrics.aiTrust.ai_trust_score : '-') + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Trust Score</span>' +
+                  '<span class="detail-value">' + (metrics.aiTrust.ai_trust_score !== null && metrics.aiTrust.ai_trust_score !== undefined ? metrics.aiTrust.ai_trust_score : '-') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>' +
+                    '<polyline points="22 4 12 14.01 9 11.01"></polyline>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Deal Rate</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.dealRate.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">30 dagen</span>' +
+                  '<span class="detail-value">' + (metrics.dealRate.deal_rate_30d !== null ? Math.round(metrics.dealRate.deal_rate_30d) + '%' : '-') + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Gewonnen</span>' +
+                  '<span class="detail-value">' + (metrics.dealRate.won_leads_30d || 0) + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Verloren</span>' +
+                  '<span class="detail-value">' + (metrics.dealRate.lost_leads_30d || 0) + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>' +
+                    '<circle cx="9" cy="7" r="4"></circle>' +
+                    '<path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>' +
+                    '<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Follow-up</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.followUp.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Gem. pogingen</span>' +
+                  '<span class="detail-value">' + (metrics.followUp.avg_contact_attempts_per_lead_30d ? metrics.followUp.avg_contact_attempts_per_lead_30d.toFixed(1) : '0') + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Min 2x</span>' +
+                  '<span class="detail-value">' + Math.round(metrics.followUp.pct_leads_min_2_attempts_30d || 0) + '%</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Feedback</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.feedback.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Gem. rating</span>' +
+                  '<span class="detail-value">' + (metrics.feedback.avg_customer_rating_30d ? metrics.feedback.avg_customer_rating_30d.toFixed(1) + ' ⭐' : '-') + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Aantal</span>' +
+                  '<span class="detail-value">' + (metrics.feedback.num_ratings_30d || 0) + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>' +
+                    '<line x1="12" y1="9" x2="12" y2="13"></line>' +
+                    '<line x1="12" y1="17" x2="12.01" y2="17"></line>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Klachten</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.complaints.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Aantal</span>' +
+                  '<span class="detail-value">' + (metrics.complaints.complaints_30d || 0) + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Rate</span>' +
+                  '<span class="detail-value">' + Math.round(metrics.complaints.complaint_rate_30d || 0) + '%</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<line x1="12" y1="2" x2="12" y2="22"></line>' +
+                    '<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Dealwaarde</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.dealValue.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Gemiddeld</span>' +
+                  '<span class="detail-value">' + (metrics.dealValue.avg_deal_value_30d ? '€' + Math.round(metrics.dealValue.avg_deal_value_30d) : '-') + '</span>' +
+                '</div>' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Mediaan</span>' +
+                  '<span class="detail-value">' + (metrics.dealValue.median_deal_value_30d ? '€' + Math.round(metrics.dealValue.median_deal_value_30d) : '-') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="performance-metric-card">' +
+              '<div class="performance-metric-header">' +
+                '<div class="performance-metric-label-wrapper">' +
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>' +
+                  '</svg>' +
+                  '<p class="performance-metric-label">Consistentie</p>' +
+                '</div>' +
+                '<p class="performance-metric-score">' + Math.round(metrics.consistency.score || 0) + '</p>' +
+              '</div>' +
+              '<div class="performance-metric-details">' +
+                '<div class="performance-metric-detail-item">' +
+                  '<span class="detail-label">Score</span>' +
+                  '<span class="detail-value">' + (metrics.consistency.consistency_score !== null ? Math.round(metrics.consistency.consistency_score) : '-') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+        
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = '<div class="performance-error"><p class="user-empty-text">Geen prestatie data beschikbaar</p></div>';
+      }
+    } catch (error) {
+      console.error('Error loading performance stats:', error);
+      container.innerHTML = '<div class="performance-error"><p class="user-empty-text">Fout bij laden prestaties: ' + error.message + '</p></div>';
+    }
+  }
+
+  async function testPerformanceSystem(partnerId) {
+    const container = document.getElementById('performance-stats-container');
+    if (!container) return;
+    
+    try {
+      container.innerHTML = '<div class="performance-loading"><p class="user-empty-text">Testen...</p></div>';
+      
+      // Test de performance debug endpoint
+      const response = await fetch('/api/admin/ai-router/performance-debug?partner_id=' + partnerId, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Fout bij testen');
+      }
+      
+      const result = await response.json();
+      
+      // Show test result
+      if (result.success) {
+        alert('✅ Test geslaagd!\\n\\nPerformance Score: ' + Math.round(result.data.performanceScore.totalScore) + '/100\\n\\nCheck console voor volledige data.');
+        console.log('Performance Test Result:', result.data);
+        
+        // Reload stats
+        loadPerformanceStats(partnerId);
+      } else {
+        throw new Error('Test mislukt');
+      }
+    } catch (error) {
+      console.error('Performance test error:', error);
+      alert('❌ Test mislukt: ' + error.message);
+      container.innerHTML = '<div class="performance-error"><p class="user-empty-text">Test mislukt: ' + error.message + '</p></div>';
+    }
+  }
+  </script>
+
+  <style>
+  .user-card-header-with-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .performance-test-btn {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s;
+  }
+
+  .performance-test-btn:hover {
+    background: #e5e7eb;
+    color: #374151;
+    border-color: #d1d5db;
+  }
+
+  .user-performance-stats-container {
+    min-height: 200px;
+  }
+
+  .user-performance-stats-horizontal {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .performance-overview-horizontal {
+    padding: 20px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .performance-total-score-horizontal {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .performance-score-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .performance-score-value-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .performance-score-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .performance-score-max {
+    font-size: 18px;
+    color: #9ca3af;
+    margin: 0;
+  }
+
+  .performance-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .performance-metric-card {
+    padding: 16px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+  }
+
+  .performance-metric-card:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .performance-metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .performance-metric-label-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .performance-metric-label-wrapper svg {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+
+  .performance-metric-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+  }
+
+  .performance-metric-score {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+
+  .performance-metric-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .performance-metric-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+  }
+
+  .detail-label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .detail-value {
+    font-size: 12px;
+    color: #111827;
+    font-weight: 600;
+  }
+
+  .performance-loading,
+  .performance-error {
+    padding: 24px;
+    text-align: center;
+  }
+  </style>
+  ` : ''}
+  `,
+  scripts: ['/js/admin/users.js'],
+  stylesheets: ['/css/admin/users.css']
+}) %>

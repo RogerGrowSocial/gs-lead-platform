@@ -1,0 +1,489 @@
+<%
+  const isAdmin = typeof isUserAdmin !== 'undefined' ? isUserAdmin : false;
+  const userIsManager = typeof isManager !== 'undefined' ? isManager : false;
+  const userCanViewAll = typeof canViewAll !== 'undefined' ? canViewAll : (isAdmin || userIsManager);
+  const currentUserId = user?.id;
+  const viewingEmployeeId = employee_id || currentUserId;
+  const isOwnPage = viewingEmployeeId === currentUserId;
+%>
+<%- include('../layouts/admin', {
+  title: 'Tijdregistratie | GrowSocial',
+  activeMenu: 'time-entries',
+  user: user,
+  isUserAdmin: isAdmin,
+  stylesheets: ['/css/admin/users.css', '/css/admin/time-tracking.css', '/css/admin/employees-drawer.css'],
+  scripts: ['/js/admin/time-tracking.js'],
+  extraHead: `
+  <style>
+    /* Critical CSS for time-tracking page - prevent layout shift */
+    .time-tracking-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .time-tracking-card {
+      background: #ffffff;
+      color: #111827;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding-top: 1.5rem;
+      padding-bottom: 1.5rem;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0px 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+    
+    .page-header h1 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      color: #111827;
+    }
+    
+    .text-muted {
+      color: #6b7280;
+      margin: 0;
+    }
+    
+    .time-tracking-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .time-tab-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      color: #111827;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .time-tab-btn.active {
+      background: #ea5d0d;
+      color: #ffffff;
+      border-color: #ea5d0d;
+    }
+    
+    .clock-widget {
+      min-height: 200px;
+    }
+    
+    .clock-card-content {
+      padding: 2rem;
+    }
+    
+    .clock-main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    
+    .clock-left {
+      flex: 1;
+    }
+    
+    .clock-right {
+      flex-shrink: 0;
+    }
+    
+    .clock-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
+      min-width: 200px;
+      position: relative;
+      min-height: 3rem;
+    }
+    
+    .clock-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      border-radius: 8px;
+      gap: 0.5rem;
+      cursor: pointer;
+      height: 3rem;
+      padding: 0 1.5rem;
+    }
+    
+    .card-header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 0.5rem;
+    }
+    
+    .card-header h3 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1;
+      color: #111827;
+    }
+    
+    .view-content {
+      padding: 1.5rem;
+    }
+    
+    .entries-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      text-align: center;
+      color: #6b7280;
+    }
+    
+    /* Prevent text rendering shift */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Hide content until fully styled */
+    html:not(.css-loaded) .time-tracking-page {
+      visibility: hidden;
+    }
+    
+    html.css-loaded .time-tracking-page {
+      visibility: visible;
+    }
+  </style>
+  `,
+  body: `
+  <div class="time-tracking-page" data-employee-id="${viewingEmployeeId}" data-is-own-page="${isOwnPage}">
+    <!-- Header -->
+    <div class="page-header" style="margin-bottom: 2rem;">
+      <div>
+        <h1>Tijdregistratie</h1>
+        <p class="text-muted">${isOwnPage ? 'Registreer je uren en houd bij waar je aan werkt' : 'Overzicht van urenregistraties'}</p>
+      </div>
+      ${userCanViewAll ? `
+      <div class="time-tracking-tabs">
+        <button class="time-tab-btn active" data-tab="own" onclick="switchTimeTab('own')">
+          Tijdregistratie
+        </button>
+        <button class="time-tab-btn" data-tab="all" onclick="switchTimeTab('all')">
+          Alle registraties
+        </button>
+      </div>
+      ` : ''}
+    </div>
+
+    <!-- Clock In/Out Card (only for own page) -->
+    ${isOwnPage ? `
+    <div class="time-tracking-card clock-widget" id="clockCard" data-slot="card">
+      <div class="clock-card-content" data-slot="card-content">
+        <div class="clock-main">
+          <div class="clock-left">
+            <div class="clock-left-inner">
+              <span class="clock-status-badge" id="clockStatusBadge" data-slot="badge">
+                <div class="status-badge-dot" id="statusDot"></div>
+                <span class="status-badge-text" id="clockStatusText">Niet ingeklokt</span>
+              </span>
+              <div class="clock-timer-wrapper">
+                <div class="clock-timer" id="clockTimer">00:00:00</div>
+                <div class="clock-timer-subtitle" id="clockTimerSubtitle">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="clock-icon">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  <span>Klik op "Klok in" om te beginnen</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="clock-right">
+            <div class="clock-actions">
+              <button class="clock-btn clock-in-btn" id="clockInBtn" onclick="clockIn()" data-slot="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Klok in
+              </button>
+              <div class="clock-secondary-actions" id="clockSecondaryActions" style="display: none;">
+                <button class="clock-btn clock-out-btn" id="clockOutBtn" onclick="clockOut()" data-slot="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-square">
+                    <rect width="18" height="18" x="3" y="3" rx="2" fill="currentColor"></rect>
+                  </svg>
+                  Klok uit
+                </button>
+                <button class="clock-btn clock-manual-btn" id="clockManualBtn" onclick="openManualEntryDrawer()" data-slot="button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                  Handmatig toevoegen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Current Activity Display (shown when clocked in) - Full width container -->
+        <div class="clock-activity-display" id="clockActivityDisplay" style="display: none;">
+          <div class="activity-display-content">
+            <p class="activity-display-label">HUIDIGE ACTIVITEIT</p>
+            <p class="activity-display-text" id="activityDisplayText">Geen activiteit opgegeven</p>
+          </div>
+          <button class="activity-edit-btn" id="activityEditBtn" onclick="toggleActivityForm()" data-slot="button">
+            <span id="activityEditBtnText">Wijzig activiteit</span>
+          </button>
+        </div>
+        
+        <!-- Activity Form (collapsible, shown when edit button clicked) - Full width container -->
+        <div class="clock-activity-form" id="clockActivityForm" style="display: none;">
+          <h3 class="activity-form-title">Wat ben je aan het doen?</h3>
+          <div class="activity-form-grid">
+            <div class="activity-form-field">
+              <label for="activeProject" data-slot="label">Project</label>
+              <input type="text" id="activeProject" class="activity-input" data-slot="input" placeholder="Bijv. Website redesign" onchange="updateActiveTimer()" onblur="updateActiveTimer()">
+            </div>
+            <div class="activity-form-field">
+              <label for="activeCustomer" data-slot="label">Klant</label>
+              <select id="activeCustomer" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
+                <option value="">Selecteer klant</option>
+                ${(customers || []).map(c => `
+                  <option value="${c.id}">${c.company_name || (c.first_name + ' ' + c.last_name) || c.email}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="activity-form-field">
+              <label for="activeTask" data-slot="label">Taak</label>
+              <select id="activeTask" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
+                <option value="">Selecteer taak</option>
+                ${(tasks || []).map(t => `
+                  <option value="${t.id}">${t.title}</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="activity-form-field-full">
+            <label for="activeNote" data-slot="label">Beschrijving</label>
+            <textarea id="activeNote" class="activity-input activity-textarea" data-slot="textarea" placeholder="Beschrijf waar je aan werkt..." onchange="updateActiveTimer()" onblur="updateActiveTimer()"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Week Overview -->
+    <div class="time-tracking-card" data-slot="card">
+      <div class="card-header" data-slot="card-header">
+        <div>
+          <h3 data-slot="card-title">Weekoverzicht</h3>
+          <p class="card-description" data-slot="card-description" id="weekDisplay">Deze week</p>
+        </div>
+        <div class="week-navigation">
+          <button class="btn-icon" onclick="changeWeek(-1)" data-slot="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-chevron-left">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+          </button>
+          <button class="btn-icon" onclick="changeWeek(1)" data-slot="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-chevron-right">
+              <path d="m9 18 6-6-6-6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="card-content" data-slot="card-content">
+        <div class="week-stats" id="weekStats">
+          <div class="stat-item">
+            <p class="stat-label">Totaal deze week</p>
+            <p class="stat-value" id="weekTotal">0min</p>
+          </div>
+          <div class="stat-item">
+            <p class="stat-label">Concept</p>
+            <p class="stat-value" id="weekDraft">0min</p>
+          </div>
+          <div class="stat-item">
+            <p class="stat-label">Ingediend</p>
+            <p class="stat-value" id="weekSubmitted">0min</p>
+          </div>
+          <div class="stat-item">
+            <p class="stat-label">Goedgekeurd</p>
+            <p class="stat-value" id="weekApproved">0min</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar View / Time Entries List -->
+    <div class="time-tracking-card" id="ownTimeEntriesCard">
+      <div class="card-header">
+        <h3>Urenregistraties</h3>
+        <div class="view-toggle">
+          <button class="btn-toggle active" data-view="list" onclick="switchView('list')">
+            <i class="fas fa-list"></i> Lijst
+          </button>
+          <button class="btn-toggle" data-view="calendar" onclick="switchView('calendar')">
+            <i class="fas fa-calendar"></i> Kalender
+          </button>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div class="view-content" id="listView">
+        <div class="entries-list" id="entriesList">
+          <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i> Laden...
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar View -->
+      <div class="view-content" id="calendarView" style="display: none;">
+        <div class="calendar-container" id="calendarContainer">
+          <!-- Calendar will be rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- All Time Entries (Manager/Admin only) -->
+    ${userCanViewAll ? `
+    <div class="time-tracking-card" id="allTimeEntriesCard" style="display: none;">
+      <div class="card-header">
+        <h3>Alle urenregistraties</h3>
+        <div class="view-toggle">
+          <button class="btn-toggle active" data-view="all-list" onclick="switchAllView('list')">
+            <i class="fas fa-list"></i> Lijst
+          </button>
+        </div>
+      </div>
+
+      <!-- All Entries List View -->
+      <div class="view-content" id="allListView">
+        <div class="entries-list" id="allEntriesList">
+          <div class="loading-state">
+            <i class="fas fa-spinner fa-spin"></i> Laden...
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Manual Entry Drawer (only for own page) -->
+    ${isOwnPage ? `
+    <div id="manualEntryDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" onclick="closeManualEntryDrawer()"></div>
+    <aside id="manualEntryDrawer" class="gs-drawer" aria-hidden="true" aria-label="Handmatig toevoegen">
+      <div class="gs-drawer__header">
+        <div>
+          <h3 class="gs-drawer__title">Handmatig toevoegen</h3>
+          <p class="gs-drawer__subtitle">Voeg een urenregistratie handmatig toe</p>
+        </div>
+        <button type="button" class="gs-drawer__close" onclick="closeManualEntryDrawer()" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="gs-drawer__body">
+        <form id="manualEntryForm" autocomplete="off">
+          <div class="gs-form-grid">
+            <div class="gs-field">
+              <label class="gs-label" for="manualDate">Datum *</label>
+              <input class="gs-input" id="manualDate" name="date" type="date" required value="${new Date().toISOString().split('T')[0]}" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="manualStart">Start tijd *</label>
+              <input class="gs-input" id="manualStart" name="start" type="time" required />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="manualEnd">Eind tijd *</label>
+              <input class="gs-input" id="manualEnd" name="end" type="time" required />
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="manualProject">Project</label>
+              <input class="gs-input" id="manualProject" name="project" type="text" placeholder="Project naam" />
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="manualCustomer">Klant</label>
+              <select class="gs-select" id="manualCustomer" name="customer">
+                <option value="">Selecteer klant</option>
+                ${(customers || []).map(c => `
+                  <option value="${c.id}">${c.company_name || (c.first_name + ' ' + c.last_name) || c.email}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="manualTask">Taak</label>
+              <select class="gs-select" id="manualTask" name="task">
+                <option value="">Selecteer taak</option>
+                ${(tasks || []).map(t => `
+                  <option value="${t.id}">${t.title}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="manualNote">Beschrijving</label>
+              <textarea class="gs-input" id="manualNote" name="note" rows="3" placeholder="Wat heb je gedaan?"></textarea>
+            </div>
+          </div>
+          <div id="manualEntryError" class="gs-error" style="display:none;"></div>
+        </form>
+      </div>
+      <div class="gs-drawer__footer">
+        <button type="button" class="gs-btn gs-btn--ghost" onclick="closeManualEntryDrawer()">Annuleren</button>
+        <button type="button" class="gs-btn gs-btn--primary" id="manualEntrySubmit" onclick="submitManualEntry()">Toevoegen</button>
+      </div>
+    </aside>
+    ` : ''}
+  </div>
+
+  <script>
+    window.timeTrackingData = {
+      employeeId: '${viewingEmployeeId}',
+      isOwnPage: ${isOwnPage},
+      isAdmin: ${isAdmin},
+      canViewAll: ${userCanViewAll}
+    };
+  </script>
+  `,
+  extraHead: `
+  <style>
+    .time-tracking-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+  </style>
+  `
+}) %>
+

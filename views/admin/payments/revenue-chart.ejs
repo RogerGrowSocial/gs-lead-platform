@@ -1,0 +1,34 @@
+<!-- Revenue Chart Container -->
+<div class="revenue-chart-card">
+  <!-- Header with filters -->
+  <div class="revenue-chart-header">
+    <h3 class="revenue-chart-title">Omzet over tijd</h3>
+    
+    <div class="revenue-chart-filters">
+      <!-- Time period buttons -->
+      <div class="period-buttons">
+        <button class="period-btn active" data-period="dag">Dag</button>
+        <button class="period-btn" data-period="week">Week</button>
+        <button class="period-btn" data-period="maand">Maand</button>
+        <button class="period-btn" data-period="jaar">Jaar</button>
+      </div>
+      
+      <!-- Year dropdown -->
+      <div class="year-select-wrapper">
+        <select class="year-select" id="revenueYearSelect">
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <svg class="year-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Chart canvas -->
+  <div class="revenue-chart-body">
+    <canvas id="revenueChart" width="800" height="300"></canvas>
+  </div>
+</div>

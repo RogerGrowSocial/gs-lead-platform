@@ -1,0 +1,1288 @@
+<%
+  const employeeName = (employee.first_name && employee.last_name) 
+    ? (employee.first_name + ' ' + employee.last_name) 
+    : employee.name || employee.email || 'Onbekend';
+  const initials = employee.first_name && employee.last_name
+    ? (employee.first_name.charAt(0) + employee.last_name.charAt(0)).toUpperCase()
+    : employeeName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+  
+  const formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  
+  const formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }
+    return d.toLocaleString('nl-NL', options)
+  }
+  
+  const startDate = employee.startDate ? formatDate(employee.startDate) : '-';
+  const revenue = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(employee.revenue);
+  const avgDealValue = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format((employee.revenue || 0) / Math.max(1, employee.dealsWon || 1));
+%>
+<%- include('../layouts/admin', {
+  title: employeeName + ' - Werknemers | GrowSocial Admin',
+  activeMenu: 'employees',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  showBackButton: true,
+  backButtonUrl: '/admin/employees',
+  backButtonText: 'Terug naar werknemers',
+  stylesheets: ['/css/admin/users.css'],
+  body: `
+  <div class="user-detail-page">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Employee Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div class="user-info-avatar-section">
+              <span class="user-avatar-large-new" aria-hidden="true">
+                ${initials}
+              </span>
+              <div class="user-info-name-section">
+                <h1 class="user-info-name-new">${employeeName}</h1>
+                <div class="user-info-badges-container">
+                  <span class="user-role-badge-new ${employee.is_admin ? 'is-admin' : 'is-user'}">
+                    ${employee.is_admin ? `
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                      </svg>
+                    ` : `
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    `}
+                    ${employee.is_admin ? 'Admin' : 'Werknemer'}
+                  </span>
+                  <span class="user-status-badge-new ${employee.status === 'active' ? 'is-active' : 'is-blocked'}">
+                    ${employee.status === 'active' ? 'Actief' : 'Inactief'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            ${employee.company_name ? `
+              <div class="user-info-company-section">
+                <div class="user-info-company-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M10 6h4"></path>
+                    <path d="M10 10h4"></path>
+                    <path d="M10 14h4"></path>
+                    <path d="M10 18h4"></path>
+                  </svg>
+                </div>
+                <span class="user-info-company-name">${employee.company_name}</span>
+              </div>
+              <div class="user-info-company-divider"></div>
+            ` : ''}
+            <div class="user-info-contact-section">
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </svg>
+                <span class="user-info-contact-text">${employee.email || '-'}</span>
+              </div>
+              ${employee.phone ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <span class="user-info-contact-text">${employee.phone}</span>
+                </div>
+              ` : ''}
+              ${employee.location ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin">
+                    <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span class="user-info-contact-text">${employee.location}</span>
+                </div>
+              ` : ''}
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase">
+                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+                <span class="user-info-contact-text">${employee.role_display_name || employee.role || 'Werknemer'}${employee.department ? ' • ' + employee.department : ''}</span>
+              </div>
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                  <line x1="16" x2="16" y1="2" y2="6"></line>
+                  <line x1="8" x2="8" y1="2" y2="6"></line>
+                  <line x1="3" x2="21" y1="10" y2="10"></line>
+                </svg>
+                <span class="user-info-contact-text">Sinds ${startDate}</span>
+              </div>
+            </div>
+            ${employee.bio ? `
+              <div class="user-info-bio-section">
+                <p class="user-info-bio-text">${employee.bio}</p>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <div style="padding: 20px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                  <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #dcfce7; border-radius: 8px;">
+                    <i class="fas fa-check-circle" style="font-size: 20px; color: #16a34a;"></i>
+                  </div>
+                  <div>
+                    <p style="font-size: 13px; color: #6b7280; margin: 0 0 4px 0;">Deals Gewonnen</p>
+                    <p style="font-size: 24px; font-weight: 700; color: #111827; margin: 0;">${employee.dealsWon || 0}</p>
+                  </div>
+                </div>
+              </div>
+              <div style="padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                  <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #dbeafe; border-radius: 8px;">
+                    <i class="fas fa-bullseye" style="font-size: 20px; color: #2563eb;"></i>
+                  </div>
+                  <div>
+                    <p style="font-size: 13px; color: #6b7280; margin: 0 0 4px 0;">In Progress</p>
+                    <p style="font-size: 24px; font-weight: 700; color: #111827; margin: 0;">${employee.dealsInProgress || 0}</p>
+                  </div>
+                </div>
+              </div>
+              <div style="padding: 20px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                  <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #fed7aa; border-radius: 8px;">
+                    <i class="fas fa-dollar-sign" style="font-size: 20px; color: #ea5d0d;"></i>
+                  </div>
+                  <div>
+                    <p style="font-size: 13px; color: #6b7280; margin: 0 0 4px 0;">Totale Omzet</p>
+                    <p style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">${revenue}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="user-tabs-container">
+          <div class="user-tabs-header">
+            <button class="user-tab-btn user-tab-active" data-tab="activity">Activiteit</button>
+            <button class="user-tab-btn" data-tab="deals">Recente Deals</button>
+            <button class="user-tab-btn" data-tab="performance">Performance</button>
+          </div>
+          <div class="user-tab-content" id="tab-activity">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Recente Activiteit</h3>
+                <div class="user-activity-list">
+                  ${(() => {
+                    var activities = employee.activities || [];
+                    if (activities.length === 0) {
+                      return '<p class="user-empty-text">Geen activiteit gevonden.</p>';
+                    }
+                    return activities.map(function(activity) {
+                      return `
+                        <div class="user-activity-item">
+                          <div class="user-activity-icon">
+                            <i class="fas fa-comment"></i>
+                          </div>
+                          <div class="user-activity-content">
+                            <p class="user-activity-title">${activity.description || 'Activiteit'}</p>
+                            <p class="user-activity-date">${activity.relative || ''}</p>
+                          </div>
+                        </div>
+                      `;
+                    }).join('');
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="user-tab-content" id="tab-deals" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Recente Deals</h3>
+                ${(() => {
+                  var deals = employee.recentDeals || [];
+                  if (deals.length === 0) {
+                    return '<p class="user-empty-text">Geen deals gevonden.</p>';
+                  }
+                  return deals.map(function(deal) {
+                    const expectedClose = formatDate(deal.expectedClose);
+                    const dealValue = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(deal.value);
+                    return `
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px;">
+                        <div>
+                          <p style="font-size: 15px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">${deal.company || 'Onbekend'}</p>
+                          <p style="font-size: 13px; color: #6b7280; margin: 0;">Verwacht: ${expectedClose}</p>
+                        </div>
+                        <div style="text-align: right;">
+                          <p style="font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 6px 0;">${dealValue}</p>
+                          <span style="padding: 4px 8px; background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 12px; font-weight: 500;">Onderhandeling</span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('');
+                })()}
+              </div>
+            </div>
+          </div>
+          <div class="user-tab-content" id="tab-performance" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Maandelijkse Performance</h3>
+                ${(() => {
+                  var performance = employee.monthlyPerformance || [];
+                  if (performance.length === 0) {
+                    return '<p class="user-empty-text">Geen performance data gevonden.</p>';
+                  }
+                  return performance.map(function(month) {
+                    const monthRevenue = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(month.revenue);
+                    return `
+                      <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px;">
+                        <div>
+                          <p style="font-size: 15px; font-weight: 600; color: #111827; margin: 0 0 6px 0;">${month.month}</p>
+                          <div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280;">
+                            <i class="fas fa-award" style="font-size: 14px; color: #fbbf24;"></i>
+                            <span>${month.deals} deals</span>
+                          </div>
+                        </div>
+                        <p style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">${monthRevenue}</p>
+                      </div>
+                    `;
+                  }).join('');
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Skills Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 class="user-card-title-small" style="margin: 0;">Vaardigheden</h3>
+              ${isUserAdmin ? `
+                <button class="employee-skill-edit-btn" onclick="openSkillsModal('${employee.id}')" title="Vaardigheden bewerken">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </button>
+              ` : ''}
+            </div>
+            <div class="employee-skills-container">
+              ${(employee.skills || []).length > 0 ? (employee.skills || []).map(function(skill) {
+                // Map skill names to icons
+                const skillIcons = {
+                  'Sales': 'fa-handshake',
+                  'Account Management': 'fa-users',
+                  'CRM': 'fa-database',
+                  'Marketing': 'fa-bullhorn',
+                  'Content': 'fa-file-alt',
+                  'SEO': 'fa-search',
+                  'Algemeen': 'fa-star',
+                  'Communication': 'fa-comments',
+                  'Negotiation': 'fa-handshake',
+                  'Project Management': 'fa-tasks',
+                  'Analytics': 'fa-chart-line',
+                  'Design': 'fa-palette',
+                  'Development': 'fa-code',
+                  'Support': 'fa-life-ring'
+                };
+                const icon = skillIcons[skill] || 'fa-star';
+                return `
+                  <div class="employee-skill-badge" title="${skill}">
+                    <div class="employee-skill-icon">
+                      <i class="fas ${icon}"></i>
+                    </div>
+                    <span class="employee-skill-label">${skill}</span>
+                  </div>
+                `;
+              }).join('') : '<p class="user-empty-text" style="margin: 0;">Geen vaardigheden toegevoegd</p>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Skills Edit Modal -->
+        ${isUserAdmin ? `
+        <div id="skillsModal" class="skills-modal" style="display: none;">
+          <div class="skills-modal-overlay" onclick="closeSkillsModal()"></div>
+          <div class="skills-modal-content">
+            <div class="skills-modal-header">
+              <div>
+                <h3 class="skills-modal-title">Vaardigheden bewerken</h3>
+                <p class="skills-modal-subtitle">Selecteer vaardigheden of voeg een nieuwe toe</p>
+              </div>
+              <button class="skills-modal-close" onclick="closeSkillsModal()" aria-label="Sluiten">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div class="skills-modal-body">
+              <!-- Add Custom Skill Section -->
+              <div class="skills-add-custom-section">
+                <div class="skills-add-custom-header">
+                  <h4 class="skills-section-title">Nieuwe vaardigheid toevoegen</h4>
+                </div>
+                <div class="skills-add-custom-form">
+                  <div class="skills-add-custom-input-group">
+                    <input type="text" id="customSkillName" placeholder="Bijv. Python, Leadership, etc." class="skills-custom-input" maxlength="50" onkeypress="if(event.key === 'Enter') { addCustomSkill(); return false; }">
+                    <div class="skills-icon-picker-container">
+                      <button type="button" class="skills-icon-picker-btn" id="iconPickerBtn" onclick="toggleIconPicker()">
+                        <i class="fas fa-star" id="selectedIconPreview"></i>
+                        <span>Icoon kiezen</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </button>
+                      <div id="iconPickerDropdown" class="skills-icon-picker-dropdown" style="display: none;">
+                        <div class="skills-icon-picker-grid-wrapper" id="iconPickerGridWrapper">
+                          <div class="skills-icon-picker-grid">
+                            ${['fa-star', 'fa-handshake', 'fa-users', 'fa-database', 'fa-bullhorn', 'fa-file-alt', 'fa-search', 'fa-comments', 'fa-tasks', 'fa-chart-line', 'fa-palette', 'fa-code', 'fa-life-ring', 'fa-lightbulb', 'fa-rocket', 'fa-trophy', 'fa-graduation-cap', 'fa-briefcase', 'fa-cog', 'fa-heart', 'fa-fire', 'fa-gem', 'fa-crown', 'fa-medal'].map(function(icon) {
+                              return '<button type="button" class="skills-icon-option" onclick="selectIcon(\'' + icon + '\')" title="' + icon + '"><i class="fas ' + icon + '"></i></button>';
+                            }).join('')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" class="btn-add-skill" onclick="addCustomSkill()">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Toevoegen
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Existing Skills Section -->
+              <div class="skills-available-list">
+                <div class="skills-section-header">
+                  <h4 class="skills-section-title">Beschikbare vaardigheden</h4>
+                  <span class="skills-count" id="selectedSkillsCount">0 geselecteerd</span>
+                </div>
+                <div class="skills-checkbox-grid" id="skillsCheckboxGrid">
+                  ${(() => {
+                    const standardSkills = ['Sales', 'Account Management', 'CRM', 'Marketing', 'Content', 'SEO', 'Communication', 'Negotiation', 'Project Management', 'Analytics', 'Design', 'Development', 'Support', 'Algemeen'];
+                    const employeeSkills = employee.skills || [];
+                    const customSkillsFromDB = employeeSkills.filter(s => !standardSkills.includes(s));
+                    
+                    // Add custom skills from DB to customSkills array
+                    customSkills.push(...customSkillsFromDB);
+                    
+                    let output = '';
+                    
+                    // Render standard skills
+                    standardSkills.forEach(function(skill) {
+                      const isSelected = employeeSkills.includes(skill);
+                      output += '<label class="skill-checkbox-item" data-skill-name="' + skill + '">';
+                      output += '<input type="checkbox" value="' + skill + '" ' + (isSelected ? 'checked' : '') + ' class="skill-checkbox" onchange="updateSkillsCount()">';
+                      output += '<span>' + skill + '</span>';
+                      output += '</label>';
+                    });
+                    
+                    // Render custom skills from database
+                    customSkillsFromDB.forEach(function(skill) {
+                      output += '<label class="skill-checkbox-item" data-skill-name="' + skill + '" data-is-custom="true">';
+                      output += '<input type="checkbox" value="' + skill + '" checked class="skill-checkbox" onchange="updateSkillsCount()">';
+                      output += '<span>' + skill + '</span>';
+                      output += '<button type="button" class="skill-delete-btn" onclick="event.stopPropagation(); removeSkill(\'' + skill + '\')" title="Verwijderen">';
+                      output += '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+                      output += '<polyline points="3 6 5 6 21 6"></polyline>';
+                      output += '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>';
+                      output += '</svg>';
+                      output += '</button>';
+                      output += '</label>';
+                    });
+                    
+                    return output;
+                  })()}
+                </div>
+              </div>
+            </div>
+            <div class="skills-modal-actions">
+              <button class="btn-secondary" onclick="closeSkillsModal()">Annuleren</button>
+              <button class="btn-primary" onclick="saveSkills('${employee.id}')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Opslaan
+              </button>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Quick Stats Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Snelle Statistieken</h3>
+            <div class="user-stats-list-new">
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Gem. deal waarde</p>
+                <p class="user-stat-value-new">${avgDealValue}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Win rate</p>
+                <p class="user-stat-value-new">75%</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Gem. deal cyclus</p>
+                <p class="user-stat-value-new">32 dagen</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Actieve prospects</p>
+                <p class="user-stat-value-new">12</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Info Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title">Account Informatie</h3>
+            <div class="user-info-list">
+              <div class="user-info-item">
+                <p class="user-info-label">Account aangemaakt</p>
+                <p class="user-info-value">${formatDateTime(employee.created_at)}</p>
+              </div>
+              ${employee.last_login ? `
+                <div class="user-info-item">
+                  <p class="user-info-label">Laatste login</p>
+                  <p class="user-info-value">${formatDateTime(employee.last_login)}</p>
+                </div>
+              ` : ''}
+              <div class="user-info-item">
+                <p class="user-info-label">Employee ID</p>
+                <p class="user-info-value user-info-mono">${employee.id ? employee.id.substring(0, 8) : '-'}</p>
+              </div>
+              ${employee.performance > 0 ? `
+                <div class="user-info-item">
+                  <p class="user-info-label">Performance Score</p>
+                  <p class="user-info-value">${employee.performance}</p>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Skills Badges */
+    .employee-skills-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .employee-skill-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: default;
+      position: relative;
+    }
+
+    .employee-skill-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .employee-skill-icon i {
+      font-size: 20px;
+      color: #6b7280;
+      transition: color 0.2s ease;
+    }
+
+    .employee-skill-badge:hover .employee-skill-icon {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+      transform: scale(1.05);
+    }
+
+    .employee-skill-badge:hover .employee-skill-icon i {
+      color: #374151;
+    }
+
+    .employee-skill-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      text-align: center;
+      max-width: 80px;
+      line-height: 1.2;
+    }
+
+    .employee-skill-edit-btn {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+
+    .employee-skill-edit-btn:hover {
+      background: #e5e7eb;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+
+    /* Skills Modal */
+    .skills-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+    }
+
+    .skills-modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .skills-modal-content {
+      position: relative;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      width: 100%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .skills-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+
+    .skills-modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 4px 0;
+    }
+
+    .skills-modal-subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    .skills-modal-close {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .skills-modal-close:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .skills-modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Add Custom Skill Section */
+    .skills-add-custom-section {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .skills-add-custom-header {
+      margin-bottom: 16px;
+    }
+
+    .skills-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+
+    .skills-add-custom-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .skills-add-custom-input-group {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .skills-custom-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .skills-custom-input:focus {
+      outline: none;
+      border-color: #ea5d0d;
+      box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+    }
+
+    .skills-icon-picker-container {
+      position: relative;
+    }
+
+    .skills-icon-picker-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #374151;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .skills-icon-picker-btn:hover {
+      border-color: #ea5d0d;
+      color: #ea5d0d;
+    }
+
+    .skills-icon-picker-btn svg {
+      transition: transform 0.2s;
+    }
+
+    .skills-icon-picker-btn.active svg {
+      transform: rotate(180deg);
+    }
+
+    .skills-icon-picker-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 360px;
+      min-width: 280px;
+      max-width: calc(100vw - 40px);
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      z-index: 10;
+      max-height: 320px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 640px) {
+      .skills-icon-picker-dropdown {
+        left: auto;
+        right: 0;
+        width: calc(100vw - 32px);
+        max-width: 360px;
+      }
+    }
+
+    .skills-icon-picker-grid-wrapper {
+      position: relative;
+      overflow-x: auto;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db #f3f4f6;
+      padding: 4px;
+      margin: -4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .skills-icon-picker-grid-wrapper::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .skills-icon-picker-grid-wrapper::-webkit-scrollbar-track {
+      background: #f9fafb;
+      border-radius: 4px;
+      margin: 4px;
+    }
+
+    .skills-icon-picker-grid-wrapper::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+      border: 2px solid #f9fafb;
+    }
+
+    .skills-icon-picker-grid-wrapper::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    .skills-icon-picker-grid-wrapper::-webkit-scrollbar-corner {
+      background: #f9fafb;
+    }
+
+    /* Scroll indicators - fade gradients */
+    .skills-icon-picker-grid-wrapper::before {
+      content: '';
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      pointer-events: none;
+      z-index: 2;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      margin-bottom: -20px;
+    }
+
+    .skills-icon-picker-grid-wrapper::after {
+      content: '';
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      pointer-events: none;
+      z-index: 2;
+      background: linear-gradient(to top, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      margin-top: -20px;
+    }
+
+    .skills-icon-picker-grid-wrapper.scrollable-top::before {
+      opacity: 1;
+    }
+
+    .skills-icon-picker-grid-wrapper.scrollable-bottom::after {
+      opacity: 1;
+    }
+
+    .skills-icon-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      min-width: fit-content;
+      width: 100%;
+    }
+
+    @media (max-width: 480px) {
+      .skills-icon-picker-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+
+    .skills-icon-option {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+      flex-shrink: 0;
+    }
+
+    .skills-icon-option i {
+      font-size: 18px;
+    }
+
+    .skills-icon-option:hover {
+      background: #ea5d0d;
+      border-color: #ea5d0d;
+      color: #ffffff;
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(234, 93, 13, 0.3);
+    }
+
+    .skills-icon-option:active {
+      transform: scale(0.95);
+    }
+
+    .btn-add-skill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: #ea5d0d;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-add-skill:hover {
+      background: #d9540b;
+    }
+
+    .btn-add-skill:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+
+    /* Existing Skills Section */
+    .skills-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .skills-count {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .skills-checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .skill-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #ffffff;
+    }
+
+    .skill-checkbox-item:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      transform: translateY(-1px);
+    }
+
+    .skill-checkbox-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #ea5d0d;
+      flex-shrink: 0;
+    }
+
+    .skill-checkbox-item input[type="checkbox"]:checked ~ span {
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .skill-checkbox-item:has(input[type="checkbox"]:checked) {
+      background: #fef5f0;
+      border-color: #ea5d0d;
+    }
+
+    .skill-checkbox-item span {
+      font-size: 14px;
+      color: #374151;
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .skill-delete-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #9ca3af;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+      opacity: 0;
+      margin-left: 4px;
+    }
+
+    .skill-checkbox-item:hover .skill-delete-btn {
+      opacity: 1;
+    }
+
+    .skill-delete-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .skills-modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      padding: 20px 24px;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #ea5d0d;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #d9540b;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const tabButtons = document.querySelectorAll('.user-tab-btn');
+      const tabContents = document.querySelectorAll('.user-tab-content');
+      
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const tab = this.dataset.tab;
+          
+          // Remove active class from all buttons and contents
+          tabButtons.forEach(b => b.classList.remove('user-tab-active'));
+          tabContents.forEach(c => {
+            c.classList.remove('user-tab-active');
+            c.style.display = 'none';
+          });
+          
+          // Add active class to clicked button and corresponding content
+          this.classList.add('user-tab-active');
+          const targetContent = document.getElementById('tab-' + tab);
+          if (targetContent) {
+            targetContent.classList.add('user-tab-active');
+            targetContent.style.display = 'block';
+          }
+        });
+      });
+    });
+
+    ${isUserAdmin ? `
+    let selectedIcon = 'fa-star';
+    let customSkills = [];
+
+    function openSkillsModal(employeeId) {
+      const modal = document.getElementById('skillsModal');
+      if (modal) {
+        // Initialize custom skills from existing skills that are not in standard list
+        const standardSkills = ['Sales', 'Account Management', 'CRM', 'Marketing', 'Content', 'SEO', 'Communication', 'Negotiation', 'Project Management', 'Analytics', 'Design', 'Development', 'Support', 'Algemeen'];
+        const employeeSkills = ${JSON.stringify(employee.skills || [])};
+        customSkills = employeeSkills.filter(s => !standardSkills.includes(s));
+        
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        updateSkillsCount();
+      }
+    }
+
+    function closeSkillsModal() {
+      const modal = document.getElementById('skillsModal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        // Reset form
+        document.getElementById('customSkillName').value = '';
+        selectedIcon = 'fa-star';
+        document.getElementById('selectedIconPreview').className = 'fas fa-star';
+        document.getElementById('iconPickerDropdown').style.display = 'none';
+        document.getElementById('iconPickerBtn').classList.remove('active');
+      }
+    }
+
+    function toggleIconPicker() {
+      const dropdown = document.getElementById('iconPickerDropdown');
+      const btn = document.getElementById('iconPickerBtn');
+      const wrapper = document.getElementById('iconPickerGridWrapper');
+      const isVisible = dropdown.style.display !== 'none';
+      dropdown.style.display = isVisible ? 'none' : 'flex';
+      btn.classList.toggle('active', !isVisible);
+      
+      if (!isVisible && wrapper) {
+        // Update scroll indicators after a brief delay to allow rendering
+        setTimeout(() => updateScrollIndicators(wrapper), 100);
+        // Update on scroll
+        wrapper.addEventListener('scroll', () => updateScrollIndicators(wrapper));
+      }
+    }
+
+    function updateScrollIndicators(wrapper) {
+      if (!wrapper) return;
+      const isScrollable = wrapper.scrollHeight > wrapper.clientHeight;
+      const isAtTop = wrapper.scrollTop === 0;
+      const isAtBottom = wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - 1;
+      
+      wrapper.classList.toggle('scrollable-top', isScrollable && !isAtTop);
+      wrapper.classList.toggle('scrollable-bottom', isScrollable && !isAtBottom);
+    }
+
+    function selectIcon(icon) {
+      selectedIcon = icon;
+      document.getElementById('selectedIconPreview').className = 'fas ' + icon;
+      document.getElementById('iconPickerDropdown').style.display = 'none';
+      document.getElementById('iconPickerBtn').classList.remove('active');
+    }
+
+    function addCustomSkill() {
+      const nameInput = document.getElementById('customSkillName');
+      const skillName = nameInput.value.trim();
+      
+      if (!skillName) {
+        alert('Voer een vaardigheidsnaam in');
+        return;
+      }
+
+      // Check if skill already exists
+      const existingCheckboxes = document.querySelectorAll('.skill-checkbox');
+      const existingSkills = Array.from(existingCheckboxes).map(cb => cb.value);
+      
+      if (existingSkills.includes(skillName) || customSkills.includes(skillName)) {
+        alert('Deze vaardigheid bestaat al');
+        return;
+      }
+
+      // Add to custom skills array
+      customSkills.push(skillName);
+
+      // Add checkbox to grid
+      const grid = document.getElementById('skillsCheckboxGrid');
+      const newItem = document.createElement('label');
+      newItem.className = 'skill-checkbox-item';
+      newItem.setAttribute('data-skill-name', skillName);
+      newItem.setAttribute('data-is-custom', 'true');
+      newItem.innerHTML = '<input type="checkbox" value="' + skillName + '" checked class="skill-checkbox" onchange="updateSkillsCount()"><span>' + skillName + '</span><button type="button" class="skill-delete-btn" onclick="event.stopPropagation(); removeSkill(\'' + skillName + '\')" title="Verwijderen"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>';
+      grid.appendChild(newItem);
+
+      // Store icon mapping in data attribute
+      newItem.setAttribute('data-icon', selectedIcon);
+
+      // Reset form
+      nameInput.value = '';
+      selectedIcon = 'fa-star';
+      document.getElementById('selectedIconPreview').className = 'fas fa-star';
+      updateSkillsCount();
+    }
+
+    function updateSkillsCount() {
+      const checkboxes = document.querySelectorAll('.skill-checkbox:checked');
+      const count = checkboxes.length;
+      document.getElementById('selectedSkillsCount').textContent = count + ' geselecteerd';
+    }
+
+    function removeSkill(skillName) {
+      if (!confirm('Weet je zeker dat je de vaardigheid "' + skillName + '" wilt verwijderen?')) {
+        return;
+      }
+
+      // Remove from custom skills array
+      customSkills = customSkills.filter(s => s !== skillName);
+
+      // Find and remove the checkbox item
+      const items = document.querySelectorAll('.skill-checkbox-item');
+      items.forEach(item => {
+        if (item.getAttribute('data-skill-name') === skillName && item.getAttribute('data-is-custom') === 'true') {
+          item.remove();
+        }
+      });
+
+      // Uncheck if it was checked
+      const checkboxes = document.querySelectorAll('.skill-checkbox');
+      checkboxes.forEach(cb => {
+        if (cb.value === skillName) {
+          cb.checked = false;
+          cb.closest('.skill-checkbox-item')?.remove();
+        }
+      });
+
+      updateSkillsCount();
+    }
+
+    async function saveSkills(employeeId) {
+      const checkboxes = document.querySelectorAll('.skill-checkbox:checked');
+      const skills = Array.from(checkboxes).map(cb => {
+        const item = cb.closest('.skill-checkbox-item');
+        return {
+          name: cb.value,
+          icon: item ? (item.getAttribute('data-icon') || 'fa-star') : 'fa-star'
+        };
+      });
+      
+      // Convert to simple array for now (backend expects array of strings)
+      const skillsArray = skills.map(s => s.name);
+      
+      try {
+        const response = await fetch('/admin/employees/' + employeeId + '/skills', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ skills: skillsArray })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          // Reload page to show updated skills
+          window.location.reload();
+        } else {
+          alert('Fout bij opslaan: ' + (result.error || 'Onbekende fout'));
+        }
+      } catch (error) {
+        console.error('Error saving skills:', error);
+        alert('Fout bij opslaan van vaardigheden');
+      }
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('skillsModal');
+        if (modal && modal.style.display !== 'none') {
+          closeSkillsModal();
+        }
+      }
+    });
+
+    // Close icon picker when clicking outside
+    document.addEventListener('click', function(e) {
+      const picker = document.getElementById('iconPickerDropdown');
+      const btn = document.getElementById('iconPickerBtn');
+      if (picker && btn && !picker.contains(e.target) && !btn.contains(e.target)) {
+        picker.style.display = 'none';
+        btn.classList.remove('active');
+      }
+    });
+    ` : ''}
+  </script>
+  `,
+  scripts: ['/js/admin/users.js']
+}) %>

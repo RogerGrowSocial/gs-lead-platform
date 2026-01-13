@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Facturen</h1>
+  <p>Beheer en bekijk alle facturen</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Facturen', 
+    activeMenu: 'payments',
+    activeSubmenu: 'invoices',
+    user: user,
+    body: pageContent
+}) %>
+

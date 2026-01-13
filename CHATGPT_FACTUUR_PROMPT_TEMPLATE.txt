@@ -1,0 +1,47 @@
+=== PROMPT VOOR CHATGPT: FACTUUR NAAR SQL CONVERSIE ===
+
+Kopieer deze prompt en plak je factuur data eronder:
+
+---
+
+Ik heb een factuur die ik wil importeren in een PostgreSQL database. Converteer deze factuur data naar een SQL UPDATE en INSERT query.
+
+FACTUUR DATA:
+[PLAK HIER JE FACTUUR DATA UIT PDF/WORD/ETC]
+
+REQUIREMENTS:
+1. Tabel: `public.customer_invoices`
+2. Converteer datums naar YYYY-MM-DD formaat
+3. Converteer bedragen: verwijder €, vervang komma door punt (€1.149,50 → 1149.50)
+4. Genereer order_number in formaat: ORD-YYYYMMDD (bijv. ORD-20200311)
+5. Voor customer_id: gebruik subquery: (SELECT id FROM public.customers WHERE company_name ILIKE '%[klantnaam]%' OR name ILIKE '%[klantnaam]%' LIMIT 1)
+6. outstanding_amount: 0 als status = 'paid', anders = amount
+7. Line items als JSONB array met: description, quantity, unit_price, has_vat, subtotal, vat_amount, total
+8. BTW berekening: 21% van subtotal (als has_vat = true)
+
+Geef me:
+- Een SQL UPDATE query (voor bestaande factuur)
+- Een SQL INSERT query met WHERE NOT EXISTS (voor nieuwe factuur)
+- Beide queries moeten de volledige line items bevatten als JSONB
+
+---
+
+VOORBEELD FACTUUR DATA FORMAAT:
+
+FACTUUR DATA:
+Factuurnummer: 201
+Factuurdatum: 11-03-2020
+Vervaldatum: 17-03-2020
+Klant: Rijschool Intest B.V.
+Subtotaal (excl. BTW): €950,00
+BTW (21%): €199,50
+Totaal (incl. BTW): €1.149,50
+Status: Betaald
+
+LINE ITEMS:
+1. Aantal: 16 | Beschrijving: Ontwerpen + publiceren Facebook, Instagram | Eenheidsprijs: €37,50 | Regeltotaal: €400,00
+2. Aantal: 12 | Beschrijving: Contact functie bij advertentie | Eenheidsprijs: €0,00 | Regeltotaal: €0,00
+3. Aantal: 1 | Beschrijving: Instagram kopjes ontwerpen / make-over | Eenheidsprijs: €48,00 | Regeltotaal: €48,00
+4. Aantal: 4 | Beschrijving: Geanimeerde versie advertentie | Eenheidsprijs: €62,50 | Regeltotaal: €251,00
+5. Aantal: 12 | Beschrijving: Verhaal versie advertentie | Eenheidsprijs: €20,92 | Regeltotaal: €251,00
+

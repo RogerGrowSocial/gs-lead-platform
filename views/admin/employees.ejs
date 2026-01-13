@@ -1,0 +1,344 @@
+<%
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    try {
+      const d = new Date(iso)
+      if (isNaN(d.getTime())) return '-'
+      return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+    } catch (e) {
+      return '-'
+    }
+  }
+
+  // Employees should be passed from the route
+  // Don't override if it's already defined (it should be passed from res.render())
+  
+  // Get roles data - access variables directly from res.render()
+  // Build the roles HTML here in outer scope where variables are accessible
+  var rolesHtmlForSelect = '';
+  
+  // Helper function to format role names
+  var formatRoleName = function(name) {
+    if (!name) return 'Onbekend';
+    return name.split('_').map(function(word) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join(' ');
+  };
+  
+  // Try to use pre-built HTML first (most reliable)
+  if (typeof rolesOptionsHtml !== 'undefined' && rolesOptionsHtml) {
+    rolesHtmlForSelect = String(rolesOptionsHtml);
+  } 
+  // Fallback: build from roles array
+  else if (typeof roles !== 'undefined' && roles && Array.isArray(roles) && roles.length > 0) {
+    // Filter out consumer/customer roles
+    var employeeRoles = roles.filter(function(role) {
+      var name = (role.name || '').toLowerCase();
+      return name !== 'consumer' && name !== 'customer';
+    });
+    
+    employeeRoles.forEach(function(role) {
+      const isSelected = role.name === 'employee' ? ' selected' : '';
+      // Use display_name from database if available, otherwise format the name
+      var displayName = (role.display_name && role.display_name.trim().length > 0)
+        ? role.display_name.trim()
+        : formatRoleName(role.name);
+      rolesHtmlForSelect += '<option value="' + role.id + '"' + isSelected + '>' + displayName + '</option>';
+    });
+  }
+  // Another fallback: try rolesList
+  else if (typeof rolesList !== 'undefined' && rolesList && Array.isArray(rolesList) && rolesList.length > 0) {
+    // Filter out consumer/customer roles
+    var employeeRolesList = rolesList.filter(function(role) {
+      var name = (role.name || '').toLowerCase();
+      return name !== 'consumer' && name !== 'customer';
+    });
+    
+    employeeRolesList.forEach(function(role) {
+      const isSelected = role.name === 'employee' ? ' selected' : '';
+      // Use display_name from database if available, otherwise format the name
+      var displayName = (role.display_name && role.display_name.trim().length > 0)
+        ? role.display_name.trim()
+        : formatRoleName(role.name);
+      rolesHtmlForSelect += '<option value="' + role.id + '"' + isSelected + '>' + displayName + '</option>';
+    });
+  }
+  // If still empty, show error message
+  else {
+    rolesHtmlForSelect = '<option value="">Geen rollen beschikbaar - laad pagina opnieuw</option>';
+  }
+%>
+<%- include('../layouts/admin', {
+  title: 'Werknemers',
+  activeMenu: 'employees',
+  user: user,
+  // IMPORTANT: pass through assets from res.render() so the layout includes them
+  stylesheets: (typeof stylesheets !== 'undefined' ? stylesheets : undefined),
+  scripts: (typeof scripts !== 'undefined' ? scripts : undefined),
+  body: (function(rolesHtmlString) {
+    var output = '';
+    output += '<div class="opportunities-container">';
+    // Ensure drawer assets load even if layout styles/scripts are not passed through
+    output += '<link rel="stylesheet" href="/css/admin/employees-drawer.css">';
+    output += '<script src="/js/admin/employeesDrawer.js" defer></script>';
+    // Right drawer (off-canvas) for creating an employee
+    // Inline fallback styles so the drawer NEVER renders inline in the page (even if CSS fails to load)
+    output += '  <div id="employeeDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>';
+    output += '  <aside id="employeeDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe werknemer" style="position:fixed;top:0;right:0;height:100vh;width:min(520px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">';
+    output += '    <div class="gs-drawer__header">';
+    output += '      <div>';
+    output += '        <h3 class="gs-drawer__title">Nieuwe werknemer</h3>';
+    output += '        <p class="gs-drawer__subtitle">Maak een account aan en stuur een e-mail om een wachtwoord in te stellen.</p>';
+    output += '      </div>';
+    output += '      <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">';
+    output += '        <i class="fas fa-times"></i>';
+    output += '      </button>';
+    output += '    </div>';
+    output += '    <div class="gs-drawer__body">';
+    output += '      <form id="employeeCreateForm" autocomplete="off">';
+    output += '        <div class="gs-form-grid">';
+    output += '          <div class="gs-field">';
+    output += '            <label class="gs-label" for="employee_first_name">Voornaam *</label>';
+    output += '            <input class="gs-input" id="employee_first_name" name="first_name" type="text" required />';
+    output += '          </div>';
+    output += '          <div class="gs-field">';
+    output += '            <label class="gs-label" for="employee_last_name">Achternaam *</label>';
+    output += '            <input class="gs-input" id="employee_last_name" name="last_name" type="text" required />';
+    output += '          </div>';
+    output += '          <div class="gs-field gs-field--full">';
+    output += '            <label class="gs-label" for="employee_email">E-mailadres *</label>';
+    output += '            <input class="gs-input" id="employee_email" name="email" type="email" required />';
+    output += '          </div>';
+    output += '          <div class="gs-field gs-field--full">';
+    output += '            <label class="gs-label" for="employee_phone">Telefoon</label>';
+    output += '            <input class="gs-input" id="employee_phone" name="phone" type="tel" />';
+    output += '          </div>';
+    output += '          <div class="gs-field gs-field--full">';
+    output += '            <label class="gs-label" for="employee_role_id">Rol</label>';
+    output += '            <select class="gs-select" id="employee_role_id" name="role_id" required>';
+    // Use the pre-built roles HTML passed as parameter
+    if (rolesHtmlString && rolesHtmlString.length > 0) {
+      // Clean up the HTML - remove extra whitespace/indentation from route
+      var cleanHtml = rolesHtmlString.replace(/^\s+/gm, '').trim();
+      output += cleanHtml;
+    } else {
+      output += '<option value="">Geen rollen beschikbaar</option>';
+    }
+    output += '            </select>';
+    output += '          </div>';
+    output += '        </div>';
+    output += '        <div class="gs-checkbox-row">';
+    output += '          <input id="employee_send_welcome_email" type="checkbox" name="send_welcome_email" checked />';
+    output += '          <label class="gs-label" for="employee_send_welcome_email" style="margin:0;">Stuur welkomst e-mail</label>';
+    output += '        </div>';
+    output += '        <div class="gs-hint">Er wordt automatisch een e-mail verstuurd om een wachtwoord in te stellen.</div>';
+    output += '        <div id="employeeCreateError" class="gs-error" style="display:none;"></div>';
+    output += '      </form>';
+    output += '    </div>';
+    output += '    <div class="gs-drawer__footer">';
+    output += '      <button type="button" class="gs-btn gs-btn--ghost" data-drawer-close>Annuleren</button>';
+    output += '      <button type="button" class="gs-btn gs-btn--primary" id="employeeCreateSubmit">Aanmaken</button>';
+    output += '    </div>';
+    output += '  </aside>';
+    output += '  <!-- Page Header -->';
+    output += '  <div class="page-header">';
+    output += '    <div>';
+    output += '      <h1>Werknemers</h1>';
+    output += '      <p class="text-muted">Beheer alle werknemers van het platform</p>';
+    output += '    </div>';
+    output += '    <div class="header-actions" style="margin-bottom:16px;">';
+    output += '      <button id="addEmployeeBtn" class="btn-primary">';
+    output += '        <i class="fas fa-plus"></i> Nieuwe werknemer';
+    output += '      </button>';
+    output += '    </div>';
+    output += '  </div>';
+    output += '  ';
+  output += '  <!-- KPI Cards -->';
+  output += '  <div class="kpi-cards-container">';
+  output += '    <div class="kpi-cards-grid">';
+  output += '      <div class="kpi-card">';
+  output += '        <div class="kpi-content">';
+  output += '          <p class="kpi-title">Totaal werknemers</p>';
+  output += '          <p class="kpi-value">' + ((kpis && kpis.total) ? kpis.total : 0) + '</p>';
+  output += '          <p class="kpi-subtitle">Alle geregistreerde werknemers</p>';
+  output += '        </div>';
+  output += '        <div class="kpi-icon"><i class="fas fa-users"></i></div>';
+  output += '      </div>';
+  output += '      <div class="kpi-card">';
+  output += '        <div class="kpi-content">';
+  output += '          <p class="kpi-title">Beste performer deze maand</p>';
+  var bestPerformerName = (kpis && kpis.bestPerformer && kpis.bestPerformer.name) ? kpis.bestPerformer.name : 'Geen data';
+  var bestPerformerRevenue = (kpis && kpis.bestPerformer && kpis.bestPerformer.revenue) ? kpis.bestPerformer.revenue : 0;
+  output += '          <p class="kpi-value" style="font-size: 1.1rem; margin-bottom: 0.25rem;">' + bestPerformerName + '</p>';
+  output += '          <p class="kpi-subtitle">€' + new Intl.NumberFormat('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(bestPerformerRevenue) + ' omzet</p>';
+  output += '        </div>';
+  output += '        <div class="kpi-icon"><i class="fas fa-trophy"></i></div>';
+  output += '      </div>';
+  output += '      <div class="kpi-card">';
+  output += '        <div class="kpi-content">';
+  output += '          <p class="kpi-title">Recent actief</p>';
+  output += '          <p class="kpi-value">' + ((kpis && kpis.recentlyActive) ? kpis.recentlyActive : 0) + '</p>';
+  output += '          <p class="kpi-subtitle">Ingelogd afgelopen 7 dagen</p>';
+  output += '        </div>';
+  output += '        <div class="kpi-icon"><i class="fas fa-clock"></i></div>';
+  output += '      </div>';
+  output += '      <div class="kpi-card">';
+  output += '        <div class="kpi-content">';
+  output += '          <p class="kpi-title">Vereist aandacht</p>';
+  output += '          <p class="kpi-value">' + ((kpis && kpis.needsAttention) ? kpis.needsAttention : 0) + '</p>';
+  output += '          <p class="kpi-subtitle">Inactief, onbevestigd of geen recente activiteit</p>';
+  output += '        </div>';
+  output += '        <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>';
+  output += '      </div>';
+  output += '    </div>';
+  output += '  </div>';
+    output += '';
+    output += '  <!-- Employees Listing -->';
+    output += '  <div class="users-listing-container">';
+    output += '    <!-- Search and Filters Header -->';
+    output += '    <div class="users-header-row">';
+    output += '      <div class="users-search-wrapper">';
+    output += '        <svg class="users-search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    output += '          <circle cx="11" cy="11" r="8"></circle>';
+    output += '          <path d="m21 21-4.3-4.3"></path>';
+    output += '        </svg>';
+    output += '        <input type="text" class="users-search-input" placeholder="Zoek werknemers..." id="searchEmployees" />';
+    output += '      </div>';
+    output += '            <div class="users-dropdowns-container">';
+      // Role filter
+      output += '        <select class="users-dropdown" id="roleFilter" name="role">';
+      output += '          <option value="all"' + ((filters && filters.role === 'all') ? ' selected' : '') + '>Alle rollen</option>';
+      if (typeof roles !== 'undefined' && roles && Array.isArray(roles)) {
+        const employeeRoles = roles.filter(function(role) {
+          var name = (role.name || '').toLowerCase();
+          return name !== 'consumer' && name !== 'customer';
+        });
+        employeeRoles.forEach(function(role) {
+          var displayName = (role.display_name && role.display_name.trim().length > 0)
+            ? role.display_name.trim()
+            : formatRoleName(role.name);
+          const isSelected = (filters && filters.role === role.id);
+          output += '          <option value="' + role.id + '"' + (isSelected ? ' selected' : '') + '>' + displayName + '</option>';
+        });
+      }
+      output += '        </select>';
+      // Status filter
+      output += '        <select class="users-dropdown" id="statusFilter" name="status">';
+      output += '          <option value="all"' + ((filters && filters.status === 'all') ? ' selected' : '') + '>Alle statussen</option>';
+      output += '          <option value="active"' + ((filters && filters.status === 'active') ? ' selected' : '') + '>Actief</option>';
+      output += '          <option value="inactive"' + ((filters && filters.status === 'inactive') ? ' selected' : '') + '>Inactief</option>';
+      output += '        </select>';
+      output += '      </div>';
+    output += '    </div>';
+    output += '    ';
+    output += '    <!-- Employees List -->';
+    output += '    <div class="users-list" id="employeesList">';
+    
+    (employees || []).forEach(function(employee) {
+      const status = employee.status || 'active';
+      const isAdmin = employee.is_admin ? true : false;
+      const employeeId = employee.id ? employee.id.toString() : '';
+      const firstName = employee.first_name || '';
+      const lastName = employee.last_name || '';
+      const initials = (firstName ? firstName.charAt(0) : '') + (lastName ? lastName.charAt(0) : '') || '?';
+      const fullName = (firstName + ' ' + lastName).trim() || employee.email || 'Onbekend';
+      
+      // Get role display name from employee data - with debug logging
+      // Debug: Log all employee properties to see what's available
+      console.log('🔍 Template - Employee data for', employee.email, {
+        has_role_display_name: !!employee.role_display_name,
+        role_display_name: employee.role_display_name,
+        role_id: employee.role_id,
+        role_name: employee.role_name,
+        all_keys: Object.keys(employee)
+      });
+      
+      const roleDisplayName = employee.role_display_name || 'Werknemer';
+      const roleId = employee.role_id ? String(employee.role_id) : '';
+      
+      // Debug: Log if role_display_name is missing or default
+      if (!employee.role_display_name || employee.role_display_name === 'Werknemer') {
+        console.log('⚠️ Template: Missing role_display_name for', employee.email, {
+          role_id: employee.role_id,
+          role_display_name: employee.role_display_name,
+          role_name: employee.role_name,
+          employee_object: JSON.stringify(employee, null, 2)
+        });
+      } else {
+        console.log('✅ Template: Found role_display_name for', employee.email, ':', employee.role_display_name);
+      }
+      
+      output += '      <a href="/admin/employees/' + employeeId + '" class="user-item" data-employee-id="' + employeeId + '" data-role-id="' + roleId + '">';
+      output += '        <div class="user-content-wrapper">';
+      output += '          <div class="user-card-avatar">' + initials.toUpperCase() + '</div>';
+      output += '          <div class="user-content-section">';
+      output += '            <div class="user-info-wrapper">';
+      output += '              <div class="user-email">' + (employee.email || '-') + '</div>';
+      output += '              <div class="user-last-login">Sinds ' + formatDate(employee.created_at) + '</div>';
+      output += '            </div>';
+      output += '            <div class="flex flex-wrap items-center gap-2">';
+      output += '              <span data-slot="badge" class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none ' + (isAdmin ? 'border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90' : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200') + ' text-xs">';
+      if (isAdmin) {
+        output += '                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path></svg>Admin';
+      } else {
+        output += '                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' + roleDisplayName;
+      }
+      output += '              </span>';
+      output += '              <span class="text-xs ' + (status === 'active' ? 'text-gray-600' : 'text-gray-500') + '">' + (status === 'active' ? 'Actief' : 'Inactief') + '</span>';
+      output += '            </div>';
+      output += '          </div>';
+      output += '          <div class="flex-shrink-0 flex items-start gap-3">';
+      output += '            <button class="employee-actions-btn" data-employee-action-id="' + employeeId + '" title="Meer acties">';
+      output += '              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+      output += '                <circle cx="12" cy="12" r="1"></circle>';
+      output += '                <circle cx="12" cy="5" r="1"></circle>';
+      output += '                <circle cx="12" cy="19" r="1"></circle>';
+      output += '              </svg>';
+      output += '            </button>';
+      output += '          </div>';
+      output += '        </div>';
+      output += '      </a>';
+    });
+    
+    if (!employees || employees.length === 0) {
+      output += '      <div class="empty-state">';
+      output += '        <div class="empty-state-icon">';
+      output += '          <i class="fas fa-users"></i>';
+      output += '        </div>';
+      output += '        <h3>Geen werknemers gevonden</h3>';
+      output += '        <p>Er zijn momenteel geen werknemers in het systeem.</p>';
+      output += '      </div>';
+    }
+    
+    output += '    </div>';
+    output += '  </div>';
+    output += '</div>';
+    output += '<script>';
+    output += '  (function(){';
+    output += '    const overlay=document.getElementById("employeeDrawerOverlay");';
+    output += '    const drawer=document.getElementById("employeeDrawer");';
+    output += '    if(!overlay||!drawer) return;';
+    output += '    function setOpen(open){';
+    output += '      drawer.style.transform=open? "translateX(0)" : "translateX(110%)";';
+    output += '      overlay.style.opacity=open? "1":"0";';
+    output += '      overlay.style.pointerEvents=open? "auto":"none";';
+    output += '      drawer.classList.toggle("is-open",open);';
+    output += '      overlay.classList.toggle("is-open",open);';
+    output += '      document.body.classList.toggle("drawer-open",open);';
+    output += '      document.documentElement.classList.toggle("drawer-open",open);';
+    output += '      drawer.setAttribute("aria-hidden", open? "false":"true");';
+    output += '      overlay.setAttribute("aria-hidden", open? "false":"true");';
+    output += '    }';
+    output += '    function open(){ setOpen(true); }';
+    output += '    function close(){ setOpen(false); }';
+    output += '    ["addEmployeeBtn"].forEach(id=>{';
+    output += '      const btn=document.getElementById(id);';
+    output += '      if(btn){ btn.addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); open(); }); }';
+    output += '    });';
+    output += '    overlay.addEventListener("click", close);';
+    output += '    drawer.querySelectorAll("[data-drawer-close]").forEach(b=>b.addEventListener("click", e=>{ e.preventDefault(); close(); }));';
+    output += '  })();';
+    output += '</script>';
+    return output;
+  })(rolesHtmlForSelect)
+}) %>

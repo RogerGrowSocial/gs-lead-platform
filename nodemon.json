@@ -1,0 +1,12 @@
+{
+  "watch": ["server.js"],
+  "ignore": [
+    "**/*"
+  ],
+  "ext": "js",
+  "delay": 5000,
+  "verbose": false,
+  "legacyWatch": false,
+  "stdout": true,
+  "restartable": "rs"
+}

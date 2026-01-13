@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Facturering</h1>
+  <p>Beheer factureringsinstellingen en SEPA mandaat configuratie</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Facturering', 
+    activeMenu: 'settings',
+    activeSubmenu: 'billing',
+    user: user,
+    body: pageContent
+}) %>
+

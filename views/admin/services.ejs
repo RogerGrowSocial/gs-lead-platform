@@ -1,0 +1,393 @@
+<%
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    try {
+      const d = new Date(iso)
+      if (isNaN(d.getTime())) return '-'
+      return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+    } catch (e) {
+      return '-'
+    }
+  }
+
+  const formatCurrency = (cents) => {
+    if (cents === null || cents === undefined) return '—'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(cents / 100)
+  }
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined) return '—'
+    return `${value.toFixed(1)}%`
+  }
+
+  const getServiceTypeLabel = (type) => {
+    const labels = {
+      'one_time': 'Eenmalig',
+      'recurring': 'Terugkerend',
+      'per_lead': 'Per lead',
+      'hourly': 'Per uur'
+    }
+    return labels[type] || type
+  }
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'active': 'Actief',
+      'inactive': 'Inactief',
+      'archived': 'Gearchiveerd'
+    }
+    return labels[status] || status
+  }
+
+  const getStatusBadgeClass = (status) => {
+    const classes = {
+      'active': 'badge-success',
+      'inactive': 'badge-warning',
+      'archived': 'badge-secondary'
+    }
+    return classes[status] || 'badge-secondary'
+  }
+%>
+<%- include('../layouts/admin', {
+  title: 'Diensten',
+  activeMenu: 'services',
+  user: user,
+  stylesheets: ['/css/admin/tasks.css', '/css/components/custom-select.css'],
+  scripts: ['/js/admin/services.js', '/js/components/custom-select.js'],
+  body: (function() {
+    var output = '';
+    output += '<style>';
+    output += '.badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }';
+    output += '.badge-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }';
+    output += '.badge-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }';
+    output += '.badge-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }';
+    output += '.btn-primary { background: #ea5d0d; color: white; border: none; padding: 0.625rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 500; }';
+    output += '.btn-primary:hover { background: #d14d0b; }';
+    output += '.btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; padding: 0.625rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 500; }';
+    output += '.btn-secondary:hover { background: #f9fafb; }';
+    output += '.modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }';
+    output += '.modal-content { background-color: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }';
+    output += '.modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }';
+    output += '.modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }';
+    output += '.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }';
+    output += '.modal-close:hover { color: #111827; }';
+    output += '.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }';
+    output += '</style>';
+    output += '<div class="services-container">';
+    
+    // Page Header
+    output += '  <div class="page-header">';
+    output += '    <div>';
+    output += '      <h1>Diensten</h1>';
+    output += '      <p class="text-muted">Beheer alle diensten, prijzen en kosten</p>';
+    output += '    </div>';
+    output += '    <div class="header-actions" style="margin-bottom:16px; display: flex; gap: 12px;">';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += '      <button id="addServiceBtn" class="btn-primary">';
+      output += '        <i class="fas fa-plus"></i> Nieuwe dienst';
+      output += '      </button>';
+    }
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Period Selector
+    output += '  <div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">';
+    output += '    <div class="custom-select" data-select-id="periodSelect" style="width: 200px;">';
+    output += '      <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" data-select-trigger>';
+    output += '        <span class="custom-select-value" data-select-value>Laatste 30 dagen</span>';
+    output += '        <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">';
+    output += '          <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    output += '        </svg>';
+    output += '      </button>';
+    output += '      <div class="custom-select-dropdown" role="listbox" data-select-dropdown>';
+    output += '        <div class="custom-select-items">';
+    output += '          <div class="custom-select-item selected" role="option" data-value="30d" tabindex="0">';
+    output += '            <span class="custom-select-item-text">Laatste 30 dagen</span>';
+    output += '            <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">';
+    output += '              <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    output += '            </svg>';
+    output += '          </div>';
+    output += '          <div class="custom-select-item" role="option" data-value="90d" tabindex="0">';
+    output += '            <span class="custom-select-item-text">Laatste 90 dagen</span>';
+    output += '            <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">';
+    output += '              <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    output += '            </svg>';
+    output += '          </div>';
+    output += '          <div class="custom-select-item" role="option" data-value="365d" tabindex="0">';
+    output += '            <span class="custom-select-item-text">Laatste jaar</span>';
+    output += '            <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">';
+    output += '              <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    output += '            </svg>';
+    output += '          </div>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <input type="hidden" name="period" value="30d" data-select-input>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // KPI Cards
+    output += '  <div class="kpi-cards-container">';
+    output += '    <div class="kpi-cards-grid">';
+    output += '      <div class="kpi-card">';
+    output += '        <div class="kpi-content">';
+    output += '          <p class="kpi-title">Totale omzet</p>';
+    output += '          <p class="kpi-value" id="totalRevenue">€0,00</p>';
+    output += '          <p class="kpi-subtitle" id="revenueSubtitle">Laatste 30 dagen</p>';
+    output += '        </div>';
+    output += '        <div class="kpi-icon">';
+    output += '          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    output += '            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>';
+    output += '            <polyline points="16 7 22 7 22 13"></polyline>';
+    output += '          </svg>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <div class="kpi-card">';
+    output += '        <div class="kpi-content">';
+    output += '          <p class="kpi-title">Brutowinst</p>';
+    output += '          <p class="kpi-value" id="totalProfit">—</p>';
+    output += '          <p class="kpi-subtitle" id="profitSubtitle">Omzet - kosten</p>';
+    output += '        </div>';
+    output += '        <div class="kpi-icon">';
+    output += '          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    output += '            <line x1="12" x2="12" y1="2" y2="22"></line>';
+    output += '            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>';
+    output += '          </svg>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <div class="kpi-card">';
+    output += '        <div class="kpi-content">';
+    output += '          <p class="kpi-title">Gewogen marge</p>';
+    output += '          <p class="kpi-value" id="weightedMargin">—</p>';
+    output += '          <p class="kpi-subtitle" id="marginSubtitle">Gemiddelde marge %</p>';
+    output += '        </div>';
+    output += '        <div class="kpi-icon">';
+    output += '          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    output += '            <line x1="18" y1="20" x2="18" y2="10"></line>';
+    output += '            <line x1="12" y1="20" x2="12" y2="4"></line>';
+    output += '            <line x1="6" y1="20" x2="6" y2="14"></line>';
+    output += '          </svg>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <div class="kpi-card">';
+    output += '        <div class="kpi-content">';
+    output += '          <p class="kpi-title">Top dienst</p>';
+    output += '          <p class="kpi-value" id="topService" style="font-size: 1.1rem; margin-bottom: 0.25rem;">—</p>';
+    output += '          <p class="kpi-subtitle" id="topServiceRevenue">—</p>';
+    output += '        </div>';
+    output += '        <div class="kpi-icon">';
+    output += '          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+    output += '            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>';
+    output += '            <path d="M2 17l10 5 10-5"></path>';
+    output += '            <path d="M2 12l10 5 10-5"></path>';
+    output += '          </svg>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Services Table
+    output += '  <div class="services-table-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+    output += '    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">';
+    output += '      <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600;">Services overzicht</h2>';
+    output += '    </div>';
+    
+    // Search and Filters
+    output += '    <div style="display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap;">';
+    output += '      <div style="flex: 1; min-width: 200px;">';
+    output += '        <input type="text" id="searchServices" placeholder="Zoek op naam of slug..." style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />';
+    output += '      </div>';
+    output += '      <select id="statusFilter" style="padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white;">';
+    output += '        <option value="all">Alle statussen</option>';
+    output += '        <option value="active">Actief</option>';
+    output += '        <option value="inactive">Inactief</option>';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += '        <option value="archived">Gearchiveerd</option>';
+    }
+    output += '      </select>';
+    output += '      <select id="typeFilter" style="padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; background: white;">';
+    output += '        <option value="all">Alle types</option>';
+    output += '        <option value="one_time">Eenmalig</option>';
+    output += '        <option value="recurring">Terugkerend</option>';
+    output += '        <option value="per_lead">Per lead</option>';
+    output += '        <option value="hourly">Per uur</option>';
+    output += '      </select>';
+    output += '    </div>';
+    
+    // Table
+    output += '    <div style="overflow-x: auto;">';
+    output += '      <table style="width: 100%; border-collapse: collapse;">';
+    output += '        <thead>';
+    output += '          <tr style="border-bottom: 2px solid #e5e7eb;">';
+    output += '            <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Dienst</th>';
+    output += '            <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Type</th>';
+    output += '            <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Status</th>';
+    output += '            <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Verkoopprijs</th>';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += '            <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Inkoopkost</th>';
+      output += '            <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Marge €</th>';
+      output += '            <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Marge %</th>';
+    }
+    output += '            <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Laatst verkocht</th>';
+    output += '            <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Omzet</th>';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += '            <th style="text-align: center; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Acties</th>';
+    }
+    output += '          </tr>';
+    output += '        </thead>';
+    output += '        <tbody id="servicesTableBody">';
+    
+    if (typeof services !== 'undefined' && services && services.length > 0) {
+      services.forEach(function(service) {
+        const marginCents = (service.price_cents && service.cost_cents !== null) ? (service.price_cents - service.cost_cents) : null;
+        const marginPercent = (service.price_cents && service.cost_cents !== null && service.price_cents > 0) 
+          ? ((marginCents / service.price_cents) * 100) 
+          : null;
+        
+        output += '          <tr style="border-bottom: 1px solid #f3f4f6;" data-service-id="' + service.id + '">';
+        output += '            <td style="padding: 0.75rem;">';
+        output += '              <div style="font-weight: 500; color: #111827;">' + (service.name || '—') + '</div>';
+        if (service.description) {
+          output += '              <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">' + service.description.substring(0, 50) + (service.description.length > 50 ? '...' : '') + '</div>';
+        }
+        output += '            </td>';
+        output += '            <td style="padding: 0.75rem; color: #374151;">' + getServiceTypeLabel(service.service_type) + '</td>';
+        output += '            <td style="padding: 0.75rem;">';
+        output += '              <span class="badge ' + getStatusBadgeClass(service.status) + '" style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">' + getStatusLabel(service.status) + '</span>';
+        output += '            </td>';
+        output += '            <td style="padding: 0.75rem; text-align: right; color: #111827; font-weight: 500;">' + formatCurrency(service.price_cents) + '</td>';
+        if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+          output += '            <td style="padding: 0.75rem; text-align: right; color: #111827;">' + formatCurrency(service.cost_cents) + '</td>';
+          output += '            <td style="padding: 0.75rem; text-align: right; color: #111827;">' + formatCurrency(marginCents) + '</td>';
+          output += '            <td style="padding: 0.75rem; text-align: right; color: #111827;">' + formatPercent(marginPercent) + '</td>';
+        }
+        output += '            <td style="padding: 0.75rem; color: #6b7280; font-size: 0.875rem;">—</td>'; // Last sold - will be populated by JS
+        output += '            <td style="padding: 0.75rem; text-align: right; color: #111827; font-weight: 500;">—</td>'; // Revenue - will be populated by JS
+        if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+          output += '            <td style="padding: 0.75rem; text-align: center;">';
+          output += '              <div style="display: flex; gap: 8px; justify-content: center;">';
+          output += '                <button class="btn-edit" data-service-id="' + service.id + '" style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; color: #374151;">';
+          output += '                  <i class="fas fa-edit"></i> Bewerken';
+          output += '                </button>';
+          if (service.status !== 'archived') {
+            output += '                <button class="btn-archive" data-service-id="' + service.id + '" style="padding: 0.375rem 0.75rem; background: #fef3c7; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; color: #92400e;">';
+            output += '                  <i class="fas fa-archive"></i> Archiveren';
+            output += '                </button>';
+          } else {
+            output += '                <button class="btn-unarchive" data-service-id="' + service.id + '" style="padding: 0.375rem 0.75rem; background: #dcfce7; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; color: #166534;">';
+            output += '                  <i class="fas fa-undo"></i> Herstellen';
+            output += '                </button>';
+          }
+          output += '              </div>';
+          output += '            </td>';
+        }
+        output += '          </tr>';
+      });
+    } else {
+      output += '          <tr>';
+      output += '            <td colspan="' + (typeof isUserAdmin !== 'undefined' && isUserAdmin ? '10' : '6') + '" style="padding: 3rem; text-align: center; color: #6b7280;">';
+      output += '              <div style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;">';
+      output += '                <i class="fas fa-box-open"></i>';
+      output += '              </div>';
+      output += '              <h3 style="margin: 0 0 0.5rem 0; color: #374151;">Geen diensten</h3>';
+      output += '              <p style="color: #6b7280; margin: 0 0 1.5rem 0;">Maak je eerste dienst aan om te beginnen.</p>';
+      if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+        output += '              <button id="addServiceBtnEmpty" class="btn-primary" style="padding: 0.625rem 1.25rem;">';
+        output += '                <i class="fas fa-plus"></i> Maak je eerste dienst aan';
+        output += '              </button>';
+      }
+      output += '            </td>';
+      output += '          </tr>';
+    }
+    
+    output += '        </tbody>';
+    output += '      </table>';
+    output += '    </div>';
+    
+    // Pagination
+    if (typeof pagination !== 'undefined' && pagination.totalPages > 1) {
+      output += '    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">';
+      output += '      <div style="color: #6b7280; font-size: 0.875rem;">';
+      output += '        Pagina ' + pagination.page + ' van ' + pagination.totalPages + ' (' + pagination.total + ' totaal)';
+      output += '      </div>';
+      output += '      <div style="display: flex; gap: 8px;">';
+      if (pagination.page > 1) {
+        output += '        <button class="btn-prev" style="padding: 0.5rem 1rem; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;">Vorige</button>';
+      }
+      if (pagination.page < pagination.totalPages) {
+        output += '        <button class="btn-next" style="padding: 0.5rem 1rem; background: white; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer;">Volgende</button>';
+      }
+      output += '      </div>';
+      output += '    </div>';
+    }
+    
+    output += '  </div>';
+    output += '</div>';
+    
+    // Service Modal
+    output += '<div id="serviceModal" class="modal" style="display: none;">';
+    output += '  <div class="modal-content" style="max-width: 600px;">';
+    output += '    <div class="modal-header">';
+    output += '      <h2 id="modalTitle">Nieuwe dienst</h2>';
+    output += '      <button class="modal-close" id="modalClose">&times;</button>';
+    output += '    </div>';
+    output += '    <form id="serviceForm">';
+    output += '      <div class="modal-body" style="padding: 1.5rem;">';
+    output += '        <input type="hidden" id="serviceId" name="id" />';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Naam *</label>';
+    output += '          <input type="text" id="serviceName" name="name" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px;" />';
+    output += '        </div>';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Slug *</label>';
+    output += '          <input type="text" id="serviceSlug" name="slug" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px;" />';
+    output += '          <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">URL-vriendelijke identifier (bijv. website-ontwikkeling)</p>';
+    output += '        </div>';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Type *</label>';
+    output += '          <select id="serviceType" name="service_type" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; background: white;">';
+    output += '            <option value="one_time">Eenmalig</option>';
+    output += '            <option value="recurring">Terugkerend</option>';
+    output += '            <option value="per_lead">Per lead</option>';
+    output += '            <option value="hourly">Per uur</option>';
+    output += '          </select>';
+    output += '        </div>';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Status *</label>';
+    output += '          <select id="serviceStatus" name="status" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; background: white;">';
+    output += '            <option value="active">Actief</option>';
+    output += '            <option value="inactive">Inactief</option>';
+    output += '            <option value="archived">Gearchiveerd</option>';
+    output += '          </select>';
+    output += '        </div>';
+    output += '        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">';
+    output += '          <div>';
+    output += '            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Verkoopprijs (€) *</label>';
+    output += '            <input type="number" id="servicePrice" name="price_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px;" />';
+    output += '          </div>';
+    output += '          <div>';
+    output += '            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Inkoopkost (€) *</label>';
+    output += '            <input type="number" id="serviceCost" name="cost_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px;" />';
+    output += '          </div>';
+    output += '        </div>';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Unit label</label>';
+    output += '          <input type="text" id="serviceUnitLabel" name="unit_label" placeholder="bijv. lead, maand, uur, project" style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px;" />';
+    output += '        </div>';
+    output += '        <div style="margin-bottom: 1rem;">';
+    output += '          <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Beschrijving</label>';
+    output += '          <textarea id="serviceDescription" name="description" rows="3" style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; resize: vertical;"></textarea>';
+    output += '        </div>';
+    output += '        <div id="serviceFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #b91c1c; margin-bottom: 1rem;"></div>';
+    output += '      </div>';
+    output += '      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">';
+    output += '        <button type="button" class="btn-secondary" id="modalCancel">Annuleren</button>';
+    output += '        <button type="submit" class="btn-primary">Opslaan</button>';
+    output += '      </div>';
+    output += '    </form>';
+    output += '  </div>';
+    output += '</div>';
+    
+    return output;
+  })()
+}) %>
+

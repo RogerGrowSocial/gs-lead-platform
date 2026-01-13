@@ -1,0 +1,704 @@
+<%
+  const employeeName = (employee.first_name && employee.last_name) 
+    ? (employee.first_name + ' ' + employee.last_name) 
+    : employee.name || employee.email || 'Onbekend';
+  const initials = employee.first_name && employee.last_name
+    ? (employee.first_name.charAt(0) + employee.last_name.charAt(0)).toUpperCase()
+    : employeeName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+  
+  const formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  
+  const formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }
+    return d.toLocaleString('nl-NL', options)
+  }
+  
+  const formatCurrency = function(cents) {
+    return new Intl.NumberFormat('nl-NL', {style:'currency',currency:'EUR',minimumFractionDigits:2}).format((cents || 0) / 100)
+  }
+  
+  // Contract filename processing
+  let contractFileName = '';
+  let contractDisplayName = '';
+  if (employee.contract_document_url) {
+    // Use original filename if available, otherwise fallback to URL
+    if (employee.contract_document_name) {
+      contractFileName = employee.contract_document_name;
+    } else {
+      contractFileName = (employee.contract_document_url.split('/').pop() || 'contract').replace(/%20/g, ' ');
+      try {
+        contractFileName = decodeURIComponent(contractFileName);
+      } catch (e) {
+        // If decode fails, use as is
+      }
+    }
+    contractDisplayName = contractFileName.length > 30 ? contractFileName.substring(0, 27) + '...' : contractFileName;
+  }
+  
+  const isAdmin = typeof isUserAdmin !== 'undefined' ? isUserAdmin : false;
+  // canEditSalary is passed from the route
+  const canEditSalaryValue = typeof canEditSalary !== 'undefined' ? canEditSalary : isAdmin;
+  const employeeId = employee.id;
+  const startDate = employee.created_at ? formatDate(employee.created_at) : '-';
+%>
+<%- include('../layouts/admin', {
+  title: employeeName + ' - Werknemers | GrowSocial Admin',
+  activeMenu: 'employees',
+  user: user,
+  isUserAdmin: isAdmin,
+  showBackButton: true,
+  backButtonUrl: '/admin/employees',
+  backButtonText: 'Terug naar werknemers',
+  stylesheets: ['/css/admin/users.css', '/css/admin/employee-detail.css'],
+  scripts: ['/js/admin/employee-detail.js'],
+  body: `
+  <div class="user-detail-page" data-employee-id="${employeeId}">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Employee Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <div class="user-info-avatar-section" style="flex: 1;">
+                <div id="employeeAvatarTrigger" style="cursor: ${typeof canEditEmployee !== 'undefined' && canEditEmployee ? 'pointer' : 'default'}; position: relative; display: inline-block;">
+                  <span class="user-avatar-large-new" id="employeeAvatar" aria-hidden="true" style="${employee.profile_picture ? 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);' : ''}">
+                    ${employee.profile_picture ? `
+                      <img src="${employee.profile_picture}" alt="${employeeName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+                    ` : `
+                      <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);color:#6b7280;border-radius:50%;border:2px solid #e5e7eb;">
+                        ${initials}
+                      </div>
+                    `}
+                  </span>
+                </div>
+                ${typeof canEditEmployee !== 'undefined' && canEditEmployee ? `
+                <input type="file" id="employeeProfilePictureUpload" accept="image/*" style="display: none;" />
+                ` : ''}
+                <div class="user-info-name-section" style="flex: 1;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <h1 class="user-info-name-new" id="employeeNameDisplay" style="flex: 1; margin: 0;">${employeeName}</h1>
+                  </div>
+                  <div class="user-info-badges-container" id="badgesContainer">
+                    <span class="user-role-badge-new ${employee.is_admin ? 'is-admin' : 'is-user'}" id="roleBadge" data-field="role_id" data-edit-type="select">
+                      ${employee.is_admin ? `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
+                        </svg>
+                      ` : `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user">
+                          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                      `}
+                      ${employee.role || 'Werknemer'}
+                    </span>
+                    <span class="user-status-badge-new ${(employee.employee_status || employee.status || 'active') === 'active' ? 'is-active' : 'is-blocked'}" id="statusBadge" data-field="employee_status" data-edit-type="select">
+                      ${(employee.employee_status || employee.status || 'active') === 'active' ? 'Actief' : (employee.employee_status || employee.status) === 'paused' ? 'Gepauzeerd' : 'Inactief'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <!-- Edit Button (replaces Profiel bewerken & Acties) -->
+              ${typeof canEditEmployee !== 'undefined' && canEditEmployee ? `
+              <button type="button" id="editEmployeeBtn" class="edit-employee-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color='#6b7280'" onmouseout="this.style.color='#9ca3af'">
+                <i class="fas fa-pencil-alt" style="font-size: 18px;"></i>
+              </button>
+              ` : ''}
+            </div>
+            ${employee.company_name ? `
+              <div class="user-info-company-section">
+                <div class="user-info-company-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M10 6h4"></path>
+                    <path d="M10 10h4"></path>
+                    <path d="M10 14h4"></path>
+                    <path d="M10 18h4"></path>
+                  </svg>
+                </div>
+                <span class="user-info-company-name">${employee.company_name}</span>
+              </div>
+              <div class="user-info-company-divider"></div>
+            ` : ''}
+            <div class="user-info-contact-section">
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
+                  <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                </svg>
+                <a href="mailto:${employee.email || ''}" class="user-info-contact-text" data-field="email" data-edit-type="text" style="text-decoration: none; color: inherit;">${employee.email || '-'}</a>
+              </div>
+              ${employee.phone ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <a href="tel:${employee.phone}" class="user-info-contact-text" data-field="phone" data-edit-type="text" style="text-decoration: none; color: inherit;">${employee.phone}</a>
+                </div>
+              ` : ''}
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase">
+                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+                <span class="user-info-contact-text" data-field="role" data-edit-type="text">${employee.role || 'Werknemer'}</span>
+              </div>
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                  <line x1="16" x2="16" y1="2" y2="6"></line>
+                  <line x1="8" x2="8" y1="2" y2="6"></line>
+                  <line x1="3" x2="21" y1="10" y2="10"></line>
+                </svg>
+                <span class="user-info-contact-text" data-field="created_at" data-edit-type="date" data-restricted="true">Sinds ${startDate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards (role-based, loaded via API) -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <div id="kpiCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div style="text-align: center; padding: 2rem; color: #6b7280;">KPI's laden...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Werk Section (no tabs, direct section) -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1.5rem;">
+              <i class="fas fa-briefcase"></i> Werk
+            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-btn active" data-filter="all" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: #2563eb; color: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Alle</button>
+                <button class="filter-btn" data-filter="open" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Open</button>
+                <button class="filter-btn" data-filter="in_progress" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">In uitvoering</button>
+                <button class="filter-btn" data-filter="in_review" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">In review</button>
+                <button class="filter-btn" data-filter="done" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Afgerond</button>
+              </div>
+              <button class="btn-primary" onclick="openCreateTaskModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px;">
+                <i class="fas fa-plus"></i> Nieuwe taak
+              </button>
+            </div>
+            <div id="tasksList">
+              <div style="text-align: center; padding: 2rem; color: #6b7280;">Taken laden...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Klanten Section -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1.5rem;">
+              <i class="fas fa-users"></i> Klanten
+            </h3>
+            <div id="customersList">
+              <div style="text-align: center; padding: 2rem; color: #6b7280;">Klanten laden...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Uren Section -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1.5rem;">
+              <i class="fas fa-clock"></i> Uren
+            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <button class="btn-secondary" onclick="changeWeek(-1)" style="padding: 0.5rem; border-radius: 8px;">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="weekDisplay" style="font-weight: 500;">Deze week</span>
+                <button class="btn-secondary" onclick="changeWeek(1)" style="padding: 0.5rem; border-radius: 8px;">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div style="display: flex; gap: 1.5rem; align-items: center;">
+                <div>
+                  <span style="font-size: 0.75rem; color: #6b7280;">Totaal:</span>
+                  <span id="totalHours" style="font-size: 1.25rem; font-weight: 600; margin-left: 0.5rem;">0h</span>
+                </div>
+                ${!isAdmin ? `
+                <button class="btn-primary" onclick="openCreateTimeEntryModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px;">
+                  <i class="fas fa-plus"></i> Uren toevoegen
+                </button>
+                <button class="btn-success" onclick="submitWeek()" style="padding: 0.5rem 1rem; font-size: 0.875rem; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <i class="fas fa-paper-plane"></i> Week indienen
+                </button>
+                ` : ''}
+              </div>
+            </div>
+            <div id="timeEntriesList">
+              <div style="text-align: center; padding: 2rem; color: #6b7280;">Urenregistraties laden...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Quick Stats Card (Top) -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">
+              <i class="fas fa-chart-line"></i> Snelle statistieken
+            </h3>
+            <div id="quickStats" style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Volgende uitbetaling</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="nextPayoutDisplay">-</p>
+              </div>
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Resterende uren deze maand</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="remainingHoursDisplay">-</p>
+              </div>
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Openstaand saldo</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="unpaidBalance">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Salary Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h3 class="user-card-title-small" style="margin: 0;">
+                <i class="fas fa-euro-sign"></i> Salaris
+              </h3>
+              ${canEditSalaryValue ? `
+              <button onclick="openEditSalaryModal()" class="btn-secondary" style="padding: 0.5rem; font-size: 0.875rem; border-radius: 6px; min-width: 36px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb';">
+                <i class="fas fa-edit"></i>
+              </button>
+              ` : ''}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Uurtarief</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;" id="hourlyRateDisplay">${formatCurrency(employee.hourly_rate_cents || 0)}</p>
+              </div>
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #0369a1; margin: 0 0 0.5rem 0; font-weight: 500;">
+                  <i class="fas fa-calendar-alt" style="margin-right: 0.25rem;"></i> Maandsalaris
+                </p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #0369a1; margin: 0;" id="monthlySalaryDisplay">-</p>
+              </div>
+            </div>
+            ${employee.payroll_scale ? `
+            <div style="padding: 0.75rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-info-circle" style="color: #0369a1; font-size: 0.875rem;"></i>
+              <p style="font-size: 0.75rem; color: #0369a1; margin: 0;">
+                Schaal: <strong>${employee.payroll_scale.name}</strong>
+              </p>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Notes Card -->
+        ${isAdmin || (employee.manager_id && employee.manager_id === user.id) ? `
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 0.75rem;">Notities</h3>
+            <div id="notesList" style="margin-bottom: 0.75rem; max-height: 200px; overflow-y: auto;">
+              <div style="text-align: center; padding: 1rem; color: #6b7280; font-size: 0.875rem;">Notities laden...</div>
+            </div>
+            <button class="btn-primary" onclick="openCreateNoteModal()" style="width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem; margin-bottom: 0.5rem; border-radius: 8px;">
+              <i class="fas fa-plus"></i> Notitie toevoegen
+            </button>
+            <a href="#" onclick="openAllNotesModal(); return false;" style="text-align: center; display: block; font-size: 0.875rem; color: #2563eb; text-decoration: none; padding: 0.5rem;">
+              Alle notities bekijken
+            </a>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Contract Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 0.75rem;">
+              <i class="fas fa-file-contract"></i> Overeenkomst
+            </h3>
+            <div id="contractDisplay">
+              ${employee.contract_document_url ? `
+                <div style="position: relative; padding: 1.5rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  ${canEditSalaryValue ? `
+                  <button onclick="showContractMenu(event)" class="contract-menu-btn" style="position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.5rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#374151';" onmouseout="this.style.background='none'; this.style.color='#6b7280';">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="5" r="1"></circle>
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="12" cy="19" r="1"></circle>
+                    </svg>
+                  </button>
+                  ` : ''}
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; width: 100%;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <p id="contractFileName" style="margin: 0; font-size: 0.875rem; color: #374151; font-weight: 500; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${contractFileName}">${contractDisplayName}</p>
+                  </div>
+                </div>
+              ` : `
+                ${canEditSalaryValue ? `
+                <label for="contractUpload" style="display: block; cursor: pointer;">
+                  <div style="padding: 2rem 1.5rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb';">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #9ca3af;">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p style="margin: 0; font-size: 0.875rem; color: #6b7280; font-weight: 500;">Upload bestand</p>
+                  </div>
+                </label>
+                <input type="file" id="contractUpload" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleContractUpload(event)">
+                ` : `
+                <div style="padding: 2rem 1.5rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;">
+                  <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">Nog geen overeenkomst</p>
+                </div>
+                `}
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Salary Edit Modal -->
+  <div id="salaryEditModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Salaris bewerken</h2>
+        <button class="modal-close" onclick="closeSalaryModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <!-- Current Salary Info -->
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+          <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Huidig uurtarief</p>
+          <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;" id="currentHourlyRateDisplay">-</p>
+          <p id="currentScaleDisplay" style="font-size: 0.875rem; color: #6b7280; margin: 0.5rem 0 0 0;"></p>
+        </div>
+
+        <!-- Scale Selection -->
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem;">
+            Kies een schaal
+          </label>
+          <div id="scalesList" style="display: grid; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
+            <div style="text-align: center; padding: 2rem; color: #6b7280;">
+              <i class="fas fa-spinner fa-spin"></i> Laden...
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Rate Option -->
+        <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem;">
+            Of voer handmatig een uurtarief in
+          </label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span style="font-size: 1rem; color: #6b7280;">€</span>
+            <input 
+              type="number" 
+              id="customHourlyRate" 
+              step="0.01" 
+              min="0" 
+              placeholder="0.00"
+              style="flex: 1; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+              oninput="updateCustomRate()"
+            />
+            <span style="font-size: 0.875rem; color: #6b7280;">/ uur</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+          <button 
+            onclick="closeSalaryModal()" 
+            style="padding: 0.625rem 1.25rem; background: white; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+          >
+            Annuleren
+          </button>
+          <button 
+            onclick="saveSalary()" 
+            id="saveSalaryBtn"
+            style="padding: 0.625rem 1.25rem; background: #2563eb; border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+          >
+            Opslaan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contract Replace Modal -->
+  <div id="contractReplaceModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Contract vervangen</h2>
+        <button class="modal-close" onclick="closeContractReplaceModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <!-- Current Contract Info -->
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+          <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Huidig contract</p>
+          <p id="currentContractFileName" style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;">-</p>
+        </div>
+
+        <!-- File Upload -->
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem;">
+            Selecteer nieuw bestand
+          </label>
+          <label for="contractReplaceUpload" style="display: block; cursor: pointer;">
+            <div style="padding: 2rem; background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; text-align: center; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.borderColor='#9ca3af';" onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db';">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #9ca3af; margin-bottom: 0.75rem;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; font-weight: 500;">Klik om bestand te selecteren</p>
+              <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #9ca3af;">PDF, DOC of DOCX (max. 10MB)</p>
+            </div>
+          </label>
+          <input type="file" id="contractReplaceUpload" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleContractReplaceFileSelect(event)">
+          <div id="selectedFileDisplay" style="margin-top: 1rem; display: none;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #0369a1;">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              <span id="selectedFileName" style="flex: 1; font-size: 0.875rem; color: #0369a1; font-weight: 500;">-</span>
+              <button onclick="clearSelectedFile()" style="background: none; border: none; color: #0369a1; cursor: pointer; padding: 0.25rem;">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+          <button 
+            onclick="closeContractReplaceModal()" 
+            style="padding: 0.625rem 1.25rem; background: white; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+          >
+            Annuleren
+          </button>
+          <button 
+            onclick="handleContractReplace()" 
+            id="replaceContractBtn"
+            style="padding: 0.625rem 1.25rem; background: #2563eb; border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+            disabled
+          >
+            Vervangen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee Profile Picture Modal -->
+  <div id="employeeProfilePictureModal" class="modal" style="display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
+    <div class="modal-content modal-sm" style="max-width: 520px; width: 90%; padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Profielfoto</h3>
+        <button class="modal-close" aria-label="Sluiten" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#374151';" onmouseout="this.style.color='#6b7280';">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+          <div style="position: relative; display: inline-block;">
+            <div id="employeeProfilePicturePreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: ${employee.profile_picture ? 'default' : 'pointer'}; transition: all 0.2s;" ${!employee.profile_picture ? 'onclick="document.getElementById(\'employeeProfilePictureUpload\').click();"' : ''} onmouseover="${!employee.profile_picture ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : ''}" onmouseout="${!employee.profile_picture ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : ''}">
+              <img id="employeeProfilePicturePreview" src="${employee.profile_picture || ''}" alt="${employeeName}" style="max-width: 100%; max-height: 100%; object-fit: cover; display: ${employee.profile_picture ? 'block' : 'none'};">
+              ${!employee.profile_picture ? `
+                <div id="profilePicturePlaceholderContent" style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;transition: all 0.2s;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;transition: all 0.2s;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span style="font-size:13px;font-weight:500;">Upload profielfoto</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
+            <button type="button" class="btn-outline" id="closeEmployeeProfilePictureModal" style="padding: 10px 20px; font-size: 14px; font-weight: 500; border-radius: 8px; background: white; border: 1px solid #e5e7eb; color: #374151; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb';">
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Pass employee data to JS
+    window.employeeData = ${JSON.stringify(employee)};
+    window.isUserAdmin = ${isAdmin};
+    window.canEditSalary = ${canEditSalaryValue};
+    window.canEditEmployee = ${typeof canEditEmployee !== 'undefined' ? canEditEmployee : (isAdmin || canEditSalaryValue)};
+    window.currentEmployeeStatus = '${employee.employee_status || employee.status || 'active'}';
+    window.currentRoleId = '${employee.role_id || ''}';
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.dropdown')) {
+          document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.remove('show');
+            menu.style.display = 'none';
+          });
+        }
+      });
+    });
+  </script>
+  `,
+  extraHead: `
+  <style>
+    .dropdown-menu.show {
+      display: block !important;
+    }
+    .btn-primary {
+      background: #ea5d0d;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .btn-primary:hover {
+      background: #d9540b;
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+    .btn-success {
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .btn-success:hover {
+      background: #047857;
+    }
+    .filter-btn {
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: #2563eb !important;
+      color: white !important;
+      border-color: #2563eb !important;
+    }
+    .filter-btn:hover:not(.active) {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+    
+    /* Salary Edit Modal Styles */
+    #salaryEditModal {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 10000 !important;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #salaryEditModal[style*="display: flex"],
+    #salaryEditModal.show {
+      display: flex !important;
+    }
+    
+    #salaryEditModal .modal-content {
+      background-color: #fff;
+      border-radius: 8px;
+      position: relative;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: auto;
+    }
+    
+    /* Contract Replace Modal Styles */
+    #contractReplaceModal {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: rgba(0, 0, 0, 0.6) !important;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 10000 !important;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #contractReplaceModal[style*="display: flex"],
+    #contractReplaceModal.show {
+      display: flex !important;
+    }
+    
+    #contractReplaceModal .modal-content {
+      background-color: #fff;
+      border-radius: 8px;
+      position: relative;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: auto;
+    }
+  </style>
+  `
+}) %>

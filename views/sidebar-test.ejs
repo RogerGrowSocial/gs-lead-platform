@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfect Sidebar Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --sidebar: #ffffff;
+      --sidebar-foreground: #4d4d4d;
+      --sidebar-hover: #fef5f0;
+      --sidebar-active: #EA5d0d;
+      --sidebar-active-fg: #ffffff;
+      --sidebar-border: #e5e7eb;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f3f4f6;
+    }
+    
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar - Fixed positioning */
+    .sidebar {
+      width: 80px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--sidebar-border);
+      position: fixed;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: width 200ms ease-in-out;
+      overflow: hidden;
+    }
+    
+    .sidebar.expanded {
+      width: 240px;
+    }
+    
+    /* Logo section - FIXED 56px container */
+    .logo-section {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--sidebar-border);
+      padding-left: 12px;
+      flex-shrink: 0;
+    }
+    
+    .logo-container {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--sidebar-active);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    
+    .logo-text {
+      font-weight: 600;
+      color: var(--sidebar-active);
+      white-space: nowrap;
+      margin-left: 12px;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .logo-text {
+      opacity: 1;
+      width: auto;
+    }
+    
+    /* Navigation section */
+    .nav-section {
+      flex: 1;
+      padding: 16px 0;
+      overflow-y: auto;
+    }
+    
+    /* Menu item - FIXED 56px icon container */
+    .menu-item {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      margin: 0 12px 4px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--sidebar-foreground);
+      text-decoration: none;
+      transition: background 200ms ease-in-out;
+    }
+    
+    .menu-item:hover {
+      background: var(--sidebar-hover);
+    }
+    
+    .menu-item.active {
+      background: var(--sidebar-active);
+      color: var(--sidebar-active-fg);
+    }
+    
+    /* Icon container - ALWAYS 56px width, NEVER changes */
+    .icon-container {
+      width: 56px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .menu-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+    
+    /* Label - appears after fixed icon container */
+    .menu-label {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .menu-label {
+      opacity: 1;
+      width: auto;
+    }
+    
+    /* Toggle button section */
+    .toggle-section {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid var(--sidebar-border);
+      flex-shrink: 0;
+    }
+    
+    .toggle-btn {
+      width: 32px;
+      height: 32px;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 200ms ease-in-out;
+      color: #6b7280;
+    }
+    
+    .toggle-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .toggle-btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .toggle-btn svg {
+      transform: rotate(180deg);
+    }
+    
+    /* Main content */
+    .main-content {
+      margin-left: 80px;
+      padding: 40px;
+      transition: margin-left 200ms ease-in-out;
+      flex: 1;
+    }
+    
+    .sidebar.expanded ~ .main-content {
+      margin-left: 240px;
+    }
+    
+    h1 {
+      font-size: 32px;
+      margin-bottom: 16px;
+      color: #111827;
+    }
+    
+    p {
+      color: #6b7280;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Perfect Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Logo Section -->
+      <div class="logo-section">
+        <div class="logo-container">
+          <div class="logo-icon">GS</div>
+        </div>
+        <span class="logo-text">GrowSocial</span>
+      </div>
+      
+      <!-- Navigation Section -->
+      <nav class="nav-section">
+        <a href="#" class="menu-item active">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+              <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+            </svg>
+          </div>
+          <span class="menu-label">Dashboard</span>
+        </a>
+        
+        <a href="#" class="menu-item">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Aanvragen</span>
+        </a>
+        
+        <a href="#" class="menu-item">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+              <line x1="2" x2="22" y1="10" y2="10"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Betalingen</span>
+        </a>
+        
+        <a href="#" class="menu-item">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <span class="menu-label">Instellingen</span>
+        </a>
+      </nav>
+      
+      <!-- Toggle Section -->
+      <div class="toggle-section">
+        <button class="toggle-btn" id="toggleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <h1>Perfect Sidebar Test</h1>
+      <p>This sidebar has zero layout shifts. Icons stay on the exact same vertical axis when toggling.</p>
+      <p>Click the chevron button at the bottom to expand/collapse.</p>
+    </main>
+  </div>
+  
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleBtn');
+    
+    // Load saved state
+    const savedState = localStorage.getItem('sidebarExpanded');
+    if (savedState === 'true') {
+      sidebar.classList.add('expanded');
+    }
+    
+    // Toggle handler
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('expanded');
+      localStorage.setItem('sidebarExpanded', sidebar.classList.contains('expanded'));
+    });
+    
+    // Active state handler
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

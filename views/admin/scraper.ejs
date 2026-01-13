@@ -1,0 +1,266 @@
+<%- include('../layouts/admin', {
+  title: 'Scraper',
+  activeMenu: 'scraper',
+  user: user,
+  stylesheets: ['/css/admin/scraper.css'],
+  scripts: ['/js/admin/scraper.js'],
+  body: (function() {
+    // Pass branches to JavaScript
+    var branchesData = typeof branches !== 'undefined' && branches ? JSON.stringify(branches) : '[]';
+    var output = '';
+    output += '<div class="scraper-container">';
+    
+    // Page Header
+    output += '  <div class="page-header">';
+    output += '    <div>';
+    output += '      <h1>Scraper</h1>';
+    output += '      <p class="text-muted">Zoek potentiële klanten (kansen) met AI-powered web scraping</p>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Config Panel
+    output += '  <div class="scraper-config-card">';
+    output += '    <div class="config-card-body">';
+    output += '      <h2 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 600;">Scrape Configuratie</h2>';
+    output += '      <form id="scraperConfigForm">';
+    output += '        <div class="config-grid">';
+    
+    // Location & Radius (Row 1)
+    output += '          <div class="config-field">';
+    output += '            <label for="locationText">Locatie <span class="required-asterisk">*</span></label>';
+    output += '            <input type="text" id="locationText" name="location_text" placeholder="Amsterdam, 1012AB, of vrije tekst" required />';
+    output += '            <small>Stad, postcode of vrije tekst</small>';
+    output += '          </div>';
+    
+    output += '          <div class="config-field">';
+    output += '            <label for="radiusKm">Radius (km)</label>';
+    output += '            <input type="number" id="radiusKm" name="radius_km" value="20" min="1" max="100" />';
+    output += '            <small>Zoekradius in kilometers</small>';
+    output += '          </div>';
+    
+    // Branches (Row 2 - full width)
+    output += '          <div class="config-field config-field-full">';
+    output += '            <label>Branches</label>';
+    output += '            <div id="branchesSelector" class="multi-select-container">';
+    output += '              <div class="multi-select-input">';
+    output += '                <input type="text" id="branchInput" placeholder="Type branch naam of selecteer..." />';
+    output += '                <div id="branchDropdown" class="multi-select-dropdown" style="display: none;"></div>';
+    output += '              </div>';
+    output += '              <div id="selectedBranches" class="selected-tags"></div>';
+    output += '            </div>';
+    output += '            <small>Selecteer branches of voeg custom branches toe</small>';
+    output += '          </div>';
+    
+    // Service & Max Resultaten (Row 3)
+    output += '          <div class="config-field">';
+    output += '            <label for="serviceId">Dienst</label>';
+    output += '            <select id="serviceId" name="service_id">';
+    output += '              <option value="">Geen dienst geselecteerd</option>';
+    if (typeof services !== 'undefined' && services) {
+      services.forEach(function(service) {
+        output += `              <option value="${service.id}">${service.name} (${service.billing_model || 'one_time'})</option>`;
+      });
+    }
+    output += '            </select>';
+    output += '            <small>Selecteer dienst voor AI targeting</small>';
+    output += '          </div>';
+    
+    output += '          <div class="config-field">';
+    output += '            <label for="maxResults">Max resultaten</label>';
+    output += '            <input type="number" id="maxResults" name="max_results" value="50" min="1" max="500" />';
+    output += '          </div>';
+    
+    // Gewenste velden (Row 4 - full width)
+    output += '          <div class="config-field config-field-full">';
+    output += '            <label>Gewenste velden</label>';
+    output += '            <div class="checkbox-group">';
+    output += '              <label><input type="checkbox" name="desired_fields" value="company_name" checked disabled /> Bedrijfsnaam <span class="field-required-text">(verplicht)</span></label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="website" checked /> Website</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="phone" checked /> Telefoon</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="email" checked /> E-mail</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="address" /> Adres</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="city" /> Stad</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="postcode" /> Postcode</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="contact_person" /> Contactpersoon</label>';
+    output += '              <label><input type="checkbox" name="desired_fields" value="notes" /> Notities</label>';
+    output += '            </div>';
+    output += '          </div>';
+    
+    // Max pagina's & Alleen Nederland (Row 5)
+    output += '          <div class="config-field">';
+    output += '            <label for="maxPagesPerDomain">Max pagina\'s per domein</label>';
+    output += '            <input type="number" id="maxPagesPerDomain" name="max_pages_per_domain" value="2" min="1" max="10" />';
+    output += '          </div>';
+    
+    output += '          <div class="config-field">';
+    output += '            <label class="checkbox-inline-label">';
+    output += '              <input type="checkbox" id="onlyNl" name="only_nl" checked />';
+    output += '              <span>Alleen Nederland</span>';
+    output += '            </label>';
+    output += '          </div>';
+    
+    output += '        </div>';
+    
+    // Actions
+    output += '        <div class="config-actions">';
+    output += '          <button type="button" id="previewQueryBtn" class="btn-secondary">Preview Query</button>';
+    output += '          <button type="button" id="historyBtn" class="btn-secondary">Geschiedenis</button>';
+    output += '          <button type="submit" id="scrapeBtn" class="btn-primary">Scrape</button>';
+    output += '        </div>';
+    output += '      </form>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Job Progress (hidden by default)
+    output += '  <div id="jobProgress" class="job-progress-card" style="display: none;">';
+    output += '    <div class="job-progress-header">';
+    output += '      <div>';
+    output += '        <h3 id="jobProgressTitle">Scrape bezig...</h3>';
+    output += '        <p id="jobProgressSubtitle" class="text-muted">Job ID: <span id="currentJobId">-</span></p>';
+    output += '      </div>';
+    output += '      <button id="cancelJobBtn" class="btn-secondary">Annuleren</button>';
+    output += '    </div>';
+    output += '    <div class="progress-bar-container">';
+    output += '      <div class="progress-bar">';
+    output += '        <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;">';
+    output += '          <div class="progress-bar-spinner"></div>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <div class="progress-stats">';
+    output += '        <span>Gevonden: <strong id="progressFound">0</strong> <span class="spinner-small" id="foundSpinner" style="display: none;"></span></span>';
+    output += '        <span>Verrijkt: <strong id="progressEnriched">0</strong> <span class="spinner-small" id="enrichedSpinner" style="display: none;"></span></span>';
+    output += '        <span>Fouten: <strong id="progressErrors">0</strong></span>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Results Area
+    output += '  <div id="resultsArea" class="results-area" style="display: none;">';
+    output += '    <div class="results-header">';
+    output += '      <h2>Resultaten</h2>';
+    output += '      <div class="results-filters">';
+    output += '        <label><input type="checkbox" id="filterHasPhone" /> Alleen met telefoon</label>';
+    output += '        <label><input type="checkbox" id="filterHasEmail" /> Alleen met e-mail</label>';
+    output += '        <label>Min score: <input type="number" id="filterMinScore" min="0" max="100" style="width: 60px; margin-left: 0.5rem;" /></label>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '    <div id="resultsTable" class="results-table">';
+    output += '      <div class="empty-state">';
+    output += '        <p>Nog geen resultaten — bezig met zoeken…</p>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '  </div>';
+    
+    // Empty State (no jobs)
+    output += '  <div id="emptyState" class="empty-state-card">';
+    output += '    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
+    output += '      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>';
+    output += '      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>';
+    output += '      <line x1="12" y1="22.08" x2="12" y2="12"></line>';
+    output += '    </svg>';
+    output += '    <h3>Start je eerste scrape</h3>';
+    output += '    <p>Vul de configuratie hierboven in en klik op "Scrape" om te beginnen.</p>';
+    output += '  </div>';
+    
+    output += '</div>';
+    
+    // Pass data to JavaScript
+    output += '<script>';
+    output += '  window.scraperBranches = ' + branchesData + ';';
+    output += '  window.scraperUserName = ' + (typeof userName !== 'undefined' ? JSON.stringify(userName) : 'null') + ';';
+    output += '  window.scraperIsUserAdmin = ' + (typeof isUserAdmin !== 'undefined' && isUserAdmin ? 'true' : 'false') + ';';
+    output += '</script>';
+    
+    // Detail Page (single page, not modal)
+    output += '<div id="detailPage" class="detail-page" style="display: none;">';
+    output += '  <div class="detail-page-header">';
+    output += '    <button id="backToListBtn" class="btn-back">← Terug naar lijst</button>';
+    output += '    <h1 id="detailPageCompanyName">-</h1>';
+    output += '  </div>';
+    output += '  <div class="detail-page-content">';
+    output += '    <div id="detailPageContent"></div>';
+    output += '  </div>';
+    output += '  <div class="detail-page-footer">';
+    output += '    <a id="detailPageCallBtn" href="#" class="btn-primary" target="_blank">Bel</a>';
+    output += '    <button id="detailPageScriptBtn" class="btn-secondary">Lees script</button>';
+    output += '    <button id="detailPageBlockBtn" class="btn-danger">Blokkeer</button>';
+    output += '    <button id="detailPageCreateKansBtn" class="btn-primary">Maak kans aan</button>';
+    output += '  </div>';
+    output += '</div>';
+    
+    // Script Modal
+    output += '<div id="scriptModal" class="modal">';
+    output += '  <div class="modal-content">';
+    output += '    <div class="modal-header">';
+    output += '      <h2>Belscript</h2>';
+    output += '      <button class="modal-close" id="closeScriptModal">×</button>';
+    output += '    </div>';
+    output += '    <div class="modal-body">';
+    output += '      <div class="form-field">';
+    output += '        <label for="scriptServiceSelect">Dienst</label>';
+    output += '        <select id="scriptServiceSelect">';
+    output += '          <option value="">Selecteer dienst...</option>';
+    if (typeof services !== 'undefined' && services) {
+      services.forEach(function(service) {
+        output += `            <option value="${service.id}">${service.name}</option>`;
+      });
+    }
+    output += '        </select>';
+    output += '      </div>';
+    output += '      <div class="form-field">';
+    output += '        <label for="scriptText">Script';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += ' <span style="margin-left: 0.5rem; font-size: 0.75rem; color: #6b7280;">(Bewerkbaar)</span>';
+    } else {
+      output += ' <span style="margin-left: 0.5rem; font-size: 0.75rem; color: #6b7280;">(Alleen bekijken)</span>';
+    }
+    output += '        </label>';
+    output += '        <textarea id="scriptText" rows="10" placeholder="Script tekst..." ' + (typeof isUserAdmin !== 'undefined' && isUserAdmin ? '' : 'readonly') + '></textarea>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '    <div class="modal-footer">';
+    if (typeof isUserAdmin !== 'undefined' && isUserAdmin) {
+      output += '      <button id="saveScriptBtn" class="btn-primary">Opslaan</button>';
+    }
+    output += '      <button id="closeScriptModalBtn" class="btn-secondary">Sluiten</button>';
+    output += '    </div>';
+    output += '  </div>';
+    output += '</div>';
+    
+    // Preview Query Modal
+    output += '<div id="previewQueryModal" class="modal">';
+    output += '  <div class="modal-content">';
+    output += '    <div class="modal-header">';
+    output += '      <h2>Preview Tavily Queries</h2>';
+    output += '      <button class="modal-close" id="closePreviewModal">×</button>';
+    output += '    </div>';
+    output += '    <div class="modal-body">';
+    output += '      <p>De volgende queries zullen worden uitgevoerd:</p>';
+    output += '      <ul id="previewQueriesList"></ul>';
+    output += '    </div>';
+    output += '    <div class="modal-footer">';
+    output += '      <button id="closePreviewModalBtn" class="btn-secondary">Sluiten</button>';
+    output += '    </div>';
+    output += '  </div>';
+    output += '</div>';
+    
+    // History Modal
+    output += '<div id="historyModal" class="modal">';
+    output += '  <div class="modal-content">';
+    output += '    <div class="modal-header">';
+    output += '      <h2>Scrape Geschiedenis</h2>';
+    output += '      <button class="modal-close" id="closeHistoryModal">×</button>';
+    output += '    </div>';
+    output += '    <div class="modal-body">';
+    output += '      <div id="historyList"></div>';
+    output += '    </div>';
+    output += '    <div class="modal-footer">';
+    output += '      <button id="closeHistoryModalBtn" class="btn-secondary">Sluiten</button>';
+    output += '    </div>';
+    output += '  </div>';
+    output += '</div>';
+    
+    return output;
+  })()
+}) %>
+

@@ -1,0 +1,621 @@
+/* ============================================
+   TABS CONTAINER
+   ============================================ */
+.tabs-container {
+  margin-top: 0;
+}
+
+/* ============================================
+   TABS HEADER
+   ============================================ */
+.tabs-header {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;  /* gray-200 */
+  margin-bottom: 24px;
+  padding-left: 0;  /* Remove left padding */
+  margin-left: 0;  /* Remove left margin */
+}
+
+/* ============================================
+   TAB BUTTONS
+   ============================================ */
+.tab-button {
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: #6b7280;  /* gray-500 */
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  position: relative;
+}
+
+/* Remove left padding from first tab */
+.tab-button:first-child {
+  padding-left: 0;
+}
+
+.tab-button:hover {
+  color: #374151;  /* gray-700 */
+}
+
+.tab-button-active {
+  color: #111827;  /* gray-900 */
+  border-bottom-color: #111827;  /* gray-900 - underline divider */
+  border-bottom-width: 2px;
+  border-bottom-style: solid;
+}
+
+/* ============================================
+   TAB CONTENT
+   ============================================ */
+.tab-content {
+  display: none;
+}
+
+.tab-content-active {
+  display: block;
+}
+
+/* ============================================
+   TAB PLACEHOLDER
+   ============================================ */
+.tab-placeholder {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;  /* gray-500 */
+  font-size: 16px;
+}
+
+/* ============================================
+   FILTERS CONTAINER
+   ============================================ */
+.filters-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 0;
+  margin-top: 16px;
+}
+
+@media (min-width: 640px) {
+  .filters-container {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
+/* ============================================
+   STATUS FILTER SECTION
+   ============================================ */
+.status-filter-section {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 640px) {
+  .status-filter-section {
+    align-items: center;
+  }
+}
+
+/* ============================================
+   RESULTS INFO
+   ============================================ */
+.results-info {
+  font-size: 12px;
+  color: #b1b3b7;
+  text-align: right;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ============================================
+   SEARCH INPUT WRAPPER
+   ============================================ */
+.search-wrapper {
+  flex: 1;
+}
+
+.search-input {
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;  /* gray-200 */
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;  /* gray-900 */
+  background: white;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #9ca3af;  /* gray-400 */
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;  /* gray-400 */
+}
+
+/* ============================================
+   STATUS SELECT
+   ============================================ */
+.status-select {
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;  /* gray-200 */
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;  /* gray-900 */
+  background: white;
+  cursor: pointer;
+}
+
+@media (min-width: 640px) {
+  .status-select {
+    width: 200px;
+  }
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #9ca3af;  /* gray-400 */
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
+}
+
+/* ============================================
+   TABLE CONTAINER - IMPORTANT: 0.5px border
+   ============================================ */
+.table-container {
+  border: 0.5px solid #e5e7eb;  /* gray-200 - MUST BE 0.5px */
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+/* ============================================
+   TABLE SCROLL WRAPPER
+   ============================================ */
+.table-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* ============================================
+   BASE TABLE
+   ============================================ */
+.payments-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+/* ============================================
+   HEADER ROW
+   ============================================ */
+.table-header-row {
+  background-color: #f9fafb;  /* gray-50 */
+  border-bottom: 1px solid #e5e7eb;  /* gray-200 */
+}
+
+/* ============================================
+   HEADER CELLS
+   ============================================ */
+.table-header-cell {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;  /* medium */
+  color: #374151;  /* gray-700 */
+  white-space: nowrap;
+}
+
+/* ============================================
+   BODY ROW
+   ============================================ */
+.table-body-row {
+  border-bottom: 0.5px solid #f3f4f6;  /* gray-100 - subtle light gray */
+  transition: background-color 0.15s;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.table-body-row:hover {
+  background-color: #f9fafb;  /* gray-50 */
+}
+
+.table-body-row:last-child {
+  border-bottom: none;
+}
+
+/* ============================================
+   TABLE CELL BASE
+   ============================================ */
+.table-cell {
+  padding: 10px 16px;
+  vertical-align: middle;
+}
+
+/* ============================================
+   CELL TEXT (Default)
+   ============================================ */
+.cell-text {
+  font-size: 14px;
+  color: #111827;  /* gray-900 */
+}
+
+/* ============================================
+   CELL COLUMN LAYOUT (for multi-line cells)
+   ============================================ */
+.cell-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ============================================
+   LEAD ID BADGE
+   ============================================ */
+.lead-id-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Courier New', monospace;  /* monospace font */
+  background-color: #f3f4f6;  /* gray-100 */
+  color: #374151;  /* gray-700 */
+  width: fit-content;
+}
+
+/* ============================================
+   LEAD TITLE
+   ============================================ */
+.lead-title {
+  font-size: 12px;
+  color: #6b7280;  /* gray-500 */
+}
+
+/* ============================================
+   CUSTOMER NAME
+   ============================================ */
+.customer-name {
+  font-size: 14px;
+  font-weight: 500;  /* medium */
+  color: #111827;  /* gray-900 */
+}
+
+/* ============================================
+   CUSTOMER ID
+   ============================================ */
+.customer-id {
+  font-size: 12px;
+  color: #6b7280;  /* gray-500 */
+}
+
+/* ============================================
+   AMOUNT GROSS (Bedrag)
+   ============================================ */
+.amount-gross {
+  font-size: 14px;
+  font-weight: 600;  /* semibold */
+  color: #111827;  /* gray-900 */
+}
+
+/* ============================================
+   AMOUNT FEES
+   ============================================ */
+.amount-fees {
+  font-size: 14px;
+  color: #4b5563;  /* gray-600 */
+}
+
+/* ============================================
+   AMOUNT NET (Netto)
+   ============================================ */
+.amount-net {
+  font-size: 14px;
+  font-weight: 600;  /* semibold */
+  color: #111827;  /* gray-900 */
+}
+
+/* ============================================
+   STATUS BADGE BASE - Exact match to user-status-badge-new
+   ============================================ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem; /* rounded-md - exact match */
+  padding: 0.125rem 0.5rem; /* px-2 py-0.5 - exact match */
+  font-size: 0.75rem; /* text-xs - exact match */
+  font-weight: 500; /* font-medium - exact match */
+  width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  background: #f3f4f6; /* bg-secondary - exact match */
+  color: #111827; /* text-secondary-foreground - exact match */
+}
+
+/* ============================================
+   STATUS COLORS - Exact match to user-status-badge-new variants
+   Match exact syntax: is-active uses border, others use border-color
+   ============================================ */
+.status-paid {
+  background: #dcfce7; /* green-100 */
+  border-color: #bbf7d0; /* green-200 */
+  color: #15803d; /* green-700 */
+}
+
+.status-pending {
+  background: #f3f4f6; /* bg-gray-100 - match is-active exactly */
+  border: 1px solid #e5e7eb; /* border-gray-200 - match is-active exactly */
+  color: #374151; /* text-gray-700 - match is-active exactly */
+}
+
+.status-new {
+  background: #e0f2fe; /* match is-new exactly */
+  border-color: #bae6fd; /* match is-new exactly */
+  color: #0369a1; /* match is-new exactly */
+}
+
+.status-failed {
+  background: #fee2e2; /* match is-blocked exactly */
+  border-color: #fecaca; /* match is-blocked exactly */
+  color: #b91c1c; /* match is-blocked exactly */
+}
+
+.status-refunded {
+  background: #fef3c7; /* yellow-100 */
+  border-color: #fde68a; /* yellow-200 */
+  color: #92400e; /* yellow-800 */
+}
+
+.status-overdue {
+  background: #fee2e2; /* red-100 */
+  border-color: #fecaca; /* red-200 */
+  color: #b91c1c; /* red-700 */
+}
+
+.status-draft {
+  background: #f3e8ff; /* purple-100 */
+  border-color: #e9d5ff; /* purple-200 */
+  color: #6b21a8; /* purple-800 */
+}
+
+.status-cancelled {
+  background: #f3f4f6; /* gray-100 */
+  border-color: #e5e7eb; /* gray-200 */
+  color: #6b7280; /* gray-600 */
+}
+
+.status-invalid {
+  background: #fef2f2; /* red-50 */
+  border-color: #fecaca; /* red-200 */
+  color: #991b1b; /* red-800 */
+}
+
+/* ============================================
+   ACTIONS BUTTON
+   ============================================ */
+.actions-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6b7280;  /* gray-600 */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.actions-button:hover {
+  background-color: #f3f4f6;  /* gray-100 */
+  color: #111827;  /* gray-900 */
+}
+
+/* ============================================
+   PAGINATION CONTAINER
+   ============================================ */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+/* ============================================
+   ITEMS PER PAGE WRAPPER
+   ============================================ */
+.items-per-page-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.items-per-page-label {
+  font-size: 14px;
+  color: #b1b3b7;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin: 0;
+}
+
+.items-per-page-select {
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;  /* gray-200 */
+  border-radius: 6px;
+  font-size: 14px;
+  color: #b1b3b7;
+  background: white;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.items-per-page-select:focus {
+  outline: none;
+  border-color: #9ca3af;  /* gray-400 */
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
+}
+
+.items-per-page-suffix {
+  font-size: 14px;
+  color: #b1b3b7;
+  white-space: nowrap;
+}
+
+/* ============================================
+   RESULTS INFO
+   ============================================ */
+.pagination-info {
+  font-size: 14px;
+  color: #4b5563;  /* gray-600 */
+}
+
+/* ============================================
+   PAGINATION BUTTONS CONTAINER
+   ============================================ */
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ============================================
+   NAVIGATION BUTTONS (Prev/Next)
+   ============================================ */
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #e5e7eb;  /* gray-200 */
+  border-radius: 6px;
+  background: white;
+  color: #b1b3b7;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination-nav:hover:not(:disabled) {
+  color: #111827;  /* gray-900 */
+  background-color: #f9fafb;  /* gray-50 */
+}
+
+.pagination-nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   PAGE NUMBER BUTTONS
+   ============================================ */
+.pagination-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #e5e7eb;  /* gray-200 */
+  border-radius: 6px;
+  background: white;
+  color: #b1b3b7;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination-page:hover {
+  color: #111827;  /* gray-900 */
+  background-color: #f9fafb;  /* gray-50 */
+}
+
+/* ============================================
+   ACTIVE PAGE
+   ============================================ */
+.pagination-page-active {
+  background-color: #111827;  /* gray-900 */
+  color: white;
+  border-color: #111827;
+}
+
+.pagination-page-active:hover {
+  background-color: #1f2937;  /* gray-800 */
+  color: white;
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+  .table-cell {
+    padding: 12px 8px;
+  }
+  
+  .table-header-cell {
+    padding: 8px;
+    font-size: 12px;
+  }
+  
+  .filters-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .status-filter-section {
+    align-items: flex-start;
+  }
+  
+  .results-info {
+    text-align: left;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .pagination-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .items-per-page-wrapper {
+    gap: 6px;
+  }
+  
+  .items-per-page-label {
+    font-size: 13px;
+  }
+  
+  .items-per-page-select {
+    height: 28px;
+    font-size: 13px;
+    min-width: 50px;
+  }
+  
+  .items-per-page-suffix {
+    font-size: 13px;
+  }
+}

@@ -1,0 +1,2389 @@
+<%
+// Declare leads and stats variables
+var leads = locals.leads || []
+var stats = locals.stats || {}
+
+// Use only real database data - no sample data
+// If no leads exist, show empty state
+
+// Statistieken berekenen
+stats = {
+totalLeads: leads.length,
+newLeads: leads.filter(function(lead) { return lead.status === "new"; }).length,
+acceptedLeads: leads.filter(function(lead) { return lead.status === "accepted"; }).length,
+rejectedLeads: leads.filter(function(lead) { return lead.status === "rejected"; }).length,
+monthlyUsage: locals.stats ? locals.stats.monthlyUsage : 0,
+monthlyQuota: locals.stats ? locals.stats.monthlyQuota : 0,
+monthlyRevenue: locals.stats ? locals.stats.monthlyRevenue : 0
+}
+
+// Bereken de geschatte omzet (som van alle bedragen van geaccepteerde leads)
+const estimatedRevenue = leads
+.filter(function(lead) { return lead.status === "accepted"; })
+.reduce(function(total, lead) { return total + (lead.amount || 0); }, 0);
+
+var leadsContent = `
+<div class="card-container">
+  <!-- Deze maand -->
+  <div class="card">
+    <div class="card-content">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="card-title">Deze maand</p>
+          <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;">
+            ${stats.monthlyUsage}
+          </p>
+        </div>
+        <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-chart-line" style="font-size: 1.5rem; color: #4B5563;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Nieuwe aanvragen -->
+  <div class="card">
+    <div class="card-content">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="card-title">Nieuwe aanvragen</p>
+          <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;">
+            ${stats.newLeads}
+          </p>
+        </div>
+        <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-bell" style="font-size: 1.5rem; color: #4B5563;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Geaccepteerde leads -->
+  <div class="card">
+    <div class="card-content">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="card-title">Geaccepteerde leads</p>
+          <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;">
+            ${stats.acceptedLeads}
+          </p>
+        </div>
+        <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #4B5563;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Maandelijkse Aanvragen Limiet Sectie (COMPACT DESIGN) -->
+<div class="monthly-limit-section">
+  <!-- Header with Pause Toggle -->
+  <div class="limit-header">
+    <div class="limit-header-content">
+      <div class="limit-header-text">
+        <h2 class="limit-title">Maandelijkse aanvragen limiet</h2>
+        <p class="limit-subtitle">Beheer hoeveel aanvragen je wilt ontvangen</p>
+      </div>
+      <div class="limit-header-toggle">
+        <span class="pause-label">Aanvragen pauzeren</span>
+        <label class="toggle-switch" for="pauseLeads">
+          <input type="checkbox" id="pauseLeads"${locals.settings && locals.settings.paused ? ' checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Warning Banner (Conditional - only shown when paused) -->
+  <div class="limit-warning-banner${locals.settings && locals.settings.paused ? ' show' : ''}" id="pauseWarningBanner">
+    <div class="warning-content">
+      <i class="fas fa-exclamation-circle warning-icon"></i>
+      <div class="warning-text">
+        <p class="warning-title">Aanvragen staan op pauze</p>
+        <p class="warning-description">Je ontvangt momenteel geen nieuwe aanvragen. Schakel de pauze uit om weer aanvragen te ontvangen.</p>
+      </div>
+      <button class="warning-btn" onclick="document.getElementById('pauseLeads').click();">
+        Pauze opheffen
+      </button>
+    </div>
+  </div>
+  
+  <!-- Slider Sectie -->
+  <div class="limit-slider-section">
+    <div class="slider-content">
+      <div class="current-limit-display">
+        <span class="current-limit-label">Huidige limiet</span>
+        <span class="current-limit-value" id="currentLimitDisplay">
+          ${stats.monthlyQuota === 100 ? 'Geen limiet' : stats.monthlyQuota + ' aanvragen'}
+        </span>
+      </div>
+      
+      <div class="modern-slider-container">
+        <input type="range" class="modern-slider" id="leadLimitSlider" min="0" max="100" value="${stats.monthlyQuota}" step="5"${locals.settings && locals.settings.paused ? ' disabled' : ''}>
+        <div class="modern-slider-progress" style="width: ${(stats.monthlyQuota / 100) * 100}% !important;"></div>
+      </div>
+      
+      <div class="slider-labels">
+        <span>0</span>
+        <span>25</span>
+        <span>50</span>
+        <span>75</span>
+        <span>100 (Geen limiet)</span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Einde Maandelijkse Aanvragen Limiet Sectie -->
+
+<!-- Branche Voorkeuren Sectie -->
+<div class="card mb-4" id="branchePreferencesCard">
+<div class="card-header">
+  <h2 class="limit-title">Branche voorkeuren</h2>
+  <p class="limit-subtitle">Selecteer voor welke branches je aanvragen wilt ontvangen</p>
+</div>
+<div class="card-body">
+  <style>
+    /* Industry Preferences - Modern Grid Design */
+    .industry-preferences-container {
+      background: transparent;
+      padding: 0;
+    }
+
+    .industry-preferences-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .industry-preference-item {
+      background: #ffffff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .industry-preference-item:hover {
+      background: #FFF;
+      border-color: #E5E7EB;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .industry-preference-item.enabled {
+      background: #FEF3ED;
+      border-color: #EA5D0D;
+    }
+
+    /* Custom checkbox styling */
+    .industry-checkbox-wrapper {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .industry-preference-checkbox {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .industry-checkbox-visual {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid #D1D5DB;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .industry-preference-item:hover .industry-checkbox-visual {
+      border-color: #9CA3AF;
+    }
+
+    .industry-preference-item.enabled .industry-checkbox-visual {
+      background: #EA5D0D;
+      border-color: #EA5D0D;
+    }
+
+    .industry-checkbox-visual::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.2s ease;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    .industry-preference-item.enabled .industry-checkbox-visual::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .industry-preference-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .industry-preference-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6B7280;
+      font-size: 18px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: #F9FAFB;
+    }
+
+    .industry-preference-item.enabled .industry-preference-icon {
+      color: #EA5D0D;
+      background: #FFF;
+    }
+
+    .industry-preference-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .industry-preference-name {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 2px;
+      font-size: 15px;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .industry-preference-status {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 4px;
+    }
+
+    .industry-preference-item.enabled .industry-preference-status {
+      color: #EA5D0D;
+      font-weight: 500;
+    }
+
+    .industry-preference-price-text {
+      font-size: 11px;
+      color: #6B7280;
+    }
+
+    /* Right price block */
+    .industry-price-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .industry-price-right .price {
+      font-weight: 700;
+      color: #111827;
+      font-size: 15px;
+    }
+    .industry-price-right .per-lead {
+      display: block;
+      font-size: 11px;
+      color: #6B7280;
+      margin-top: 2px;
+    }
+
+    .industry-preferences-actions {
+      padding: 20px 0 0 0;
+      text-align: right;
+    }
+
+    .industry-preferences-actions .btn {
+      min-width: 120px;
+      padding: 10px 20px;
+      font-weight: 500;
+      border-radius: 6px;
+      background: #e9ecef;
+      border: 1px solid #dee2e6;
+      color: #6c757d;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .industry-preferences-actions .btn:hover:not(:disabled) {
+      background: #007bff;
+      border-color: #007bff;
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+      opacity: 1;
+    }
+
+    .industry-preferences-actions .btn:disabled {
+      background: #e9ecef;
+      border-color: #dee2e6;
+      color: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.6;
+    }
+
+    .industry-preferences-actions .btn.active {
+      background: #007bff;
+      border-color: #007bff;
+      color: white;
+      cursor: pointer;
+      opacity: 1;
+    }
+
+    .industry-preferences-actions .btn i {
+      margin-right: 8px;
+    }
+
+    /* Modern Confirmation Modal Styles */
+    .confirmation-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .confirmation-modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+    }
+
+    .confirmation-modal-content {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      max-width: 448px;
+      width: 100%;
+      z-index: 10000;
+      animation: modal-fade-in 0.3s ease-out;
+    }
+
+    .confirmation-modal-header {
+      padding: 20px 24px 0 24px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .confirmation-modal-header-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .confirmation-modal-icon {
+      width: 40px;
+      height: 40px;
+      background: #fef3c7;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .confirmation-modal-icon svg {
+      width: 20px;
+      height: 20px;
+      color: #d97706;
+    }
+
+    .confirmation-modal-title {
+      margin: 0;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .confirmation-modal-subtitle {
+      margin: 4px 0 0 0;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .confirmation-modal-body {
+      padding: 20px 24px;
+    }
+
+    .confirmation-modal-body p {
+      margin: 0 0 24px 0;
+      color: #374151;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Limit Change Visualization */
+    .limit-change-visualization {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .limit-change-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .limit-badge {
+      text-align: center;
+    }
+
+    .limit-badge-label {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1d4ed8;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 12px;
+      margin-bottom: 4px;
+      border: 1px solid #93c5fd;
+    }
+
+    .limit-badge-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 2px;
+    }
+
+    .limit-badge-unit {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .limit-arrow {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+
+    .limit-arrow svg {
+      width: 24px;
+      height: 24px;
+      color: #9ca3af;
+    }
+
+    .limit-badge.new {
+      text-align: center;
+    }
+
+    .limit-badge.new .limit-badge-label {
+      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+      color: #047857;
+      border: 1px solid #6ee7b7;
+    }
+
+    .limit-badge.new .limit-badge-value {
+      color: #059669;
+    }
+
+    /* Info Box */
+    .confirmation-info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 24px;
+    }
+
+    .confirmation-info-content {
+      display: flex;
+      gap: 12px;
+    }
+
+    .confirmation-info-icon {
+      width: 20px;
+      height: 20px;
+      color: #3b82f6;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .confirmation-info-text {
+      font-size: 14px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .confirmation-info-text strong {
+      font-weight: 600;
+    }
+
+    .confirmation-modal-footer {
+      padding: 16px 24px 24px 24px;
+      background: #f9fafb;
+      border-radius: 0 0 12px 12px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .confirmation-modal-footer .btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .confirmation-modal-footer .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #e2e8f0;
+    }
+
+    .confirmation-modal-footer .btn-secondary:hover {
+      background: #e2e8f0;
+      transform: translateY(-1px);
+    }
+
+    .confirmation-modal-footer .btn-primary {
+      background: #059669;
+      color: white;
+    }
+
+    .confirmation-modal-footer .btn-primary:hover {
+      background: #047857;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    }
+
+    /* Modal Animation */
+    @keyframes modal-fade-in {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* Pause Confirmation Modal Styles */
+    .pause-confirmation-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .pause-confirmation-modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(4px);
+    }
+
+    .pause-confirmation-modal-content {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      max-width: 448px;
+      width: 100%;
+      z-index: 10000;
+      animation: modal-fade-in 0.3s ease-out;
+    }
+
+    .pause-confirmation-modal-header {
+      padding: 20px 24px 0 24px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .pause-confirmation-modal-header-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .pause-confirmation-modal-icon {
+      width: 40px;
+      height: 40px;
+      background: #fef3c7;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pause-confirmation-modal-icon svg {
+      width: 20px;
+      height: 20px;
+      color: #d97706;
+    }
+
+    .pause-confirmation-modal-title {
+      margin: 0;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .pause-confirmation-modal-subtitle {
+      margin: 4px 0 0 0;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .pause-confirmation-modal-body {
+      padding: 20px 24px;
+    }
+
+    .pause-confirmation-modal-body p {
+      margin: 0 0 24px 0;
+      color: #374151;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Pause Status Visualization */
+    .pause-status-visualization {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .pause-status-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .pause-status-badge {
+      text-align: center;
+    }
+
+    .pause-status-badge-label {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1d4ed8;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 12px;
+      margin-bottom: 4px;
+      border: 1px solid #93c5fd;
+    }
+
+    .pause-status-badge-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 2px;
+    }
+
+    .pause-status-badge-unit {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .pause-status-arrow {
+      display: flex;
+      justify-content: center;
+    }
+
+    .pause-status-arrow svg {
+      width: 24px;
+      height: 24px;
+      color: #9ca3af;
+    }
+
+    .pause-status-badge.new {
+      text-align: center;
+    }
+
+    .pause-status-badge.new .pause-status-badge-label {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+
+    .pause-status-badge.new .pause-status-badge-value {
+      color: #d97706;
+    }
+
+    /* Pause Info Box */
+    .pause-confirmation-info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 24px;
+    }
+
+    .pause-confirmation-info-content {
+      display: flex;
+      gap: 12px;
+    }
+
+    .pause-confirmation-info-icon {
+      width: 20px;
+      height: 20px;
+      color: #3b82f6;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .pause-confirmation-info-text {
+      font-size: 14px;
+      color: #1e40af;
+      line-height: 1.5;
+    }
+
+    .pause-confirmation-info-text strong {
+      font-weight: 600;
+    }
+
+    .pause-confirmation-modal-footer {
+      padding: 16px 24px 24px 24px;
+      background: #f9fafb;
+      border-radius: 0 0 12px 12px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .pause-confirmation-modal-footer .btn {
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .pause-confirmation-modal-footer .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #e2e8f0;
+    }
+
+    .pause-confirmation-modal-footer .btn-secondary:hover {
+      background: #e2e8f0;
+      transform: translateY(-1px);
+    }
+
+    .pause-confirmation-modal-footer .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .pause-confirmation-modal-footer .btn-warning:hover {
+      background: #d97706;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Notification styles verwijderd - gebruik nu het standaard notification systeem van main.js */
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .industry-preferences-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .industry-preferences-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .industry-preferences-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .industry-preference-item {
+        padding: 16px;
+      }
+      
+      .industry-preference-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+      }
+      
+      .industry-preference-name {
+        font-size: 15px;
+      }
+      
+      .industry-preference-description {
+        font-size: 12px;
+      }
+      
+      .industry-preference-price {
+        font-size: 13px;
+        padding: 6px 10px;
+      }
+      
+      .industry-preferences-actions .btn {
+        min-width: 160px;
+        padding: 10px 20px;
+        font-size: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .industry-preference-item {
+        padding: 12px;
+      }
+      
+      .industry-preference-header {
+        gap: 8px;
+      }
+      
+      .industry-preference-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+      }
+      
+      .industry-preference-name {
+        font-size: 14px;
+      }
+      
+      .industry-preference-description {
+        font-size: 11px;
+      }
+    }
+  </style>
+  
+  <style>
+    /* Leads table typography overrides */
+    #allLeadsTable thead th,
+    #newLeadsTable thead th,
+    #acceptedLeadsTable thead th,
+    #rejectedLeadsTable thead th {
+      font-size: 14px !important;
+      color: #374151 !important;
+    }
+
+    #allLeadsTable tbody td,
+    #newLeadsTable tbody td,
+    #acceptedLeadsTable tbody td,
+    #rejectedLeadsTable tbody td {
+      font-size: 14px !important;
+      color: #111827 !important;
+    }
+  </style>
+  <div class="industry-preferences-container" data-tour-id="leads-page">
+    <div class="industry-preferences-grid" id="industryPreferencesGrid">
+      <!-- Industry preferences will be loaded here -->
+    </div>
+  </div>
+  
+  <script>
+    // Industry Preferences Management
+    document.addEventListener('DOMContentLoaded', function() {
+      var industryPreferencesGrid = document.getElementById('industryPreferencesGrid');
+      
+      if (!industryPreferencesGrid) {
+        return;
+      }
+      
+      var currentPreferences = [];
+      var originalPreferences = [];
+      var isLoading = false;
+      
+      // Initialize industry preferences
+      initIndustryPreferences();
+      
+      // Removed explicit save button; saving happens on modal confirm per item
+      
+      function initIndustryPreferences() {
+        return new Promise(function(resolve, reject) {
+          try {
+            showLoading();
+            
+            // Load industries first (this is the main data source)
+            loadAvailableIndustries().then(function() {
+              // Then try to load user preferences (this might fail if user has no preferences yet)
+              return loadIndustryPreferences().catch(function(error) {
+                return Promise.resolve();
+              });
+            }).then(function() {
+              renderIndustryPreferences();
+              // Trigger event wanneer industry preferences geladen zijn (voor tour)
+              window.dispatchEvent(new CustomEvent('industryPreferencesLoaded'));
+              resolve();
+            }).catch(function(error) {
+              console.error('Error initializing industry preferences:', error);
+              showError('Fout bij laden van branche voorkeuren');
+              reject(error);
+            });
+            
+          } catch (error) {
+            console.error('Error initializing industry preferences:', error);
+            showError('Fout bij laden van branche voorkeuren');
+            reject(error);
+          }
+        });
+      }
+      
+      function showLoading() {
+        industryPreferencesGrid.innerHTML = 
+          '<div class="industry-preferences-loading">' +
+            '<i class="fas fa-spinner"></i>' +
+            '<p>Branche voorkeuren laden...</p>' +
+          '</div>';
+      }
+      
+      function showError(message) {
+        industryPreferencesGrid.innerHTML = 
+          '<div class="industry-preferences-empty">' +
+            '<i class="fas fa-exclamation-triangle"></i>' +
+            '<p>' + message + '</p>' +
+          '</div>';
+      }
+      
+      function loadIndustryPreferences() {
+        return fetch('/api/users/current/industry-preferences', {
+          credentials: 'include'
+        }).then(function(response) {
+          if (!response.ok) {
+            throw new Error('Failed to load user preferences');
+          }
+          return response.json();
+        }).then(function(data) {
+          
+          // Handle both array response and object response formats
+          if (Array.isArray(data)) {
+            currentPreferences = data;
+            originalPreferences = JSON.parse(JSON.stringify(data)); // Deep copy
+          } else if (data.success && data.data) {
+            currentPreferences = data.data;
+            originalPreferences = JSON.parse(JSON.stringify(data.data)); // Deep copy
+          } else {
+            throw new Error('Invalid response format');
+          }
+        });
+      }
+      
+      function loadAvailableIndustries() {
+        return fetch('/api/industries', {
+          credentials: 'include'
+        }).then(function(response) {
+          if (!response.ok) {
+            throw new Error('Failed to load industries');
+          }
+          return response.json();
+        }).then(function(data) {
+          
+          var industries = [];
+          if (data.success && data.data) {
+            industries = data.data;
+          } else if (Array.isArray(data)) {
+            industries = data;
+          } else {
+            throw new Error('Invalid industries response format');
+          }
+          
+          if (industries.length === 0) {
+            throw new Error('No industries available');
+          }
+          
+          // If we don't have user preferences yet, create default ones
+          if (currentPreferences.length === 0) {
+            currentPreferences = industries.map(function(industry) {
+              return {
+                industry_id: industry.id,
+                industry_name: industry.name,
+                industry_description: industry.description,
+                industry_price: industry.price_per_lead || 0,
+                is_enabled: false
+              };
+            });
+            originalPreferences = JSON.parse(JSON.stringify(currentPreferences)); // Deep copy
+          }
+        });
+      }
+      
+      function renderIndustryPreferences() {
+        
+        if (!currentPreferences || currentPreferences.length === 0) {
+          industryPreferencesGrid.innerHTML = 
+            '<div class="industry-preferences-empty">' +
+              '<i class="fas fa-exclamation-triangle"></i>' +
+              '<p>Geen branches beschikbaar</p>' +
+            '</div>';
+          return;
+        }
+        
+        var industryIcons = {
+          'Dakdekkers': 'fas fa-home',
+          'Glaszetters': 'fas fa-window-maximize',
+          'Hoveniers': 'fas fa-seedling',
+          'Installatiebedrijven': 'fas fa-tools',
+          'Schilders': 'fas fa-paint-brush',
+          'default': 'fas fa-building'
+        };
+        
+        var html = currentPreferences.map(function(preference) {
+          var icon = industryIcons[preference.industry_name] || industryIcons.default;
+          var isEnabled = preference.is_enabled === true || preference.is_enabled === 'true';
+          
+          return '<div class="industry-preference-item ' + (isEnabled ? 'enabled' : '') + '" ' +
+                 'data-industry-id="' + preference.industry_id + '">' +
+              '<div class="industry-checkbox-wrapper">' +
+                '<input type="checkbox" ' +
+                       'class="industry-preference-checkbox" ' +
+                       'id="industry-' + preference.industry_id + '"' +
+                       (isEnabled ? ' checked' : '') + '>' +
+                '<div class="industry-checkbox-visual"></div>' +
+              '</div>' +
+              '<div class="industry-preference-content">' +
+                '<div class="industry-preference-icon">' +
+                  '<i class="' + icon + '"></i>' +
+                '</div>' +
+                '<div class="industry-preference-info">' +
+                  '<div class="industry-preference-name">' + preference.industry_name + '</div>' +
+                  '<div class="industry-preference-status">' + (isEnabled ? 'Actief' : 'Niet actief') + '</div>' +
+                  '<div class="industry-preference-price-text">€' + (preference.industry_price || 0).toFixed(2) + ' per lead</div>' +
+                '</div>' +
+              '</div>' +
+              (preference.industry_price > 0 ? '<div class="industry-price-right"><span class="price">€' + preference.industry_price.toFixed(2) + '</span><span class="per-lead">per lead</span></div>' : '') +
+            '</div>';
+        }).join('');
+        
+        industryPreferencesGrid.innerHTML = html;
+        
+        // Add click event listeners
+        industryPreferencesGrid.querySelectorAll('.industry-preference-item').forEach(function(item) {
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleIndustryPreference(this);
+          });
+        });
+        
+        // Check for changes after rendering
+        checkForChanges();
+      }
+      
+      function toggleIndustryPreference(item) {
+        var industryId = item.getAttribute('data-industry-id');
+        var checkbox = item.querySelector('.industry-preference-checkbox');
+        var preference = currentPreferences.find(function(p) { return p.industry_id == industryId; });
+        if (!preference) return;
+
+        var isCurrentlyEnabled = preference.is_enabled === true || preference.is_enabled === 'true';
+        var industryName = preference.industry_name || 'deze branche';
+        var priceText = '€' + ((preference.industry_price || 0).toFixed ? (preference.industry_price || 0).toFixed(2) : Number(preference.industry_price || 0).toFixed(2)) + ' per lead';
+        var title = isCurrentlyEnabled ? 'Branche uitschakelen' : 'Branche inschakelen';
+        var message = (isCurrentlyEnabled
+          ? 'Weet je zeker dat je wilt stoppen met het ontvangen van aanvragen voor ' + industryName + '?'
+          : 'Weet je zeker dat je aanvragen voor ' + industryName + ' wilt inschakelen?') +
+          '<br><span style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;">' +
+            '<span style="background:rgba(234,93,13,0.10);color:#EA5D0D;border:1px solid rgba(234,93,13,0.25);padding:6px 10px;border-radius:9999px;font-weight:600;font-size:12px;">' + priceText + '</span>' +
+          '</span>';
+
+        showIndustryToggleConfirmation(title, message, function confirmed() {
+          var wasEnabled = isCurrentlyEnabled;
+          preference.is_enabled = !wasEnabled;
+          checkbox.checked = preference.is_enabled;
+
+          var statusElement = item.querySelector('.industry-preference-status');
+          if (preference.is_enabled) {
+            item.classList.add('enabled');
+            if (statusElement) { statusElement.textContent = 'Actief'; }
+            if (typeof window.showNotification === 'function') {
+              window.showNotification(industryName + ' is ingeschakeld', 'success', 3000, false);
+            }
+          } else {
+            item.classList.remove('enabled');
+            if (statusElement) { statusElement.textContent = 'Niet actief'; }
+            if (typeof window.showNotification === 'function') {
+              window.showNotification(industryName + ' is uitgeschakeld', 'info', 3000, false);
+            }
+          }
+
+          checkForChanges();
+          // Persist immediately after confirmation
+          saveIndustryPreferences();
+        });
+      }
+
+      function showIndustryToggleConfirmation(title, message, onConfirm) {
+        var existing = document.querySelector('.industry-toggle-modal');
+        if (existing) { existing.parentNode.removeChild(existing); }
+
+        var modal = document.createElement('div');
+        modal.className = 'industry-toggle-modal';
+        modal.innerHTML =
+          '<div class="industry-toggle-overlay" style="position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:10000;"></div>' +
+          '<div class="industry-toggle-content" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;border:1px solid #E5E7EB;box-shadow:0 20px 40px rgba(0,0,0,0.18);width:92%;max-width:520px;z-index:10001;overflow:hidden;">' +
+            '<div class="industry-toggle-header" style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #F3F4F6;">' +
+              '<div class="industry-toggle-icon" style="width:36px;height:36px;border-radius:9999px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;color:#CA8A04;flex-shrink:0;"><i class="fas fa-circle-exclamation"></i></div>' +
+              '<div>' +
+                '<h3 class="industry-toggle-title" style="margin:0;font-size:16px;font-weight:600;color:#111827;">' + title + '</h3>' +
+                '<p class="industry-toggle-subtitle" style="margin:2px 0 0 0;font-size:13px;color:#6B7280;">Bevestig je wijziging</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="industry-toggle-body" style="padding:18px 20px;color:#374151;font-size:14px;line-height:1.5;">' +
+              '<p style="margin:0;">' + message + '</p>' +
+            '</div>' +
+            '<div class="industry-toggle-actions" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid #F3F4F6;background:#FAFAFA;">' +
+              '<button class="industry-toggle-cancel" style="background:#ffffff;border:1px solid #E5E7EB;color:#374151;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:500;">Annuleren</button>' +
+              '<button class="industry-toggle-confirm" style="background:#EA5D0D;border:1px solid #D9550C;color:#ffffff;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;">Bevestigen</button>' +
+            '</div>' +
+          '</div>';
+
+        document.body.appendChild(modal);
+
+        // Disable background scroll with scrollbar compensation
+        var prevOverflow = document.body.style.overflow;
+        var prevPaddingRight = document.body.style.paddingRight;
+        var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        if (scrollbarWidth > 0) {
+          document.body.style.paddingRight = scrollbarWidth + 'px';
+        }
+
+        function close() {
+          if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+          // Restore scroll
+          document.body.style.overflow = prevOverflow || '';
+          document.body.style.paddingRight = prevPaddingRight || '';
+        }
+
+        modal.querySelector('.industry-toggle-overlay').addEventListener('click', close);
+        modal.querySelector('.industry-toggle-cancel').addEventListener('click', close);
+        modal.querySelector('.industry-toggle-confirm').addEventListener('click', function() {
+          close();
+          if (typeof onConfirm === 'function') onConfirm();
+        });
+
+        // Close on ESC
+        function onKey(e){ if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } }
+        document.addEventListener('keydown', onKey);
+      }
+      
+      function checkForChanges() {
+        var hasChanges = false;
+        
+        if (originalPreferences.length !== currentPreferences.length) {
+          hasChanges = true;
+        } else {
+          for (var i = 0; i < currentPreferences.length; i++) {
+            var current = currentPreferences[i];
+            var original = originalPreferences.find(function(p) { return p.industry_id == current.industry_id; });
+            
+            // Convert to boolean for comparison
+            var currentEnabled = current.is_enabled === true || current.is_enabled === 'true';
+            var originalEnabled = original ? (original.is_enabled === true || original.is_enabled === 'true') : false;
+            
+            if (!original || originalEnabled !== currentEnabled) {
+              hasChanges = true;
+              break;
+            }
+          }
+        }
+        
+        // No save button; saving happens per confirm
+      }
+      
+      function showSaveConfirmation() {
+        // Get selected industries
+        var selectedIndustries = currentPreferences.filter(function(pref) {
+          return pref.is_enabled === true || pref.is_enabled === 'true';
+        });
+        
+        var deselectedIndustries = currentPreferences.filter(function(pref) {
+          return pref.is_enabled === false || pref.is_enabled === 'false';
+        });
+        
+        // Find what changed
+        var changedIndustries = [];
+        
+        // Check for newly selected industries
+        selectedIndustries.forEach(function(selected) {
+          var wasSelected = originalPreferences.find(function(orig) {
+            return orig.industry_id == selected.industry_id;
+          });
+          if (!wasSelected || !(wasSelected.is_enabled === true || wasSelected.is_enabled === 'true')) {
+            changedIndustries.push({
+              name: selected.industry_name,
+              action: 'ontvangen'
+            });
+          }
+        });
+        
+        // Check for newly deselected industries
+        deselectedIndustries.forEach(function(deselected) {
+          var wasSelected = originalPreferences.find(function(orig) {
+            return orig.industry_id == deselected.industry_id;
+          });
+          if (wasSelected && (wasSelected.is_enabled === true || wasSelected.is_enabled === 'true')) {
+            changedIndustries.push({
+              name: deselected.industry_name,
+              action: 'stoppen met ontvangen'
+            });
+          }
+        });
+        
+        // Create confirmation message
+        var confirmationMessage = '';
+        if (changedIndustries.length === 0) {
+          confirmationMessage = 'Er zijn geen wijzigingen om op te slaan.';
+        } else if (changedIndustries.length === 1) {
+          var change = changedIndustries[0];
+          confirmationMessage = 'Weet je zeker dat je voor de branche <strong>' + change.name + '</strong> aanvragen wilt ' + change.action + '?';
+        } else {
+          var selectedChanges = changedIndustries.filter(function(c) { return c.action === 'ontvangen'; });
+          var deselectedChanges = changedIndustries.filter(function(c) { return c.action === 'stoppen met ontvangen'; });
+          
+          var messageParts = [];
+          if (selectedChanges.length > 0) {
+            messageParts.push('aanvragen wilt ontvangen voor: <strong>' + selectedChanges.map(function(c) { return c.name; }).join(', ') + '</strong>');
+          }
+          if (deselectedChanges.length > 0) {
+            messageParts.push('wilt stoppen met ontvangen voor: <strong>' + deselectedChanges.map(function(c) { return c.name; }).join(', ') + '</strong>');
+          }
+          
+          confirmationMessage = 'Weet je zeker dat je ' + messageParts.join(' en ') + '?';
+        }
+        
+        // Create confirmation modal
+        var modal = document.createElement('div');
+        modal.className = 'confirmation-modal';
+        modal.innerHTML = 
+          '<div class="confirmation-modal-overlay"></div>' +
+          '<div class="confirmation-modal-content">' +
+            '<div class="confirmation-modal-header">' +
+              '<h4>Voorkeuren opslaan</h4>' +
+            '</div>' +
+            '<div class="confirmation-modal-body">' +
+              '<p>' + confirmationMessage + '</p>' +
+            '</div>' +
+            '<div class="confirmation-modal-footer">' +
+              '<button class="btn btn-secondary" id="cancelSaveBtn">Annuleren</button>' +
+              '<button class="btn btn-primary" id="confirmSaveBtn" ' + (changedIndustries.length === 0 ? 'disabled' : '') + '>Opslaan</button>' +
+            '</div>' +
+          '</div>';
+        
+        document.body.appendChild(modal);
+        
+        // Add event listeners
+        document.getElementById('cancelSaveBtn').addEventListener('click', function() {
+          document.body.removeChild(modal);
+        });
+        
+        document.getElementById('confirmSaveBtn').addEventListener('click', function() {
+          document.body.removeChild(modal);
+          saveIndustryPreferences();
+        });
+        
+        // Close on overlay click
+        modal.querySelector('.confirmation-modal-overlay').addEventListener('click', function() {
+          document.body.removeChild(modal);
+        });
+      }
+      
+      function saveIndustryPreferences() {
+        if (isLoading) return;
+        isLoading = true;
+        
+        fetch('/api/users/current/industry-preferences', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            preferences: currentPreferences.map(function(p) {
+              return {
+                industry_id: p.industry_id,
+                is_enabled: p.is_enabled === true || p.is_enabled === 'true'
+              };
+            })
+          })
+        }).then(function(response) {
+          if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error('Failed to save preferences: ' + response.status);
+          }
+        }).then(function(data) {
+          
+          // Update original preferences after successful save
+          originalPreferences = JSON.parse(JSON.stringify(currentPreferences));
+          
+          // Show success notification
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Branche voorkeuren succesvol opgeslagen!', 'success', 4000, false);
+          }
+          
+          // Deactivate save button after successful save
+          checkForChanges();
+          
+          // Refresh the display to ensure everything is in sync
+          setTimeout(function() {
+            renderIndustryPreferences();
+          }, 100);
+          
+        }).catch(function(error) {
+          console.error('Error saving industry preferences:', error);
+          
+          // Show error notification
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Fout bij opslaan van voorkeuren: ' + error.message, 'error', 5000, false);
+          }
+        }).finally(function() {
+          isLoading = false;
+        });
+      }
+      
+      
+      // Notification function - gebruik het standaard notification systeem
+      function showNotification(message, type) {
+        type = type || 'info';
+        // Gebruik het globale notification systeem
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(message, type, 5000, false);
+        }
+      }
+    });
+  </script>
+</div>
+</div>
+<!-- Einde Branche Voorkeuren Sectie -->
+
+<!-- Locatie Voorkeuren Sectie -->
+<div class="card mb-4" id="locationPreferencesCard">
+<div class="card-header">
+  <h2 class="limit-title">Locatie voorkeuren</h2>
+  <p class="limit-subtitle">Selecteer voor welke regio's je aanvragen wilt ontvangen</p>
+</div>
+<div class="card-body">
+  <style>
+    /* Location Preferences - Modern Grid Design (same as industry) */
+    .location-preferences-container {
+      background: transparent;
+      padding: 0;
+    }
+
+    .location-preferences-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .location-preference-item {
+      background: #ffffff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .location-preference-item:hover {
+      background: #FFF;
+      border-color: #E5E7EB;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .location-preference-item.enabled {
+      background: #FEF3ED;
+      border-color: #EA5D0D;
+    }
+
+    /* Custom checkbox styling */
+    .location-checkbox-wrapper {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .location-preference-checkbox {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .location-checkbox-visual {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid #D1D5DB;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .location-preference-item:hover .location-checkbox-visual {
+      border-color: #9CA3AF;
+    }
+
+    .location-preference-item.enabled .location-checkbox-visual {
+      background: #EA5D0D;
+      border-color: #EA5D0D;
+    }
+
+    .location-checkbox-visual::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      opacity: 0;
+      transform: scale(0);
+      transition: all 0.2s ease;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    .location-preference-item.enabled .location-checkbox-visual::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .location-preference-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .location-preference-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6B7280;
+      font-size: 18px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: #F9FAFB;
+    }
+
+    .location-preference-item.enabled .location-preference-icon {
+      color: #EA5D0D;
+      background: #FFF;
+    }
+
+    .location-preference-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .location-preference-name {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 2px;
+      font-size: 15px;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .location-preference-status {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 4px;
+    }
+
+    .location-preference-item.enabled .location-preference-status {
+      color: #EA5D0D;
+      font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .location-preferences-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .location-preferences-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .location-preferences-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .location-preference-item {
+        padding: 16px;
+      }
+    }
+  </style>
+  
+  <div class="location-preferences-container" data-tour-id="locations-page">
+    <div class="location-preferences-grid" id="locationPreferencesGrid"></div>
+  </div>
+  
+  <script>
+    // Location Preferences Management
+    document.addEventListener('DOMContentLoaded', function() {
+      var locationPreferencesGrid = document.getElementById('locationPreferencesGrid');
+      
+      if (!locationPreferencesGrid) {
+        return;
+      }
+      
+      var currentPreferences = [];
+      var originalPreferences = [];
+      var isLoading = false;
+      
+      // Initialize location preferences
+      initLocationPreferences();
+      
+      function initLocationPreferences() {
+        return new Promise(function(resolve, reject) {
+          try {
+            showLoading();
+            
+            loadLocationPreferences().then(function() {
+              renderLocationPreferences();
+              window.dispatchEvent(new CustomEvent('locationPreferencesLoaded'));
+              resolve();
+            }).catch(function(error) {
+              console.error('Error initializing location preferences:', error);
+              showError('Fout bij laden van locatie voorkeuren');
+              reject(error);
+            });
+            
+          } catch (error) {
+            console.error('Error initializing location preferences:', error);
+            showError('Fout bij laden van locatie voorkeuren');
+            reject(error);
+          }
+        });
+      }
+      
+      function showLoading() {
+        locationPreferencesGrid.innerHTML = 
+          '<div class="location-preferences-loading" style="text-align:center;padding:40px;">' +
+            '<i class="fas fa-spinner fa-spin" style="font-size:24px;color:#6B7280;margin-bottom:12px;"></i>' +
+            '<p style="color:#6B7280;font-size:14px;">Locatie voorkeuren laden...</p>' +
+          '</div>';
+      }
+      
+      function showError(message) {
+        locationPreferencesGrid.innerHTML = 
+          '<div class="location-preferences-empty" style="text-align:center;padding:40px;">' +
+            '<i class="fas fa-exclamation-triangle" style="font-size:24px;color:#EF4444;margin-bottom:12px;"></i>' +
+            '<p style="color:#6B7280;font-size:14px;">' + message + '</p>' +
+          '</div>';
+      }
+      
+      function loadLocationPreferences() {
+        return fetch('/api/users/current/location-preferences', {
+          credentials: 'include'
+        }).then(function(response) {
+          if (!response.ok) {
+            throw new Error('Failed to load location preferences');
+          }
+          return response.json();
+        }).then(function(data) {
+          // Handle both array response and object response formats
+          if (Array.isArray(data)) {
+            currentPreferences = data;
+            originalPreferences = JSON.parse(JSON.stringify(data)); // Deep copy
+          } else if (data.success && data.data) {
+            currentPreferences = data.data;
+            originalPreferences = JSON.parse(JSON.stringify(data.data)); // Deep copy
+          } else {
+            throw new Error('Invalid response format');
+          }
+        });
+      }
+      
+      function renderLocationPreferences() {
+        
+        if (!currentPreferences || currentPreferences.length === 0) {
+          locationPreferencesGrid.innerHTML = 
+            '<div class="location-preferences-empty" style="text-align:center;padding:40px;">' +
+              '<i class="fas fa-exclamation-triangle" style="font-size:24px;color:#6B7280;margin-bottom:12px;"></i>' +
+              '<p style="color:#6B7280;font-size:14px;">Geen locaties beschikbaar</p>' +
+            '</div>';
+          return;
+        }
+        
+        var html = currentPreferences.map(function(preference) {
+          var icon = preference.location_icon || 'fas fa-map-marker-alt';
+          var isEnabled = preference.is_enabled === true || preference.is_enabled === 'true';
+          
+          return '<div class="location-preference-item ' + (isEnabled ? 'enabled' : '') + '" ' +
+                 'data-location-code="' + preference.location_code + '">' +
+              '<div class="location-checkbox-wrapper">' +
+                '<input type="checkbox" ' +
+                       'class="location-preference-checkbox" ' +
+                       'id="location-' + preference.location_code + '"' +
+                       (isEnabled ? ' checked' : '') + '>' +
+                '<div class="location-checkbox-visual"></div>' +
+              '</div>' +
+              '<div class="location-preference-content">' +
+                '<div class="location-preference-icon">' +
+                  '<i class="' + icon + '"></i>' +
+                '</div>' +
+                '<div class="location-preference-info">' +
+                  '<div class="location-preference-name">' + preference.location_name + '</div>' +
+                  '<div class="location-preference-status">' + (isEnabled ? 'Actief' : 'Niet actief') + '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        
+        locationPreferencesGrid.innerHTML = html;
+        
+        // Add click event listeners
+        locationPreferencesGrid.querySelectorAll('.location-preference-item').forEach(function(item) {
+          item.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleLocationPreference(this);
+          });
+        });
+      }
+      
+      function toggleLocationPreference(item) {
+        var locationCode = item.getAttribute('data-location-code');
+        var checkbox = item.querySelector('.location-preference-checkbox');
+        var preference = currentPreferences.find(function(p) { return p.location_code == locationCode; });
+        if (!preference) return;
+
+        var isCurrentlyEnabled = preference.is_enabled === true || preference.is_enabled === 'true';
+        var locationName = preference.location_name || 'deze locatie';
+        var title = isCurrentlyEnabled ? 'Locatie uitschakelen' : 'Locatie inschakelen';
+        var message = (isCurrentlyEnabled
+          ? 'Weet je zeker dat je wilt stoppen met het ontvangen van aanvragen voor ' + locationName + '?'
+          : 'Weet je zeker dat je aanvragen voor ' + locationName + ' wilt inschakelen?');
+
+        showLocationToggleConfirmation(title, message, function confirmed() {
+          var wasEnabled = isCurrentlyEnabled;
+          preference.is_enabled = !wasEnabled;
+          checkbox.checked = preference.is_enabled;
+
+          var statusElement = item.querySelector('.location-preference-status');
+          if (preference.is_enabled) {
+            item.classList.add('enabled');
+            if (statusElement) { statusElement.textContent = 'Actief'; }
+            // Notificatie wordt getoond na succesvol opslaan, niet hier
+          } else {
+            item.classList.remove('enabled');
+            if (statusElement) { statusElement.textContent = 'Niet actief'; }
+            // Notificatie wordt getoond na succesvol opslaan, niet hier
+          }
+
+          // Persist immediately after confirmation
+          // Notificatie wordt getoond in saveLocationPreferences() na succesvol opslaan
+          saveLocationPreferences();
+        });
+      }
+
+      function showLocationToggleConfirmation(title, message, onConfirm) {
+        var existing = document.querySelector('.location-toggle-modal');
+        if (existing) { existing.parentNode.removeChild(existing); }
+
+        var modal = document.createElement('div');
+        modal.className = 'location-toggle-modal';
+        modal.innerHTML =
+          '<div class="location-toggle-overlay" style="position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:10000;"></div>' +
+          '<div class="location-toggle-content" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;border:1px solid #E5E7EB;box-shadow:0 20px 40px rgba(0,0,0,0.18);width:92%;max-width:520px;z-index:10001;overflow:hidden;">' +
+            '<div class="location-toggle-header" style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #F3F4F6;">' +
+              '<div class="location-toggle-icon" style="width:36px;height:36px;border-radius:9999px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;color:#CA8A04;flex-shrink:0;"><i class="fas fa-circle-exclamation"></i></div>' +
+              '<div>' +
+                '<h3 class="location-toggle-title" style="margin:0;font-size:16px;font-weight:600;color:#111827;">' + title + '</h3>' +
+                '<p class="location-toggle-subtitle" style="margin:2px 0 0 0;font-size:13px;color:#6B7280;">Bevestig je wijziging</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="location-toggle-body" style="padding:18px 20px;color:#374151;font-size:14px;line-height:1.5;">' +
+              '<p style="margin:0;">' + message + '</p>' +
+            '</div>' +
+            '<div class="location-toggle-actions" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid #F3F4F6;background:#FAFAFA;">' +
+              '<button class="location-toggle-cancel" style="background:#ffffff;border:1px solid #E5E7EB;color:#374151;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:500;">Annuleren</button>' +
+              '<button class="location-toggle-confirm" style="background:#EA5D0D;border:1px solid #D9550C;color:#ffffff;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;">Bevestigen</button>' +
+            '</div>' +
+          '</div>';
+
+        document.body.appendChild(modal);
+
+        // Disable background scroll with scrollbar compensation
+        var prevOverflow = document.body.style.overflow;
+        var prevPaddingRight = document.body.style.paddingRight;
+        var scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        if (scrollbarWidth > 0) {
+          document.body.style.paddingRight = scrollbarWidth + 'px';
+        }
+
+        function close() {
+          if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+          // Restore scroll
+          document.body.style.overflow = prevOverflow || '';
+          document.body.style.paddingRight = prevPaddingRight || '';
+        }
+
+        modal.querySelector('.location-toggle-overlay').addEventListener('click', close);
+        modal.querySelector('.location-toggle-cancel').addEventListener('click', close);
+        modal.querySelector('.location-toggle-confirm').addEventListener('click', function() {
+          close();
+          if (typeof onConfirm === 'function') onConfirm();
+        });
+
+        // Close on ESC
+        function onKey(e){ if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } }
+        document.addEventListener('keydown', onKey);
+      }
+      
+      function saveLocationPreferences() {
+        if (isLoading) return;
+        isLoading = true;
+        
+        fetch('/api/users/current/location-preferences', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            preferences: currentPreferences.map(function(p) {
+              return {
+                location_code: p.location_code,
+                location_name: p.location_name,
+                is_enabled: p.is_enabled === true || p.is_enabled === 'true'
+              };
+            })
+          })
+        }).then(function(response) {
+          if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error('Failed to save preferences: ' + response.status);
+          }
+        }).then(function(data) {
+          
+          // Update original preferences after successful save
+          originalPreferences = JSON.parse(JSON.stringify(currentPreferences));
+          
+          // Show success notification
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Locatie voorkeuren succesvol opgeslagen!', 'success', 4000, false);
+          }
+          
+          // Refresh the display to ensure everything is in sync
+          setTimeout(function() {
+            renderLocationPreferences();
+          }, 100);
+          
+        }).catch(function(error) {
+          console.error('Error saving location preferences:', error);
+          
+          // Show error notification
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Fout bij opslaan van voorkeuren: ' + error.message, 'error', 5000, false);
+          }
+        }).finally(function() {
+          isLoading = false;
+        });
+      }
+    });
+  </script>
+</div>
+</div>
+<!-- Einde Locatie Voorkeuren Sectie -->
+
+<!-- Leads tabel met tabs -->
+<div class="card" id="leadsOverviewCard">
+<div class="card-header">
+  <div>
+    <h2 class="limit-title">Aanvragen overzicht</h2>
+    <p class="limit-subtitle">Bekijk en beheer al je aanvragen en leads op één plek</p>
+  </div>
+  <div class="card-actions">
+    
+  </div>
+</div>
+<div class="card-body">
+  <!-- Search and filter functions -->
+  <div class="search-filter-container mb-4">
+    <div class="row filter-row">
+      <!-- Search bar -->
+      <div class="search-wrapper">
+        <label for="searchInput">Zoeken</label>
+        <input type="text" class="search-input" id="searchInput" placeholder="Zoek op naam, email of telefoonnummer...">
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="leadsTabContent">
+    <!-- All leads tab -->
+    <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+      <div>
+        <div style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+          <table class="table table-hover" id="allLeadsTable" style="width: 100%; table-layout: fixed; min-height: 300px;">
+            <thead style="border-top: none;">
+              <tr style="background-color: #F9FAFB; border-top: none;">
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 20%; font-size: 14px;">Naam</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 25%; font-size: 14px;">Email</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Telefoon</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Datum</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Status</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 10%; font-size: 14px;">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads.length === 0 
+                ? `<tr style="height: 100%; background-color: transparent !important;">
+                    <td colspan="6" style="padding: 0; text-align: center; color: #9CA3AF; font-size: 14px; font-weight: 400; height: 100%; vertical-align: middle; position: relative; background-color: transparent !important;">
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center;">
+                        Geen leads gevonden
+                      </div>
+                    </td>
+                  </tr>`
+                : leads.map(function(lead) {
+                    var leadName = (lead.name || '').replace(/"/g, '&quot;');
+                    var leadEmail = (lead.email || '').replace(/"/g, '&quot;');
+                    var leadPhone = (lead.phone || '').replace(/"/g, '&quot;');
+                    var leadMessage = (lead.message || '').replace(/"/g, '&quot;');
+                    var leadDate = new Date(lead.created_at).toLocaleDateString('nl-NL');
+                    // Status badge (extended with won/lost/in_progress)
+                    var statusBadge = '';
+                    if (lead.status === 'new') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEF3C7; color: #92400E;">Nieuw</span>';
+                    } else if (lead.status === 'accepted') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #DCFCE7; color: #15803D;">Geaccepteerd</span>';
+                    } else if (lead.status === 'rejected') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEE2E2; color: #991B1B;">Afgewezen</span>';
+                    } else if (lead.status === 'won') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #DCFCE7; color: #15803D;">Opdracht binnen</span>';
+                    } else if (lead.status === 'lost') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEE2E2; color: #991B1B;">Geen opdracht</span>';
+                    } else if (lead.status === 'in_progress') {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #F3F4F6; color: #374151;">Lopend</span>';
+                    } else {
+                      statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #F3F4F6; color: #374151;">' + (lead.status || '') + '</span>';
+                    }
+                    
+                    // Contact badge (opgepakt/niet opgepakt)
+                    var contactBadge = '';
+                    if (lead.first_contact_at) {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; margin-top: 4px;">Opgepakt</span>';
+                    } else {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB; margin-top: 4px;">Niet opgepakt</span>';
+                    }
+                    
+                    return `
+                    <tr class="lead-row" 
+                        data-lead-id="${lead.id}" 
+                        data-lead-name="${leadName}" 
+                        data-lead-email="${leadEmail}" 
+                        data-lead-phone="${leadPhone}" 
+                        data-lead-date="${leadDate}" 
+                        data-lead-status="${lead.status || 'new'}" 
+                        data-lead-message="${leadMessage}" 
+                        data-lead-amount="${lead.amount || 0}">
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${lead.name || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${lead.email || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${lead.phone || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${leadDate}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                          ${statusBadge}
+                          ${contactBadge}
+                        </div>
+                      </td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">
+                        <div style="display: flex; gap: 8px;">
+                          <a href="/dashboard/leads/${lead.id}" class="btn btn-outline-primary view-lead" data-id="${lead.id}" title="Bekijk details" style="padding: 4px; border: none; background: none; color: #6B7280; text-decoration: none;">
+                            <i class="far fa-eye" style="font-size: 16px;"></i>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                  }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginatie voor alle leads -->
+        <div class="pagination-container mt-3" id="allLeadsPagination">
+          <nav aria-label="Paginatie">
+            <ul class="pagination justify-content-center">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Vorige</a>
+              </li>
+              <li class="page-item active">
+                <a class="page-link" href="#">1</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="#">Volgende</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    
+    <!-- New leads tab -->
+    <div class="tab-pane fade" id="new" role="tabpanel" aria-labelledby="new-tab">
+      <div>
+        <div style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+          <table class="table table-hover" id="newLeadsTable" style="width: 100%; table-layout: fixed; min-height: 300px;">
+            <thead style="border-top: none;">
+              <tr style="background-color: #F9FAFB; border-top: none;">
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 20%; font-size: 14px;">Naam</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 25%; font-size: 14px;">Email</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Telefoon</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Datum</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Status</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 10%; font-size: 14px;">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads.filter(function(lead) { return lead.status === "new"; }).length === 0 
+                ? `<tr style="height: 100%; background-color: transparent !important;">
+                    <td colspan="6" style="padding: 0; text-align: center; color: #9CA3AF; font-size: 14px; font-weight: 400; height: 100%; vertical-align: middle; position: relative; background-color: transparent !important;">
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center;">
+                        Geen nieuwe leads gevonden
+                      </div>
+                    </td>
+                  </tr>`
+                : leads
+                  .filter(function(lead) { return lead.status === "new"; })
+                  .map(function(lead) {
+                    var leadName = (lead.name || '').replace(/"/g, '&quot;');
+                    var leadEmail = (lead.email || '').replace(/"/g, '&quot;');
+                    var leadPhone = (lead.phone || '').replace(/"/g, '&quot;');
+                    var leadMessage = (lead.message || '').replace(/"/g, '&quot;');
+                    var leadDate = new Date(lead.created_at).toLocaleDateString('nl-NL');
+                    
+                    // Status badge
+                    var statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEF3C7; color: #92400E;">Nieuw</span>';
+                    
+                    // Contact badge
+                    var contactBadge = '';
+                    if (lead.first_contact_at) {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; margin-top: 4px;">Opgepakt</span>';
+                    } else {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB; margin-top: 4px;">Niet opgepakt</span>';
+                    }
+                    
+                    return `
+                    <tr class="lead-row" 
+                        data-lead-id="${lead.id}" 
+                        data-lead-name="${lead.name}" 
+                        data-lead-email="${lead.email}" 
+                        data-lead-phone="${lead.phone}" 
+                        data-lead-date="${new Date(lead.created_at).toLocaleDateString("nl-NL")}" 
+                        data-lead-status="${lead.status}" 
+                        data-lead-message="${lead.message || ''}" 
+                        data-lead-amount="${lead.amount}">
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.name || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.email || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.phone || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${leadDate}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                          ${statusBadge}
+                          ${contactBadge}
+                        </div>
+                      </td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; gap: 8px;">
+                          <a href="/dashboard/leads/${lead.id}" class="btn btn-outline-primary view-lead" data-id="${lead.id}" title="Bekijk details" style="padding: 4px; border: none; background: none; color: #6B7280; text-decoration: none;">
+                            <i class="far fa-eye" style="font-size: 16px;"></i>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                  }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginatie voor nieuwe leads -->
+        <div class="pagination-container mt-3" id="newLeadsPagination">
+          <nav aria-label="Paginatie">
+            <ul class="pagination justify-content-center">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Vorige</a>
+              </li>
+              <li class="page-item active">
+                <a class="page-link" href="#">1</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="#">Volgende</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Accepted leads tab -->
+    <div class="tab-pane fade" id="accepted" role="tabpanel" aria-labelledby="accepted-tab">
+      <div>
+        <div style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+          <table class="table table-hover" id="acceptedLeadsTable" style="width: 100%; table-layout: fixed; min-height: 300px;">
+            <thead style="border-top: none;">
+              <tr style="background-color: #F9FAFB; border-top: none;">
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 20%; font-size: 14px;">Naam</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 25%; font-size: 14px;">Email</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Telefoon</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Datum</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Status</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 10%; font-size: 14px;">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads.filter(function(lead) { return lead.status === "accepted"; }).length === 0 
+                ? `<tr style="height: 100%; background-color: transparent !important;">
+                    <td colspan="6" style="padding: 0; text-align: center; color: #9CA3AF; font-size: 14px; font-weight: 400; height: 100%; vertical-align: middle; position: relative; background-color: transparent !important;">
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center;">
+                        Geen geaccepteerde leads gevonden
+                      </div>
+                    </td>
+                  </tr>`
+                : leads
+                  .filter(function(lead) { return lead.status === "accepted"; })
+                  .map(function(lead) {
+                    var leadName = (lead.name || '').replace(/"/g, '&quot;');
+                    var leadEmail = (lead.email || '').replace(/"/g, '&quot;');
+                    var leadPhone = (lead.phone || '').replace(/"/g, '&quot;');
+                    var leadMessage = (lead.message || '').replace(/"/g, '&quot;');
+                    var leadDate = new Date(lead.created_at).toLocaleDateString('nl-NL');
+                    
+                    // Status badge
+                    var statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #DCFCE7; color: #15803D;">Geaccepteerd</span>';
+                    
+                    // Contact badge
+                    var contactBadge = '';
+                    if (lead.first_contact_at) {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; margin-top: 4px;">Opgepakt</span>';
+                    } else {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB; margin-top: 4px;">Niet opgepakt</span>';
+                    }
+                    
+                    return `
+                    <tr class="lead-row" 
+                        data-lead-id="${lead.id}" 
+                        data-lead-name="${lead.name}" 
+                        data-lead-email="${lead.email}" 
+                        data-lead-phone="${lead.phone}" 
+                        data-lead-date="${new Date(lead.created_at).toLocaleDateString("nl-NL")}" 
+                        data-lead-status="${lead.status}" 
+                        data-lead-message="${lead.message || ''}" 
+                        data-lead-amount="${lead.amount}">
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.name || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.email || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.phone || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${leadDate}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                          ${statusBadge}
+                          ${contactBadge}
+                        </div>
+                      </td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; gap: 8px;">
+                          <a href="/dashboard/leads/${lead.id}" class="btn btn-outline-primary view-lead" data-id="${lead.id}" title="Bekijk details" style="padding: 4px; border: none; background: none; color: #6B7280; text-decoration: none;">
+                            <i class="far fa-eye" style="font-size: 16px;"></i>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                  }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginatie voor geaccepteerde leads -->
+        <div class="pagination-container mt-3" id="acceptedLeadsPagination">
+          <nav aria-label="Paginatie">
+            <ul class="pagination justify-content-center">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Vorige</a>
+              </li>
+              <li class="page-item active">
+                <a class="page-link" href="#">1</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="#">Volgende</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Rejected leads tab -->
+    <div class="tab-pane fade" id="rejected" role="tabpanel" aria-labelledby="rejected-tab">
+      <div>
+        <div style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+          <table class="table table-hover" id="rejectedLeadsTable" style="width: 100%; table-layout: fixed; min-height: 300px;">
+            <thead style="border-top: none;">
+              <tr style="background-color: #F9FAFB; border-top: none;">
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 20%; font-size: 14px;">Naam</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 25%; font-size: 14px;">Email</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Telefoon</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Datum</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%; font-size: 14px;">Status</th>
+                <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 10%; font-size: 14px;">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${leads.filter(function(lead) { return lead.status === "rejected"; }).length === 0 
+                ? `<tr style="height: 100%; background-color: transparent !important;">
+                    <td colspan="6" style="padding: 0; text-align: center; color: #9CA3AF; font-size: 14px; font-weight: 400; height: 100%; vertical-align: middle; position: relative; background-color: transparent !important;">
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center;">
+                        Geen afgewezen leads gevonden
+                      </div>
+                    </td>
+                  </tr>`
+                : leads
+                  .filter(function(lead) { return lead.status === "rejected"; })
+                  .map(function(lead) {
+                    var leadName = (lead.name || '').replace(/"/g, '&quot;');
+                    var leadEmail = (lead.email || '').replace(/"/g, '&quot;');
+                    var leadPhone = (lead.phone || '').replace(/"/g, '&quot;');
+                    var leadMessage = (lead.message || '').replace(/"/g, '&quot;');
+                    var leadDate = new Date(lead.created_at).toLocaleDateString('nl-NL');
+                    
+                    // Status badge
+                    var statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEE2E2; color: #991B1B;">Afgewezen</span>';
+                    
+                    // Contact badge
+                    var contactBadge = '';
+                    if (lead.first_contact_at) {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #DCFCE7; color: #166534; border: 1px solid #BBF7D0; margin-top: 4px;">Opgepakt</span>';
+                    } else {
+                      contactBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500; background-color: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB; margin-top: 4px;">Niet opgepakt</span>';
+                    }
+                    
+                    return `
+                    <tr class="lead-row" 
+                        data-lead-id="${lead.id}" 
+                        data-lead-name="${lead.name}" 
+                        data-lead-email="${lead.email}" 
+                        data-lead-phone="${lead.phone}" 
+                        data-lead-date="${new Date(lead.created_at).toLocaleDateString("nl-NL")}" 
+                        data-lead-status="${lead.status}" 
+                        data-lead-message="${lead.message || ''}" 
+                        data-lead-amount="${lead.amount}">
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.name || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.email || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${lead.phone || ''}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">${leadDate}</td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                          ${statusBadge}
+                          ${contactBadge}
+                        </div>
+                      </td>
+                      <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #111827;">
+                        <div style="display: flex; gap: 8px;">
+                          <a href="/dashboard/leads/${lead.id}" class="btn btn-outline-primary view-lead" data-id="${lead.id}" title="Bekijk details" style="padding: 4px; border: none; background: none; color: #6B7280; text-decoration: none;">
+                            <i class="far fa-eye" style="font-size: 16px;"></i>
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                  }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+        <!-- Paginatie voor afgewezen leads -->
+        <div class="pagination-container mt-3" id="rejectedLeadsPagination">
+          <nav aria-label="Paginatie">
+            <ul class="pagination justify-content-center">
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Vorige</a>
+              </li>
+              <li class="page-item active">
+                <a class="page-link" href="#">1</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="#">Volgende</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<script>
+// Ensure "Aanvragen overzicht" appears above "Branche voorkeuren"
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    var branche = document.getElementById('branchePreferencesCard');
+    var leads = document.getElementById('leadsOverviewCard');
+    if (branche && leads && branche.previousElementSibling !== leads) {
+      var parent = branche.parentNode;
+      if (parent) {
+        parent.insertBefore(leads, branche);
+      }
+    }
+  } catch (e) {
+        // Silent error handling
+  }
+});
+</script>
+
+
+<!-- Lead Details Popup -->
+<div class="lead-details-popup" id="leadDetailsPopup">
+<div class="lead-details-popup-overlay"></div>
+<div class="lead-details-popup-content">
+  <div class="lead-details-popup-header">
+    <h3>Aanvraag details</h3>
+    <button class="lead-details-popup-close" id="closeLeadPopup">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="lead-details-popup-body">
+    <div class="lead-details-info">
+      <div class="lead-details-avatar">
+        <div class="lead-avatar-circle">
+          <span id="leadInitials"></span>
+        </div>
+      </div>
+      <div class="lead-details-main">
+        <h4 id="leadName"></h4>
+        <div class="lead-details-status">
+          <span id="leadStatusBadge" class="badge"></span>
+          <span id="leadDate" class="lead-date"></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="lead-details-grid">
+      <div class="lead-details-item">
+        <div class="lead-details-label">Email</div>
+        <div class="lead-details-value" id="leadEmail"></div>
+      </div>
+      <div class="lead-details-item">
+        <div class="lead-details-label">Telefoon</div>
+        <div class="lead-details-value" id="leadPhone"></div>
+      </div>
+      <div class="lead-details-item">
+        <div class="lead-details-label">Status</div>
+        <div class="lead-details-value">
+          <select id="leadStatusSelect" class="form-control lead-status-select">
+            <option value="new">Nieuw</option>
+            <option value="accepted">Geaccepteerd</option>
+            <option value="rejected">Afgewezen</option>
+          </select>
+        </div>
+      </div>
+      <div class="lead-details-item" id="amountContainer" style="display: none;">
+        <div class="lead-details-label">Bedrag (€)</div>
+        <div class="lead-details-value">
+          <input type="number" id="leadAmountInput" class="form-control lead-amount-input" min="0" step="1" placeholder="Voer bedrag in">
+        </div>
+      </div>
+      <div class="lead-details-item lead-details-full">
+        <div class="lead-details-label">Bericht</div>
+        <div class="lead-details-value lead-message" id="leadMessage"></div>
+      </div>
+    </div>
+  </div>
+  <div class="lead-details-popup-footer">
+    <button class="btn btn-outline-secondary" id="closeLeadPopupBtn">Sluiten</button>
+    <div class="lead-action-buttons">
+      <button class="btn btn-primary" id="saveStatusBtn">Status opslaan</button>
+      <button class="btn btn-success" id="contactLeadBtn">Contact opnemen</button>
+    </div>
+  </div>
+</div>
+</div>
+`
+%>
+
+<%- include('../layouts/dashboard', {
+title: "Aanvragen",
+activeMenu: 'leads',
+pageClass: 'leads',
+user: user,
+body: leadsContent,
+scripts: [
+'https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js',
+'https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js',
+'/js/leads.js',
+'/js/lead-popup.js'
+],
+}) %>
+

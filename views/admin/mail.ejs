@@ -1,0 +1,212 @@
+<%
+  const formatDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+%>
+
+<%- include('../layouts/admin', {
+  title: 'Mail',
+  activeMenu: 'mail',
+  user: user,
+  body: `
+  <div class="settings-container"> 
+    <!-- SSR Rendered At: ${ssrRenderedAt || ''} -->
+    <div class="page-header">
+      <div>
+        <h1>Mail</h1>
+        <p class="text-muted">AI-gestuurde inbox met automatische labels en snelle acties</p>
+      </div>
+      <div class="header-actions">
+        <button id="composeBtn" class="btn-primary">
+          <i class="fas fa-pen"></i> Nieuw bericht
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-cards-container">
+      <div class="kpi-cards-grid">
+        <div class="kpi-card"><div class="kpi-content"><p class="kpi-title">Ongelezen</p><p class="kpi-value" id="kpiUnread">${kpis?.unread || 0}</p><p class="kpi-subtitle">Inbox</p></div><div class="kpi-icon"><i class="fas fa-envelope-open-text"></i></div></div>
+        <div class="kpi-card"><div class="kpi-content"><p class="kpi-title">Urgent</p><p class="kpi-value" id="kpiUrgent">${kpis?.urgent || 0}</p><p class="kpi-subtitle">Gemarkeerd door AI</p></div><div class="kpi-icon"><i class="fas fa-bolt"></i></div></div>
+        <div class="kpi-card"><div class="kpi-content"><p class="kpi-title">Vandaag</p><p class="kpi-value" id="kpiToday">${kpis?.today || 0}</p><p class="kpi-subtitle">Binnengekomen</p></div><div class="kpi-icon"><i class="fas fa-calendar-day"></i></div></div>
+        <div class="kpi-card"><div class="kpi-content"><p class="kpi-title">Klantaanvragen</p><p class="kpi-value" id="kpiCustomerRequests">${kpis?.customer_requests || 0}</p><p class="kpi-subtitle">Gelabeld als klantaanvraag</p></div><div class="kpi-icon"><i class="fas fa-user-tag"></i></div></div>
+      </div>
+    </div>
+
+    <div class="mail-listing-container">
+      <div class="mail-header-row">
+        <div class="mail-search-wrapper">
+          <svg class="mail-search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <input type="text" class="mail-search-input" placeholder="Zoek in mail..." id="mailSearchInput" />
+        </div>
+        <div class="mail-dropdowns-container">
+          <select class="mail-dropdown" id="mailboxSelect">
+            <option value="all" ${currentMailboxId === 'all' ? 'selected' : ''}>Alle mailboxen</option>
+            ${(mailboxes || []).map(mb => `<option value="${mb.id}" ${currentMailboxId === mb.id ? 'selected' : ''}>${mb.email}</option>`).join('')}
+          </select>
+          <select class="mail-dropdown" id="labelSelect">
+            <option value="all" ${currentLabel === 'all' ? 'selected' : ''}>Alle labels</option>
+            <option value="lead" ${currentLabel === 'lead' ? 'selected' : ''}>Lead</option>
+            <option value="urgent" ${currentLabel === 'urgent' ? 'selected' : ''}>Urgent</option>
+            <option value="customer_request" ${currentLabel === 'customer_request' ? 'selected' : ''}>Belangrijk</option>
+            <option value="support_request" ${currentLabel === 'support_request' ? 'selected' : ''}>Supportaanvraag</option>
+            <option value="newsletter" ${currentLabel === 'newsletter' ? 'selected' : ''}>Nieuwsbrief</option>
+            <option value="invoice" ${currentLabel === 'invoice' ? 'selected' : ''}>Factuur</option>
+            <option value="follow_up" ${currentLabel === 'follow_up' ? 'selected' : ''}>Follow-up</option>
+            <option value="feedback" ${currentLabel === 'feedback' ? 'selected' : ''}>Feedback</option>
+            <option value="other" ${currentLabel === 'other' ? 'selected' : ''}>Overig</option>
+            <option value="junk" ${currentLabel === 'junk' ? 'selected' : ''}>Spam</option>
+          </select>
+          <select class="mail-dropdown" id="filterSelect">
+            <option value="all">Alle</option>
+            <option value="unread">Ongelezen</option>
+            <option value="attachments">Met bijlage</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bulk-actions-bar" id="bulkActionsBar" style="display:none;">
+        <div class="bulk-actions-left"><span class="bulk-count" id="bulkCount">0 geselecteerd</span></div>
+        <div class="bulk-actions-right">
+          <button class="bulk-btn" onclick="markSelectedAsRead()">Markeer als gelezen</button>
+          <button class="bulk-btn" onclick="deleteSelected()">Verwijderen</button>
+          <button class="bulk-btn bulk-btn-clear" onclick="clearSelection()">Deselecteren</button>
+        </div>
+      </div>
+
+      <div class="mail-select-all-row">
+        <label class="mail-checkbox-label">
+          <input type="checkbox" class="mail-checkbox-input" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+          <span class="mail-checkbox-box"></span>
+        </label>
+        <span class="mail-select-all-text">Selecteer alle e-mails</span>
+      </div>
+
+      <div class="mail-list" id="mailList">
+        ${
+          (mails || []).map(m => {
+            const fromEmail = m.from_email || ''
+            const fromName = (m.display_from_name || '').trim() || (fromEmail ? fromEmail.split('@')[0] : '')
+            const initials = (fromName || '?').split(/\s+/).map(s => s[0]).join('').slice(0,2).toUpperCase()
+            const subject = (m.display_subject || '').trim()
+            const preview = (m.body_text || '').replace(/\s+/g,' ').slice(0,120)
+            const receivedDate = m.received_at ? new Date(m.received_at) : new Date()
+            const isToday = receivedDate.toDateString() === new Date().toDateString()
+            const timeDisplay = isToday ? receivedDate.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) : receivedDate.toLocaleDateString('nl-NL',{day:'2-digit',month:'short'})
+            return `
+            <div class="mail-item" data-mail-id="${m.id}" data-read="${m.read_at ? 'true' : 'false'}">
+              <label class="mail-checkbox-label" onclick="event.stopPropagation()">
+                <input type="checkbox" class="mail-checkbox-input mail-item-checkbox" onchange="updateBulkActions()">
+                <span class="mail-checkbox-box"></span>
+              </label>
+              <div class="mail-content" onclick="openMail('${m.id}')">
+                <div class="mail-top-row">
+                  <div class="mail-sender-section">
+                    <div class="mail-avatar">${initials}</div>
+                    <div class="mail-sender-info">
+                      <div class="mail-sender-name">${fromName}</div>
+                      <div class="mail-sender-email">${fromEmail}</div>
+                    </div>
+                  </div>
+                  <div class="mail-meta-section">
+                    ${m.read_at ? '' : '<span class="mail-unread-dot" title="Ongelezen"></span>'}
+                    ${m.has_attachments ? '<span class="mail-attachment-tag">📎</span>' : ''}
+                    <button class="mail-star-btn" onclick="event.stopPropagation(); toggleStar('${m.id}')">★</button>
+                    <span class="mail-time">${timeDisplay}</span>
+                    <button class="mail-action-icon" title="Archiveer" onclick="event.stopPropagation(); archiveMail('${m.id}')">
+                      <i class="fas fa-box-archive"></i>
+                    </button>
+                    <button class="mail-action-icon" title="Verwijder" onclick="event.stopPropagation(); deleteMail('${m.id}')">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="mail-action-icon" title="Meer" onclick="event.stopPropagation(); showMailActionsMenu('${m.id}', event)">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="mail-subject">${subject}</div>
+                ${preview ? `<div class="mail-preview">${preview}${(m.body_text||'').length>120?'…':''}</div>` : ''}
+                <div class="mail-tags-row">
+                  ${(() => {
+                    const nameMap = {
+                      'customer_request': 'Klantaanvraag',
+                      'support_request': 'Supportaanvraag',
+                      'urgent': 'Urgent',
+                      'lead': 'Kans',
+                      'junk': 'Spam',
+                      'spam': 'Spam',
+                      'support': 'Support',
+                      'newsletter': 'Nieuwsbrief',
+                      'other': 'Overig',
+                      'follow_up': 'Follow-up',
+                      'feedback': 'Feedback',
+                      'invoice': 'Factuur'
+                    }
+                    const classFor = (label) => ({
+                      'newsletter': 'mail-label-neutral',
+                      'other': 'mail-label-neutral',
+                      'follow_up': 'mail-label-neutral',
+                      'feedback': 'mail-label-neutral',
+                      'junk': 'mail-label-neutral',
+                      'spam': 'mail-label-neutral',
+                      'support_request': 'mail-label-orange',
+                      'support': 'mail-label-orange',
+                      'invoice': 'mail-label-blue',
+                      'customer_request': 'mail-label-blue',
+                      'lead': 'mail-label-personal',
+                      'urgent': 'mail-label-important'
+                    }[label] || 'mail-label-neutral')
+                    return (m.labels||[]).map(l => `<span class="mail-label-tag ${classFor(l.label)}">${nameMap[l.label] || (l.label||'')}</span>`).join('')
+                  })()}
+                </div>
+              </div>
+            </div>`
+          }).join('')
+        }
+      </div>
+
+      <div class="pagination-container" data-total-mails="${pagination?.total || 0}" data-current-page="${pagination?.page || 1}" data-total-pages="${pagination?.totalPages || 1}" data-per-page="${pagination?.perPage || 10}">
+        <div class="items-per-page-wrapper">
+          <span class="items-per-page-label">Items per pagina:</span>
+          <select class="items-per-page-select" id="itemsPerPageSelect">
+            ${[10,15,25,50].map(n => `<option value="${n}" ${n === (pagination?.perPage||10) ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="pagination-info" id="paginationInfo">
+          Toont ${((pagination.page || 1) - 1) * (pagination.perPage || 10) + 1} tot ${Math.min((pagination.page || 1) * (pagination.perPage || 10), pagination.total || 0)} van ${pagination.total || 0} resultaten
+        </div>
+        <div class="pagination-buttons" id="paginationButtons">
+          <!-- Will be populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Actions Menu -->
+    <div id="mailActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 200px; padding: 8px 0;">
+      <button class="mail-action-item" data-action="open" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-eye" style="margin-right: 8px; width: 16px;"></i> Openen
+      </button>
+      <button class="mail-action-item" data-action="ai-reply" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-sparkles" style="margin-right: 8px; width: 16px;"></i> AI Antwoord
+      </button>
+      <button class="mail-action-item" data-action="unsubscribe" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-ban" style="margin-right: 8px; width: 16px;"></i> Afmelden
+      </button>
+      <button class="mail-action-item" data-action="archive" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-box-archive" style="margin-right: 8px; width: 16px;"></i> Archiveren
+      </button>
+      <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+      <button class="mail-action-item" data-action="create-ticket" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #ea5d0d;">
+        <i class="fas fa-ticket-alt" style="margin-right: 8px; width: 16px;"></i> Maak Ticket
+      </button>
+    </div>
+
+    <!-- Modals placeholder -->
+    <div id="mailModalRoot"></div>
+  </div>
+  `,
+  scripts: (scripts || []),
+  stylesheets: (stylesheets || [])
+}) %>

@@ -1,0 +1,661 @@
+/**
+ * REST-exposure voor CPT 'referenties' (en 'referentie')
+ * - Strings blijven string
+ * - Logo als object (niet forceren naar string)
+ * - Computed veld 'ref_logo_url' altijd als nette URL
+ * - Sortering: standaard A → Z op titel (REST + alle frontend queries)
+ * - Paginatie: 100 per pagina (REST + frontend)
+ */
+
+add_action('init', function () {
+  $cpts = ['referenties','referentie'];
+
+  // Simpele stringvelden
+  foreach ($cpts as $type) {
+    foreach (['ref_location','ref_url','ref_text'] as $field) {
+      register_post_meta($type, $field, [
+        'show_in_rest'  => true,
+        'single'        => true,
+        'type'          => 'string',
+        'auth_callback' => '__return_true',
+      ]);
+    }
+
+    // Logo NIET als string, maar als object (kan id/array/object zijn)
+    register_post_meta($type, 'ref_logo', [
+      'show_in_rest'  => true,
+      'single'        => true,
+      'type'          => 'object', // belangrijk!
+      'auth_callback' => '__return_true',
+    ]);
+  }
+});
+
+/**
+ * Helper: normaliseer alles naar een bruikbare logo-URL
+ */
+function probouws_normalize_logo_to_url($val){
+  // leeg
+  if ($val === null || $val === '' ) return null;
+
+  // array (galerij of image-object)
+  if (is_array($val)) {
+    // JetEngine/ACF object met 'url' of 'sizes'
+    if (!empty($val['url'])) return probouws_to_absolute_url($val['url']);
+    if (!empty($val['source_url'])) return probouws_to_absolute_url($val['source_url']);
+
+    if (!empty($val['sizes']) && is_array($val['sizes'])) {
+      foreach (['full','large','medium_large','medium','thumbnail'] as $k) {
+        if (!empty($val['sizes'][$k])) {
+          $s = $val['sizes'][$k];
+          if (is_string($s)) return probouws_to_absolute_url($s);
+          if (is_array($s) && !empty($s['url'])) return probouws_to_absolute_url($s['url']);
+          if (is_array($s) && !empty($s['source_url'])) return probouws_to_absolute_url($s['source_url']);
+        }
+      }
+    }
+
+    // ID in array?
+    if (!empty($val['id'])) return probouws_logo_url_from_id((int)$val['id']);
+
+    // galerij: pak eerste item
+    $first = reset($val);
+    if ($first !== false) return probouws_normalize_logo_to_url($first);
+
+    return null;
+  }
+
+  // numeriek (bijv. ACF "Return value = ID")
+  if (is_numeric($val)) {
+    return probouws_logo_url_from_id((int)$val);
+  }
+
+  // string: kan URL, attachment permalink, <img> HTML, of JSON-string zijn
+  if (is_string($val)) {
+    $s = trim($val);
+
+    // JSON-string (ACF/JetEngine kan zo serialiseren)
+    if ((substr($s,0,1) === '{' && substr($s,-1) === '}') || (substr($s,0,1) === '[' && substr($s,-1) === ']')) {
+      $json = json_decode($s, true);
+      if (json_last_error() === JSON_ERROR_NONE) {
+        return probouws_normalize_logo_to_url($json);
+      }
+    }
+
+    // <img ... src="...">
+    if (preg_match('/<img[^>]*\s+src=["\']([^"\']+)["\']/i', $s, $m)) {
+      return probouws_to_absolute_url($m[1]);
+    }
+
+    // ?attachment_id=123
+    if (preg_match('/[?&]attachment_id=(\d+)/i', $s, $m)) {
+      return probouws_logo_url_from_id((int)$m[1]);
+    }
+
+    // lijkt op URL/path
+    if (preg_match('~^(data:|https?://|//|/|www\.)~i', $s)) {
+      return probouws_to_absolute_url($s);
+    }
+
+    // numerieke string
+    if (ctype_digit($s)) {
+      return probouws_logo_url_from_id((int)$s);
+    }
+  }
+
+  return null;
+}
+
+function probouws_logo_url_from_id($id){
+  if (!$id) return null;
+  $src = wp_get_attachment_image_src($id, 'full');
+  if (!empty($src[0])) return probouws_to_absolute_url($src[0]);
+  $url = wp_get_attachment_url($id);
+  return $url ? probouws_to_absolute_url($url) : null;
+}
+
+function probouws_to_absolute_url($u){
+  if (!$u) return null;
+  // data URI
+  if (preg_match('~^data:~i', $u)) return $u;
+  // protocol-relative
+  if (preg_match('~^//~', $u)) return (is_ssl() ? 'https:' : 'http:') . $u;
+  // absolute
+  if (preg_match('~^https?://~i', $u)) return $u;
+  // www.
+  if (preg_match('~^www\.~i', $u)) return (is_ssl() ? 'https://' : 'http://') . $u;
+  // relatief pad
+  return home_url('/' . ltrim($u, '/'));
+}
+
+add_action('rest_api_init', function () {
+  $cpts = ['referenties','referentie'];
+
+  foreach ($cpts as $type) {
+    // Top-level aliasen (optioneel, maar handig)
+    foreach (['ref_logo','ref_location','ref_url','ref_text'] as $field) {
+      register_rest_field($type, $field, [
+        'get_callback' => function ($object) use ($field) {
+          // geef rauwe meta terug; logo kan object/array/id zijn
+          return get_post_meta($object['id'], $field, true);
+        },
+        'schema' => [
+          'description' => 'Referentieveld '.$field,
+          'context'     => ['view','edit'],
+          // type bewust weggelaten/algemeen gehouden i.v.m. wisselende vormen
+        ],
+      ]);
+    }
+
+    // Extra: genormaliseerde URL altijd als string
+    register_rest_field($type, 'ref_logo_url', [
+      'get_callback' => function ($object) {
+        $raw = get_post_meta($object['id'], 'ref_logo', true);
+        return probouws_normalize_logo_to_url($raw);
+      },
+      'schema' => [
+        'description' => 'Genormaliseerde logo URL',
+        'type'        => 'string',
+        'context'     => ['view','edit'],
+      ],
+    ]);
+  }
+});
+
+/**
+ * A → Z sortering + standaard 100 per pagina voor REST collections
+ * + optionele filter op taxonomy 'branche-relatie' via ?branche=slug
+ * (respecteert expliciete request params: order, orderby, per_page)
+ */
+add_filter('rest_referenties_query', 'probouws_rest_sort_az', 10, 2);
+add_filter('rest_referentie_query',  'probouws_rest_sort_az', 10, 2);
+function probouws_rest_sort_az($args, $request) {
+  // ALTIJD A-Z sorteren op titel, tenzij expliciet anders gevraagd
+  // Maar we forceren A-Z als standaard voor referenties
+  $explicit_orderby = $request->get_param('orderby');
+  $explicit_order = $request->get_param('order');
+  
+  // Als er geen expliciete sortering is, of als het niet 'title' is, forceer dan A-Z
+  if (!$explicit_orderby || $explicit_orderby !== 'title') {
+    $args['orderby'] = 'title';
+    $args['order'] = 'ASC';
+  } else {
+    // Als orderby wel 'title' is, zorg dat order ASC is (tenzij expliciet DESC)
+    if (!$explicit_order || $explicit_order !== 'DESC') {
+      $args['order'] = 'ASC';
+    }
+  }
+  
+  // alleen defaulten als er geen per_page expliciet is meegegeven
+  if (!$request->get_param('per_page') && empty($args['posts_per_page'])) {
+    $args['posts_per_page'] = 100;
+  }
+
+  // Branche-filter (taxonomy 'branche-relatie', terms op slug)
+  // Nieuwe categorie namen: 
+  // - bouwbedrijven
+  // - infra / gww (slug: infra-gww)
+  // - installateurs
+  // - Interieur / afbouw (slug: interieur-afbouw)
+  // - dakdekkers
+  // Mapping voor backward compatibility met oude slugs
+  $branche_mapping = [
+    'bouw' => 'bouwbedrijven',
+    'bouw-software' => 'bouwbedrijven',
+    'infra' => 'infra-gww',
+    'gww' => 'infra-gww',
+    'software-infra' => 'infra-gww',
+    'installatie' => 'installateurs',
+    'installatiebedrijf' => 'installateurs',
+    'installatiebedrijven' => 'installateurs',
+    'software-installatiebedrijf' => 'installateurs',
+    'interieur' => 'interieur-afbouw',
+    'afbouw' => 'interieur-afbouw',
+    'interieur-afbouw' => 'interieur-afbouw',
+    'dakdekker' => 'dakdekkers',
+    'dakdekkers' => 'dakdekkers',
+  ];
+  
+  $branche = $request->get_param('branche');
+  if (!empty($branche) && $branche !== 'all') {
+    $terms = (array) $branche;
+    
+    // Map oude slugs naar nieuwe slugs indien nodig
+    $mapped_terms = [];
+    foreach ($terms as $term) {
+      $sanitized = sanitize_title($term);
+      // Check mapping eerst
+      if (isset($branche_mapping[$sanitized])) {
+        $mapped_terms[] = sanitize_title($branche_mapping[$sanitized]);
+      } else {
+        // Anders gebruik de gesanitized term direct
+        $mapped_terms[] = $sanitized;
+      }
+    }
+    
+    // Voeg ook de originele gesanitized terms toe voor backward compatibility
+    $all_terms = array_unique(array_merge($mapped_terms, array_map('sanitize_title', $terms)));
+
+    $args['tax_query'] = [
+      [
+        'taxonomy' => 'branche-relatie',
+        'field'    => 'slug',
+        'terms'    => $all_terms,
+      ],
+    ];
+  }
+
+  return $args;
+}
+
+/**
+ * Forceer A → Z sortering + 100 per pagina voor ALLE frontend-queries
+ * die deze CPT's ophalen, inclusief Elementor/JetEngine AJAX requests.
+ */
+add_action('pre_get_posts', function($q){
+  if (! $q instanceof WP_Query) return;
+
+  // Laat admin-schermen met hun eigen sortering met rust,
+  // maar sta AJAX (admin-ajax.php) wél toe.
+  if (is_admin() && !wp_doing_ajax()) return;
+
+  // Laat REST API met eigen parameters werken
+  if (defined('REST_REQUEST') && REST_REQUEST) return;
+
+  $targets = ['referenties','referentie'];
+
+  $apply = false;
+  $pt = $q->get('post_type');
+
+  if ($pt) {
+    $pts = (array) $pt;
+    foreach ($pts as $p) {
+      if (in_array($p, $targets, true)) {
+        $apply = true;
+        break;
+      }
+    }
+  } else {
+    // Main query zonder expliciet post_type (bijv. archief)
+    if ($q->is_main_query() && $q->is_post_type_archive($targets)) {
+      $apply = true;
+    }
+  }
+
+  if ($apply) {
+    // ALTIJD A-Z sorteren op titel voor referenties
+    // Overschrijf eventuele andere orderby/order parameters
+    $q->set('orderby', 'title');
+    $q->set('order', 'ASC');
+    
+    // Verwijder eventuele meta_key als die er is (voor andere orderby types)
+    $q->set('meta_key', '');
+
+    // Standaard 100 referenties per pagina; paged wordt door WP afgehandeld
+    if (!$q->get('posts_per_page')) {
+      $q->set('posts_per_page', 100);
+    }
+  }
+});
+
+/**
+ * Helper + shortcode voor frontend-paginatie in Probouws-stijl
+ * - Gebruik in template: <?php probouws_render_referenties_pagination(); ?>
+ * - Of in Elementor / editor: [probouws_ref_pagination]
+ */
+
+function probouws_render_referenties_pagination($query = null){
+  if ($query instanceof WP_Query) {
+    $q = $query;
+  } else {
+    global $wp_query;
+    $q = $wp_query;
+  }
+
+  if (! $q instanceof WP_Query) return;
+  if ($q->max_num_pages <= 1) return;
+
+  $big = 999999999;
+
+  $current = max(1, get_query_var('paged') ? get_query_var('paged') : 1);
+
+  $links = paginate_links([
+    'base'      => str_replace($big, '%#%', esc_url(get_pagenum_link($big))),
+    'format'    => '?paged=%#%',
+    'current'   => $current,
+    'total'     => $q->max_num_pages,
+    'prev_text' => '&laquo;',
+    'next_text' => '&raquo;',
+    'type'      => 'list',
+  ]);
+
+  if (!$links) return;
+
+  echo '<nav class="probouws-pagination" aria-label="Referenties paginatie">';
+  echo $links;
+  echo '</nav>';
+}
+
+// Shortcode: [probouws_ref_pagination]
+add_shortcode('probouws_ref_pagination', function() {
+  ob_start();
+  probouws_render_referenties_pagination();
+  return ob_get_clean();
+});
+
+/**
+ * PHP functie: Genereer filter knoppen HTML direct
+ * Gebruik in template: <?php echo probouws_render_referentie_filters_html(); ?>
+ * Of in Elementor / editor: [probouws_ref_filters]
+ */
+function probouws_render_referentie_filters_html() {
+  $branches = probouws_get_referentie_branches();
+  
+  $buttons = '';
+  foreach ($branches as $index => $branch) {
+    $is_active = $index === 0 ? 'is-active' : '';
+    $buttons .= sprintf(
+      '<button type="button" class="%s" data-branch="%s">%s</button>',
+      esc_attr($is_active),
+      esc_attr($branch['slug']),
+      esc_html($branch['label'])
+    );
+  }
+  
+  return sprintf(
+    '<div class="refs-filter-bar" id="refsFilterBar" aria-label="Filter op branche">%s</div>',
+    $buttons
+  );
+}
+
+// Shortcode: [probouws_ref_filters]
+add_shortcode('probouws_ref_filters', function() {
+  return probouws_render_referentie_filters_html();
+});
+
+/**
+ * Helper functie: Get alle branches in de juiste volgorde voor filter knoppen
+ * - Eerste: "Alle bedrijven" (value: 'all')
+ * - Daarna: De 5 branches in volgorde
+ * 
+ * Gebruik: $branches = probouws_get_referentie_branches();
+ * Of via REST: /wp-json/wp/v2/referenties/branches
+ */
+function probouws_get_referentie_branches() {
+  return [
+    [
+      'slug' => 'all',
+      'name' => 'Alle bedrijven',
+      'label' => 'Alle bedrijven',
+    ],
+    [
+      'slug' => 'bouwbedrijven',
+      'name' => 'Bouwbedrijven',
+      'label' => 'Bouwbedrijven',
+    ],
+    [
+      'slug' => 'infra-gww',
+      'name' => 'Infra / GWW',
+      'label' => 'Infra / GWW',
+    ],
+    [
+      'slug' => 'installateurs',
+      'name' => 'Installateurs',
+      'label' => 'Installateurs',
+    ],
+    [
+      'slug' => 'interieur-afbouw',
+      'name' => 'Interieur / Afbouw',
+      'label' => 'Interieur / Afbouw',
+    ],
+    [
+      'slug' => 'dakdekkers',
+      'name' => 'Dakdekkers',
+      'label' => 'Dakdekkers',
+    ],
+  ];
+}
+
+/**
+ * REST endpoint voor branches lijst
+ * GET /wp-json/wp/v2/referenties/branches
+ */
+add_action('rest_api_init', function() {
+  register_rest_route('wp/v2', '/referenties/branches', [
+    'methods' => 'GET',
+    'callback' => function() {
+      return new WP_REST_Response(probouws_get_referentie_branches(), 200);
+    },
+    'permission_callback' => '__return_true',
+  ]);
+});
+
+/**
+ * Basis CSS voor paginatie (Probouws-stijl, #ea5d0d)
+ */
+add_action('wp_head', function () {
+  echo <<<CSS
+<style>
+  .probouws-pagination {
+    margin: 40px 0 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .probouws-pagination ul {
+    display: flex;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .probouws-pagination li {
+    margin: 0;
+  }
+
+  .probouws-pagination a,
+  .probouws-pagination span {
+    display: inline-flex;
+    min-width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    text-decoration: none;
+    color: #111827;
+    background: #ffffff;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.1s ease;
+  }
+
+  .probouws-pagination a:hover {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+    transform: translateY(-1px);
+  }
+
+  .probouws-pagination .current {
+    background: #ea5d0d;
+    color: #ffffff;
+    border-color: #ea5d0d;
+    cursor: default;
+  }
+
+  .probouws-pagination .dots {
+    border: none;
+    background: transparent;
+  }
+</style>
+CSS;
+});
+
+/**
+ * JavaScript helper: Genereer filter knoppen voor referenties
+ * Gebruik: probouws_render_referentie_filters(containerId, onFilterChange)
+ */
+add_action('wp_footer', function() {
+  ?>
+  <script>
+  (function() {
+    'use strict';
+    
+    // Wacht tot DOM geladen is
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    
+    function init() {
+      // Auto-update bestaande filter bars met nieuwe branch namen
+      function updateExistingFilterBar() {
+        var existingFilterBar = document.getElementById('refsFilterBar');
+        if (!existingFilterBar) return;
+        
+        // Haal branches op
+        fetch('/wp-json/wp/v2/referenties/branches')
+          .then(function(response) {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(function(branches) {
+            if (!Array.isArray(branches)) return;
+            
+            // Vervang alle buttons
+            var buttonsHTML = branches.map(function(branch, index) {
+              var isActive = index === 0 ? 'is-active' : '';
+              return '<button type="button" class="' + isActive + '" data-branch="' + branch.slug + '">' + branch.label + '</button>';
+            }).join('');
+            
+            existingFilterBar.innerHTML = buttonsHTML;
+            
+            // Add event listeners
+            var buttons = existingFilterBar.querySelectorAll('button');
+            buttons.forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                var branchSlug = btn.getAttribute('data-branch');
+                probouws_filter_referenties(branchSlug, btn);
+              });
+            });
+          })
+          .catch(function(error) {
+            console.error('Error updating filter bar:', error);
+          });
+      }
+      
+      // Update bestaande filter bar als deze bestaat
+      updateExistingFilterBar();
+      
+      // Observeer voor nieuwe filter bars (voor dynamisch geladen content)
+      if (window.MutationObserver) {
+        var observer = new MutationObserver(function(mutations) {
+          var filterBar = document.getElementById('refsFilterBar');
+          if (filterBar && filterBar.querySelector('button[data-branch="all"]')) {
+            // Check of het nog de oude tekst heeft
+            var allButton = filterBar.querySelector('button[data-branch="all"]');
+            if (allButton && allButton.textContent.trim() === 'Alle branches') {
+              updateExistingFilterBar();
+            }
+          }
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+      
+      // Genereer filter knoppen voor referenties
+      window.probouws_render_referentie_filters = function(containerId, onFilterChange) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.warn('Container not found:', containerId);
+          return;
+        }
+        
+        // Haal branches op via REST API
+        fetch('/wp-json/wp/v2/referenties/branches')
+          .then(function(response) {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(function(branches) {
+            if (!Array.isArray(branches)) {
+              console.warn('Branches is not an array:', branches);
+              return;
+            }
+            
+            // Genereer knoppen HTML in de juiste structuur
+            var buttonsHTML = branches.map(function(branch, index) {
+              var isActive = index === 0 ? 'is-active' : '';
+              var buttonClass = index === 0 ? 'is-active' : '';
+              
+              return '<button type="button" ' +
+                'class="' + buttonClass + '" ' +
+                'data-branch="' + branch.slug + '">' +
+                branch.label +
+                '</button>';
+            }).join('');
+            
+            // Genereer de refs-filter-bar structuur
+            container.innerHTML = '<div class="refs-filter-bar" id="refsFilterBar" aria-label="Filter op branche">' + buttonsHTML + '</div>';
+            
+            // Add event listeners to buttons
+            var buttons = container.querySelectorAll('.refs-filter-bar button');
+            buttons.forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                var branchSlug = btn.getAttribute('data-branch');
+                probouws_filter_referenties(branchSlug, btn);
+              });
+            });
+            
+            // Store callback
+            if (onFilterChange) {
+              window.probouws_on_filter_change = onFilterChange;
+            }
+          })
+          .catch(function(error) {
+            console.error('Error loading branches:', error);
+          });
+      };
+      
+      // Filter functie
+      window.probouws_filter_referenties = function(branche, buttonElement) {
+        if (!buttonElement) return;
+        
+        // Update active state - gebruik data-branch attribuut
+        var filterBar = document.getElementById('refsFilterBar');
+        if (filterBar) {
+          var buttons = filterBar.querySelectorAll('button');
+          buttons.forEach(function(btn) {
+            btn.classList.remove('is-active');
+          });
+        }
+        
+        buttonElement.classList.add('is-active');
+        
+        // Call callback if exists
+        if (window.probouws_on_filter_change) {
+          window.probouws_on_filter_change(branche);
+        }
+        
+        // Trigger custom event
+        var event = new CustomEvent('probouws:filter_referenties', {
+          detail: { branche: branche }
+        });
+        document.dispatchEvent(event);
+      };
+    }
+  })();
+  </script>
+  <?php
+});

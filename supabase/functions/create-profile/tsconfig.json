@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "types": ["./deno.d.ts"],
+    "paths": {
+      "std/*": ["https://deno.land/std@0.177.0/*"],
+      "supabase": ["https://esm.sh/@supabase/supabase-js@2.7.1"],
+      "deno": ["https://deno.land/x/deno@v1.37.1/mod.ts"]
+    }
+  },
+  "include": ["*.ts", "*.d.ts"],
+  "exclude": ["node_modules"]
+} 

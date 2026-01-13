@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= employee.name %> | GrowSocial Admin</title>
+  <link rel="stylesheet" href="/css/werknemer-detail.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="werknemer-detail-page">
+    <div class="werknemer-detail-header">
+      <div class="werknemer-detail-header-inner">
+        <button class="werknemer-back-btn" onclick="window.location.href='/admin/werknemers'">
+          <i class="fas fa-arrow-left"></i> Terug naar werknemers
+        </button>
+        <div class="werknemer-header-actions">
+          <button class="werknemer-action-btn werknemer-action-edit"><i class="fas fa-edit"></i> Bewerken</button>
+          <button class="werknemer-action-btn werknemer-action-delete"><i class="fas fa-trash"></i> Verwijderen</button>
+        </div>
+      </div>
+    </div>
+    <div class="werknemer-detail-content">
+      <div class="werknemer-detail-grid">
+        <div class="werknemer-detail-left">
+          <div class="werknemer-header-card">
+            <div class="werknemer-header-card-inner">
+              <div class="werknemer-detail-avatar"><%= employee.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() %></div>
+              <div class="werknemer-header-info">
+                <div class="werknemer-header-top">
+                  <div>
+                    <h1 class="werknemer-detail-name"><%= employee.name %></h1>
+                    <div class="werknemer-header-badges">
+                      <span class="werknemer-badge werknemer-badge-active">Actief</span>
+                      <% if (employee.performance>=90){ %><span class="werknemer-badge werknemer-badge-excellent">Excellent</span><% } %>
+                    </div>
+                  </div>
+                  <div class="werknemer-header-score">
+                    <div class="werknemer-score-value"><i class="fas fa-star"></i><span><%= employee.performance %></span></div>
+                    <p class="werknemer-score-label">Performance Score</p>
+                  </div>
+                </div>
+                <p class="werknemer-header-role"><i class="fas fa-briefcase"></i><%= employee.role %><span class="werknemer-separator">•</span><i class="fas fa-building werknemer-department-icon"></i><span class="werknemer-department"><%= employee.department %></span></p>
+                <div class="werknemer-header-contact">
+                  <div class="werknemer-contact-item"><i class="fas fa-envelope"></i><span><%= employee.email %></span></div>
+                  <div class="werknemer-contact-item"><i class="fas fa-phone"></i><span><%= employee.phone %></span></div>
+                  <div class="werknemer-contact-item"><i class="fas fa-map-marker-alt"></i><span><%= employee.location %></span></div>
+                  <div class="werknemer-contact-item"><i class="fas fa-calendar"></i><span>Sinds <%= new Date(employee.startDate).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) %></span></div>
+                </div>
+              </div>
+            </div>
+            <% if (employee.bio) { %>
+              <div class="werknemer-bio"><p><%= employee.bio %></p></div>
+            <% } %>
+          </div>
+          <div class="werknemer-stats-grid">
+            <div class="werknemer-stat-card werknemer-stat-card-green"><div class="werknemer-stat-card-inner"><div class="werknemer-stat-icon"><i class="fas fa-check-circle"></i></div><div><p class="werknemer-stat-card-label">Deals Gewonnen</p><p class="werknemer-stat-card-value"><%= employee.dealsWon %></p></div></div></div>
+            <div class="werknemer-stat-card werknemer-stat-card-blue"><div class="werknemer-stat-card-inner"><div class="werknemer-stat-icon"><i class="fas fa-bullseye"></i></div><div><p class="werknemer-stat-card-label">In Progress</p><p class="werknemer-stat-card-value"><%= employee.dealsInProgress %></p></div></div></div>
+            <div class="werknemer-stat-card werknemer-stat-card-orange"><div class="werknemer-stat-card-inner"><div class="werknemer-stat-icon"><i class="fas fa-dollar-sign"></i></div><div><p class="werknemer-stat-card-label">Totale Omzet</p><p class="werknemer-stat-card-value-small"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(employee.revenue) %></p></div></div></div>
+          </div>
+          <div class="werknemer-tabs">
+            <div class="werknemer-tabs-header"><button class="werknemer-tab-btn active" data-tab="activity">Activiteit</button><button class="werknemer-tab-btn" data-tab="deals">Recente Deals</button><button class="werknemer-tab-btn" data-tab="performance">Performance</button></div>
+            <div class="werknemer-tab-content active" id="tab-activity">
+              <div class="werknemer-tab-card"><h3 class="werknemer-tab-title">Activiteit Tijdlijn</h3><div class="werknemer-activity-list">
+                <% (employee.activities||[]).forEach(function(activity){ %>
+                  <div class="werknemer-activity-item"><div class="werknemer-activity-icon werknemer-activity-<%= activity.type %>"><i class="fas fa-comment"></i></div><div class="werknemer-activity-content"><p class="werknemer-activity-text"><%= activity.description %></p><p class="werknemer-activity-time"><%= activity.relative || '' %></p></div></div>
+                <% }) %>
+              </div></div>
+            </div>
+            <div class="werknemer-tab-content" id="tab-deals"><div class="werknemer-tab-card"><h3 class="werknemer-tab-title">Recente Deals</h3><div class="werknemer-deals-list">
+              <% (employee.recentDeals||[]).forEach(function(deal){ %>
+                <div class="werknemer-deal-item"><div><p class="werknemer-deal-company"><%= deal.company %></p><p class="werknemer-deal-date">Verwacht: <%= new Date(deal.expectedClose).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) %></p></div><div class="werknemer-deal-right"><p class="werknemer-deal-value"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(deal.value) %></p><span class="werknemer-badge werknemer-badge-negotiation">Onderhandeling</span></div></div>
+              <% }) %>
+            </div></div></div>
+            <div class="werknemer-tab-content" id="tab-performance"><div class="werknemer-tab-card"><h3 class="werknemer-tab-title">Maandelijkse Performance</h3><div class="werknemer-performance-list">
+              <% (employee.monthlyPerformance||[]).forEach(function(month){ %>
+                <div class="werknemer-performance-item"><div class="werknemer-performance-left"><p class="werknemer-performance-month"><%= month.month %></p><div class="werknemer-performance-deals"><i class="fas fa-award"></i><span><%= month.deals %> deals</span></div></div><p class="werknemer-performance-revenue"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(month.revenue) %></p></div>
+              <% }) %>
+            </div></div></div>
+          </div>
+        </div>
+        <div class="werknemer-detail-right">
+          <div class="werknemer-sidebar-card"><h3 class="werknemer-sidebar-title">Vaardigheden</h3><div class="werknemer-skills"><% (employee.skills||[]).forEach(function(skill){ %><span class="werknemer-skill-badge"><%= skill %></span><% }) %></div></div>
+          <div class="werknemer-sidebar-card"><h3 class="werknemer-sidebar-title">Snelle Statistieken</h3><div class="werknemer-quick-stats"><div class="werknemer-quick-stat"><span class="werknemer-quick-stat-label">Gem. deal waarde</span><span class="werknemer-quick-stat-value"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format((employee.revenue||0)/Math.max(1,employee.dealsWon||1)) %></span></div><div class="werknemer-quick-stat"><span class="werknemer-quick-stat-label">Win rate</span><span class="werknemer-quick-stat-value">75%</span></div><div class="werknemer-quick-stat"><span class="werknemer-quick-stat-label">Gem. deal cyclus</span><span class="werknemer-quick-stat-value">32 dagen</span></div><div class="werknemer-quick-stat"><span class="werknemer-quick-stat-label">Actieve prospects</span><span class="werknemer-quick-stat-value">12</span></div></div></div>
+          <div class="werknemer-sidebar-card werknemer-trend-card"><div class="werknemer-trend-header"><i class="fas fa-arrow-trend-up"></i><h3 class="werknemer-sidebar-title">Performance Trend</h3></div><p class="werknemer-trend-value">+18%</p><p class="werknemer-trend-label">vs vorige maand</p><div class="werknemer-trend-note"><p>Sarah presteert uitstekend en overtreft consistent haar targets. Top performer van het team.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const tabButtons=document.querySelectorAll('.werknemer-tab-btn');
+      const tabContents=document.querySelectorAll('.werknemer-tab-content');
+      tabButtons.forEach(btn=>btn.addEventListener('click',function(){
+        const t=this.dataset.tab;tabButtons.forEach(b=>b.classList.remove('active'));tabContents.forEach(c=>c.classList.remove('active'));this.classList.add('active');document.getElementById('tab-'+t).classList.add('active');
+      }));
+    });
+  </script>
+</body>
+</html>
+
+

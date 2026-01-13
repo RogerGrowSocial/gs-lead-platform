@@ -1,0 +1,823 @@
+<%
+  // Format date helper
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Format time helper (for chat messages)
+  function formatTime(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', { 
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Get current status
+  const currentStatus = lead.status || 'new';
+  const hasFirstContact = lead.first_contact_at !== null;
+  const firstContactDate = hasFirstContact ? formatDate(lead.first_contact_at) : null;
+  
+  // Status badge mapping
+  const statusBadgeClass = currentStatus === 'new' ? 'badge-blue' 
+    : currentStatus === 'accepted' || currentStatus === 'won' ? 'badge-green'
+    : currentStatus === 'lost' ? 'badge-red'
+    : 'badge-warning';
+  
+  const statusBadgeText = currentStatus === 'new' ? 'Nieuw'
+    : currentStatus === 'accepted' ? 'Geaccepteerd'
+    : currentStatus === 'won' ? 'Opdracht binnen'
+    : currentStatus === 'lost' ? 'Geen opdracht'
+    : currentStatus === 'in_progress' ? 'Lopend'
+    : currentStatus;
+  
+  var leadDetailsContent = `
+<style>
+  /* Workspace Layout */
+  .lead-workspace {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  /* Lead Overview Card */
+  .lead-overview-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .lead-overview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .lead-overview-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+  }
+
+  .lead-overview-meta {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .lead-overview-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .lead-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .lead-info-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .lead-info-value {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 500;
+  }
+
+  .lead-info-value a {
+    color: #ea5d0d;
+    text-decoration: none;
+  }
+
+  .lead-info-value a:hover {
+    text-decoration: underline;
+  }
+
+  /* Klant Bericht - Groot en duidelijk */
+  .lead-message-box {
+    background: #f9fafb;
+    border-left: 4px solid #ea5d0d;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 24px;
+  }
+
+  .lead-message-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  .lead-message-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #111827;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
+  /* Workspace Grid: Chat + Timeline */
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 1024px) {
+    .workspace-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Chat Systeem */
+  .chat-container {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chat-header-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .chat-message {
+    display: flex;
+    gap: 12px;
+    max-width: 75%;
+  }
+
+  .chat-message.partner {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .chat-message.customer {
+    align-self: flex-start;
+  }
+
+  .chat-message.system {
+    align-self: center;
+    max-width: 90%;
+  }
+
+  .chat-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+  }
+
+  .chat-message.partner .chat-bubble {
+    background: #ea5d0d;
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+
+  .chat-message.customer .chat-bubble {
+    background: #f3f4f6;
+    color: #111827;
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-message.system .chat-bubble {
+    background: #f9fafb;
+    color: #6b7280;
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
+  }
+
+  .chat-message-time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+    align-self: flex-end;
+  }
+
+  .chat-message.partner .chat-message-time {
+    text-align: right;
+  }
+
+  .chat-input-container {
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chat-channel-selector {
+    display: flex;
+    gap: 8px;
+  }
+
+  .chat-channel-btn {
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .chat-channel-btn:hover {
+    border-color: #ea5d0d;
+    color: #ea5d0d;
+  }
+
+  .chat-channel-btn.active {
+    background: #ea5d0d;
+    border-color: #ea5d0d;
+    color: white;
+  }
+
+  .chat-input-wrapper {
+    display: flex;
+    gap: 8px;
+  }
+
+  .chat-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+  }
+
+  .chat-input:focus {
+    outline: none;
+    border-color: #ea5d0d;
+    box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+  }
+
+  .chat-send-btn {
+    padding: 10px 20px;
+    background: #ea5d0d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .chat-send-btn:hover:not(:disabled) {
+    background: #d45409;
+  }
+
+  .chat-send-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Activity Timeline */
+  .timeline-container {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    height: 600px;
+    overflow-y: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .timeline-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .timeline-item:last-child {
+    border-bottom: none;
+  }
+
+  .timeline-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  .timeline-icon.phone_call { background: #dbeafe; color: #1e40af; }
+  .timeline-icon.email_sent { background: #fce7f3; color: #9f1239; }
+  .timeline-icon.whatsapp { background: #dcfce7; color: #166534; }
+  .timeline-icon.meeting { background: #fef3c7; color: #92400e; }
+  .timeline-icon.status_change_contacted { background: #d1fae5; color: #065f46; }
+  .timeline-icon.note { background: #e0e7ff; color: #3730a3; }
+  .timeline-icon.message { background: #e0f2fe; color: #0c4a6e; }
+  .timeline-icon.created { background: #f3f4f6; color: #4b5563; }
+  .timeline-icon.status_changed { background: #fef3c7; color: #92400e; }
+
+  .timeline-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .timeline-description {
+    font-size: 14px;
+    color: #111827;
+    margin: 0 0 4px 0;
+  }
+
+  .timeline-meta {
+    font-size: 12px;
+    color: #6b7280;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .timeline-time {
+    font-size: 11px;
+    color: #9ca3af;
+  }
+
+  /* Actieknoppen */
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+
+  .action-btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 12px 20px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 150ms ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .action-btn:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #ea5d0d;
+    color: #ea5d0d;
+  }
+
+  .action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .action-btn.loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.show {
+    display: flex;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  .modal-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #ea5d0d;
+    box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 150ms ease;
+    border: none;
+  }
+
+  .btn-primary {
+    background: #ea5d0d;
+    color: white;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #d45409;
+  }
+
+  .btn-secondary {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+  }
+
+  .btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  /* Badge styling */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .badge-blue {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .badge-green {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .badge-red {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+
+  .badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+
+  /* Toast messages */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 2000;
+    animation: slideIn 0.3s ease;
+  }
+
+  .toast.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .toast.error {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+</style>
+
+<div class="lead-workspace">
+  <!-- Lead Overview Card -->
+  <div class="lead-overview-card">
+    <div class="lead-overview-header">
+      <div>
+        <h1 class="lead-overview-title">${lead.name || 'Onbekend'}</h1>
+        <p class="lead-overview-meta">Lead ID: ${lead.id}</p>
+      </div>
+      <a href="/dashboard/leads" class="btn-secondary" style="text-decoration: none;">← Terug naar overzicht</a>
+    </div>
+    
+    <div class="lead-overview-info">
+      <div class="lead-info-item">
+        <span class="lead-info-label">Email</span>
+        <span class="lead-info-value" data-email="${lead.email || ''}">
+          ${lead.email ? `<a href="mailto:${lead.email}">${lead.email}</a>` : '-'}
+        </span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Telefoon</span>
+        <span class="lead-info-value" data-phone="${lead.phone || ''}">
+          ${lead.phone ? `<a href="tel:${lead.phone}">${lead.phone}</a>` : '-'}
+        </span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">WhatsApp</span>
+        <span class="lead-info-value">
+          ${lead.phone ? `<a href="https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}" target="_blank">Open WhatsApp</a>` : '-'}
+        </span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Status</span>
+        <span class="badge ${statusBadgeClass}">${statusBadgeText}</span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Provincie</span>
+        <span class="lead-info-value">${lead.province || '-'}</span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Branche</span>
+        <span class="lead-info-value">${industryName || '-'}</span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Lead prijs</span>
+        <span class="lead-info-value">€${(lead.price_at_purchase || 0).toFixed(2)}</span>
+      </div>
+      <div class="lead-info-item">
+        <span class="lead-info-label">Ingediend op</span>
+        <span class="lead-info-value">${formatDate(lead.created_at)}</span>
+      </div>
+      ${hasFirstContact ? `
+      <div class="lead-info-item">
+        <span class="lead-info-label">Eerste contact</span>
+        <span class="lead-info-value">${firstContactDate}</span>
+      </div>
+      ` : ''}
+      ${currentStatus === 'won' && lead.deal_value ? `
+      <div class="lead-info-item">
+        <span class="lead-info-label">Opdrachtwaarde</span>
+        <span class="lead-info-value">€${parseFloat(lead.deal_value).toFixed(2)}</span>
+      </div>
+      ` : ''}
+    </div>
+
+    <!-- Klant Bericht - Groot en duidelijk -->
+    ${lead.message ? `
+    <div class="lead-message-box">
+      <div class="lead-message-label">Bericht van de klant</div>
+      <p class="lead-message-text">${lead.message}</p>
+    </div>
+    ` : ''}
+  </div>
+
+  <!-- Workspace Grid: Chat + Timeline -->
+  <div class="workspace-grid">
+    <!-- Chat Systeem (links) -->
+    <div class="chat-container">
+      <div class="chat-header">
+        <h3 class="chat-header-title">Conversatie</h3>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <!-- Messages worden hier geladen via JavaScript -->
+        <div class="chat-message customer">
+          <div class="chat-bubble">${lead.message || 'Geen bericht'}</div>
+          <div class="chat-message-time">${formatTime(lead.created_at)}</div>
+        </div>
+      </div>
+      <div class="chat-input-container">
+        <div class="chat-channel-selector">
+          <button class="chat-channel-btn active" data-channel="dashboard">Dashboard</button>
+          <button class="chat-channel-btn" data-channel="email">E-mail</button>
+          <button class="chat-channel-btn" data-channel="whatsapp">WhatsApp</button>
+        </div>
+        <div class="chat-input-wrapper">
+          <textarea 
+            class="chat-input" 
+            id="chatMessageInput" 
+            placeholder="Typ je bericht..."
+            rows="2"></textarea>
+          <button class="chat-send-btn" id="chatSendBtn">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Timeline (rechts) -->
+    <div class="timeline-container">
+      <h3 class="timeline-header">Activiteiten</h3>
+      <div id="timelineItems">
+        <!-- Activities worden hier geladen via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Actieknoppen (onderaan) -->
+  <div class="action-buttons">
+    <button class="action-btn" id="btnPhoneCall" data-type="phone_call">
+      <i class="fas fa-phone"></i>
+      Ik heb gebeld
+    </button>
+    <button class="action-btn" id="btnWhatsapp" data-type="whatsapp">
+      <i class="fab fa-whatsapp"></i>
+      WhatsApp gestuurd
+    </button>
+    <button class="action-btn" id="btnEmailSent" data-type="email_sent">
+      <i class="fas fa-envelope"></i>
+      E-mail gestuurd
+    </button>
+    <button class="action-btn" id="btnMeeting" data-type="meeting">
+      <i class="fas fa-calendar"></i>
+      Afspraak ingepland
+    </button>
+    <button class="action-btn" id="btnWon" data-status="won">
+      <i class="fas fa-trophy"></i>
+      Opdracht binnen
+    </button>
+    <button class="action-btn" id="btnLost" data-status="lost">
+      <i class="fas fa-times-circle"></i>
+      Geen opdracht
+    </button>
+  </div>
+</div>
+
+<!-- Modal voor Opdrachtwaarde -->
+<div class="modal-overlay" id="dealValueModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Opdrachtwaarde</h3>
+      <button class="modal-close" id="closeDealValueModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" for="dealValueInput">Indicatieve opdrachtwaarde (optioneel)</label>
+        <input type="number" 
+               class="form-input" 
+               id="dealValueInput" 
+               placeholder="0.00" 
+               step="0.01" 
+               min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelDealValue">Annuleren</button>
+      <button class="btn btn-primary" id="saveDealValue">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/lead-details.js"></script>
+`;
+
+%>
+
+<%- include('../layouts/dashboard', {
+  title: 'Aanvragen',
+  activeMenu: 'leads',
+  pageClass: 'lead-details',
+  user: user,
+  body: leadDetailsContent,
+  scripts: []
+}) %>
+

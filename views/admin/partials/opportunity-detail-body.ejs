@@ -1,0 +1,420 @@
+<%
+  const opp = opportunity || {}
+  const formatCurrency = (amount) => {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount)
+  }
+
+  const formatDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+  }
+
+  const formatDateOnly = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const formatRelativeTime = (iso) => {
+    if (!iso) return '-'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '-'
+    const now = new Date()
+    const diffMs = now - date
+    const diffMinutes = Math.round(diffMs / 60000)
+    if (diffMinutes <= 0) return 'zojuist'
+    if (diffMinutes < 60) return diffMinutes === 1 ? '1 minuut geleden' : `${diffMinutes} minuten geleden`
+    const diffHours = Math.round(diffMinutes / 60)
+    if (diffHours < 24) return diffHours === 1 ? '1 uur geleden' : `${diffHours} uur geleden`
+    const diffDays = Math.round(diffHours / 24)
+    if (diffDays === 1) return '1 dag geleden'
+    if (diffDays < 7) return `${diffDays} dagen geleden`
+    const diffWeeks = Math.round(diffDays / 7)
+    if (diffWeeks < 5) return diffWeeks === 1 ? '1 week geleden' : `${diffWeeks} weken geleden`
+    const diffMonths = Math.round(diffDays / 30)
+    if (diffMonths < 12) return diffMonths === 1 ? '1 maand geleden' : `${diffMonths} maanden geleden`
+    const diffYears = Math.round(diffDays / 365)
+    return diffYears === 1 ? '1 jaar geleden' : `${diffYears} jaar geleden`
+  }
+
+  const statusConfigs = {
+    new: { label: 'Nieuw', class: 'status-blue' },
+    contacted: { label: 'Gecontacteerd', class: 'status-purple' },
+    qualified: { label: 'Gekwalificeerd', class: 'status-green' },
+    proposal: { label: 'Offerte', class: 'status-orange' },
+    negotiation: { label: 'Onderhandeling', class: 'status-orange' },
+    won: { label: 'Gewonnen', class: 'status-success' },
+    lost: { label: 'Verloren', class: 'status-gray' },
+    open: { label: 'Open', class: 'status-blue' }
+  }
+
+  const priorityConfigs = {
+    high: { label: 'Hoog', class: 'priority-red' },
+    medium: { label: 'Gemiddeld', class: 'priority-yellow' },
+    low: { label: 'Laag', class: 'priority-gray' }
+  }
+
+  const statusConfig = statusConfigs[opp.status] || statusConfigs.new
+  const priorityConfig = priorityConfigs[opp.priority] || priorityConfigs.medium
+
+  const companyName = opp.company_name || 'Onbekend bedrijf'
+  const initialsSource = companyName || opp.title || '?'
+  const initialsMatches = initialsSource.match(/\b\w/g)
+  const avatarInitials = (initialsMatches && initialsMatches.length ? initialsMatches.slice(0, 2).join('') : initialsSource.substring(0, 2)).toUpperCase()
+
+  const pipelineStages = [
+    { key: 'new', label: 'Nieuw' },
+    { key: 'contacted', label: 'Gecontacteerd' },
+    { key: 'qualified', label: 'Gekwalificeerd' },
+    { key: 'proposal', label: 'Offerte' },
+    { key: 'negotiation', label: 'Onderhandeling' },
+    { key: 'won', label: 'Gewonnen' }
+  ]
+
+  const normalizedStatus = pipelineStages.find(s => s.key === opp.status) ? opp.status : (opp.status === 'lost' ? 'negotiation' : 'new')
+  const currentStageIndex = pipelineStages.findIndex(stage => stage.key === normalizedStatus)
+  const progressPercentage = currentStageIndex <= 0 ? 0 : Math.min(100, (currentStageIndex / (pipelineStages.length - 1)) * 100)
+
+  const activityList = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : []
+  const assignedName = opp.assigned_to_name || (assignedRep && assignedRep.name) || 'Niet toegewezen'
+  const assignedEmail = assignedRep && assignedRep.email ? assignedRep.email : null
+  const contactEmail = opp.contact_email || opp.email || '-'
+  const contactPhone = opp.contact_phone || opp.phone || '-'
+%>
+
+<div class="opportunity-detail-page">
+  <header class="opportunity-detail-header">
+    <div class="opportunity-detail-header-content">
+      <a href="/admin/opportunities" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Terug naar overzicht
+      </a>
+      <div class="header-actions">
+        <% if (user && (user.is_admin || (user.role && ['admin', 'manager'].includes(user.role)))) { %>
+          <button class="btn-outline-sm btn-delete" type="button" onclick="showDeleteConfirmModal('<%= opp.id %>', '<%= companyName %>')">
+            <i class="fas fa-trash"></i>
+            Verwijderen
+          </button>
+        <% } %>
+      </div>
+    </div>
+  </header>
+
+  <div class="opportunity-detail-container">
+    <div class="opportunity-detail-grid">
+      <div class="opportunity-detail-main">
+        <!-- Summary Card -->
+        <section class="detail-card company-card">
+          <div class="company-header">
+            <div class="company-avatar"><%= avatarInitials %></div>
+            <div class="company-info">
+              <h1 class="company-title"><%= companyName %></h1>
+              <% if (opp.title && opp.title !== companyName) { %>
+                <p class="company-subtitle"><%= opp.title %></p>
+              <% } %>
+              <p class="company-description"><%= opp.description || 'Geen beschrijving beschikbaar voor deze kans.' %></p>
+              <div class="company-badges">
+                <span class="opportunity-badge <%= statusConfig.class %>"><%= statusConfig.label %></span>
+                <span class="opportunity-badge <%= priorityConfig.class %>"><%= priorityConfig.label %></span>
+              </div>
+            </div>
+            <div class="company-value">
+              <p class="value-label">Geschatte waarde</p>
+              <p class="value-amount"><%= formatCurrency(opp.value || opp.value_eur || 0) %></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pipeline Progress -->
+        <section class="detail-card">
+          <h3 class="card-title">Pipeline Voortgang</h3>
+          <div class="pipeline-container">
+            <div class="pipeline-line">
+              <div class="pipeline-progress" style="width: <%= progressPercentage %>%"></div>
+            </div>
+            <div class="pipeline-stages">
+              <% pipelineStages.forEach((stage, index) => { %>
+                <div class="pipeline-stage">
+                  <div class="pipeline-stage-indicator <%= index === currentStageIndex ? 'active' : '' %> <%= index < currentStageIndex ? 'past' : '' %> <%= index > currentStageIndex ? 'future' : '' %>">
+                    <% if (index < currentStageIndex) { %>
+                      <i class="fas fa-check"></i>
+                    <% } else { %>
+                      <div class="stage-dot"></div>
+                    <% } %>
+                  </div>
+                  <p class="pipeline-stage-label <%= index === currentStageIndex ? 'active' : '' %> <%= index < currentStageIndex ? 'past' : '' %>"><%= stage.label %></p>
+                  <% if (index < currentStageIndex) { %>
+                    <p class="pipeline-stage-date"><%= formatDateOnly(opp.updated_at || opp.created_at) %></p>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tabs -->
+        <section class="detail-tabs">
+          <div class="tabs-header">
+            <button class="tab-button active" type="button" data-tab="overview">Overzicht</button>
+            <button class="tab-button" type="button" data-tab="activity">Activiteit</button>
+            <button class="tab-button" type="button" data-tab="notes">Notities</button>
+          </div>
+
+          <!-- Overview Tab -->
+          <div class="tab-content active" data-tab-content="overview">
+            <div class="detail-card">
+              <h3 class="card-title">Contactinformatie</h3>
+              <div class="contact-info-grid">
+                <div class="contact-info-item">
+                  <div class="contact-icon"><i class="fas fa-user"></i></div>
+                  <div>
+                    <p class="contact-label">Contactpersoon</p>
+                    <p class="contact-value"><%= opp.contact_name || '-' %></p>
+                  </div>
+                </div>
+                <div class="contact-info-item">
+                  <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                  <div>
+                    <p class="contact-label">E-mail</p>
+                    <p class="contact-value"><%= contactEmail %></p>
+                  </div>
+                </div>
+                <div class="contact-info-item">
+                  <div class="contact-icon"><i class="fas fa-phone"></i></div>
+                  <div>
+                    <p class="contact-label">Telefoon</p>
+                    <p class="contact-value"><%= contactPhone %></p>
+                  </div>
+                </div>
+                <div class="contact-info-item">
+                  <div class="contact-icon"><i class="fas fa-user-tie"></i></div>
+                  <div>
+                    <p class="contact-label">Toegewezen</p>
+                    <p class="contact-value"><%= assignedName %></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <h3 class="card-title">Details bewerken</h3>
+              <div class="form-grid-3">
+                <div class="form-group">
+                  <label class="form-label" for="detail-status">Status</label>
+                  <select id="detail-status" class="form-select editable-field" data-field="status" data-opp-id="<%= opp.id %>">
+                    <option value="new" <%= opp.status === 'new' ? 'selected' : '' %>>Nieuw</option>
+                    <option value="contacted" <%= opp.status === 'contacted' ? 'selected' : '' %>>Gecontacteerd</option>
+                    <option value="qualified" <%= opp.status === 'qualified' ? 'selected' : '' %>>Gekwalificeerd</option>
+                    <option value="proposal" <%= opp.status === 'proposal' ? 'selected' : '' %>>Offerte</option>
+                    <option value="negotiation" <%= opp.status === 'negotiation' ? 'selected' : '' %>>Onderhandeling</option>
+                    <option value="won" <%= opp.status === 'won' ? 'selected' : '' %>>Gewonnen</option>
+                    <option value="lost" <%= opp.status === 'lost' ? 'selected' : '' %>>Verloren</option>
+                    <option value="open" <%= opp.status === 'open' ? 'selected' : '' %>>Open</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-priority">Prioriteit</label>
+                  <select id="detail-priority" class="form-select editable-field" data-field="priority" data-opp-id="<%= opp.id %>">
+                    <option value="low" <%= opp.priority === 'low' ? 'selected' : '' %>>Laag</option>
+                    <option value="medium" <%= opp.priority === 'medium' ? 'selected' : '' %>>Gemiddeld</option>
+                    <option value="high" <%= opp.priority === 'high' ? 'selected' : '' %>>Hoog</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-assigned">Toegewezen aan</label>
+                  <select id="detail-assigned" class="form-select editable-field" data-field="assigned_to" data-opp-id="<%= opp.id %>">
+                    <option value="">Niet toegewezen</option>
+                    <% (salesReps || []).forEach(rep => { %>
+                      <option value="<%= rep.id %>" <%= opp.assigned_to === rep.id ? 'selected' : '' %>><%= rep.name %></option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="detail-company">Bedrijfsnaam</label>
+                  <input id="detail-company" type="text" class="form-input editable-field" data-field="company_name" data-opp-id="<%= opp.id %>" value="<%= opp.company_name || '' %>" placeholder="Bedrijfsnaam" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-title">Titel</label>
+                  <input id="detail-title" type="text" class="form-input editable-field" data-field="title" data-opp-id="<%= opp.id %>" value="<%= opp.title || '' %>" placeholder="Kans titel" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-value">Waarde (€)</label>
+                  <input id="detail-value" type="number" class="form-input editable-field" data-field="value" data-opp-id="<%= opp.id %>" value="<%= opp.value || opp.value_eur || 0 %>" placeholder="0" min="0" />
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label" for="detail-description">Beschrijving</label>
+                <textarea id="detail-description" class="form-textarea editable-field" data-field="description" data-opp-id="<%= opp.id %>" rows="4" placeholder="Beschrijf deze kans"><%= opp.description || '' %></textarea>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="detail-email">E-mail</label>
+                  <input id="detail-email" type="email" class="form-input editable-field" data-field="email" data-opp-id="<%= opp.id %>" value="<%= opp.email || '' %>" placeholder="E-mailadres" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-phone">Telefoon</label>
+                  <input id="detail-phone" type="tel" class="form-input editable-field" data-field="phone" data-opp-id="<%= opp.id %>" value="<%= opp.phone || '' %>" placeholder="Telefoonnummer" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="detail-stage">Fase</label>
+                  <input id="detail-stage" type="text" class="form-input editable-field" data-field="stage" data-opp-id="<%= opp.id %>" value="<%= opp.stage || '' %>" placeholder="Pipeline fase" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Tab -->
+          <div class="tab-content" data-tab-content="activity">
+            <div class="detail-card">
+              <h3 class="card-title">Activiteit Tijdlijn</h3>
+              <% if (!activityList.length) { %>
+                <p class="empty-state">Nog geen activiteiten geregistreerd voor deze kans.</p>
+              <% } else { %>
+                <div class="activity-timeline">
+                  <% activityList.forEach(item => { %>
+                    <div class="activity-item">
+                      <div class="activity-icon activity-icon-gray">
+                        <i class="fas fa-clock"></i>
+                      </div>
+                      <div class="activity-content">
+                        <div class="activity-header">
+                          <p class="activity-user"><%= item.user_name || 'System' %></p>
+                          <p class="activity-time"><%= formatRelativeTime(item.created_at) %></p>
+                        </div>
+                        <p class="activity-text"><%= item.content || item.description || 'Activiteit zonder omschrijving' %></p>
+                      </div>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Notes Tab -->
+          <div class="tab-content" data-tab-content="notes">
+            <div class="detail-card">
+              <h3 class="card-title">Notities</h3>
+              <textarea class="form-textarea editable-field" data-field="notes" data-opp-id="<%= opp.id %>" rows="6" placeholder="Voeg je notities toe..."><%= opp.notes || '' %></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="opportunity-detail-sidebar">
+        <% if (aiSuggestion) { %>
+          <section class="detail-card ai-card">
+            <div class="ai-card-header">
+              <svg class="ai-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                <path d="M20 3v4"></path>
+                <path d="M22 5h-4"></path>
+                <path d="M4 17v2"></path>
+                <path d="M5 18H3"></path>
+              </svg>
+              <h3 class="card-title">AI Aanbevelingen</h3>
+            </div>
+            <div class="ai-suggestion-primary">
+              <div class="ai-suggestion-header">
+                <span class="ai-rep-name"><%= aiSuggestion.rep_name %></span>
+                <span class="opportunity-badge opportunity-badge--match"><%= Math.round(aiSuggestion.match_percentage || aiSuggestion.confidence || 0) %>% match</span>
+              </div>
+              <p class="ai-reason"><%= aiSuggestion.reason || 'AI suggestie beschikbaar.' %></p>
+              <button class="btn-ai-assign" type="button" onclick="assignToSuggested('<%= opp.id %>', '<%= aiSuggestion.rep_id %>', event)">
+                Toewijzen aan <%= aiSuggestion.rep_name.split(' ')[0] %>
+              </button>
+            </div>
+            <% if (aiSuggestion.alternatives && aiSuggestion.alternatives.length) { %>
+              <div class="ai-alternatives">
+                <p class="ai-alternatives-title">Alternatieve opties</p>
+                <% aiSuggestion.alternatives.forEach(option => { %>
+                  <div class="ai-alternative-item">
+                    <div class="ai-alternative-header">
+                      <p class="ai-alternative-name"><%= option.name %></p>
+                      <span class="ai-alternative-confidence"><%= option.confidence || option.match_percentage %>%</span>
+                    </div>
+                    <p class="ai-alternative-reason"><%= option.reason || '' %></p>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+        <% } %>
+
+        <section class="detail-card">
+          <h3 class="card-title-sm">Snelle informatie</h3>
+          <div class="quick-info-list">
+            <div class="quick-info-item">
+              <div class="quick-info-label">
+                <i class="fas fa-calendar"></i>
+                <span>Aangemaakt</span>
+              </div>
+              <span class="quick-info-value"><%= formatDateTime(opp.created_at) %></span>
+            </div>
+            <div class="quick-info-item">
+              <div class="quick-info-label">
+                <i class="fas fa-clock"></i>
+                <span>Laatste update</span>
+              </div>
+              <span class="quick-info-value"><%= formatRelativeTime(opp.updated_at || opp.created_at) %></span>
+            </div>
+            <div class="quick-info-item">
+              <div class="quick-info-label">
+                <i class="fas fa-user"></i>
+                <span>Toegewezen aan</span>
+              </div>
+              <span class="quick-info-value"><%= assignedName %></span>
+            </div>
+            <% if (assignedEmail) { %>
+              <div class="quick-info-item">
+                <div class="quick-info-label">
+                  <i class="fas fa-envelope"></i>
+                  <span>E-mail sales</span>
+                </div>
+                <span class="quick-info-value"><%= assignedEmail %></span>
+              </div>
+            <% } %>
+            <div class="quick-info-item">
+              <div class="quick-info-label">
+                <i class="fas fa-euro-sign"></i>
+                <span>Waarde</span>
+              </div>
+              <span class="quick-info-value"><%= formatCurrency(opp.value || opp.value_eur || 0) %></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-card next-steps-card">
+          <div class="next-steps-header">
+            <i class="fas fa-circle-exclamation"></i>
+            <h3 class="card-title-sm">Aanbevolen acties</h3>
+          </div>
+          <div class="next-steps-list">
+            <div class="next-step-item">
+              <div class="next-step-number">1</div>
+              <p class="next-step-text">Wijs deze kans toe aan een beschikbare sales rep.</p>
+            </div>
+            <div class="next-step-item">
+              <div class="next-step-number">2</div>
+              <p class="next-step-text">Plan een discovery call met de contactpersoon.</p>
+            </div>
+            <div class="next-step-item">
+              <div class="next-step-number">3</div>
+              <p class="next-step-text">Stuur relevante cases en documentatie ter voorbereiding.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>
+

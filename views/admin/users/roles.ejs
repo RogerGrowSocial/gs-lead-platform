@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Rollen & Rechten</h1>
+  <p>Beheer gebruikersrollen en toegangsrechten</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Rollen & Rechten', 
+    activeMenu: 'users',
+    activeSubmenu: 'roles',
+    user: user,
+    body: pageContent
+}) %>
+

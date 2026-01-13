@@ -1,0 +1,1733 @@
+<%
+var currentTab = typeof activeTab !== 'undefined' ? activeTab : 'profile';
+
+// Render payments table separately if on payment tab
+var paymentsTableHtml = '';
+if (currentTab === 'payment' && typeof payments !== 'undefined') {
+  const _payments = Array.isArray(payments) ? payments : [];
+  const paymentsPageSafe = (typeof paymentsPage !== 'undefined') ? paymentsPage : 1;
+  const paymentsTotalPagesSafe = (typeof paymentsTotalPages !== 'undefined') ? paymentsTotalPages : 1;
+  const paymentsTotalCountSafe = (typeof paymentsTotalCount !== 'undefined') ? paymentsTotalCount : 0;
+  
+  paymentsTableHtml = `
+    <div style="margin-top: 8px;">
+      <div class="settings-card-header" style="padding: 0 0 16px 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px;">
+        <h4>Betalingen overzicht</h4>
+        <p class="text-muted">Overzicht van al je betalingen</p>
+      </div>
+      
+      <div style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+        <table class="table table-hover" style="width: 100%; table-layout: fixed; margin: 0;">
+          <thead style="border-top: none;">
+            <tr style="background-color: #F9FAFB; border-top: none;">
+              <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 22%; font-size: 16px;">Datum</th>
+              <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 18%; font-size: 16px;">Bedrag</th>
+              <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 45%; font-size: 16px;">Beschrijving</th>
+              <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 10%; font-size: 16px;">Status</th>
+              <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 5%; font-size: 16px;"></th>
+            </tr>
+          </thead>
+          <tbody>`;
+  
+  if (_payments.length > 0) {
+    _payments.forEach(function(payment) {
+      const paymentDate = new Date(payment.created_at);
+      const dateStr = paymentDate.toLocaleDateString("nl-NL");
+      const amountStr = '€ ' + parseFloat(payment.amount).toFixed(2);
+      
+      // Bepaal beschrijving
+      let displayDescription = 'Betaling #' + payment.id.substring(0, 8);
+      let periodInfo = '';
+      
+      let paymentDetails = null;
+      if (payment.payment_details) {
+        try {
+          paymentDetails = typeof payment.payment_details === 'string' 
+            ? JSON.parse(payment.payment_details) 
+            : payment.payment_details;
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+      
+      if (paymentDetails) {
+        if (paymentDetails.billing_date) {
+          const billingDate = new Date(paymentDetails.billing_date);
+          const monthNames = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
+          const month = monthNames[billingDate.getMonth()];
+          periodInfo = 'Aanvragen ' + month;
+        } else if (paymentDetails.period_month) {
+          const periodDate = new Date(paymentDetails.period_month);
+          const monthNames = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
+          const month = monthNames[periodDate.getMonth()];
+          periodInfo = 'Aanvragen ' + month;
+        } else if (paymentDetails.leads_count) {
+          const monthNames = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
+          const month = monthNames[paymentDate.getMonth()];
+          periodInfo = 'Aanvragen ' + month;
+        }
+        
+        if (paymentDetails.description) {
+          displayDescription = paymentDetails.description;
+        }
+      }
+      
+      if (payment.invoice_number && !displayDescription.includes('Factuur')) {
+        displayDescription = 'Factuur ' + payment.invoice_number;
+      }
+      
+      if (periodInfo) {
+        displayDescription = periodInfo + (displayDescription ? ' - ' + displayDescription : '');
+      }
+      
+      let statusBadge = '';
+      if (payment.status === "completed" || payment.status === "paid") {
+        statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #DCFCE7; color: #15803D;">Voltooid</span>';
+      } else if (payment.status === "pending") {
+        statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #F3F4F6; color: #374151;">Openstaand</span>';
+      } else if (payment.status === "failed") {
+        statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #FEE2E2; color: #991B1B;">Mislukt</span>';
+      } else {
+        statusBadge = '<span style="display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; background-color: #F3F4F6; color: #374151;">' + payment.status + '</span>';
+      }
+      
+      // Actieknoppen: optioneel download
+      let actionsHtml = '<div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px;">'
+      ;
+
+      if (payment.status === "completed" || payment.status === "paid") {
+        actionsHtml += '<a href="/dashboard/payments/' + payment.id + '/invoice" class="download-invoice-btn" data-payment-id="' + payment.id + '" title="Factuur downloaden" style="padding: 8px; border: none; background: none; color: #6B7280; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; border-radius: 6px; width: 32px; height: 32px;">'
+          + '<i class="fas fa-download" style="font-size: 16px;"></i>'
+          + '</a>'
+        ;
+      }
+      actionsHtml += '</div>';
+      
+      paymentsTableHtml += `
+            <tr>
+              <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${dateStr}</td>
+              <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${amountStr}</td>
+              <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${displayDescription}</td>
+              <td style="padding: 12px; border: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px;">${statusBadge}</td>
+              <td style="padding: 12px 24px 12px 12px; border: none; font-size: 14px; width: 80px;">${actionsHtml}</td>
+            </tr>`;
+    });
+  } else {
+    paymentsTableHtml += `
+            <tr>
+              <td colspan="5" style="padding: 40px; text-align: center; color: #9CA3AF; font-size: 14px; font-weight: 400;">
+                Geen betalingen gevonden
+              </td>
+            </tr>`;
+  }
+  
+  paymentsTableHtml += `
+          </tbody>
+        </table>
+      </div>`;
+  
+  // Paginatie
+  if (paymentsTotalPagesSafe > 1) {
+    const startPage = Math.max(1, paymentsPageSafe - 2);
+    let endPage = Math.min(paymentsTotalPagesSafe, startPage + 4);
+    let adjustedStartPage = startPage;
+    if (endPage - adjustedStartPage < 4) {
+      adjustedStartPage = Math.max(1, endPage - 4);
+    }
+    
+    let paginationHtml = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <div style="font-size: 14px; color: #6B7280;">
+          Toont ${((paymentsPageSafe - 1) * 10) + 1} - ${Math.min(paymentsPageSafe * 10, paymentsTotalCountSafe)} van ${paymentsTotalCountSafe} betalingen
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">`;
+    
+    // Vorige knop
+    if (paymentsPageSafe > 1) {
+      paginationHtml += `<a href="/dashboard/settings/payment?page=${paymentsPageSafe - 1}" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; background: white; transition: all 0.2s;">Vorige</a>`;
+    } else {
+      paginationHtml += `<span style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 6px; color: #9CA3AF; font-size: 14px; background: #F9FAFB; cursor: not-allowed;">Vorige</span>`;
+    }
+    
+    // Pagina nummers
+    for (let i = adjustedStartPage; i <= endPage; i++) {
+      if (i === paymentsPageSafe) {
+        paginationHtml += `<span style="padding: 8px 12px; border-radius: 6px; background: #3B82F6; color: white; font-size: 14px; font-weight: 500;">${i}</span>`;
+      } else {
+        paginationHtml += `<a href="/dashboard/settings/payment?page=${i}" style="padding: 8px 12px; border-radius: 6px; background: white; color: #374151; font-size: 14px; text-decoration: none; border: 1px solid #e5e7eb; transition: all 0.2s;">${i}</a>`;
+      }
+    }
+    
+    // Volgende knop
+    if (paymentsPageSafe < paymentsTotalPagesSafe) {
+      paginationHtml += `<a href="/dashboard/settings/payment?page=${paymentsPageSafe + 1}" style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; background: white; transition: all 0.2s;">Volgende</a>`;
+    } else {
+      paginationHtml += `<span style="padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 6px; color: #9CA3AF; font-size: 14px; background: #F9FAFB; cursor: not-allowed;">Volgende</span>`;
+    }
+    
+    paginationHtml += `
+        </div>
+      </div>`;
+    
+    paymentsTableHtml += paginationHtml;
+  }
+  
+  paymentsTableHtml += `
+    </div>`;
+}
+
+var settingsContent = `
+<div class="settings-page">
+  <!-- Sidebar met navigatie -->
+  <div class="settings-sidebar">
+    <div class="settings-profile text-center mb-4">
+      <div class="settings-avatar" onclick="document.getElementById('settingsAvatarUpload').click()" style="cursor: pointer;">
+        ${user.profile_picture ? 
+          `<img src="${user.profile_picture}" alt="${user.first_name || ''} ${user.last_name || ''}" class="rounded-circle">` : 
+          `<div class="avatar-placeholder">
+            <i class="fas fa-user"></i>
+          </div>`
+        }
+        <div class="settings-avatar-edit">
+          <i class="fas fa-pencil"></i>
+        </div>
+        <input type="file" id="settingsAvatarUpload" class="avatar-upload" accept="image/*" style="display: none;">
+      </div>
+      <h5 class="mt-3 mb-1">${user.first_name || ''} ${user.last_name || ''}</h5>
+      <p class="text-muted small">${user.company_name || 'Bedrijfsnaam'}</p>
+    </div>
+    
+    <div class="settings-nav">
+      <a href="/dashboard/settings/profile" class="settings-nav-item ${currentTab === 'profile' ? 'active' : ''}">
+        <i class="far fa-user-circle fa-fw mr-3"></i> Profiel
+      </a>
+      <a href="/dashboard/settings/security" class="settings-nav-item ${currentTab === 'security' ? 'active' : ''}">
+        <i class="fas fa-shield-alt fa-fw mr-3"></i> Beveiliging
+      </a>
+      <a href="/dashboard/settings/payment" class="settings-nav-item ${currentTab === 'payment' ? 'active' : ''}">
+        <i class="far fa-credit-card fa-fw mr-3"></i> Betalingen
+      </a>
+      <a href="/dashboard/settings/notifications" class="settings-nav-item ${currentTab === 'notifications' ? 'active' : ''}">
+        <i class="far fa-bell fa-fw mr-3"></i> Notificaties
+      </a>
+    </div>
+  </div>
+  
+  <!-- Content area -->
+  <div class="settings-content">
+    ${currentTab === 'profile' ? `
+      <!-- DEBUG: User data available: first_name=${user.first_name || 'null'}, last_name=${user.last_name || 'null'}, company_name=${user.company_name || 'null'}, address=${user.address || user.street || 'null'}, postal_code=${user.postal_code || 'null'}, city=${user.city || 'null'} -->
+      <div class="settings-card profile-settings-card">
+        <div class="settings-card-header profile-card-header">
+          <h4>Profiel instellingen</h4>
+          <p class="text-muted">Beheer je persoonlijke en bedrijfsgegevens</p>
+        </div>
+        
+        <div class="settings-card-body profile-card-body">
+          <form action="/dashboard/settings/profile" method="POST" class="needs-validation" novalidate enctype="multipart/form-data">
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="firstName">Voornaam</label>
+                <input type="text" class="form-control" id="firstName" name="firstName" value="${user.first_name || ''}" placeholder="${user.first_name ? '' : 'Voornaam'}">
+              </div>
+              <div class="form-group col-md-6">
+                <label for="lastName">Achternaam</label>
+                <input type="text" class="form-control" id="lastName" name="lastName" value="${user.last_name || ''}" placeholder="${user.last_name ? '' : 'Achternaam'}">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="companyName">Bedrijfsnaam <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="companyName" name="companyName" value="${user.company_name || ''}" placeholder="${user.company_name ? '' : 'Bedrijfsnaam'}" required>
+              <div class="invalid-feedback">Voer een geldige bedrijfsnaam in.</div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label for="email">E-mailadres <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="email" name="email" value="${user.email || ''}" placeholder="${user.email ? '' : 'voorbeeld@email.nl'}" required>
+                <div class="invalid-feedback">Voer een geldig e-mailadres in.</div>
+              </div>
+              <div class="form-group col-md-6">
+                <label for="phone">Telefoonnummer</label>
+                <input type="tel" class="form-control" id="phone" name="phone" value="${user.phone || ''}" placeholder="${user.phone ? '' : 'Telefoonnummer'}">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="address">Adres</label>
+              <input type="text" class="form-control pac-target-input" id="address" name="address" value="${user.address || user.street || ''}" placeholder="${(user.address || user.street) ? '' : 'Begin met typen om Adres te vinden...'}" autocomplete="off">
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label for="postalCode">Postcode</label>
+                <input type="text" class="form-control pac-target-input" id="postalCode" name="postalCode" value="${user.postal_code || ''}" placeholder="${user.postal_code ? '' : 'Postcode'}" autocomplete="off">
+              </div>
+              <div class="form-group col-md-4">
+                <label for="city">Plaats</label>
+                <input type="text" class="form-control pac-target-input" id="city" name="city" value="${user.city || ''}" placeholder="${user.city ? '' : 'Woonplaats'}" autocomplete="off">
+              </div>
+              <div class="form-group col-md-4">
+                <label for="country">Land</label>
+                <select class="form-control" id="country" name="country">
+                  <option value="NL" ${user.country === 'NL' ? 'selected' : ''}>Nederland</option>
+                  <option value="BE" ${user.country === 'BE' ? 'selected' : ''}>België</option>
+                  <option value="DE" ${user.country === 'DE' ? 'selected' : ''}>Duitsland</option>
+                  <option value="FR" ${user.country === 'FR' ? 'selected' : ''}>Frankrijk</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    ` : ''}
+    ${currentTab === 'security' ? `
+      <div class="settings-card mb-4 security-settings-card">
+        <div class="settings-card-header security-card-header">
+          <h4>Beveiliging</h4>
+          <p class="text-muted">Beheer je wachtwoord en twee-stapsverificatie</p>
+        </div>
+        <div class="settings-card-body">
+          <div class="security-list">
+              <!-- Password row -->
+              <div class="security-item">
+                <div class="sec-left">
+                  <div class="sec-title">Wachtwoord</div>
+                  <div class="sec-sub">Stel een wachtwoord in om je account te beveiligen.</div>
+                </div>
+                <div class="sec-middle">
+                  <span class="password-dots">••••••••••</span>
+                  <span class="sec-status sec-success"><i class="fas fa-check-circle" style="margin-right:6px;"></i> Zeer veilig</span>
+                </div>
+                <div class="sec-right">
+                  <button type="button" class="sepa-cancel-button show" id="editPasswordBtn">Bewerken</button>
+                </div>
+              </div>
+              <!-- Password edit -->
+              <div class="security-edit" id="passwordEdit" style="display:none;">
+                <form action="/dashboard/settings/password" method="POST" id="passwordForm" novalidate>
+                  <div class="form-group">
+                    <label for="currentPassword">Huidig wachtwoord <span class="text-danger">*</span></label>
+                    <div class="password-input-wrapper">
+                      <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+                      <i class="fas fa-eye password-toggle" data-target="currentPassword"></i>
+                    </div>
+                    <div class="invalid-feedback">Voer je huidige wachtwoord in.</div>
+                  </div>
+                  <div class="form-group">
+                    <label for="newPassword">Nieuw wachtwoord <span class="text-danger">*</span></label>
+                    <div class="password-input-wrapper">
+                      <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+                      <i class="fas fa-eye password-toggle" data-target="newPassword"></i>
+                    </div>
+                    <div class="invalid-feedback">Voer een geldig wachtwoord in.</div>
+                    <small class="form-text text-muted">Minimaal 8 tekens, met ten minste één hoofdletter, één cijfer en één speciaal teken.</small>
+                  </div>
+                  <div class="form-group" id="confirmPasswordGroup" style="display:none;">
+                    <label for="confirmPassword">Bevestig nieuw wachtwoord <span class="text-danger">*</span></label>
+                    <div class="password-input-wrapper">
+                      <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+                      <i class="fas fa-eye password-toggle" data-target="confirmPassword"></i>
+                    </div>
+                    <div class="invalid-feedback">Wachtwoorden komen niet overeen.</div>
+                  </div>
+                  <div class="forgot-password-section">
+                    <a href="/dashboard/forgot-password" class="forgot-password-link">Wachtwoord vergeten?</a>
+                  </div>
+                  <div class="form-group mt-3 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-secondary" id="savePasswordBtn" disabled style="opacity: 0.6; cursor: not-allowed;">Opslaan</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- 2FA row -->
+              <div class="security-item">
+                <div class="sec-left">
+                  <div class="sec-title">Twee-stapsverificatie</div>
+                  <div class="sec-sub">We raden extra verificatie aan naast je wachtwoord.</div>
+                </div>
+                <div class="sec-middle">
+                  ${settings.two_factor_enabled === 1 ? `
+                    <span class="sec-status sec-success">
+                      <i class="fas fa-check-circle" style="margin-right: 6px;"></i>
+                      Ingeschakeld
+                    </span>
+                  ` : `
+                    <span class="sec-status">Uitgeschakeld</span>
+                  `}
+                </div>
+                <div class="sec-right">
+                  <button type="button" class="sepa-cancel-button show" id="editTwoFactorBtn">Bewerken</button>
+                </div>
+              </div>
+              <!-- 2FA edit -->
+              <div class="security-edit d-none" id="twoFactorEdit">
+                ${settings.two_factor_enabled === 1 ? `
+                  <!-- 2FA is enabled - show disable option -->
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Twee-factor authenticatie is ingeschakeld. Voer je wachtwoord in om 2FA uit te schakelen.
+                  </div>
+                  <form id="twoFactorDisableForm" class="needs-validation" novalidate>
+                    <div class="form-group">
+                      <label for="disablePassword">Wachtwoord</label>
+                      <input type="password" class="form-control" id="disablePassword" name="password" placeholder="Voer je wachtwoord in" required>
+                      <div class="invalid-feedback">Voer je wachtwoord in om 2FA uit te schakelen.</div>
+                    </div>
+                    <div class="form-group d-flex justify-content-end">
+                      <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times mr-2"></i>2FA uitschakelen
+                      </button>
+                    </div>
+                  </form>
+                  <hr class="my-4">
+                  <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Wil je 2FA opnieuw instellen? Schakel eerst uit en stel dan opnieuw in.
+                  </div>
+                ` : `
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Scan de QR-code met je authenticator app (zoals Google Authenticator of Authy) om twee-factor authenticatie in te stellen.
+                  </div>
+                  <div class="text-center mb-3">
+                    <div id="qrCodeContainer">
+                      <div class="qr-code-placeholder" style="width: 200px; height: 200px; margin: 0 auto; border: 1px solid #e9ecef; border-radius: 8px; display: flex; align-items: center; justify-content: center; background-color: #f9fafb; color: #9ca3af;">
+                        <span>Laden...</span>
+                      </div>
+                    </div>
+                    <button type="button" id="regenerateQRBtn" class="btn btn-sm btn-outline-secondary mt-2" style="display:none;">
+                      <i class="fas fa-sync-alt mr-1"></i> Nieuwe QR code genereren
+                    </button>
+                  </div>
+                  <form id="twoFactorVerifyForm" class="needs-validation" novalidate>
+                    <input type="hidden" id="twoFactorSecret" name="twoFactorSecret" value="">
+                    <div class="form-group">
+                      <label for="verificationCode">Verificatiecode</label>
+                      <input type="text" class="form-control" id="verificationCode" name="verificationCode" placeholder="Voer de 6-cijferige code in" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required>
+                      <div class="invalid-feedback">Voer een geldige 6-cijferige verificatiecode in.</div>
+                    </div>
+                    <div class="form-group d-flex justify-content-end">
+                      <button type="submit" class="btn btn-primary"><i class="fas fa-check mr-2"></i>Verifiëren en activeren</button>
+                    </div>
+                  </form>
+                `}
+              </div>
+            </div>
+          </div>
+        </div>
+      
+      <div class="settings-card login-history-card">
+        <div class="security-item login-history-header">
+          <div class="sec-left">
+            <div class="sec-title">Inloggeschiedenis</div>
+            <div class="sec-sub">Recente inlogactiviteiten</div>
+          </div>
+        </div>
+        
+        <div class="login-history-content">
+          <div class="table-responsive" style="border-radius: 8px; border: 1px solid #F3F4F6; overflow: hidden;">
+            <table class="table login-history-table">
+              <thead style="border-top: none;">
+                <tr style="background-color: #F9FAFB; border-top: none;">
+                  <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 25%;">Datum</th>
+                  <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 30%;">Apparaat</th>
+                  <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 30%;">Locatie</th>
+                  <th style="font-weight: 500; color: #374151; padding: 12px; border: none; width: 15%;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(typeof loginHistory !== 'undefined' && loginHistory && loginHistory.length > 0) ? 
+                  loginHistory.map(function(login) {
+                    const loginDate = new Date(login.created_at);
+                    const dateStr = loginDate.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    const timeStr = loginDate.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                    const deviceStr = (login.browser && login.os) ? (login.browser + ' op ' + login.os) : (login.device || 'Onbekend');
+                    const rawLocation = login.location;
+                    const locationStr = (!rawLocation || rawLocation.toLowerCase() === 'unknown')
+                      ? 'Onbekend'
+                      : (rawLocation.toLowerCase() === 'local' ? 'Lokaal netwerk' : rawLocation);
+                    let statusBadge = '<span class="badge badge-success">Succesvol</span>';
+                    if (login.status === 'failed') {
+                      statusBadge = '<span class="badge badge-danger">Mislukt</span>';
+                    } else if (login.status === 'blocked') {
+                      statusBadge = '<span class="badge badge-warning">Geblokkeerd</span>';
+                    }
+                    return '<tr>' +
+                      '<td style="font-size: 14px;">' + dateStr + ' ' + timeStr + '</td>' +
+                      '<td style="font-size: 14px;">' + deviceStr + '</td>' +
+                      '<td style="font-size: 14px; word-wrap: break-word; max-width: 200px;">' + locationStr + '</td>' +
+                      '<td style="font-size: 14px;">' + statusBadge + '</td>' +
+                      '</tr>';
+                  }).join('') :
+                  '<tr><td colspan="4" style="text-align: center; padding: 20px; font-size: 14px; color: #9CA3AF;">Geen inloggeschiedenis gevonden</td></tr>'
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    ` : ''}
+    ${currentTab === 'payment' ? `
+        <div class="settings-card billing-settings-card" style="box-shadow: none; overflow: visible;">
+          <div class="settings-card-header billing-card-header" style="padding: 0 0 16px 0; border-bottom: 1px solid #e5e7eb;">
+            <h4>Factuurgegevens</h4>
+            <p class="text-muted">Gegevens voor op je facturen</p>
+          </div>
+          
+          <div class="settings-card-body billing-card-body" style="padding: 0; overflow: visible;">
+            <form action="/dashboard/settings/billing" method="POST" class="needs-validation" novalidate>
+              <div class="form-group" style="overflow: visible; padding-top: 16px;">
+                <label for="billingCompanyName">Bedrijfsnaam <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="billingCompanyName" name="billingCompanyName" value="${user.billing_company_name || user.company_name || ''}" placeholder="${(user.billing_company_name || user.company_name) ? '' : 'Bedrijfsnaam'}" required style="box-sizing: border-box;">
+              </div>
+              
+              <div class="form-group" style="overflow: visible;">
+                <label for="billingAddress">Adres</label>
+                <input type="text" class="form-control pac-target-input" id="billingAddress" name="billingAddress" value="${user.billing_address || user.address || ''}" placeholder="${(user.billing_address || user.address) ? '' : 'Begin met typen om Adres te vinden...'}" autocomplete="off" style="box-sizing: border-box;">
+              </div>
+              
+              <div class="form-row" style="overflow: visible;">
+                <div class="form-group col-md-4" style="overflow: visible;">
+                  <label for="billingPostalCode">Postcode</label>
+                  <input type="text" class="form-control pac-target-input" id="billingPostalCode" name="billingPostalCode" value="${user.billing_postal_code || user.postal_code || ''}" placeholder="${(user.billing_postal_code || user.postal_code) ? '' : 'Postcode'}" autocomplete="off" style="box-sizing: border-box;">
+                </div>
+                <div class="form-group col-md-4" style="overflow: visible;">
+                  <label for="billingCity">Plaats</label>
+                  <input type="text" class="form-control pac-target-input" id="billingCity" name="billingCity" value="${user.billing_city || user.city || ''}" placeholder="${(user.billing_city || user.city) ? '' : 'Woonplaats'}" autocomplete="off" style="box-sizing: border-box;">
+                </div>
+                <div class="form-group col-md-4" style="overflow: visible;">
+                  <label for="billingCountry">Land</label>
+                  <select class="form-control" id="billingCountry" name="billingCountry" style="box-sizing: border-box;">
+                    <option value="NL" ${(user.billing_country || user.country || 'NL') === 'NL' ? 'selected' : ''}>Nederland</option>
+                    <option value="BE" ${(user.billing_country || user.country) === 'BE' ? 'selected' : ''}>België</option>
+                    <option value="DE" ${(user.billing_country || user.country) === 'DE' ? 'selected' : ''}>Duitsland</option>
+                    <option value="FR" ${(user.billing_country || user.country) === 'FR' ? 'selected' : ''}>Frankrijk</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-row" style="overflow: visible;">
+                <div class="form-group col-md-6" style="overflow: visible;">
+                  <label for="vatNumber">BTW-nummer</label>
+                  <input type="text" class="form-control" id="vatNumber" name="vatNumber" value="${user.vat_number || ''}" placeholder="${user.vat_number ? '' : 'BTW-nummer'}" style="box-sizing: border-box;">
+                  <small class="form-text text-muted" id="vatNumberHelp"></small>
+                </div>
+                <div class="form-group col-md-6" style="overflow: visible;">
+                  <label for="chamberOfCommerce">KVK-nummer</label>
+                  <input type="text" class="form-control" id="chamberOfCommerce" name="chamberOfCommerce" value="${user.chamber_of_commerce || user.coc_number || ''}" placeholder="${(user.chamber_of_commerce || user.coc_number) ? '' : 'KVK-nummer'}" style="box-sizing: border-box;">
+                  <small class="form-text text-muted" id="cocNumberHelp"></small>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        ${paymentsTableHtml}
+    ` : ''}
+    ${currentTab === 'notifications' ? `
+      <div class="notifications-container">
+        <!-- Header sectie -->
+        <div class="notifications-header">
+          <h2 class="notifications-title">Notificatie instellingen</h2>
+          <p class="notifications-subtitle">Beheer je notificatievoorkeuren</p>
+          </div>
+          
+            <form action="/dashboard/settings/notifications" method="POST" class="needs-validation" novalidate>
+          <!-- Lead Notificaties Card -->
+          <div class="notification-card">
+            <div class="notification-category">Aanvragen Notificaties</div>
+            
+            <div class="notification-items">
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Nieuwe aanvragen</div>
+                  <div class="notification-description">Ontvang een notificatie wanneer je een nieuwe aanvraag ontvangt</div>
+                  </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="newLeadNotification" name="newLeadNotification" ${settings.new_lead_notification === 1 ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                    </div>
+
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Aanvraag toegewezen</div>
+                  <div class="notification-description">Ontvang een notificatie wanneer een aanvraag aan jou wordt toegewezen</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="leadAssignedNotification" name="leadAssignedNotification" ${(settings.lead_assigned_notification === 1 || settings.lead_assigned_notification === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                  </div>
+                </div>
+              </div>
+              
+          <!-- Systeem Notificaties Card -->
+          <div class="notification-card">
+            <div class="notification-category">Systeem Notificaties</div>
+              
+            <div class="notification-items">
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Quota waarschuwing</div>
+                  <div class="notification-description">Ontvang een waarschuwing wanneer je 80% van je quota hebt gebruikt</div>
+                  </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="quotaWarningNotification" name="quotaWarningNotification" ${(settings.quota_warning_notification === 1 || settings.quota_warning_notification === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                    </div>
+
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Quota bereikt</div>
+                  <div class="notification-description">Ontvang een notificatie wanneer je je volledige quota hebt gebruikt</div>
+                  </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="quotaReachedNotification" name="quotaReachedNotification" ${(settings.quota_reached_notification === 1 || settings.quota_reached_notification === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Abonnement loopt af</div>
+                  <div class="notification-description">Ontvang een waarschuwing wanneer je abonnement binnenkort afloopt</div>
+                  </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="subscriptionExpiringNotification" name="subscriptionExpiringNotification" ${(settings.subscription_expiring_notification === 1 || settings.subscription_expiring_notification === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                    </div>
+
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Nieuw apparaat</div>
+                  <div class="notification-description">Ontvang een notificatie bij inloggen vanaf een nieuw apparaat of locatie</div>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="loginFromNewDeviceNotification" name="loginFromNewDeviceNotification" ${(settings.login_from_new_device_notification === 1 || settings.login_from_new_device_notification === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                  </div>
+                </div>
+              </div>
+              
+          <!-- WhatsApp Card -->
+          <div class="notification-card">
+            <div class="notification-category">WhatsApp</div>
+            
+            <div class="notification-items">
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">WhatsApp notificaties</div>
+                  <div class="notification-description">Ontvang WhatsApp berichten bij nieuwe aanvragen</div>
+                  <small class="notification-hint">Zorg dat je telefoonnummer klopt in je profiel</small>
+                  <div style="margin-top: 12px;">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="testWhatsAppBtn" style="font-size: 14px;">
+                      <i class="fas fa-paper-plane mr-2"></i> Test WhatsApp bericht
+                    </button>
+                    <small class="text-muted d-block mt-2" id="whatsappTestStatus" style="display: none; font-size: 13px;"></small>
+                  </div>
+                    </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="whatsappNotification" name="whatsappNotification" ${(settings.whatsapp_notification_enabled === 1 || settings.whatsapp_notification_enabled === undefined) ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                  </div>
+                </div>
+              </div>
+              
+          <!-- Marketing Card -->
+          <div class="notification-card">
+            <div class="notification-category">Marketing</div>
+            
+            <div class="notification-items">
+              <div class="notification-item">
+                <div class="notification-content">
+                  <div class="notification-label">Marketingberichten</div>
+                  <div class="notification-description">Ontvang updates over nieuwe functies en aanbiedingen</div>
+                  </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="marketingNotification" name="marketingNotification" ${settings.marketing_notification === 1 ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+                  </div>
+                </div>
+              </div>
+              
+          
+            </form>
+        </div>
+    ` : ''}
+  </div>
+</div>
+
+<!-- Modals -->
+<!-- Betaalmethode verwijderen modal -->
+<div class="modal fade" id="removePaymentMethodModal" tabindex="-1" role="dialog" aria-labelledby="removePaymentMethodModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="removePaymentMethodModalLabel">Betaalmethode verwijderen</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Weet je zeker dat je deze betaalmethode wilt verwijderen?</p>
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Als je geen andere betaalmethode hebt ingesteld, kun je geen nieuwe leads ontvangen.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuleren</button>
+        <form action="/dashboard/settings/remove-payment-method" method="POST">
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash mr-4"></i> Betaalmethode verwijderen
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+%>
+
+<!-- Voeg CSS toe voor de settings pagina -->
+<style>
+  /* Basis layout */
+  .settings-page {
+    display: flex;
+    width: 100%;
+    gap: 24px;
+    margin-bottom: 30px;
+  }
+  
+  /* Sidebar styling */
+  .settings-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+  }
+  
+  .settings-profile {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .settings-avatar {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  .settings-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: #f3f4f6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: 3rem;
+  }
+  
+  .settings-avatar-edit {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    background: #3b82f6;
+    border: 3px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .settings-avatar-edit:hover {
+    background: #2563eb;
+  }
+  
+  .settings-avatar-edit i {
+    font-size: 14px;
+    color: white;
+  }
+  
+  .settings-nav {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+  }
+  
+  .settings-nav-item {
+    display: flex;
+    align-items: center;
+    height: 48px;
+    margin: 0 0 4px 0;
+    border-radius: 12px;
+    padding: 0 12px;
+    color: var(--sidebar-foreground);
+    text-decoration: none;
+    transition: background 200ms ease-in-out, color 200ms ease-in-out;
+    border-left: none;
+  }
+  
+  .settings-nav-item:hover {
+    background: #f9fafb;
+    color: inherit;
+    text-decoration: none;
+  }
+  
+  .settings-nav-item.active {
+    background: #f9fafb;
+    color: var(--sidebar-foreground);
+    font-weight: 500;
+  }
+
+  .settings-nav-item i {
+    color: inherit;
+    width: 20px; /* ensure consistent left alignment */
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  /* Content area styling */
+  .settings-content {
+    flex: 1;
+    min-width: 0; /* Belangrijk voor flexbox layout */
+    display: flex;
+    flex-direction: column; /* Stack cards vertically */
+  }
+  
+  .settings-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+    overflow: hidden;
+    width: 100%; /* Ensure full width */
+  }
+  
+  .profile-settings-card {
+    box-shadow: none;
+    overflow: visible;
+  }
+  
+  .notification-settings-card {
+    box-shadow: none;
+    overflow: visible;
+  }
+  
+  .settings-card-header {
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .profile-card-header {
+    padding: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px; /* extra ruimte onder header */
+  }
+  .security-card-header {
+    padding: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px; /* extra ruimte onder header */
+  }
+  
+  .notification-card-header {
+    padding: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px; /* extra ruimte onder header */
+  }
+
+  /* Payment header spacing (used on betalingen tab) */
+  .billing-card-header {
+    margin-bottom: 16px; /* extra ruimte onder header */
+  }
+  
+  .settings-card-header h4 {
+    margin: 0 0 5px 0;
+    font-weight: 600;
+  }
+  
+  .settings-card-header p {
+    margin: 0;
+    font-size: 14px;
+  }
+  
+  .settings-card-body {
+    padding: 20px;
+  }
+  
+  .profile-card-body {
+    padding: 0;
+    padding-top: 16px;
+    overflow: visible;
+  }
+  
+  .profile-card-body form {
+    overflow: visible;
+  }
+  
+  .notification-card-body {
+    padding: 0;
+    padding-top: 16px;
+    overflow: visible;
+  }
+  
+  .notification-card-body form {
+    overflow: visible;
+  }
+
+  /* Notification Settings - Modern Card Design */
+  .notifications-container {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Header */
+  .notifications-header {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 0 16px 0; /* match other tabs */
+    border-bottom: 1px solid #e5e7eb; /* match other tabs */
+    margin-bottom: 16px; /* exact same spacing as other headers */
+    box-shadow: none;
+  }
+
+  .notifications-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+  }
+
+  .notifications-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  /* Notification Cards */
+  .notification-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: 36px; /* iets meer ruimte onder elke kolom */
+    box-shadow: none;
+  }
+
+  .notification-category {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: none; /* geen caps */
+    letter-spacing: 0;
+    color: #6b7280;
+    margin-bottom: 18px; /* iets meer ruimte onder label */
+  }
+
+  /* Extra ruimte boven de eerste categorie-titel (Aanvragen Notificaties) */
+  .notifications-container .notification-card:first-of-type .notification-category {
+    padding-top: 16px;
+  }
+
+  /* Notification Items */
+  .notification-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* no extra gap between rows */
+  }
+
+  .notification-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0; /* tighter spacing between items */
+    border-radius: 0;
+    transition: background-color 150ms ease;
+  }
+
+  .notification-item:hover {
+    background-color: transparent; /* hover effect removed */
+  }
+
+  .notification-content {
+    flex: 1;
+    padding-right: 16px;
+    display: flex;              /* place label and description on one row */
+    align-items: baseline;      /* align text on the same baseline */
+    gap: 12px;                  /* spacing between label and divider */
+    flex-wrap: wrap;            /* wrap on small screens */
+  }
+
+  .notification-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    margin: 0;                  /* no extra vertical shift when inline */
+    position: relative;         /* for divider positioning */
+    padding-right: 12px;        /* space for divider */
+  }
+
+  /* Subtle divider between label and description */
+  .notification-label::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 14px;
+    background-color: #e5e7eb;  /* light grey divider */
+  }
+
+  .notification-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  .notification-hint {
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
+  }
+
+  /* Toggle Switch */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e5e7eb;
+    border-radius: 24px;
+    transition: background-color 150ms ease;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: transform 150ms ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: #ea5d0d;
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+
+  .toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+  }
+
+  /* (test UI removed) */
+  
+  /* Payment methods container */
+  .payment-methods-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+  }
+
+  .payment-methods-section {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  /* Payment method styling */
+  .payment-method-card {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background-color: #fff;
+  }
+  
+  .payment-method-icon {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(var(--primary-rgb), 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    flex-shrink: 0;
+  }
+  
+  .payment-method-icon i {
+    font-size: 1.5rem;
+    color: var(--primary);
+  }
+  
+  .payment-method-details {
+    flex-grow: 1;
+  }
+  
+  .payment-method-actions {
+    margin-left: 10px;
+  }
+
+  
+
+  
+  
+  /* QR code styling */
+  .qr-code {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #fff;
+    max-width: 200px;
+  }
+  
+  /* Responsive aanpassingen */
+  @media (max-width: 991.98px) {
+    .settings-page {
+      flex-direction: column;
+    }
+    
+    .settings-sidebar {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    
+    .settings-nav {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    
+    .settings-nav-item {
+      border-left: none;
+      border-bottom: none;
+      padding: 0 12px;
+      height: 44px;
+    }
+    
+    .settings-nav-item.active {
+      border-left: none;
+      border-bottom: none;
+    }
+
+    .payment-methods-container {
+      flex-direction: column;
+    }
+  }
+  
+  @media (max-width: 767.98px) {
+    .settings-card-header,
+    .settings-card-body {
+      padding: 15px;
+    }
+
+    .notifications-container {
+      padding: 16px;
+    }
+
+    .notifications-header {
+      padding: 24px;
+    }
+
+    .notification-card {
+      padding: 20px;
+    }
+
+    .notification-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .notification-content {
+      padding-right: 0;
+    }
+
+    .toggle-switch {
+      align-self: flex-end;
+    }
+  }
+
+  /* Button icon spacing */
+  .btn i {
+    margin-right: 0.75rem !important;
+  }
+
+  /* Security rows */
+  .security-list { border-top: none; }
+  
+  /* Remove padding from security card body */
+  .security-settings-card .settings-card-body {
+    padding: 0 !important;
+  }
+  
+  /* Remove border from security card */
+  .security-settings-card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  
+  .security-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .sec-left .sec-title { font-weight: 600; color: #111827; }
+  .sec-left .sec-sub { color: #6b7280; font-size: 13px; margin-top: 4px; }
+  .sec-middle { display: flex; align-items: center; gap: 12px; color: #374151; }
+  .password-dots { letter-spacing: 2px; font-weight: 600; color: #111827; }
+  .sec-status { font-size: 13px; color: #6b7280; display: inline-flex; align-items: center; }
+  .sec-success { color: #16a34a; }
+  /* Use sepa-cancel-button styling for edit buttons */
+  .sepa-cancel-button {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 80px;
+    height: 32px;
+    background-color: #f3f4f6;
+    color: #6b7280;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: block;
+    z-index: 20;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    margin-left: 0;
+    white-space: nowrap;
+    overflow: visible;
+  }
+  
+  .sepa-cancel-button:hover:not(:disabled) {
+    background-color: #e5e7eb;
+    color: #374151;
+  }
+  
+  .sepa-cancel-button:disabled {
+    background-color: #f9fafb;
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+  
+  .sepa-cancel-button.show {
+    display: block;
+  }
+  
+  .security-edit { padding: 12px 0 20px 0; }
+
+  /* Toggle */
+  .sec-toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .sec-toggle input { display:none; }
+  .sec-toggle-slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background:#e5e7eb; transition:.2s; border-radius:9999px; }
+  .sec-toggle-slider:before { position: absolute; content:""; height: 18px; width: 18px; left: 3px; top:3px; background: white; transition:.2s; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  .sec-toggle input:checked + .sec-toggle-slider { background:#22c55e; }
+  .sec-toggle input:checked + .sec-toggle-slider:before { transform: translateX(20px); }
+
+  /* Align all form controls to the same left axis - remove left padding */
+  .settings-card-body .form-control {
+    margin-left: 0 !important;
+    box-sizing: border-box;
+  }
+  
+  /* Fix focus border being cut off */
+  .profile-card-body .form-control:focus {
+    outline: none;
+    border: 1px solid #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    z-index: 1;
+    position: relative;
+  }
+  
+  .profile-card-body .form-row {
+    overflow: visible;
+  }
+  
+  .profile-card-body .form-group {
+    overflow: visible;
+  }
+  
+  .profile-card-body .form-row [class*="col-"] {
+    overflow: visible;
+  }
+
+  /* Remove all left padding from form groups and columns */
+  .settings-card-body .form-group {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .settings-card-body .form-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .settings-card-body .form-row [class*="col-"] {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* Keep right padding for spacing between columns */
+  .settings-card-body .form-row [class*="col-"]:not(:last-child) {
+    padding-right: 15px;
+  }
+
+  /* Ensure custom file input aligns */
+  .settings-card-body .custom-file {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  /* Ensure labels align consistently */
+  .settings-card-body .form-group > label {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+    font-size: 13px; /* iets kleiner */
+    color: #6b7280; /* iets lichter grijs */
+    font-weight: 500;
+  }
+  
+  /* Password input wrapper with eye icon */
+  .password-input-wrapper {
+    position: relative;
+  }
+  
+  .password-input-wrapper input {
+    padding-right: 40px;
+  }
+
+  /* Disable Bootstrap validation checkmarks (vinkjes) - prevent the floating checkmark */
+  /* Apply to all forms to prevent checkmarks */
+  form.needs-validation .form-control.is-valid,
+  form.needs-validation .form-control:valid,
+  form.needs-validation.was-validated .form-control:valid,
+  #passwordForm .form-control.is-valid,
+  #passwordForm .form-control:valid,
+  #passwordForm.was-validated .form-control:valid,
+  #twoFactorDisableForm .form-control.is-valid,
+  #twoFactorDisableForm .form-control:valid,
+  #twoFactorDisableForm.was-validated .form-control:valid {
+    background-image: none !important;
+    padding-right: 40px !important;
+    border-color: #ced4da !important;
+  }
+
+  /* Also remove valid state styling completely */
+  form.needs-validation .form-control.is-valid:focus,
+  form.needs-validation .form-control:valid:focus,
+  form.needs-validation.was-validated .form-control:valid:focus,
+  #passwordForm .form-control.is-valid:focus,
+  #passwordForm .form-control:valid:focus,
+  #passwordForm.was-validated .form-control:valid:focus,
+  #twoFactorDisableForm .form-control.is-valid:focus,
+  #twoFactorDisableForm .form-control:valid:focus,
+  #twoFactorDisableForm.was-validated .form-control:valid:focus {
+    border-color: #ced4da !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+  }
+
+  /* Prevent valid checkmark icons from appearing */
+  form.needs-validation .was-validated .form-control:valid,
+  #passwordForm .was-validated .form-control:valid,
+  #twoFactorDisableForm .was-validated .form-control:valid {
+    background-image: none !important;
+    background-position: unset !important;
+    background-repeat: unset !important;
+    background-size: unset !important;
+    padding-right: 40px !important;
+  }
+  
+  /* Remove any pseudo-elements that might show checkmarks */
+  form.needs-validation .form-control.is-valid::after,
+  form.needs-validation .form-control:valid::after,
+  #passwordForm .form-control.is-valid::after,
+  #passwordForm .form-control:valid::after,
+  #twoFactorDisableForm .form-control.is-valid::after,
+  #twoFactorDisableForm .form-control:valid::after {
+    display: none !important;
+    content: none !important;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 14px;
+    z-index: 10;
+    transition: color 0.2s ease;
+  }
+  
+  .password-toggle:hover {
+    color: #374151;
+  }
+  
+  /* Forgot password link */
+  .forgot-password-section {
+    margin-top: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .forgot-password-link {
+    color: #6b7280;
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  
+  .forgot-password-link:hover {
+    color: #374151;
+    text-decoration: underline;
+  }
+  
+  /* Login history styling for consistency */
+  .login-history-header {
+    border-bottom: none !important;
+    padding: 16px 0 !important;
+    margin-bottom: 0;
+  }
+  
+  .login-history-header .sec-left {
+    width: 100%;
+  }
+  
+  .login-history-content {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  
+  /* Remove border from Inloggeschiedenis card */
+  .login-history-card {
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 30px;
+  }
+  
+  .login-history-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  .login-history-table th {
+    font-size: 14px !important;
+    font-weight: 500;
+    color: #374151 !important;
+    padding: 12px;
+    border: none;
+    text-align: left;
+  }
+  
+  .login-history-table td {
+    font-size: 14px !important;
+    padding: 12px;
+    border: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+    color: #111827 !important;
+  }
+  
+  .login-history-table td:nth-child(4) {
+    max-width: 250px;
+    word-wrap: break-word;
+    white-space: normal;
+  }
+</style>
+
+<!-- Google Maps API for Address Autocomplete - Load immediately for instant autocomplete -->
+<% if (typeof googleMapsApiKey !== "undefined" && googleMapsApiKey && googleMapsApiKey !== "") { %>
+<script>
+  // Google Maps API key
+  window.GOOGLE_MAPS_API_KEY = '<%= googleMapsApiKey %>';
+  
+  // Suppress Google Maps console warnings
+  (function() {
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.warn = function(...args) {
+      const message = args.join(' ');
+      // Filter out Google Maps warnings
+      if (message.includes('Google Maps') || 
+          message.includes('google.maps') || 
+          message.includes('Autocomplete') ||
+          message.includes('loading=async') ||
+          message.includes('PlaceAutocompleteElement')) {
+        return; // Suppress Google Maps warnings
+      }
+      originalWarn.apply(console, args);
+    };
+    
+    console.error = function(...args) {
+      const message = args.join(' ');
+      // Filter out Google Maps errors/warnings
+      if (message.includes('Google Maps') || 
+          message.includes('google.maps') || 
+          message.includes('Autocomplete') ||
+          message.includes('PlaceAutocompleteElement')) {
+        return; // Suppress Google Maps errors
+      }
+      originalError.apply(console, args);
+    };
+  })();
+  
+  // Initialize immediately when API loads
+  window.initGoogleMaps = function() {
+    if (typeof window.initializeAddressAutocomplete === 'function') {
+      window.initializeAddressAutocomplete();
+    }
+  };
+  
+  // Start polling immediately (don't wait for DOMContentLoaded)
+  // This ensures we catch the API as soon as it loads
+  (function() {
+    let checkCount = 0;
+    const maxChecks = 50; // Check for 5 seconds max (50 * 100ms)
+    
+    const checkInterval = setInterval(function() {
+      checkCount++;
+      if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.places !== 'undefined') {
+        if (typeof window.initializeAddressAutocomplete === 'function') {
+          window.initializeAddressAutocomplete();
+          clearInterval(checkInterval);
+        }
+      } else if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        // API loaded but places library not ready yet, try importing it
+        if (typeof google.maps.importLibrary === 'function') {
+          google.maps.importLibrary('places').then(function() {
+            if (typeof window.initializeAddressAutocomplete === 'function') {
+              window.initializeAddressAutocomplete();
+              clearInterval(checkInterval);
+            }
+          }).catch(function(err) {
+            // Error loading Places library - silently fail
+          });
+        }
+      }
+      
+      if (checkCount >= maxChecks) {
+        clearInterval(checkInterval);
+      }
+    }, 100); // Check every 100ms for faster initialization
+  })();
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<%= googleMapsApiKey %>&libraries=places&language=nl&callback=initGoogleMaps" async defer></script>
+<% } else { %>
+<script>
+  window.GOOGLE_MAPS_API_KEY = '';
+</script>
+<% } %>
+
+<script>
+// Automatisch opslaan van notificatie instellingen
+document.addEventListener('DOMContentLoaded', function() {
+  const newLeadNotification = document.getElementById('newLeadNotification');
+  const leadAssignedNotification = document.getElementById('leadAssignedNotification');
+  const quotaWarningNotification = document.getElementById('quotaWarningNotification');
+  const quotaReachedNotification = document.getElementById('quotaReachedNotification');
+  const subscriptionExpiringNotification = document.getElementById('subscriptionExpiringNotification');
+  const loginFromNewDeviceNotification = document.getElementById('loginFromNewDeviceNotification');
+  const whatsappNotification = document.getElementById('whatsappNotification');
+  const marketingNotification = document.getElementById('marketingNotification');
+  
+  let saveTimeout = null;
+  
+  function saveNotificationSettings() {
+    // Clear previous timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    
+    // Debounce: wacht 500ms voordat je opslaat
+    saveTimeout = setTimeout(async () => {
+      const data = {
+        newLeadNotification: newLeadNotification?.checked || false,
+        leadAssignedNotification: leadAssignedNotification?.checked || false,
+        quotaWarningNotification: quotaWarningNotification?.checked || false,
+        quotaReachedNotification: quotaReachedNotification?.checked || false,
+        subscriptionExpiringNotification: subscriptionExpiringNotification?.checked || false,
+        loginFromNewDeviceNotification: loginFromNewDeviceNotification?.checked || false,
+        whatsappNotification: whatsappNotification?.checked || false,
+        marketingNotification: marketingNotification?.checked || false
+      };
+      
+      try {
+        const response = await fetch('/dashboard/settings/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Notificatie-instellingen opgeslagen', 'success', 3000);
+          }
+        } else {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(result.message || 'Fout bij opslaan notificatie-instellingen', 'error', 5000);
+          }
+        }
+      } catch (error) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Fout bij opslaan notificatie-instellingen', 'error', 5000);
+        }
+      }
+    }, 500);
+  }
+  
+  if (newLeadNotification) {
+    newLeadNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (leadAssignedNotification) {
+    leadAssignedNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (quotaWarningNotification) {
+    quotaWarningNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (quotaReachedNotification) {
+    quotaReachedNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (subscriptionExpiringNotification) {
+    subscriptionExpiringNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (loginFromNewDeviceNotification) {
+    loginFromNewDeviceNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (whatsappNotification) {
+    whatsappNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  if (marketingNotification) {
+    marketingNotification.addEventListener('change', saveNotificationSettings);
+  }
+  
+  // WhatsApp test functionaliteit
+  const testWhatsAppBtn = document.getElementById('testWhatsAppBtn');
+  const whatsappTestStatus = document.getElementById('whatsappTestStatus');
+  
+  if (testWhatsAppBtn) {
+    testWhatsAppBtn.addEventListener('click', async () => {
+      // Disable button tijdens verzenden
+      testWhatsAppBtn.disabled = true;
+      testWhatsAppBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Verzenden...';
+      whatsappTestStatus.textContent = '';
+      whatsappTestStatus.style.display = 'none';
+      
+      try {
+        const response = await fetch('/dashboard/settings/test-whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          whatsappTestStatus.textContent = '✅ Test bericht verzonden! Check je WhatsApp.';
+          whatsappTestStatus.style.color = '#10b981';
+          whatsappTestStatus.style.display = 'block';
+        } else {
+          whatsappTestStatus.textContent = `❌ ${result.message || 'Fout bij verzenden'}`;
+          whatsappTestStatus.style.color = '#ef4444';
+          whatsappTestStatus.style.display = 'block';
+        }
+      } catch (error) {
+        whatsappTestStatus.textContent = '❌ Fout bij verzenden. Probeer het opnieuw.';
+        whatsappTestStatus.style.color = '#ef4444';
+        whatsappTestStatus.style.display = 'block';
+      } finally {
+        // Re-enable button
+        testWhatsAppBtn.disabled = false;
+        testWhatsAppBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Test WhatsApp bericht';
+      }
+    });
+  }
+  
+  // (test notifications UI removed)
+});
+</script>
+
+<%- include('../layouts/dashboard', { 
+    title: 'Instellingen', 
+    activeMenu: 'settings',
+    user: user,
+    body: settingsContent,
+    scripts: (currentTab === 'payment' ? ['/js/settings.js', '/js/payments.js'] : ['/js/settings.js'])
+}) %>
+

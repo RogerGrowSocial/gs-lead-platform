@@ -1,0 +1,1623 @@
+<%
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const getStatusClass = (status) => {
+    const map = { 
+      todo: 'status-blue', 
+      in_progress: 'status-orange', 
+      done: 'status-success'
+    }
+    return map[status] || 'status-gray'
+  }
+
+  const getStatusLabel = (status) => {
+    const map = { 
+      todo: 'Te doen', 
+      in_progress: 'Bezig', 
+      done: 'Klaar' 
+    }
+    return map[status] || 'Te doen'
+  }
+
+  const getPriorityClass = (priority) => {
+    const map = { 
+      low: 'status-gray', 
+      normal: 'status-blue', 
+      high: 'status-orange', 
+      urgent: 'status-red' 
+    }
+    return map[priority] || 'status-gray'
+  }
+
+  const getPriorityLabel = (priority) => {
+    const map = { 
+      low: 'Laag', 
+      normal: 'Normaal', 
+      high: 'Hoog', 
+      urgent: 'Urgent' 
+    }
+    return map[priority] || 'Normaal'
+  }
+
+  const getPriorityColor = (priority) => {
+    const map = {
+      low: '#6b7280',
+      normal: '#3b82f6',
+      high: '#f59e0b',
+      urgent: '#ef4444'
+    }
+    return map[priority] || '#6b7280'
+  }
+
+  // Group todos by status for Kanban columns
+  const todosByStatus = {
+    todo: todos.filter(t => t.status === 'todo'),
+    in_progress: todos.filter(t => t.status === 'in_progress'),
+    done: todos.filter(t => t.status === 'done')
+  }
+
+  const renderTodoCard = (todo = {}) => {
+    const priorityColor = getPriorityColor(todo.priority || 'normal')
+    const priorityLabel = getPriorityLabel(todo.priority || 'normal')
+    const priorityBadge = '<span class="todo-priority-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; border-color: ' + priorityColor + '40;">' + priorityLabel + '</span>'
+    
+    const tagsHtml = (todo.tags || []).slice(0, 3).map(tag => 
+      '<span class="todo-tag">' + tag + '</span>'
+    ).join('')
+    
+    const createdDate = formatDate(todo.created_at)
+    const dueDate = todo.due_date ? formatDate(todo.due_date) : null
+    const isOverdue = dueDate && new Date(todo.due_date) < new Date() && todo.status !== 'done'
+    
+    const todoUuid = todo.uuid || todo.id
+    const todoId = todo.todo_id || todo.id || 'TODO-000'
+    
+    const todoDataJson = JSON.stringify(todo).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    const status = todo.status || 'todo'
+    const priority = todo.priority || 'normal'
+    
+    return (
+      '<div class="todo-card" draggable="true" data-todo-id="' + todoId + '" data-todo-uuid="' + todoUuid + '" data-status="' + status + '" data-priority="' + priority + '" data-todo-data="' + todoDataJson + '">' +
+        '<div class="todo-card-header">' +
+          '<div class="todo-card-id">' + todoId + '</div>' +
+          priorityBadge +
+        '</div>' +
+        '<h3 class="todo-card-title">' + (todo.title || 'Geen titel') + '</h3>' +
+        (todo.description ? '<p class="todo-card-description">' + (todo.description.length > 100 ? todo.description.substring(0, 100) + '...' : todo.description) + '</p>' : '') +
+        (tagsHtml ? '<div class="todo-tags">' + tagsHtml + '</div>' : '') +
+        '<div class="todo-card-footer">' +
+          (todo.assignee ? '<div class="todo-meta-item"><i class="fas fa-user"></i><span>' + todo.assignee + '</span></div>' : '') +
+          (dueDate ? '<div class="todo-meta-item ' + (isOverdue ? 'overdue' : '') + '"><i class="fas fa-calendar"></i><span>' + dueDate + '</span></div>' : '') +
+          (!dueDate && todo.created_at ? '<div class="todo-meta-item"><i class="fas a-calendar"></i><span>' + createdDate + '</span></div>' : '') +
+        '</div>' +
+      '</div>'
+    )
+  }
+%>
+
+<%- include('../layouts/admin', {
+  title: 'To-Do\'s',
+  activeMenu: 'settings',
+  activeSubmenu: 'todos',
+  user: user,
+  body: `
+  <div class="opportunities-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>To-Do's</h1>
+        <p class="text-muted">Beheer taken met drag-and-drop Kanban board</p>
+      </div>
+      <div class="header-actions">
+        <button id="createTodoBtn" class="btn-primary">
+          <i class="fas fa-plus"></i> Nieuwe To-Do
+        </button>
+      </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-cards-container">
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Totaal</p>
+            <p class="kpi-value">${kpis.total}</p>
+            <p class="kpi-subtitle">Openstaande taken</p>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-tasks" style="color: #ea5d0d;"></i>
+          </div>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Te doen</p>
+            <p class="kpi-value" style="color: #3b82f6;">${kpis.todo}</p>
+            <p class="kpi-subtitle">Nog te starten</p>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-circle" style="color: #3b82f6;"></i>
+          </div>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Bezig</p>
+            <p class="kpi-value" style="color: #f59e0b;">${kpis.in_progress}</p>
+            <p class="kpi-subtitle">In uitvoering</p>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-spinner" style="color: #f59e0b;"></i>
+          </div>
+        </div>
+        
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Klaar</p>
+            <p class="kpi-value" style="color: #10b981;">${kpis.done}</p>
+            <p class="kpi-subtitle">Afgerond</p>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+      <!-- Todo Column -->
+      <div class="kanban-column" data-status="todo">
+        <div class="kanban-column-header">
+          <h3 class="kanban-column-title">
+            <span class="kanban-column-icon" style="background: #3b82f6;">${todosByStatus.todo.length}</span>
+            Te doen
+          </h3>
+        </div>
+        <div class="kanban-column-body">
+          ${todosByStatus.todo.length > 0 ? todosByStatus.todo.map(renderTodoCard).join('') : '<div class="kanban-empty">Geen taken</div>'}
+        </div>
+      </div>
+      
+      <!-- In Progress Column -->
+      <div class="kanban-column" data-status="in_progress">
+        <div class="kanban-column-header">
+          <h3 class="kanban-column-title">
+            <span class="kanban-column-icon" style="background: #f59e0b;">${todosByStatus.in_progress.length}</span>
+            Bezig
+          </h3>
+        </div>
+        <div class="kanban-column-body">
+          ${todosByStatus.in_progress.length > 0 ? todosByStatus.in_progress.map(renderTodoCard).join('') : '<div class="kanban-empty">Geen taken</div>'}
+        </div>
+      </div>
+      
+      <!-- Done Column -->
+      <div class="kanban-column" data-status="done">
+        <div class="kanban-column-header">
+          <h3 class="kanban-column-title">
+            <span class="kanban-column-icon" style="background: #10b981;">${todosByStatus.done.length}</span>
+            Klaar
+          </h3>
+        </div>
+        <div class="kanban-column-body">
+          ${todosByStatus.done.length > 0 ? todosByStatus.done.map(renderTodoCard).join('') : '<div class="kanban-empty">Geen taken</div>'}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+      padding: 0;
+    }
+    
+    .kanban-column {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .kanban-column-header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .kanban-column-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+    
+    .kanban-column-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .kanban-column-body {
+      flex: 1;
+      min-height: 200px;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .kanban-column-body.drag-over {
+      background: rgba(234, 93, 13, 0.1);
+      border: 2px dashed #ea5d0d;
+    }
+    
+    .kanban-empty {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 40px 20px;
+      border: 2px dashed #e5e7eb;
+      border-radius: 8px;
+    }
+    
+    .todo-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      cursor: grab;
+      transition: all 0.2s ease;
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      user-select: none;
+      margin-bottom: 12px;
+    }
+    
+    .todo-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateY(-2px);
+      border-color: #ea5d0d;
+    }
+    
+    .todo-card:active {
+      cursor: grabbing;
+    }
+    
+    .todo-card.dragging {
+      opacity: 0.5;
+      transform: rotate(3deg);
+    }
+    
+    .todo-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .todo-card-id {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .todo-priority-badge {
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    
+    .todo-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+    }
+    
+    .todo-card-description {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+      margin: 0 0 12px 0;
+    }
+    
+    .todo-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .todo-tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #f3f4f6;
+      color: #6b7280;
+      border-radius: 4px;
+    }
+    
+    .todo-card-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    
+    .todo-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .todo-meta-item.overdue {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    
+    .todo-meta-item i {
+      font-size: 10px;
+      width: 12px;
+    }
+    
+    /* Prevent text selection during drag */
+    .todo-card * {
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    
+    .todo-card {
+      cursor: pointer;
+    }
+    
+    .todo-card:hover {
+      cursor: grab;
+    }
+    
+    .todo-card:active {
+      cursor: grabbing;
+    }
+    
+    /* Modal styles */
+    .todo-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .todo-modal.active {
+      display: flex;
+    }
+    
+    .todo-modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 700px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    
+    .todo-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .todo-modal-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    
+    .todo-modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    
+    .todo-modal-close:hover {
+      background: #f3f4f6;
+    }
+    
+    .todo-detail-section {
+      margin-bottom: 20px;
+    }
+    
+    .todo-detail-label {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      display: block;
+    }
+    
+    .todo-detail-value {
+      color: #6b7280;
+      line-height: 1.6;
+    }
+    
+    .todo-detail-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .todo-modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    
+    .status-blue {
+      background: #dbeafe;
+      color: #1e40af;
+      border-color: #bfdbfe;
+    }
+    
+    .status-orange {
+      background: #ffedd5;
+      color: #c2410c;
+      border-color: #fed7aa;
+    }
+    
+    .status-success {
+      background: #d1fae5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+    
+    .status-gray {
+      background: #f3f4f6;
+      color: #6b7280;
+      border-color: #e5e7eb;
+    }
+    
+    .btn-secondary {
+      padding: 10px 20px;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #374151;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+    
+    .btn-primary {
+      padding: 10px 20px;
+      background: #ea5d0d;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .btn-primary:hover {
+      background: #cf4a09;
+    }
+    
+    .btn-primary i {
+      margin-right: 6px;
+    }
+    
+    .btn-danger {
+      padding: 10px 20px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+    
+    .btn-danger i {
+      margin-right: 6px;
+    }
+    
+    /* Confirmation Modal */
+    .confirm-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .confirm-modal.active {
+      display: flex;
+    }
+    
+    .confirm-modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
+    
+    .confirm-modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .confirm-modal-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #fee2e2;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .confirm-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+    
+    .confirm-modal-message {
+      color: #6b7280;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    
+    .confirm-modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    
+    @media (max-width: 1400px) {
+      .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  
+  <script>
+    let draggedTodo = null;
+    let draggedTodoData = null;
+    let isDragging = false;
+    
+    // Drag start - use event delegation
+    document.addEventListener('dragstart', (e) => {
+      const todoCard = e.target.closest('.todo-card');
+      if (todoCard && todoCard.draggable) {
+        isDragging = true;
+        draggedTodo = todoCard;
+        draggedTodoData = {
+          uuid: todoCard.dataset.todoUuid,
+          todoId: todoCard.dataset.todoId,
+          status: todoCard.dataset.status
+        };
+        todoCard.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', todoCard.dataset.todoUuid || todoCard.dataset.todoId);
+        console.log('Drag started', draggedTodoData);
+      }
+    });
+    
+    // Drag end
+    document.addEventListener('dragend', (e) => {
+      const todoCard = e.target.closest('.todo-card');
+      if (todoCard) {
+        todoCard.classList.remove('dragging');
+        // Remove drag-over class from all columns
+        document.querySelectorAll('.kanban-column-body').forEach(col => {
+          col.classList.remove('drag-over');
+        });
+      }
+      // Reset after a short delay to allow drop to complete
+      setTimeout(() => {
+        isDragging = false;
+        draggedTodo = null;
+        draggedTodoData = null;
+      }, 200);
+    });
+    
+    // Drag over handler
+    function handleDragOver(e) {
+      // ALWAYS prevent default to allow drop
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (!isDragging) {
+        return false;
+      }
+      
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+      }
+      
+      const dropZone = e.currentTarget || e.target.closest('.kanban-column-body');
+      if (dropZone && dropZone.classList.contains('kanban-column-body')) {
+        dropZone.classList.add('drag-over');
+      }
+      return false;
+    }
+    
+    // Drop handler
+    async function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const dropTarget = e.currentTarget || e.target.closest('.kanban-column-body');
+      if (!dropTarget || !dropTarget.classList.contains('kanban-column-body')) {
+        console.warn('Invalid drop target:', dropTarget);
+        return;
+      }
+      
+      dropTarget.classList.remove('drag-over');
+      
+      console.log('Drop event triggered', { draggedTodo, draggedTodoData, dropTarget });
+      
+      if (!draggedTodoData && !draggedTodo) {
+        // Try to get from dataTransfer as fallback
+        const todoUuid = e.dataTransfer.getData('text/plain');
+        if (!todoUuid) {
+          console.warn('No dragged todo data found');
+          return;
+        }
+        // Try to find the todo card by UUID
+        const todoCard = document.querySelector('[data-todo-uuid="' + todoUuid + '"]');
+        if (todoCard) {
+          draggedTodo = todoCard;
+          draggedTodoData = {
+            uuid: todoCard.dataset.todoUuid,
+            todoId: todoCard.dataset.todoId,
+            status: todoCard.dataset.status
+          };
+        } else {
+          draggedTodoData = { uuid: todoUuid };
+        }
+      }
+      
+      const targetColumn = dropTarget.closest('.kanban-column');
+      if (!targetColumn) {
+        console.error('No target column found');
+        return;
+      }
+      
+      const newStatus = targetColumn.dataset.status;
+      if (!newStatus) {
+        console.error('No status found on target column');
+        return;
+      }
+      
+      const todoCard = draggedTodo || document.querySelector('[data-todo-uuid="' + (draggedTodoData?.uuid || draggedTodoData?.todoId) + '"]');
+      if (!todoCard) {
+        console.error('No todo card found');
+        return;
+      }
+      
+      const oldStatus = todoCard.dataset.status;
+      
+      if (newStatus === oldStatus) {
+        console.log('Same status, no change needed');
+        return;
+      }
+      
+      const todoUuid = todoCard.dataset.todoUuid || todoCard.dataset.todoId;
+      
+      if (!todoUuid) {
+        console.error('No todo UUID found');
+        return;
+      }
+      
+      // Store original position for rollback (BEFORE moving)
+      const originalColumn = todoCard.closest('.kanban-column');
+      const originalColumnBody = originalColumn ? originalColumn.querySelector('.kanban-column-body') : null;
+      
+      // INSTANT: Move card visually immediately (optimistic update)
+      todoCard.dataset.status = newStatus;
+      dropTarget.appendChild(todoCard);
+      updateColumnCounts();
+      
+      // Update in background (non-blocking)
+      try {
+        const apiUrl = '/admin/api/todos/' + todoUuid;
+        const response = await fetch(apiUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          // Rollback on error
+          if (todoCard && originalColumnBody) {
+            originalColumnBody.appendChild(todoCard);
+            todoCard.dataset.status = oldStatus;
+            updateColumnCounts();
+          }
+          showToast('error', 'Fout bij verplaatsen', result.error || 'Onbekende fout');
+        } else {
+          const statusLabel = getStatusLabel(newStatus);
+          showToast('success', 'To-do verplaatst', 'To-do verplaatst naar ' + statusLabel);
+        }
+      } catch (error) {
+        console.error('Error updating todo:', error);
+        // Rollback on error
+        if (todoCard && originalColumnBody) {
+          originalColumnBody.appendChild(todoCard);
+          todoCard.dataset.status = oldStatus;
+          updateColumnCounts();
+        }
+        showToast('error', 'Fout bij verplaatsen', error.message);
+      }
+    }
+    
+    // Make handlers globally available
+    window.handleDragOver = handleDragOver;
+    window.handleDrop = handleDrop;
+    
+    // Setup drop zones programmatically
+    function setupDropZones() {
+      const dropZones = document.querySelectorAll('.kanban-column-body');
+      console.log('Setting up drop zones:', dropZones.length);
+      
+      dropZones.forEach(body => {
+        // Remove existing listeners if any (by cloning without listeners)
+        const hasListeners = body.hasAttribute('data-drop-zone-setup');
+        if (!hasListeners) {
+          // Add fresh listeners with capture phase to ensure they fire
+          body.addEventListener('dragover', handleDragOver, true);
+          body.addEventListener('drop', handleDrop, true);
+          body.addEventListener('dragleave', (e) => {
+            if (e.target === body || !body.contains(e.relatedTarget)) {
+              body.classList.remove('drag-over');
+            }
+          }, true);
+          body.setAttribute('data-drop-zone-setup', 'true');
+          console.log('Drop zone setup for:', body);
+        }
+      });
+    }
+    
+    // Setup when DOM is ready
+    function initDropZones() {
+      try {
+        setupDropZones();
+      } catch (e) {
+        console.error('Error setting up drop zones:', e);
+      }
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDropZones);
+    } else {
+      initDropZones();
+    }
+    
+    // Also try after delays as fallback
+    setTimeout(initDropZones, 100);
+    setTimeout(initDropZones, 500);
+    
+    function updateColumnCounts() {
+      document.querySelectorAll('.kanban-column').forEach(column => {
+        const columnBody = column.querySelector('.kanban-column-body');
+        const count = column.querySelectorAll('.todo-card').length;
+        const icon = column.querySelector('.kanban-column-icon');
+        const emptyPlaceholder = columnBody.querySelector('.kanban-empty');
+        
+        if (icon) icon.textContent = count;
+        
+        // Show/hide empty placeholder
+        if (count > 0 && emptyPlaceholder) {
+          emptyPlaceholder.remove();
+        } else if (count === 0 && !emptyPlaceholder) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'kanban-empty';
+          emptyDiv.textContent = 'Geen taken';
+          columnBody.appendChild(emptyDiv);
+        }
+      });
+      updateKPICards();
+    }
+    
+    function updateKPICards() {
+      const allTodos = Array.from(document.querySelectorAll('.todo-card'));
+      const total = allTodos.filter(card => card.dataset.status !== 'done').length;
+      const todo = allTodos.filter(card => card.dataset.status === 'todo').length;
+      const inProgress = allTodos.filter(card => card.dataset.status === 'in_progress').length;
+      const done = allTodos.filter(card => card.dataset.status === 'done').length;
+      
+      const kpiValues = document.querySelectorAll('.kpi-value');
+      if (kpiValues.length >= 4) {
+        kpiValues[0].textContent = total;
+        kpiValues[1].textContent = todo;
+        kpiValues[2].textContent = inProgress;
+        kpiValues[3].textContent = done;
+      }
+    }
+    
+    // Click on todo card to show details (only if not dragging)
+    document.addEventListener('click', (e) => {
+      // Don't show detail modal if we just finished dragging
+      if (isDragging) {
+        return;
+      }
+      
+      const todoCard = e.target.closest('.todo-card');
+      if (todoCard && !todoCard.classList.contains('dragging')) {
+        // Small delay to ensure dragend has completed
+        setTimeout(() => {
+          if (!isDragging) {
+            const todoDataStr = todoCard.getAttribute('data-todo-data');
+            if (todoDataStr) {
+              try {
+                const todoData = JSON.parse(todoDataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+                showTodoDetail(todoData);
+              } catch (err) {
+                console.error('Error parsing todo data:', err);
+              }
+            }
+          }
+        }, 10);
+      }
+    });
+    
+    function showTodoDetail(todo) {
+      const modal = document.getElementById('todoDetailModal');
+      if (!modal) return;
+      
+      const tagsHtml = (todo.tags || []).map(tag => 
+        '<span class="todo-tag">' + tag + '</span>'
+      ).join('');
+      
+      const dueDate = todo.due_date ? formatDate(todo.due_date) : '-';
+      const isOverdue = todo.due_date && new Date(todo.due_date) < new Date() && todo.status !== 'done';
+      
+      const statusClass = getStatusClass(todo.status);
+      const statusLabel = getStatusLabel(todo.status);
+      const priorityColor = getPriorityColor(todo.priority);
+      const priorityLabel = getPriorityLabel(todo.priority);
+      const todoId = todo.todo_id || todo.id || 'TODO-000';
+      const todoUuid = todo.uuid || todo.id;
+      
+      const priorityBgColor = priorityColor + '20';
+      const priorityBorderColor = priorityColor + '40';
+      const priorityStyle = 'background-color: ' + priorityBgColor + '; color: ' + priorityColor + '; border-color: ' + priorityBorderColor + ';';
+      
+      modal.innerHTML = 
+        '<div class="todo-modal-content">' +
+          '<div class="todo-modal-header">' +
+            '<h2 class="todo-modal-title">' + todoId + '</h2>' +
+            '<button class="todo-modal-close" id="todoDetailModalClose">' +
+              '<i class="fas fa-times"></i>' +
+            '</button>' +
+          '</div>' +
+          '<div class="todo-detail-section">' +
+            '<span class="todo-detail-label">Titel</span>' +
+            '<div class="todo-detail-value">' + (todo.title || '-') + '</div>' +
+          '</div>' +
+          '<div class="todo-detail-section">' +
+            '<span class="todo-detail-label">Beschrijving</span>' +
+            '<div class="todo-detail-value">' + (todo.description || '-') + '</div>' +
+          '</div>' +
+          '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">' +
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Status</span>' +
+              '<div class="todo-detail-value">' +
+                '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Prioriteit</span>' +
+              '<div class="todo-detail-value">' +
+                '<span class="status-badge" style="' + priorityStyle + '">' + priorityLabel + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Toegewezen aan</span>' +
+              '<div class="todo-detail-value">' + (todo.assignee || '-') + '</div>' +
+            '</div>' +
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Deadline</span>' +
+              '<div class="todo-detail-value ' + (isOverdue ? 'overdue' : '') + '">' + dueDate + '</div>' +
+            '</div>' +
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Aangemaakt</span>' +
+              '<div class="todo-detail-value">' + formatDate(todo.created_at) + '</div>' +
+            '</div>' +
+            (todo.completed_at ? 
+              '<div class="todo-detail-section">' +
+                '<span class="todo-detail-label">Afgerond op</span>' +
+                '<div class="todo-detail-value">' + formatDate(todo.completed_at) + '</div>' +
+              '</div>' : '') +
+          '</div>' +
+          (tagsHtml ? 
+            '<div class="todo-detail-section">' +
+              '<span class="todo-detail-label">Tags</span>' +
+              '<div class="todo-detail-tags">' + tagsHtml + '</div>' +
+            '</div>' : '') +
+          '<div class="todo-modal-actions">' +
+            '<button class="btn-danger" id="todoDetailDeleteBtn" data-todo-uuid="' + todoUuid + '"><i class="fas fa-trash"></i> Verwijderen</button>' +
+            '<button class="btn-secondary" id="todoDetailCloseBtn">Sluiten</button>' +
+          '</div>' +
+        '</div>';
+      
+      modal.classList.add('active');
+      
+      const closeBtn = modal.querySelector('#todoDetailCloseBtn');
+      const deleteBtn = modal.querySelector('#todoDetailDeleteBtn');
+      const modalCloseBtn = modal.querySelector('#todoDetailModalClose');
+      
+      if (closeBtn) closeBtn.onclick = closeTodoDetail;
+      if (modalCloseBtn) modalCloseBtn.onclick = closeTodoDetail;
+      
+      if (deleteBtn) {
+        deleteBtn.onclick = () => {
+          deleteTodo(deleteBtn.dataset.todoUuid);
+        };
+      }
+      
+      // Close on background click
+      const handleDetailModalClick = (e) => {
+        if (e.target === modal) {
+          closeTodoDetail();
+        }
+      };
+      modal.onclick = handleDetailModalClick;
+    }
+    
+    function closeTodoDetail() {
+      const modal = document.getElementById('todoDetailModal');
+      if (modal) modal.classList.remove('active');
+    }
+    
+    let pendingDeleteTodoUuid = null;
+    
+    function showDeleteConfirm(todoUuid, todoTitle) {
+      pendingDeleteTodoUuid = todoUuid;
+      const modal = document.getElementById('todoConfirmModal');
+      const message = document.getElementById('todoConfirmMessage');
+      
+      if (todoTitle) {
+        message.textContent = 'Weet je zeker dat je "' + todoTitle + '" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.';
+      } else {
+        message.textContent = 'Weet je zeker dat je deze to-do wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.';
+      }
+      
+      if (modal) {
+        modal.classList.add('active');
+      }
+    }
+    
+    function closeDeleteConfirm() {
+      const modal = document.getElementById('todoConfirmModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      pendingDeleteTodoUuid = null;
+    }
+    
+    async function confirmDeleteTodo() {
+      if (!pendingDeleteTodoUuid) {
+        return;
+      }
+      
+      const todoUuid = pendingDeleteTodoUuid;
+      closeDeleteConfirm();
+      
+      try {
+        const response = await fetch('/admin/api/todos/' + todoUuid, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          closeTodoDetail();
+          showToast('success', 'To-do verwijderd', 'De to-do is succesvol verwijderd.');
+          // Remove todo card from DOM
+          const todoCard = document.querySelector('[data-todo-uuid="' + todoUuid + '"]');
+          if (todoCard) {
+            todoCard.remove();
+            updateColumnCounts();
+          } else {
+            // Reload if card not found
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          }
+        } else {
+          showToast('error', 'Fout bij verwijderen', result.error || 'Onbekende fout');
+        }
+      } catch (error) {
+        console.error('Error deleting todo:', error);
+        showToast('error', 'Fout bij verwijderen', error.message);
+      }
+    }
+    
+    // Setup confirmation modal event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const confirmModal = document.getElementById('todoConfirmModal');
+      const cancelBtn = document.getElementById('todoConfirmCancel');
+      const deleteBtn = document.getElementById('todoConfirmDelete');
+      
+      if (cancelBtn) {
+        cancelBtn.onclick = closeDeleteConfirm;
+      }
+      
+      if (deleteBtn) {
+        deleteBtn.onclick = confirmDeleteTodo;
+      }
+      
+      if (confirmModal) {
+        confirmModal.onclick = (e) => {
+          if (e.target === confirmModal) {
+            closeDeleteConfirm();
+          }
+        };
+      }
+    });
+    
+    function deleteTodo(todoUuid) {
+      // Get todo title for better confirmation message
+      const todoCard = document.querySelector('[data-todo-uuid="' + todoUuid + '"]');
+      let todoTitle = null;
+      if (todoCard) {
+        const titleEl = todoCard.querySelector('.todo-card-title');
+        if (titleEl) {
+          todoTitle = titleEl.textContent.trim();
+        }
+      }
+      showDeleteConfirm(todoUuid, todoTitle);
+    }
+    
+    // Make globally available
+    window.deleteTodo = deleteTodo;
+    
+    function editTodo(todoUuid) {
+      // Get todo data
+      const todoCard = document.querySelector('[data-todo-uuid="' + todoUuid + '"]');
+      if (!todoCard) {
+        showToast('error', 'Fout', 'To-Do niet gevonden');
+        return;
+      }
+      
+      const todoDataStr = todoCard.getAttribute('data-todo-data');
+      if (!todoDataStr) {
+        showToast('error', 'Fout', 'To-Do data niet gevonden');
+        return;
+      }
+      
+      try {
+        const todoData = JSON.parse(todoDataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+        showEditModal(todoData);
+      } catch (err) {
+        console.error('Error parsing todo data:', err);
+        showToast('error', 'Fout', 'Fout bij laden to-do data');
+      }
+    }
+    
+    function showEditModal(todo) {
+      closeTodoDetail();
+      
+      let editModal = document.getElementById('todoEditModal');
+      if (!editModal) {
+        // Create edit modal if it doesn't exist
+        const modalHTML = 
+          '<div id="todoEditModal" class="todo-modal" style="display: none;">' +
+            '<div class="todo-modal-content" style="max-width: 600px;">' +
+              '<div class="todo-modal-header">' +
+                '<h2 class="todo-modal-title">To-Do Bewerken</h2>' +
+                '<button class="todo-modal-close" id="todoEditModalClose">' +
+                  '<i class="fas fa-times"></i>' +
+                '</button>' +
+              '</div>' +
+              '<form id="todoEditForm">' +
+                '<div style="margin-bottom: 16px;">' +
+                  '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Titel *</label>' +
+                  '<input type="text" name="title" id="editTodoTitle" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                '</div>' +
+                '<div style="margin-bottom: 16px;">' +
+                  '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Beschrijving</label>' +
+                  '<textarea name="description" id="editTodoDescription" rows="4" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>' +
+                '</div>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">' +
+                  '<div>' +
+                    '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Prioriteit</label>' +
+                    '<select name="priority" id="editTodoPriority" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                      '<option value="low">Laag</option>' +
+                      '<option value="normal">Normaal</option>' +
+                      '<option value="high">Hoog</option>' +
+                      '<option value="urgent">Urgent</option>' +
+                    '</select>' +
+                  '</div>' +
+                  '<div>' +
+                    '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Status</label>' +
+                    '<select name="status" id="editTodoStatus" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                      '<option value="todo">Te doen</option>' +
+                      '<option value="in_progress">Bezig</option>' +
+                      '<option value="done">Klaar</option>' +
+                    '</select>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">' +
+                  '<div>' +
+                    '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Toegewezen aan</label>' +
+                    '<input type="text" name="assignee" id="editTodoAssignee" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                  '</div>' +
+                  '<div>' +
+                    '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Deadline</label>' +
+                    '<input type="date" name="due_date" id="editTodoDueDate" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                  '</div>' +
+                '</div>' +
+                '<div style="margin-bottom: 24px;">' +
+                  '<label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Tags (komma-gescheiden)</label>' +
+                  '<input type="text" name="tags" id="editTodoTags" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">' +
+                '</div>' +
+                '<div style="display: flex; gap: 12px; justify-content: flex-end;">' +
+                  '<button type="button" id="todoEditCancel" class="btn-secondary">Annuleren</button>' +
+                  '<button type="submit" class="btn-primary">Opslaan</button>' +
+                '</div>' +
+              '</form>' +
+            '</div>' +
+          '</div>';
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        editModal = document.getElementById('todoEditModal');
+      }
+      
+      const form = document.getElementById('todoEditForm');
+      
+      // Fill form with todo data
+      document.getElementById('editTodoTitle').value = todo.title || '';
+      document.getElementById('editTodoDescription').value = todo.description || '';
+      document.getElementById('editTodoPriority').value = todo.priority || 'normal';
+      document.getElementById('editTodoStatus').value = todo.status || 'todo';
+      document.getElementById('editTodoAssignee').value = todo.assignee || '';
+      document.getElementById('editTodoDueDate').value = todo.due_date ? todo.due_date.split('T')[0] : '';
+      document.getElementById('editTodoTags').value = (todo.tags || []).join(', ');
+      
+      // Show modal
+      editModal.style.display = 'flex';
+      
+      // Setup close handlers
+      document.getElementById('todoEditModalClose').onclick = () => {
+        editModal.style.display = 'none';
+      };
+      
+      document.getElementById('todoEditCancel').onclick = () => {
+        editModal.style.display = 'none';
+      };
+      
+      editModal.onclick = (e) => {
+        if (e.target === editModal) {
+          editModal.style.display = 'none';
+        }
+      };
+      
+      // Setup form submit
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const tagsInput = formData.get('tags');
+        const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+        
+        const todoData = {
+          title: formData.get('title'),
+          description: formData.get('description'),
+          priority: formData.get('priority'),
+          status: formData.get('status'),
+          assignee: formData.get('assignee'),
+          due_date: formData.get('due_date'),
+          tags: tags
+        };
+        
+        try {
+          const todoUuid = todo.uuid || todo.id;
+          const response = await fetch('/admin/api/todos/' + todoUuid, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(todoData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            editModal.style.display = 'none';
+            showToast('success', 'To-do bijgewerkt', 'De to-do is succesvol bijgewerkt.');
+            setTimeout(() => {
+              window.location.reload();
+            }, 500);
+          } else {
+            showToast('error', 'Fout bij bijwerken', result.error || 'Onbekende fout');
+          }
+        } catch (error) {
+          console.error('Error updating todo:', error);
+          showToast('error', 'Fout bij bijwerken', error.message);
+        }
+      };
+    }
+    
+    // Make globally available
+    window.editTodo = editTodo;
+    
+    function getStatusClass(status) {
+      const map = { 
+        todo: 'status-blue', 
+        in_progress: 'status-orange', 
+        done: 'status-success'
+      };
+      return map[status] || 'status-gray';
+    }
+    
+    function getStatusLabel(status) {
+      const map = { 
+        todo: 'Te doen', 
+        in_progress: 'Bezig', 
+        done: 'Klaar' 
+      };
+      return map[status] || 'Te doen';
+    }
+    
+    function getPriorityColor(priority) {
+      const map = {
+        low: '#6b7280',
+        normal: '#3b82f6',
+        high: '#f59e0b',
+        urgent: '#ef4444'
+      };
+      return map[priority] || '#6b7280';
+    }
+    
+    function getPriorityLabel(priority) {
+      const map = {
+        low: 'Laag',
+        normal: 'Normaal',
+        high: 'Hoog',
+        urgent: 'Urgent'
+      };
+      return map[priority] || 'Normaal';
+    }
+    
+    function formatDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    
+    // Use existing notification system
+    function showToast(type, title, message, duration = 4000) {
+      // Use the existing showNotification function from main.js
+      if (typeof window.showNotification === 'function') {
+        // If message is provided, use only the message (skip title)
+        const fullMessage = message || title;
+        window.showNotification(fullMessage, type, duration, false);
+      } else {
+        // Fallback if showNotification is not available
+        console.warn('showNotification not available, using alert fallback');
+        alert(message || title);
+      }
+    }
+    
+    // Make globally available
+    window.showToast = showToast;
+    
+    // Setup create todo modal
+    function setupTodoModal() {
+      const createTodoBtn = document.getElementById('createTodoBtn');
+      const todoModal = document.getElementById('todoModal');
+      const todoModalClose = document.getElementById('todoModalClose');
+      const todoForm = document.getElementById('todoForm');
+      
+      if (!createTodoBtn) {
+        console.warn('Create todo button not found');
+        return;
+      }
+      
+      if (!todoModal) {
+        console.warn('Todo modal not found');
+        return;
+      }
+      
+      // Remove existing listeners to prevent duplicates
+      const newCreateBtn = createTodoBtn.cloneNode(true);
+      createTodoBtn.parentNode.replaceChild(newCreateBtn, createTodoBtn);
+      
+      // Open modal
+      newCreateBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Create todo button clicked');
+        const modal = document.getElementById('todoModal');
+        if (modal) {
+          modal.style.display = 'flex';
+        }
+      });
+      
+      // Close modal handlers
+      if (todoModalClose) {
+        todoModalClose.onclick = () => {
+          todoModal.style.display = 'none';
+          if (todoForm) todoForm.reset();
+        };
+      }
+      
+      // Close on background click
+      todoModal.onclick = (e) => {
+        if (e.target === todoModal) {
+          todoModal.style.display = 'none';
+          if (todoForm) todoForm.reset();
+        }
+      };
+      
+      // Cancel button
+      const todoModalCancel = document.getElementById('todoModalCancel');
+      if (todoModalCancel) {
+        todoModalCancel.onclick = () => {
+          todoModal.style.display = 'none';
+          if (todoForm) todoForm.reset();
+        };
+      }
+      
+      // Form submit handler
+      if (todoForm) {
+        todoForm.onsubmit = async (e) => {
+          e.preventDefault();
+          
+          const formData = new FormData(todoForm);
+          const tagsInput = formData.get('tags');
+          const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : [];
+          
+          const todoData = {
+            title: formData.get('title'),
+            description: formData.get('description'),
+            priority: formData.get('priority'),
+            status: formData.get('status'),
+            assignee: formData.get('assignee'),
+            due_date: formData.get('due_date'),
+            tags: tags
+          };
+          
+          try {
+            const response = await fetch('/admin/api/todos', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(todoData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              todoModal.style.display = 'none';
+              todoForm.reset();
+              showToast('success', 'To-do toegevoegd', 'De to-do is succesvol toegevoegd.');
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
+            } else {
+              showToast('error', 'Fout bij toevoegen', result.error || 'Onbekende fout');
+            }
+          } catch (error) {
+            console.error('Error creating todo:', error);
+            showToast('error', 'Fout bij aanmaken', error.message);
+          }
+        };
+      }
+    }
+    
+    // Setup todo modal multiple times to ensure it works
+    function initTodoModal() {
+      try {
+        setupTodoModal();
+      } catch (e) {
+        console.error('Error setting up todo modal:', e);
+      }
+    }
+    
+    // Try immediately
+    initTodoModal();
+    
+    // Also on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTodoModal);
+    }
+    
+    // Fallback delays
+    setTimeout(initTodoModal, 100);
+    setTimeout(initTodoModal, 500);
+    setTimeout(initTodoModal, 1000);
+  </script>
+  
+  <!-- Todo Modal -->
+  <div id="todoModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 600;">Nieuwe To-Do Toevoegen</h2>
+        <button id="todoModalClose" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="todoForm">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Titel *</label>
+          <input type="text" name="title" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+        </div>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Beschrijving</label>
+          <textarea name="description" rows="4" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Prioriteit</label>
+            <select name="priority" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+              <option value="low">Laag</option>
+              <option value="normal" selected>Normaal</option>
+              <option value="high">Hoog</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Status</label>
+            <select name="status" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+              <option value="todo" selected>Te doen</option>
+              <option value="in_progress">Bezig</option>
+              <option value="done">Klaar</option>
+            </select>
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Toegewezen aan</label>
+            <input type="text" name="assignee" placeholder="Naam" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+          </div>
+          
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Deadline</label>
+            <input type="date" name="due_date" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Tags</label>
+          <input type="text" name="tags" placeholder="tag1, tag2, tag3" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+          <p style="margin-top: 4px; font-size: 12px; color: #6b7280;">Scheid tags met komma's</p>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" id="todoModalCancel" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 8px; font-weight: 500; cursor: pointer; color: #374151;">
+            Annuleren
+          </button>
+          <button type="submit" style="padding: 10px 20px; background: #ea5d0d; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer;">
+            Toevoegen
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  
+  <!-- Todo Detail Modal -->
+  <div id="todoDetailModal" class="todo-modal"></div>
+  
+  <!-- Confirmation Modal -->
+  <div id="todoConfirmModal" class="confirm-modal">
+    <div class="confirm-modal-content">
+      <div class="confirm-modal-header">
+        <div class="confirm-modal-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="confirm-modal-title">To-Do Verwijderen</h3>
+      </div>
+      <p class="confirm-modal-message" id="todoConfirmMessage">
+        Weet je zeker dat je deze to-do wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+      </p>
+      <div class="confirm-modal-actions">
+        <button class="btn-secondary" id="todoConfirmCancel">Annuleren</button>
+        <button class="btn-danger" id="todoConfirmDelete"><i class="fas fa-trash"></i> Verwijderen</button>
+      </div>
+    </div>
+  </div>
+  `,
+  stylesheets: (stylesheets || [])
+}) %>
+

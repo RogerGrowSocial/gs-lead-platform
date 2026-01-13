@@ -1,0 +1,513 @@
+<%- include('../layouts/admin', {
+  title: 'Agenda | GrowSocial Admin',
+  activeMenu: 'calendar',
+  user: user,
+  stylesheets: ['/css/admin-calendar.css'],
+  scripts: ['/js/admin-calendar.js'],
+  body: `
+  <div class="calendar-page">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-content">
+        <h1>Agenda</h1>
+        <p class="page-subtitle">Beheer afspraken en planning</p>
+      </div>
+      <div class="page-header-actions" style="display: flex; align-items: center; gap: 12px;">
+        <!-- Agenda Selector (only for managers+) -->
+        <div id="agendaSelectorContainer" style="display: none;">
+          <select id="agendaSelector" class="form-select" style="min-width: 200px; padding: 8px 12px; border: 0.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;">
+            <option value="all">Totaal (alle agenda's)</option>
+            <option value="main">GrowSocial (hoofdagenda)</option>
+            <!-- Employee agendas will be populated by JavaScript -->
+          </select>
+        </div>
+        <button type="button" class="btn-secondary" id="todayBtn">
+          <i class="fas fa-calendar-day"></i>
+          Vandaag
+        </button>
+        <div class="new-event-dropdown" style="position: relative;">
+          <button type="button" class="btn-primary" id="newEventBtn">
+            <i class="fas fa-plus"></i>
+            Nieuw
+            <i class="fas fa-chevron-down" style="margin-left: 8px; font-size: 12px;"></i>
+          </button>
+          <div class="new-event-menu" id="newEventMenu" style="display: none;">
+            <button type="button" class="new-event-menu-item" data-category="appointment">
+              <i class="fas fa-calendar-check"></i>
+              <span>Nieuwe afspraak</span>
+            </button>
+            <button type="button" class="new-event-menu-item" data-category="meeting">
+              <i class="fas fa-users"></i>
+              <span>Nieuwe vergadering</span>
+            </button>
+            <button type="button" class="new-event-menu-item" data-category="call">
+              <i class="fas fa-phone"></i>
+              <span>Nieuw telefoongesprek</span>
+            </button>
+            <button type="button" class="new-event-menu-item" data-category="task">
+              <i class="fas fa-tasks"></i>
+              <span>Nieuwe taak</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Container -->
+    <div class="calendar-container">
+      <!-- Left Sidebar -->
+      <div class="calendar-sidebar">
+        <!-- Agenda Overview Tab -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">Agenda overzicht</h3>
+          <div class="agenda-list" id="agendaList">
+            <!-- Agenda items will be rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">Filters</h3>
+          <div class="filter-list">
+            <label class="filter-item">
+              <input type="checkbox" checked data-category="meeting">
+              <span class="filter-color" style="background: #3b82f6;"></span>
+              <span>Vergaderingen</span>
+            </label>
+            <label class="filter-item">
+              <input type="checkbox" checked data-category="call">
+              <span class="filter-color" style="background: #10b981;"></span>
+              <span>Telefoongesprekken</span>
+            </label>
+            <label class="filter-item">
+              <input type="checkbox" checked data-category="appointment">
+              <span class="filter-color" style="background: #f59e0b;"></span>
+              <span>Afspraken</span>
+            </label>
+            <label class="filter-item">
+              <input type="checkbox" checked data-category="task">
+              <span class="filter-color" style="background: #ef4444;"></span>
+              <span>Taken</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Calendar Area -->
+      <div class="calendar-main">
+        <!-- Calendar Header -->
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button type="button" class="nav-btn" id="prevBtn">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2 class="calendar-month" id="currentMonth"></h2>
+            <button type="button" class="nav-btn" id="nextBtn">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          
+          <div class="calendar-actions">
+            <div class="view-selector">
+              <button type="button" class="view-selector-btn active" data-view="month">
+                Maand
+              </button>
+              <button type="button" class="view-selector-btn" data-view="week">
+                Week
+              </button>
+              <button type="button" class="view-selector-btn" data-view="day">
+                Dag
+              </button>
+            </div>
+            
+            <div class="search-box">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Zoek afspraken..." id="searchInput">
+            </div>
+          </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-body">
+          <!-- Weekday Headers -->
+          <div class="calendar-weekdays">
+            <div class="weekday">Ma</div>
+            <div class="weekday">Di</div>
+            <div class="weekday">Wo</div>
+            <div class="weekday">Do</div>
+            <div class="weekday">Vr</div>
+            <div class="weekday">Za</div>
+            <div class="weekday">Zo</div>
+          </div>
+
+          <!-- Calendar Days Grid -->
+          <div class="calendar-grid" id="calendarGrid">
+            <!-- Days will be rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Modal - Drawer from right -->
+  <div class="modal-overlay" id="eventModal">
+    <div class="event-modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Nieuwe afspraak</h3>
+        <button type="button" class="modal-close" id="closeModalBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <form id="eventForm">
+          <input type="hidden" id="eventId">
+          
+          <div class="form-group">
+            <label>Titel</label>
+            <input type="text" id="eventTitle" class="form-input" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Beschrijving</label>
+            <textarea id="eventDescription" class="form-textarea" rows="3"></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Datum</label>
+              <input type="date" id="eventStartDate" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>Starttijd</label>
+              <input type="time" id="eventStartTime" class="form-input" required>
+            </div>
+          </div>
+          
+          <!-- Duur en Categorie horizontaal -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Duur</label>
+              <select id="eventDuration" class="form-select" required>
+                <option value="15">15 minuten</option>
+                <option value="30" selected>30 minuten</option>
+                <option value="45">45 minuten</option>
+                <option value="60">1 uur</option>
+                <option value="90">1,5 uur</option>
+                <option value="120">2 uur</option>
+                <option value="180">3 uur</option>
+                <option value="240">4 uur</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Categorie</label>
+              <select id="eventCategory" class="form-select">
+                <option value="meeting">Vergadering</option>
+                <option value="call">Telefoongesprek</option>
+                <option value="appointment">Afspraak</option>
+                <option value="task">Taak</option>
+              </select>
+            </div>
+          </div>
+          
+          <input type="hidden" id="eventEndDate">
+          <input type="hidden" id="eventEndTime">
+          
+          <!-- Meeting Type Switcher (for Meeting & Appointment) -->
+          <div class="form-group category-field" data-category="meeting,appointment" id="meetingTypeGroup">
+            <label>Type vergadering</label>
+            <div class="meeting-type-switcher">
+              <button type="button" class="meeting-type-btn active" data-type="physical">
+                <i class="fas fa-map-marker-alt"></i> Fysiek
+              </button>
+              <button type="button" class="meeting-type-btn" data-type="online">
+                <i class="fas fa-video"></i> Online
+              </button>
+            </div>
+          </div>
+          
+          <!-- Physical Location Fields -->
+          <div class="form-group category-field location-type-field" data-category="meeting,appointment" data-location-type="physical">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="eventAtOffice" class="form-checkbox">
+              <label for="eventAtOffice" style="margin: 0; font-weight: 500; cursor: pointer;">Op kantoor</label>
+            </div>
+            <input type="text" id="eventLocation" class="form-input" placeholder="Adres of locatie..." style="display: none;">
+          </div>
+          
+          <!-- Online Meeting Fields -->
+          <div class="form-group category-field location-type-field" data-category="meeting,appointment" data-location-type="online" style="display: none;">
+            <label>Google Meet link (optioneel)</label>
+            <input type="url" id="eventMeetLink" class="form-input" placeholder="https://meet.google.com/...">
+            <button type="button" id="createMeetLinkBtn" class="btn-secondary" style="margin-top: 8px; width: 100%;">
+              <i class="fas fa-video"></i> Nieuwe Google Meet link aanmaken
+            </button>
+          </div>
+          
+          <!-- Fields for Meeting, Call & Appointment: Bedrijf en Contactpersoon -->
+          <div class="form-group category-field" data-category="meeting,call,appointment">
+            <!-- Contactpersoon -->
+            <div style="margin-bottom: 16px;">
+              <label for="eventContactSelect" style="display: block; font-size: 14px; font-weight: 500; color: #111827; margin-bottom: 6px;">Contactpersoon</label>
+              <div class="association-select-wrapper" id="eventContactSelectWrapper">
+                <button type="button" class="association-select-trigger" id="eventContactSelectTrigger" aria-haspopup="true">
+                  <span class="association-select-value" id="eventContactSelectValue">Zoeken</span>
+                  <i class="fas fa-chevron-down association-select-caret"></i>
+                </button>
+                <div class="association-select-dropdown" id="eventContactSelectDropdown" style="display: none;">
+                  <div class="association-select-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="eventContactSelectSearch" class="form-input" placeholder="Zoek contactpersoon..." autocomplete="off">
+                  </div>
+                  <div class="association-select-items" id="eventContactSelectItems">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+                <input type="hidden" id="eventContactId" name="contact_id">
+              </div>
+            </div>
+            
+            <!-- Bedrijf -->
+            <div>
+              <label for="eventCustomerSelect" style="display: block; font-size: 14px; font-weight: 500; color: #111827; margin-bottom: 6px;">Bedrijf</label>
+              <div class="association-select-wrapper" id="eventCustomerSelectWrapper">
+                <button type="button" class="association-select-trigger" id="eventCustomerSelectTrigger" aria-haspopup="true">
+                  <span class="association-select-value" id="eventCustomerSelectValue">Zoeken</span>
+                  <i class="fas fa-chevron-down association-select-caret"></i>
+                </button>
+                <div class="association-select-dropdown" id="eventCustomerSelectDropdown" style="display: none;">
+                  <div class="association-select-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="eventCustomerSelectSearch" class="form-input" placeholder="Zoek bedrijf..." autocomplete="off">
+                  </div>
+                  <div class="association-select-items" id="eventCustomerSelectItems">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+                <input type="hidden" id="eventCustomerId" name="customer_id">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Fields for Call only -->
+          <div class="form-group category-field" data-category="call" style="display: none;">
+            <label>Telefoonnummer (optioneel)</label>
+            <input type="tel" id="eventPhone" class="form-input" placeholder="+31 6 12345678">
+          </div>
+          
+          <!-- Fields for Task only -->
+          <div class="form-group category-field" data-category="task" style="display: none;">
+            <label>Prioriteit</label>
+            <select id="eventPriority" class="form-select">
+              <option value="low">Laag</option>
+              <option value="normal" selected>Normaal</option>
+              <option value="high">Hoog</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          
+          <!-- Task: Customer or Contact (required) -->
+          <div class="form-group category-field" data-category="task" style="display: none;">
+            <label>Bedrijf of Contactpersoon *</label>
+            <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="taskRelationType" value="customer" id="taskRelationCustomer" checked>
+                <span>Bedrijf</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="taskRelationType" value="contact" id="taskRelationContact">
+                <span>Contactpersoon</span>
+              </label>
+            </div>
+            <div id="taskCustomerContainer" style="position: relative;">
+              <input type="text" id="taskCustomerSearch" class="form-input" placeholder="Zoek bedrijf..." autocomplete="off">
+              <input type="hidden" id="taskCustomerId">
+              <div id="taskCustomerSearchResults" class="customer-search-results" style="display: none;"></div>
+            </div>
+            <div id="taskContactContainer" style="position: relative; display: none;">
+              <input type="text" id="taskContactSearch" class="form-input" placeholder="Zoek contactpersoon..." autocomplete="off">
+              <input type="hidden" id="taskContactId">
+              <div id="taskContactSearchResults" class="customer-search-results" style="display: none;"></div>
+            </div>
+          </div>
+          
+          <!-- Recurrence Section - Google Calendar Style -->
+          <div class="form-group" id="recurrenceGroup">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
+              <input type="checkbox" id="eventIsRecurring" class="form-checkbox">
+              <label for="eventIsRecurring" style="margin: 0; font-weight: 500; cursor: pointer;">Terugkerend</label>
+            </div>
+            <div id="recurrenceOptions" class="recurrence-panel" style="display: none;">
+              <div class="recurrence-panel-content">
+                <div class="recurrence-frequency-row">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Herhaal</label>
+                  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <select id="eventRecurrenceFrequency" class="form-select" style="flex: 1; min-width: 140px;">
+                      <option value="daily">Dagelijks</option>
+                      <option value="weekly" selected>Wekelijks</option>
+                      <option value="monthly">Maandelijks</option>
+                      <option value="yearly">Jaarlijks</option>
+                    </select>
+                    <span style="color: #6b7280;">elke</span>
+                    <input type="number" id="eventRecurrenceInterval" class="form-input" value="1" min="1" style="width: 80px;">
+                    <span id="recurrenceIntervalLabel" style="color: #6b7280;">week</span>
+                  </div>
+                </div>
+                
+                <div class="form-group" id="weeklyDaysGroup" style="display: none; margin-top: 12px;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Op dagen</label>
+                  <div class="recurrence-days-grid">
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="1" class="recurrence-day-checkbox">
+                      <span>Ma</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="2" class="recurrence-day-checkbox">
+                      <span>Di</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="3" class="recurrence-day-checkbox">
+                      <span>Wo</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="4" class="recurrence-day-checkbox">
+                      <span>Do</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="5" class="recurrence-day-checkbox">
+                      <span>Vr</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="6" class="recurrence-day-checkbox">
+                      <span>Za</span>
+                    </label>
+                    <label class="recurrence-day-label">
+                      <input type="checkbox" value="7" class="recurrence-day-checkbox">
+                      <span>Zo</span>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="form-group" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                  <label style="font-weight: 500; margin-bottom: 8px; display: block;">Eindigt</label>
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="radio" name="recurrenceEnd" value="never" checked>
+                      <span>Nooit</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="radio" name="recurrenceEnd" value="date">
+                      <span>Op</span>
+                      <input type="date" id="eventRecurrenceEndDate" class="form-input" style="flex: 1; max-width: 200px; margin-left: 8px;" disabled>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                      <input type="radio" name="recurrenceEnd" value="count">
+                      <span>Na</span>
+                      <input type="number" id="eventRecurrenceCount" class="form-input" value="10" min="1" style="width: 100px; margin-left: 8px;" disabled>
+                      <span>keer</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reminders Section - Improved UI -->
+          <div class="form-group" id="remindersGroup">
+            <label style="font-weight: 500; margin-bottom: 12px; display: block;">Herinneringen (optioneel)</label>
+            
+            <!-- Reminder Times -->
+            <div class="reminders-time-grid">
+              <label class="reminder-time-option">
+                <input type="checkbox" id="reminder15min" class="form-checkbox" value="15">
+                <span>15 min</span>
+              </label>
+              <label class="reminder-time-option">
+                <input type="checkbox" id="reminder30min" class="form-checkbox" value="30">
+                <span>30 min</span>
+              </label>
+              <label class="reminder-time-option">
+                <input type="checkbox" id="reminder1hour" class="form-checkbox" value="60">
+                <span>1 uur</span>
+              </label>
+              <label class="reminder-time-option">
+                <input type="checkbox" id="reminder1day" class="form-checkbox" value="1440">
+                <span>1 dag</span>
+              </label>
+            </div>
+            
+            <!-- Recipients -->
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+              <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 10px;">Verstuur naar</label>
+              
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <input type="checkbox" id="reminderToSelf" class="form-checkbox" checked>
+                <label for="reminderToSelf" style="margin: 0; cursor: pointer; font-weight: 500;">Mijzelf</label>
+              </div>
+              
+              <div id="reminderEmployeesContainer" style="display: none;">
+                <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Werknemers (managers+)</label>
+                <div class="multi-select-wrapper" id="reminderEmployeesMultiSelect">
+                  <div class="multi-select-trigger" id="reminderEmployeesTrigger">
+                    <span class="multi-select-placeholder">Selecteer werknemers...</span>
+                    <i class="fas fa-chevron-down"></i>
+                  </div>
+                  <div class="multi-select-dropdown" id="reminderEmployeesDropdown" style="display: none;">
+                    <div class="multi-select-search">
+                      <input type="text" id="reminderEmployeesSearch" class="form-input" placeholder="Zoek werknemer..." autocomplete="off">
+                    </div>
+                    <div class="multi-select-items" id="reminderEmployeesItems">
+                      <!-- Will be populated by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+                <div class="selected-items-list" id="selectedReminderEmployeesList"></div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelBtn">Annuleren</button>
+        <button type="button" class="btn-danger" id="deleteEventBtn" style="display: none;">
+          <i class="fas fa-trash"></i>
+          Verwijderen
+        </button>
+        <button type="submit" form="eventForm" class="btn-primary" id="saveEventBtn">
+          <i class="fas fa-save"></i>
+          Opslaan
+        </button>
+      </div>
+    </div>
+  </div>
+  `
+}) %>
+
+<script>
+  // Pass server data to JavaScript
+  window.calendarEmployeesData = <%- JSON.stringify(typeof employees !== 'undefined' ? employees : []) %>;
+  window.calendarAllEmployees = <%- JSON.stringify(typeof allEmployees !== 'undefined' ? allEmployees : []) %>;
+  window.calendarUserCustomer = <%- JSON.stringify(typeof userCustomer !== 'undefined' ? userCustomer : null) %>;
+  window.calendarCanViewAll = <%- JSON.stringify(typeof canViewAll !== 'undefined' ? canViewAll : false) %>;
+  window.calendarCurrentUserId = <%- JSON.stringify(typeof currentUserId !== 'undefined' ? currentUserId : null) %>;
+</script>
+
+<% if (typeof googleMapsApiKey !== "undefined" && googleMapsApiKey && googleMapsApiKey !== "") { %>
+<script>
+  window.GOOGLE_MAPS_API_KEY = '<%= googleMapsApiKey %>';
+  window.GOOGLE_MAPS_LOADED = false;
+  
+  // Callback when Google Maps API is loaded
+  function initGoogleMapsForCalendar() {
+    window.GOOGLE_MAPS_LOADED = true;
+    console.log('[calendar] Google Maps API loaded');
+    
+    // Initialize address autocomplete when modal opens
+    if (typeof initCalendarAddressAutocomplete === 'function') {
+      initCalendarAddressAutocomplete();
+    }
+  }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<%= googleMapsApiKey %>&libraries=places&language=nl&callback=initGoogleMapsForCalendar" async defer></script>
+<% } %>

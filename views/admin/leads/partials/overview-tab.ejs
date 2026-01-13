@@ -1,0 +1,113 @@
+<!-- KPI Cards Grid - EXACT zoals /admin/payments -->
+<div class="kpi-cards-container">
+  <div class="kpi-cards-grid">
+    <!-- Card 1: Leads vandaag -->
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Leads vandaag</p>
+        <div class="kpi-value-container">
+          <p class="kpi-value" id="kpi-leads-today">-</p>
+          <span class="kpi-subtitle">/ Target <span id="kpi-leads-target">-</span></span>
+        </div>
+        <span class="kpi-comparison-badge neutral" id="kpi-leads-status">Laden...</span>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Card 2: Leads afgelopen 7 dagen -->
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Leads afgelopen 7 dagen</p>
+        <p class="kpi-value" id="kpi-leads-week">-</p>
+        <p class="kpi-subtitle" id="kpi-leads-week-avg">-</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Card 3: Google Ads spend -->
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Ads spend vandaag</p>
+        <div class="kpi-value-container">
+          <p class="kpi-value" id="kpi-spend-today">€-</p>
+          <span class="kpi-subtitle">/ Budget <span id="kpi-spend-budget">€-</span></span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+          <div class="bg-gray-900 h-1.5 rounded-full" id="kpi-spend-progress" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 6v6l4 2"></path>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Card 4: Gemiddelde CPL -->
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Gemiddelde CPL</p>
+        <p class="kpi-value" id="kpi-cpl-avg">€-</p>
+        <p class="kpi-subtitle" id="kpi-cpl-info">Gemiddelde over 7 dagen</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="2" x2="12" y2="22"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Grafiek: Leads vs Targets - EXACT zoals /admin/leads -->
+<div class="table-container" style="margin-bottom: 16px;">
+  <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+    <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Leads vs targets (laatste 30 dagen)</h3>
+    <select id="chart-period" class="status-select" style="width: auto; min-width: 150px;">
+      <option value="7">7 dagen</option>
+      <option value="30" selected>30 dagen</option>
+    </select>
+  </div>
+  <div style="padding: 24px; position: relative; height: 320px;">
+    <div id="chart-skeleton-loader" class="chart-skeleton-loader" style="display: none;"></div>
+    <canvas id="leads-chart"></canvas>
+  </div>
+</div>
+
+<!-- Segmententabel - EXACT zoals /admin/leads -->
+<div class="table-container">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Segment</th>
+          <th>Branche</th>
+          <th>Regio</th>
+          <th>Target/dag</th>
+          <th>Actual/dag</th>
+          <th>Gap</th>
+          <th>Status</th>
+          <th>Partners</th>
+          <th style="text-align: right;">Acties</th>
+        </tr>
+      </thead>
+      <tbody id="segments-table-body">
+        <!-- Dynamisch gevuld via JS -->
+      </tbody>
+      <tbody id="segments-table-skeleton" style="display: none;">
+        <!-- Skeleton loader rows -->
+      </tbody>
+    </table>
+  </div>
+</div>
+

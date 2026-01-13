@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maandelijkse facturen rapport - GrowSocial</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        .summary {
+            background-color: #e0f2fe;
+            border: 1px solid #bae6fd;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .summary-item {
+            margin: 10px 0;
+        }
+        .summary-label {
+            font-weight: bold;
+            color: #0369a1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://growsocial.nl/logo.png" alt="GrowSocial Logo" class="logo">
+        </div>
+        
+        <div class="content">
+            <h1>Maandelijkse facturen rapport</h1>
+            
+            <div class="summary">
+                <div class="summary-item">
+                    <span class="summary-label">Aantal facturen:</span>
+                    {{invoice_count}}
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Totaalbedrag:</span>
+                    €{{total_amount}}
+                </div>
+            </div>
+            
+            <h2>Gegenereerde facturen</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Factuurnummer</th>
+                        <th>Bedrag</th>
+                        <th>Vervaldatum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each invoices}}
+                    <tr>
+                        <td>{{number}}</td>
+                        <td>€{{amount}}</td>
+                        <td>{{due_date}}</td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+            
+            <p>Alle facturen zijn automatisch gegenereerd en naar de betreffende klanten gestuurd. U kunt de status van deze facturen bekijken in het admin dashboard.</p>
+            
+            <p>Met vriendelijke groet,<br>Het GrowSocial Systeem</p>
+        </div>
+        
+        <div class="footer">
+            <p>GrowSocial B.V. | Hoofdstraat 123, 1234 AB Amsterdam</p>
+            <p>BTW: NL123456789B01 | KvK: 12345678</p>
+            <p>Tel: +31 (0)20 123 4567 | Email: facturen@growsocial.nl</p>
+        </div>
+    </div>
+</body>
+</html> 

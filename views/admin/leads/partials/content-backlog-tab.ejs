@@ -1,0 +1,166 @@
+<!-- Filters - 3 wide horizontal layout -->
+<div class="content-filters-container">
+  <div class="content-filter-item">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Segment</label>
+    <select id="filter-segment" class="status-select">
+      <option value="">Alle segmenten</option>
+      <option value="schilder">Schilder</option>
+      <option value="dakdekker">Dakdekker</option>
+      <option value="electricien">Electricien</option>
+    </select>
+  </div>
+  <div class="content-filter-item">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+    <select id="filter-type" class="status-select">
+      <option value="">Alle types</option>
+      <option value="landingpage">Landingspagina</option>
+      <option value="ads">Ads AdGroup</option>
+      <option value="blog">Blog</option>
+      <option value="other">Overige</option>
+    </select>
+  </div>
+  <div class="content-filter-item">
+    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+    <select id="filter-status" class="status-select">
+      <option value="">Alle statussen</option>
+      <option value="idea">Idee</option>
+      <option value="concept">Concept</option>
+      <option value="review">Wacht op review</option>
+      <option value="approved">Goedgekeurd</option>
+      <option value="live">Live</option>
+    </select>
+  </div>
+</div>
+
+<!-- Backlog Tabel - EXACT zoals /admin/leads -->
+<div class="table-container">
+  <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Content & campagnes backlog</h3>
+      <p style="margin-top: 4px; font-size: 14px; color: #6b7280;">Overzicht van alle door AI voorgestelde landingspagina's, advertenties en content-items.</p>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button 
+        id="regenerate-recommendations-btn"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+        title="Genereer nieuwe AI aanbevelingen"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Regenereren
+      </button>
+      <button 
+        id="test-landing-page-btn"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+        title="Test een landing page in een nieuw tabblad"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+        </svg>
+        Test Landing Page
+      </button>
+    </div>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Titel / Naam</th>
+          <th>Segment</th>
+          <th>Kanaal</th>
+          <th>Status</th>
+          <th>Laatste update</th>
+          <th style="text-align: right;">Actie</th>
+        </tr>
+      </thead>
+      <tbody id="backlog-table-body">
+        <!-- Dynamisch gevuld -->
+      </tbody>
+      <tbody id="backlog-table-skeleton" style="display: none;">
+        <!-- Skeleton loader rows -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal voor Landing Page Test/Create -->
+<div id="landing-page-modal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>Landing Page Testen / Aanmaken</h2>
+      <button class="modal-close" onclick="closeLandingPageModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-loading" class="text-center py-8" style="display: none;">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <p class="mt-4 text-gray-600">Laden...</p>
+      </div>
+      
+      <div id="modal-content">
+        <div id="modal-no-lp" style="display: none;">
+          <p class="text-gray-700 mb-4">Er is geen live landing page gevonden om te testen.</p>
+          <p class="text-gray-600 mb-6">Wil je automatisch een test landing page aanmaken?</p>
+          <div class="flex gap-3">
+            <button 
+              onclick="createTestLandingPageFromModal()" 
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+            >
+              Ja, maak aan
+            </button>
+            <button 
+              onclick="closeLandingPageModal()" 
+              class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+        
+        <div id="modal-has-lp" style="display: none;">
+          <p class="text-gray-700 mb-4">Er is een live landing page gevonden!</p>
+          <div class="bg-gray-50 p-4 rounded-md mb-4">
+            <p class="text-sm text-gray-600 mb-2"><strong>Path:</strong> <span id="modal-lp-path" class="font-mono"></span></p>
+            <p class="text-sm text-gray-600"><strong>Titel:</strong> <span id="modal-lp-title"></span></p>
+          </div>
+          <div class="flex gap-3">
+            <button 
+              onclick="openTestLandingPage()" 
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+            >
+              Open in nieuw tabblad
+            </button>
+            <button 
+              onclick="closeLandingPageModal()" 
+              class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+        
+        <div id="modal-error" style="display: none;">
+          <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <p class="text-red-800" id="modal-error-message"></p>
+          </div>
+          <div class="flex gap-3">
+            <button 
+              onclick="createTestLandingPageFromModal()" 
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+            >
+              Probeer test LP aan te maken
+            </button>
+            <button 
+              onclick="closeLandingPageModal()" 
+              class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

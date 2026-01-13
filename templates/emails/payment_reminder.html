@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betalingsherinnering - GrowSocial</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #dc2626;
+            margin: 20px 0;
+        }
+        .warning {
+            background-color: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://growsocial.nl/logo.png" alt="GrowSocial Logo" class="logo">
+        </div>
+        
+        <div class="content">
+            <h1>Betalingsherinnering</h1>
+            
+            <p>Beste {{company_name}},</p>
+            
+            <div class="warning">
+                <p><strong>Let op:</strong> Deze factuur is {{days_overdue}} dagen over tijd.</p>
+            </div>
+            
+            <p>Wij hebben nog geen betaling ontvangen voor onderstaande factuur:</p>
+            
+            <div class="amount">
+                €{{amount}}
+            </div>
+            
+            <p><strong>Factuurnummer:</strong> {{invoice_number}}</p>
+            <p><strong>Vervaldatum:</strong> {{due_date}}</p>
+            
+            <p>Wij verzoeken u vriendelijk om deze betaling zo spoedig mogelijk te voldoen. U kunt de factuur bekijken via onderstaande link:</p>
+            
+            <a href="{{pdf_url}}" class="button">Factuur bekijken</a>
+            
+            <p>Heeft u de betaling al gedaan? Dan kunt u deze herinnering negeren. Heeft u vragen of wilt u een betalingsregeling treffen? Neem dan gerust contact met ons op.</p>
+            
+            <p>Met vriendelijke groet,<br>Het GrowSocial Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>GrowSocial B.V. | Hoofdstraat 123, 1234 AB Amsterdam</p>
+            <p>BTW: NL123456789B01 | KvK: 12345678</p>
+            <p>Tel: +31 (0)20 123 4567 | Email: facturen@growsocial.nl</p>
+        </div>
+    </div>
+</body>
+</html> 

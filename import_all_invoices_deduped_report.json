@@ -1,0 +1,332 @@
+{
+  "inputs": {
+    "zoho": "/Users/rogierschoenmakers/Downloads/Factuur (1).csv",
+    "eboekhouden": "/Users/rogierschoenmakers/Downloads/Facturen GrowSocial 13-01-2026.csv"
+  },
+  "zoho_invoice_count": 244,
+  "zoho_line_rows": 395,
+  "eboekhouden_invoice_count": 97,
+  "merged_invoice_count": 319,
+  "overlap_invoice_numbers": 22,
+  "overlap_details": [
+    {
+      "invoice_number": "GS-0514",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-04-02",
+        "total": 561.92
+      },
+      "eboekhouden": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-03-29",
+        "total": 561.92
+      }
+    },
+    {
+      "invoice_number": "GS-0512",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-03-18",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-03-18",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0510",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Steck013",
+        "date": "2024-03-30",
+        "total": 133.1
+      },
+      "eboekhouden": {
+        "customer": "Steck013",
+        "date": "2024-03-18",
+        "total": 133.1
+      }
+    },
+    {
+      "invoice_number": "GS-0504",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-02-25",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-02-25",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0503",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-02-25",
+        "total": 561.92
+      },
+      "eboekhouden": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-02-25",
+        "total": 924.92
+      }
+    },
+    {
+      "invoice_number": "GS-0502",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Steck013",
+        "date": "2024-02-25",
+        "total": 133.1
+      },
+      "eboekhouden": {
+        "customer": "Steck013",
+        "date": "2024-02-25",
+        "total": 133.1
+      }
+    },
+    {
+      "invoice_number": "GS-0500",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2024-01-31",
+        "total": 907.5
+      },
+      "eboekhouden": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2024-01-31",
+        "total": 907.5
+      }
+    },
+    {
+      "invoice_number": "GS-0499",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Amsterdam Design",
+        "date": "2024-01-29",
+        "total": 1185.8
+      },
+      "eboekhouden": {
+        "customer": "Amsterdam Design",
+        "date": "2024-01-29",
+        "total": 1185.8
+      }
+    },
+    {
+      "invoice_number": "GS-0498",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakbeheer Acuut",
+        "date": "2024-04-01",
+        "total": 907.5
+      },
+      "eboekhouden": {
+        "customer": "Dakbeheer Acuut",
+        "date": "2024-01-29",
+        "total": 907.5
+      }
+    },
+    {
+      "invoice_number": "GS-0497",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-01-29",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2024-01-29",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0496",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-01-29",
+        "total": 561.92
+      },
+      "eboekhouden": {
+        "customer": "Dakpreventie van der Steen",
+        "date": "2024-01-29",
+        "total": 561.92
+      }
+    },
+    {
+      "invoice_number": "GS-0495",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Steck013",
+        "date": "2024-01-29",
+        "total": 133.1
+      },
+      "eboekhouden": {
+        "customer": "Steck013",
+        "date": "2024-01-29",
+        "total": 133.1
+      }
+    },
+    {
+      "invoice_number": "GS-0493",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "The Workspot",
+        "date": "2024-01-15",
+        "total": 1185.8
+      },
+      "eboekhouden": {
+        "customer": "The Workspot",
+        "date": "2024-01-15",
+        "total": 1185.8
+      }
+    },
+    {
+      "invoice_number": "GS-0487",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-12-21",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-12-21",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0481",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2023-11-24",
+        "total": 544.5
+      },
+      "eboekhouden": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2023-11-24",
+        "total": 544.5
+      }
+    },
+    {
+      "invoice_number": "GS-0480",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-11-24",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-11-24",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0476",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2023-11-02",
+        "total": 544.5
+      },
+      "eboekhouden": {
+        "customer": "Jouwgeboortewijn",
+        "date": "2023-11-02",
+        "total": 544.5
+      }
+    },
+    {
+      "invoice_number": "GS-0473",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-10-27",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-10-27",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0469",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Lammy Yarns B.V.",
+        "date": "2023-10-18",
+        "total": 2395.8
+      },
+      "eboekhouden": {
+        "customer": "Lammy Yarns B.V.",
+        "date": "2023-10-18",
+        "total": 2395.8
+      }
+    },
+    {
+      "invoice_number": "GS-0466",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-08-26",
+        "total": 1439.9
+      },
+      "eboekhouden": {
+        "customer": "Dakmeester Nederland",
+        "date": "2023-09-26",
+        "total": 1439.9
+      }
+    },
+    {
+      "invoice_number": "GS-0456",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Steck013",
+        "date": "2023-07-17",
+        "total": 133.1
+      },
+      "eboekhouden": {
+        "customer": "Steck013",
+        "date": "2023-08-17",
+        "total": 133.1
+      }
+    },
+    {
+      "invoice_number": "GS-0442",
+      "used": "zoho_books",
+      "zoho": {
+        "customer": "Steck013",
+        "date": "2023-06-29",
+        "total": 133.1
+      },
+      "eboekhouden": {
+        "customer": "Steck013",
+        "date": "2023-06-29",
+        "total": 133.1
+      }
+    }
+  ],
+  "overlap_conflicts_count": 1,
+  "overlap_conflicts": [
+    {
+      "invoice_number": "GS-0503",
+      "zoho_total": 561.92,
+      "eboekhouden_total": 924.92,
+      "override": null
+    }
+  ],
+  "conflicts_multiple_zoho_same_number": {},
+  "renamed_due_to_customer_dupe": []
+}

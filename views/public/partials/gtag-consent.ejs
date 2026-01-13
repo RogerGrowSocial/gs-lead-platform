@@ -1,0 +1,65 @@
+<% if (typeof googleAdsTagId !== 'undefined' || typeof ga4MeasurementId !== 'undefined') { %>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=<%= googleAdsTagId || ga4MeasurementId %>"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+
+    gtag('js', new Date());
+
+    // Consent Mode v2 defaults: everything denied until the user explicitly grants
+    gtag('consent', 'default', {
+      'ad_storage': 'denied',
+      'analytics_storage': 'denied',
+      'functionality_storage': 'denied',
+      'personalization_storage': 'denied',
+      'security_storage': 'granted'
+    });
+
+    // Base config for Google Ads / GA4 if IDs are configured
+    <% if (googleAdsTagId) { %>
+    gtag('config', '<%= googleAdsTagId %>');
+    <% } %>
+    <% if (ga4MeasurementId) { %>
+    gtag('config', '<%= ga4MeasurementId %>');
+    <% } %>
+
+    // Simple consent helper the cookie banner / UI can call
+    window.growsocialConsent = (function() {
+      let state = {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        functionality_storage: 'denied',
+        personalization_storage: 'denied'
+      };
+
+      function update(consent) {
+        state = { ...state, ...consent };
+        gtag('consent', 'update', consent);
+      }
+
+      return {
+        grantAdsAndAnalytics: function () {
+          update({
+            ad_storage: 'granted',
+            analytics_storage: 'granted',
+            functionality_storage: 'granted',
+            personalization_storage: 'granted'
+          });
+        },
+        denyAll: function () {
+          update({
+            ad_storage: 'denied',
+            analytics_storage: 'denied',
+            functionality_storage: 'denied',
+            personalization_storage: 'denied'
+          });
+        },
+        canSendAds: function () {
+          return state.ad_storage === 'granted';
+        }
+      };
+    })();
+  </script>
+<% } %>
+
+

@@ -1,0 +1,110 @@
+/* Condensed from provided spec to match v0 design */
+.werknemer-detail-page{
+  min-height:100vh;
+  background:#ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.werknemer-detail-header{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e5e7eb;padding:0}
+.werknemer-detail-header-inner{display:flex;justify-content:space-between;align-items:center;max-width:1400px;margin:0 auto;padding:1rem}
+.werknemer-back-btn{display:flex;align-items:center;gap:8px;padding:8px 16px;background:transparent;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:500;color:#374151;cursor:pointer;transition:all 150ms ease}
+.werknemer-back-btn:hover{background:#f9fafb;border-color:#d1d5db}
+.werknemer-header-actions{display:flex;gap:12px}
+.werknemer-action-btn{display:flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:500;background:#fff;cursor:pointer;transition:all 150ms ease}
+.werknemer-action-edit{color:#374151}
+.werknemer-action-edit:hover{background:#f9fafb;border-color:#d1d5db}
+.werknemer-action-delete{color:#dc2626;border-color:#fecaca}
+.werknemer-action-delete:hover{background:#fef2f2;border-color:#fca5a5}
+.werknemer-detail-content{max-width:1400px;margin:0 auto;padding:0}
+.werknemer-detail-grid{display:grid;grid-template-columns:1fr 320px;gap:24px}
+.werknemer-detail-left{display:flex;flex-direction:column;gap:24px}
+.werknemer-header-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;padding:24px;box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)}
+.werknemer-header-card-inner{display:flex;gap:20px;padding-bottom:20px;border-bottom:1px solid #f3f4f6}
+.werknemer-detail-avatar{width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:#e5e7eb;color:#6b7280;border-radius:16px;font-size:28px;font-weight:700;flex-shrink:0}
+.werknemer-header-info{flex:1;min-width:0}
+.werknemer-header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.werknemer-detail-name{font-size:24px;font-weight:700;color:#111827;margin:0 0 8px 0}
+.werknemer-header-badges{display:flex;gap:8px;flex-wrap:wrap}
+.werknemer-header-score{text-align:right}
+.werknemer-score-value{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:4px}
+.werknemer-score-value i{font-size:20px;color:#fbbf24}
+.werknemer-score-value span{font-size:32px;font-weight:700;color:#111827}
+.werknemer-score-label{font-size:12px;color:#6b7280;margin:0}
+.werknemer-header-role{display:flex;align-items:center;gap:8px;font-size:16px;color:#6b7280;margin:0 0 16px 0}
+.werknemer-header-role i{font-size:16px;color:#9ca3af}
+.werknemer-header-contact{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.werknemer-contact-item{display:flex;align-items:center;gap:8px;font-size:14px;color:#6b7280}
+.werknemer-contact-item i{font-size:16px;color:#9ca3af;width:16px}
+.werknemer-bio{padding-top:20px}
+.werknemer-bio p{font-size:14px;line-height:1.6;color:#6b7280;margin:0}
+.werknemer-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.werknemer-stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;padding:20px;box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)}
+.werknemer-stat-card-inner{display:flex;align-items:center;gap:16px}
+.werknemer-stat-icon{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:12px;flex-shrink:0}
+.werknemer-stat-card-green .werknemer-stat-icon{background:#dcfce7}
+.werknemer-stat-card-green .werknemer-stat-icon i{font-size:24px;color:#16a34a}
+.werknemer-stat-card-blue .werknemer-stat-icon{background:#dbeafe}
+.werknemer-stat-card-blue .werknemer-stat-icon i{font-size:24px;color:#2563eb}
+.werknemer-stat-card-orange .werknemer-stat-icon{background:#fed7aa}
+.werknemer-stat-card-orange .werknemer-stat-icon i{font-size:24px;color:#ea5d0d}
+.werknemer-stat-card-label{font-size:13px;color:#6b7280;margin:0 0 4px 0}
+.werknemer-stat-card-value{font-size:28px;font-weight:700;color:#111827;margin:0}
+.werknemer-stat-card-value-small{font-size:20px;font-weight:700;color:#111827;margin:0}
+.werknemer-tabs{background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);overflow:hidden}
+.werknemer-tabs-header{display:flex;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+.werknemer-tab-btn{flex:1;padding:16px 24px;background:transparent;border:none;border-bottom:2px solid transparent;font-size:14px;font-weight:500;color:#6b7280;cursor:pointer;transition:all 150ms ease}
+.werknemer-tab-btn:hover{color:#374151;background:#f3f4f6}
+.werknemer-tab-btn.active{color:#ea5d0d;border-bottom-color:#ea5d0d;background:#fff}
+.werknemer-tab-content{display:none}
+.werknemer-tab-content.active{display:block}
+.werknemer-tab-card{padding:24px}
+.werknemer-tab-title{font-size:16px;font-weight:600;color:#111827;margin:0 0 20px 0}
+.werknemer-activity-list{display:flex;flex-direction:column;gap:16px}
+.werknemer-activity-item{display:flex;gap:12px}
+.werknemer-activity-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;flex-shrink:0}
+.werknemer-activity-deal_won{background:#dcfce7}
+.werknemer-activity-deal_won i{font-size:18px;color:#16a34a}
+.werknemer-activity-meeting{background:#dbeafe}
+.werknemer-activity-meeting i{font-size:18px;color:#2563eb}
+.werknemer-activity-email{background:#fef3c7}
+.werknemer-activity-email i{font-size:18px;color:#d97706}
+.werknemer-activity-note{background:#f3f4f6}
+.werknemer-activity-note i{font-size:18px;color:#6b7280}
+.werknemer-activity-content{flex:1}
+.werknemer-activity-text{font-size:14px;color:#374151;margin:0 0 4px 0;line-height:1.5}
+.werknemer-activity-time{font-size:12px;color:#9ca3af;margin:0}
+.werknemer-deals-list{display:flex;flex-direction:column;gap:12px}
+.werknemer-deal-item{display:flex;justify-content:space-between;align-items:center;padding:16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px}
+.werknemer-deal-company{font-size:15px;font-weight:600;color:#111827;margin:0 0 4px 0}
+.werknemer-deal-date{font-size:13px;color:#6b7280;margin:0}
+.werknemer-deal-right{text-align:right}
+.werknemer-deal-value{font-size:16px;font-weight:700;color:#111827;margin:0 0 6px 0}
+.werknemer-badge-won{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.werknemer-badge-negotiation{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+.werknemer-performance-list{display:flex;flex-direction:column;gap:12px}
+.werknemer-performance-item{display:flex;justify-content:space-between;align-items:center;padding:16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px}
+.werknemer-performance-left{display:flex;flex-direction:column;gap:6px}
+.werknemer-performance-month{font-size:15px;font-weight:600;color:#111827;margin:0}
+.werknemer-performance-deals{display:flex;align-items:center;gap:6px;font-size:13px;color:#6b7280}
+.werknemer-performance-deals i{font-size:14px;color:#fbbf24}
+.werknemer-performance-revenue{font-size:18px;font-weight:700;color:#111827;margin:0}
+.werknemer-detail-right{display:flex;flex-direction:column;gap:20px}
+.werknemer-sidebar-card{background:#fff;border:1px solid #e5e7eb;border-radius:0.5rem;padding:20px;box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)}
+.werknemer-sidebar-title{font-size:14px;font-weight:600;color:#111827;margin:0 0 16px 0}
+.werknemer-skills{display:flex;flex-wrap:wrap;gap:8px}
+.werknemer-skill-badge{padding:6px 12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;font-weight:500;color:#374151}
+.werknemer-quick-stats{display:flex;flex-direction:column;gap:16px}
+.werknemer-quick-stat{display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;border-bottom:1px solid #f3f4f6}
+.werknemer-quick-stat:last-child{padding-bottom:0;border-bottom:none}
+.werknemer-quick-stat-label{font-size:13px;color:#6b7280}
+.werknemer-quick-stat-value{font-size:16px;font-weight:700;color:#111827}
+.werknemer-trend-card{background:linear-gradient(135deg,#dcfce7 0%,#d1fae5 100%);border-color:#bbf7d0}
+.werknemer-trend-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.werknemer-trend-header i{font-size:18px;color:#16a34a}
+.werknemer-trend-value{font-size:36px;font-weight:700;color:#166534;margin:0 0 4px 0}
+.werknemer-trend-label{font-size:13px;color:#15803d;margin:0 0 16px 0}
+.werknemer-trend-note{padding-top:16px;border-top:1px solid #bbf7d0}
+.werknemer-trend-note p{font-size:13px;line-height:1.5;color:#15803d;margin:0}
+@media (max-width:1024px){.werknemer-detail-grid{grid-template-columns:1fr}.werknemer-detail-right{order:-1}.werknemer-stats-grid{grid-template-columns:1fr}}
+@media (max-width:768px){.werknemer-header-card-inner{flex-direction:column;align-items:center;text-align:center}.werknemer-header-top{flex-direction:column;align-items:center}.werknemer-header-score{text-align:center}.werknemer-header-contact{grid-template-columns:1fr}.werknemer-tabs-header{flex-direction:column}}
+
+

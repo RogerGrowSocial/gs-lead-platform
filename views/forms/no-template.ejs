@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulier niet beschikbaar</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #f9fafb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    .container {
+      max-width: 42rem;
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      padding: 32px;
+      text-align: center;
+    }
+    .icon-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: #fef3c7;
+      border-radius: 50%;
+      margin-bottom: 16px;
+    }
+    .icon-container svg {
+      width: 32px;
+      height: 32px;
+      color: #d97706;
+    }
+    h1 {
+      font-size: 30px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #4b5563;
+      margin-bottom: 24px;
+    }
+    .info-box {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .info-box p {
+      color: #374151;
+      margin-bottom: 0;
+    }
+    .actions {
+      display: flex;
+      justify-content: center;
+    }
+    .btn {
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-block;
+      background: #ea5d0d;
+      color: white;
+    }
+    .btn:hover {
+      background: #d14d07;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-container">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+      </svg>
+    </div>
+    <h1>Formulier niet beschikbaar</h1>
+    <p>
+      Er is nog geen aanvraagformulier ingesteld voor <strong><%= industry.name %></strong>.
+    </p>
+    <div class="info-box">
+      <p>
+        Neem contact met ons op via een andere manier, of probeer het later opnieuw.
+      </p>
+    </div>
+    <div class="actions">
+      <a href="/" class="btn">Terug naar homepage</a>
+    </div>
+  </div>
+</body>
+</html>

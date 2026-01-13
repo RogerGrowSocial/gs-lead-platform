@@ -1,0 +1,427 @@
+<%
+  // Build body content - this will be inserted into main-container
+  const bodyContent = `
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+      <div>
+        <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem 0;">💰 KPI Simulator</h2>
+        <p style="color: #6b7280; margin: 0;">Test tool om KPI's op het dashboard te simuleren met realistische updates</p>
+      </div>
+    </div>
+
+    <div class="kpi-card" style="margin-bottom: 2rem;">
+      <div class="kpi-card-content">
+        <div style="width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.5rem; font-weight: 600; margin: 0;">Simulatie Status</h2>
+            <label style="display: flex; align-items: center; cursor: pointer;">
+              <input type="checkbox" id="simulationToggle" style="margin-right: 0.5rem; width: 20px; height: 20px; cursor: pointer;">
+              <span style="font-weight: 500; font-size: 1rem;" id="toggleLabel">Uit</span>
+            </label>
+          </div>
+          
+          <div id="simulationStatus" style="padding: 1rem; background: #f3f4f6; border-radius: 0.5rem; margin-bottom: 1rem;">
+            <p style="margin: 0; color: #6b7280;">Simulatie is <strong id="statusText">uitgeschakeld</strong></p>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #9ca3af;" id="statusDetails">
+              KPI's tonen echte data van de database
+            </p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div style="padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Update Interval</p>
+              <p style="margin: 0; font-size: 1.25rem; font-weight: 600;" id="updateInterval">-</p>
+            </div>
+            <div style="padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Laatste Update</p>
+              <p style="margin: 0; font-size: 1.25rem; font-weight: 600;" id="lastUpdate">-</p>
+            </div>
+            <div style="padding: 1rem; background: #f9fafb; border-radius: 0.5rem;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Totaal Updates</p>
+              <p style="margin: 0; font-size: 1.25rem; font-weight: 600;" id="totalUpdates">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-card-content">
+        <div style="width: 100%;">
+          <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Huidige Simulatie Waarden</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: #eff6ff; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Gebruikers</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #3b82f6;" id="simUsers">0</p>
+            </div>
+            <div style="padding: 1rem; background: #fef3c7; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Aanvragen</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #f59e0b;" id="simLeads">0</p>
+            </div>
+            <div style="padding: 1rem; background: #d1fae5; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Totale Omzet</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #10b981;" id="simRevenue">€0,00</p>
+            </div>
+            <div style="padding: 1rem; background: #fee2e2; border-radius: 0.5rem; border-left: 4px solid #ef4444;">
+              <p style="margin: 0; font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Wachtende Aanvragen</p>
+              <p style="margin: 0; font-size: 1.5rem; font-weight: 700; color: #ef4444;" id="simPending">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+`;
+%>
+
+<%- include('../layouts/admin', { 
+  title: 'KPI Simulator',
+  activeMenu: 'dashboard',
+  stylesheets: ['/css/admin/dashboard.css'],
+  body: bodyContent
+}) %>
+
+<script>
+(function() {
+  let simulationActive = false;
+  let simulationInterval = null;
+  let updateCount = 0;
+  let baseStats = {
+    totalUsers: 0,
+    totalLeads: 0,
+    totalRevenue: 0,
+    pendingLeads: 0
+  };
+  let currentSimStats = { ...baseStats };
+
+  // Format currency
+  function formatCurrency(amount) {
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+  }
+
+  // Load real KPI data
+  async function loadRealKPIData() {
+    try {
+      // (debug removed)
+      const response = await fetch('/admin/api/admin/dashboard-kpis?period=lifetime');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // (debug removed)
+      
+      if (data.success && data.stats) {
+        baseStats = {
+          totalUsers: data.stats.totalUsers || 0,
+          totalLeads: data.stats.totalLeads || 0,
+          totalRevenue: data.stats.totalRevenue || 0,
+          pendingLeads: data.stats.pendingLeads || 0
+        };
+        currentSimStats = { ...baseStats };
+        // (debug removed)
+        updateDisplay();
+      } else {
+        console.warn('No stats in response, using defaults');
+        baseStats = {
+          totalUsers: 0,
+          totalLeads: 0,
+          totalRevenue: 0,
+          pendingLeads: 0
+        };
+        currentSimStats = { ...baseStats };
+        updateDisplay();
+      }
+    } catch (error) {
+      console.error('Error loading real KPI data:', error);
+      // Use defaults if API fails
+      baseStats = {
+        totalUsers: 0,
+        totalLeads: 0,
+        totalRevenue: 0,
+        pendingLeads: 0
+      };
+      currentSimStats = { ...baseStats };
+      updateDisplay();
+    }
+  }
+
+  // Update dashboard KPI cards (if dashboard is open in another tab)
+  function updateDashboardKPIs(stats) {
+    // Store in localStorage so dashboard can read it
+    localStorage.setItem('kpi_simulation_active', simulationActive ? 'true' : 'false');
+    localStorage.setItem('kpi_simulation_data', JSON.stringify(stats));
+    localStorage.setItem('kpi_simulation_timestamp', Date.now().toString());
+    
+    // Dispatch custom event for same-tab updates (storage events only work cross-tab)
+    window.dispatchEvent(new CustomEvent('kpiSimulationDataUpdate', {
+      detail: { stats: stats }
+    }));
+    
+    // Also try to update directly if elements exist (same page)
+    const usersEl = document.getElementById('kpi-total-users');
+    const leadsEl = document.getElementById('kpi-total-leads');
+    const revenueEl = document.getElementById('kpi-total-revenue');
+    const pendingEl = document.getElementById('kpi-pending-leads');
+
+    if (usersEl) usersEl.textContent = stats.totalUsers.toLocaleString('nl-NL');
+    if (leadsEl) leadsEl.textContent = stats.totalLeads.toLocaleString('nl-NL');
+    if (revenueEl) revenueEl.textContent = formatCurrency(stats.totalRevenue);
+    if (pendingEl) pendingEl.textContent = stats.pendingLeads.toLocaleString('nl-NL');
+  }
+
+  // Update display on this page
+  function updateDisplay() {
+    try {
+      const simUsersEl = document.getElementById('simUsers');
+      const simLeadsEl = document.getElementById('simLeads');
+      const simRevenueEl = document.getElementById('simRevenue');
+      const simPendingEl = document.getElementById('simPending');
+      
+      if (simUsersEl) simUsersEl.textContent = currentSimStats.totalUsers.toLocaleString('nl-NL');
+      if (simLeadsEl) simLeadsEl.textContent = currentSimStats.totalLeads.toLocaleString('nl-NL');
+      if (simRevenueEl) simRevenueEl.textContent = formatCurrency(currentSimStats.totalRevenue);
+      if (simPendingEl) simPendingEl.textContent = currentSimStats.pendingLeads.toLocaleString('nl-NL');
+      
+      // (debug removed)
+      
+      // Also update dashboard if we're on the same domain
+      updateDashboardKPIs(currentSimStats);
+    } catch (error) {
+      console.error('Error updating display:', error);
+    }
+  }
+
+  // Generate realistic random increment
+  function getRandomIncrement(baseValue, type) {
+    // Different increment patterns for different KPIs - increased for more action
+    switch(type) {
+      case 'users':
+        // Users grow: 1-5 per update (was 0-3)
+        return Math.floor(Math.random() * 5) + 1;
+      case 'leads':
+        // Leads grow: 2-12 per update (was 1-8)
+        return Math.floor(Math.random() * 11) + 2;
+      case 'revenue':
+        // Revenue grows: €10-€200 per update (was €5-€150)
+        return Math.floor(Math.random() * 190) + 10;
+      case 'pending':
+        // Pending leads fluctuate: -3 to +7 (was -2 to +5)
+        return Math.floor(Math.random() * 11) - 3;
+      default:
+        return 0;
+    }
+  }
+
+  // Simulate KPI update
+  function simulateUpdate() {
+    if (!simulationActive) {
+      // (debug removed)
+      return;
+    }
+    
+    // Random interval between 0.5-2 seconds for constant action
+    const nextInterval = Math.floor(Math.random() * 1500) + 500;
+    
+    // Update stats with realistic increments
+    const userIncrement = getRandomIncrement(currentSimStats.totalUsers, 'users');
+    const leadIncrement = getRandomIncrement(currentSimStats.totalLeads, 'leads');
+    const revenueIncrement = getRandomIncrement(currentSimStats.totalRevenue, 'revenue');
+    const pendingIncrement = getRandomIncrement(currentSimStats.pendingLeads, 'pending');
+    
+    currentSimStats.totalUsers += userIncrement;
+    currentSimStats.totalLeads += leadIncrement;
+    currentSimStats.totalRevenue += revenueIncrement;
+    currentSimStats.pendingLeads = Math.max(0, currentSimStats.pendingLeads + pendingIncrement);
+
+    updateCount++;
+    
+    // (debug removed)
+    
+    updateDisplay();
+    
+    // Update status
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const totalUpdatesEl = document.getElementById('totalUpdates');
+    const updateIntervalEl = document.getElementById('updateInterval');
+    
+    if (lastUpdateEl) lastUpdateEl.textContent = new Date().toLocaleTimeString('nl-NL');
+    if (totalUpdatesEl) totalUpdatesEl.textContent = updateCount;
+    if (updateIntervalEl) updateIntervalEl.textContent = `${(nextInterval / 1000).toFixed(1)}s`;
+
+    // Schedule next update
+    if (simulationActive) {
+      simulationInterval = setTimeout(simulateUpdate, nextInterval);
+    }
+  }
+
+  // Start simulation
+  function startSimulation() {
+    if (simulationActive) {
+      // (debug removed)
+      return;
+    }
+    
+    // (debug removed)
+    simulationActive = true;
+    updateCount = 0;
+    
+    // Save simulation state to localStorage
+    localStorage.setItem('kpi_simulation_active', 'true');
+    localStorage.setItem('kpi_simulation_persistent', 'true'); // Persistent flag
+    
+    const toggleLabelEl = document.getElementById('toggleLabel');
+    const statusTextEl = document.getElementById('statusText');
+    const statusDetailsEl = document.getElementById('statusDetails');
+    const simulationStatusEl = document.getElementById('simulationStatus');
+    const toggleEl = document.getElementById('simulationToggle');
+    
+    if (toggleEl) toggleEl.checked = true;
+    if (toggleLabelEl) toggleLabelEl.textContent = 'Aan';
+    if (statusTextEl) statusTextEl.textContent = 'ingeschakeld';
+    if (statusDetailsEl) statusDetailsEl.textContent = 'KPI\'s worden nu gesimuleerd met realistische random updates';
+    if (simulationStatusEl) {
+      simulationStatusEl.style.background = '#d1fae5';
+      if (statusTextEl) statusTextEl.style.color = '#10b981';
+    }
+    
+    // If global producer exists (admin layout), it will keep simulation running on ANY admin page.
+    // Avoid running a second local simulation loop here (would double-increment).
+    if (window.__kpiSimulationProducerActive) {
+      // (debug removed)
+      // Still ensure dashboard gets a first push immediately
+      updateDashboardKPIs(currentSimStats);
+      return;
+    }
+
+    // Fallback: local simulation loop (if admin layout script not present)
+    // (debug removed)
+    simulateUpdate();
+  }
+
+  // Stop simulation
+  function stopSimulation() {
+    if (!simulationActive) return;
+    
+    simulationActive = false;
+    if (simulationInterval) {
+      clearTimeout(simulationInterval);
+      simulationInterval = null;
+    }
+    
+    // Remove simulation state from localStorage
+    localStorage.setItem('kpi_simulation_active', 'false');
+    localStorage.removeItem('kpi_simulation_persistent');
+    
+    const toggleLabelEl = document.getElementById('toggleLabel');
+    const statusTextEl = document.getElementById('statusText');
+    const statusDetailsEl = document.getElementById('statusDetails');
+    const simulationStatusEl = document.getElementById('simulationStatus');
+    const toggleEl = document.getElementById('simulationToggle');
+    
+    if (toggleEl) toggleEl.checked = false;
+    if (toggleLabelEl) toggleLabelEl.textContent = 'Uit';
+    if (statusTextEl) statusTextEl.textContent = 'uitgeschakeld';
+    if (statusDetailsEl) statusDetailsEl.textContent = 'KPI\'s tonen echte data van de database';
+    if (simulationStatusEl) {
+      simulationStatusEl.style.background = '#f3f4f6';
+      if (statusTextEl) statusTextEl.style.color = '#6b7280';
+    }
+    
+    // Reset to real data
+    currentSimStats = { ...baseStats };
+    updateDisplay();
+    
+    // Reload real data
+    loadRealKPIData();
+  }
+
+  // Restore simulation state from localStorage
+  async function restoreSimulationState() {
+    const persistent = localStorage.getItem('kpi_simulation_persistent') === 'true';
+    const savedData = localStorage.getItem('kpi_simulation_data');
+    
+    if (persistent && savedData) {
+      try {
+        const savedStats = JSON.parse(savedData);
+        
+        // First load real data to get baseStats
+        await loadRealKPIData();
+        
+        // Then restore the saved simulation stats (continue from where we left off)
+        currentSimStats = { ...savedStats };
+        
+        // Update display with saved stats
+        updateDisplay();
+        
+        // Start simulation automatically (this will continue from saved stats)
+        // (debug removed)
+        simulationActive = true; // Set flag first
+        const toggleEl = document.getElementById('simulationToggle');
+        if (toggleEl) toggleEl.checked = true;
+        
+        // Update UI
+        const toggleLabelEl = document.getElementById('toggleLabel');
+        const statusTextEl = document.getElementById('statusText');
+        const statusDetailsEl = document.getElementById('statusDetails');
+        const simulationStatusEl = document.getElementById('simulationStatus');
+        
+        if (toggleLabelEl) toggleLabelEl.textContent = 'Aan';
+        if (statusTextEl) statusTextEl.textContent = 'ingeschakeld';
+        if (statusDetailsEl) statusDetailsEl.textContent = 'KPI\'s worden nu gesimuleerd met realistische random updates';
+        if (simulationStatusEl) {
+          simulationStatusEl.style.background = '#d1fae5';
+          if (statusTextEl) statusTextEl.style.color = '#10b981';
+        }
+        
+        // Continue simulation from saved state
+        localStorage.setItem('kpi_simulation_active', 'true');
+        simulateUpdate();
+      } catch (error) {
+        console.error('Error restoring simulation state:', error);
+        // If restoration fails, load real data
+        loadRealKPIData();
+      }
+    } else {
+      // No persistent state, load real data
+      loadRealKPIData();
+    }
+  }
+
+  // Toggle handler
+  document.addEventListener('DOMContentLoaded', function() {
+    const toggleEl = document.getElementById('simulationToggle');
+    if (toggleEl) {
+      toggleEl.addEventListener('change', function(e) {
+        if (e.target.checked) {
+          startSimulation();
+        } else {
+          stopSimulation();
+        }
+      });
+    }
+    
+    // Restore simulation state if it was active before page reload
+    // Use async/await to ensure data is loaded before restoring
+    (async () => {
+      await restoreSimulationState();
+    })();
+    
+    // If global producer is active, it owns localStorage writes & timing.
+    // Keep local sync only as a fallback.
+    if (!window.__kpiSimulationProducerActive) {
+      // Store simulation state in localStorage for dashboard to read (more frequently for faster updates)
+      setInterval(() => {
+        if (simulationActive) {
+          localStorage.setItem('kpi_simulation_active', 'true');
+          localStorage.setItem('kpi_simulation_data', JSON.stringify(currentSimStats));
+          localStorage.setItem('kpi_simulation_timestamp', Date.now().toString());
+        } else {
+          localStorage.setItem('kpi_simulation_active', 'false');
+        }
+      }, 500); // Update every 500ms instead of 1000ms for faster sync
+    }
+  });
+})();
+</script>

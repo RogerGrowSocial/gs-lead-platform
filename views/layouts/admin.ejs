@@ -1,0 +1,2004 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | GrowSocial Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Design System -->
+  <link rel="stylesheet" href="/css/design-tokens.css">
+  <link rel="stylesheet" href="/css/chart-theme.css">
+  <!-- Component Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin/notifications.css">
+  <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
+    <% stylesheets.forEach(function(stylesheet) { %>
+      <link rel="stylesheet" href="<%= stylesheet %>" media="all">
+    <% }); %>
+  <% } %>
+  <% if (typeof extraHead !== 'undefined' && extraHead) { %>
+    <%- extraHead %>
+  <% } %>
+  <!-- Tailwind CSS CDN (voor utility classes) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Wait for tailwind to load
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', function() {
+        if (typeof tailwind !== 'undefined' && tailwind.config) {
+          tailwind.config = {
+            corePlugins: {
+              preflight: false, // Disable Tailwind's base styles to avoid conflicts
+            },
+            important: false // Don't add !important to all Tailwind classes
+          }
+        }
+      });
+    }
+  </script>
+  
+  <script>
+    // Prevent FOUC - Mark CSS as loaded when stylesheets are ready
+    (function() {
+      'use strict';
+      
+      function markCSSLoaded() {
+        if (!document.documentElement.classList.contains('css-loaded')) {
+          document.documentElement.classList.add('css-loaded');
+        }
+      }
+      
+      function checkStylesheetLoaded(link) {
+        try {
+          // Check if stylesheet is loaded
+          if (link.sheet || link.styleSheet) {
+            return true;
+          }
+          // For cross-origin stylesheets, check if they're in the document
+          if (link.href && link.href.indexOf(window.location.origin) === -1) {
+            // Cross-origin, assume loaded after a delay
+            return false;
+          }
+        } catch(e) {
+          // Cross-origin error, assume loaded
+          return true;
+        }
+        return false;
+      }
+      
+      function checkAllStylesheets() {
+        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+        const totalStylesheets = stylesheets.length;
+        
+        if (totalStylesheets === 0) {
+          markCSSLoaded();
+          return true;
+        }
+        
+        let loadedCount = 0;
+        let pendingCount = 0;
+        
+        stylesheets.forEach(function(link) {
+          if (checkStylesheetLoaded(link)) {
+            loadedCount++;
+          } else {
+            pendingCount++;
+            // Set up load listeners
+            var loadHandler = function() {
+              loadedCount++;
+              pendingCount--;
+              if (loadedCount >= totalStylesheets) {
+                markCSSLoaded();
+              }
+              link.removeEventListener('load', loadHandler);
+              link.removeEventListener('error', errorHandler);
+            };
+            var errorHandler = function() {
+              loadedCount++;
+              pendingCount--;
+              if (loadedCount >= totalStylesheets) {
+                markCSSLoaded();
+              }
+              link.removeEventListener('load', loadHandler);
+              link.removeEventListener('error', errorHandler);
+            };
+            
+            link.addEventListener('load', loadHandler);
+            link.addEventListener('error', errorHandler);
+          }
+        });
+        
+        // If all already loaded
+        if (loadedCount >= totalStylesheets) {
+          markCSSLoaded();
+          return true;
+        }
+        
+        return false;
+      }
+      
+      // Multiple check strategies for reliability
+      var checksComplete = false;
+      
+      // Strategy 1: Check immediately
+      if (checkAllStylesheets()) {
+        checksComplete = true;
+      }
+      
+      // Strategy 2: Check on DOMContentLoaded
+      if (!checksComplete) {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function() {
+            if (!checksComplete) {
+              checkAllStylesheets();
+            }
+          });
+        }
+      }
+      
+      // Strategy 3: Check on next animation frame
+      if (!checksComplete) {
+        requestAnimationFrame(function() {
+          if (!checksComplete) {
+            if (checkAllStylesheets()) {
+              checksComplete = true;
+            }
+          }
+        });
+      }
+      
+      // Strategy 4: Check after a short delay
+      setTimeout(function() {
+        if (!checksComplete) {
+          if (checkAllStylesheets()) {
+            checksComplete = true;
+          }
+        }
+      }, 10);
+      
+      // Strategy 5: Fallback timeout - always show after 200ms max to prevent infinite hiding
+      setTimeout(function() {
+        if (!document.documentElement.classList.contains('css-loaded')) {
+          markCSSLoaded();
+        }
+      }, 200);
+    })();
+  </script>
+  
+  <style>
+    /* Prevent FOUC - Hide content until CSS is loaded */
+    html:not(.css-loaded) body {
+      visibility: hidden;
+      opacity: 0;
+    }
+    
+    html.css-loaded body {
+      visibility: visible;
+      opacity: 1;
+      transition: opacity 0.05s ease-in;
+    }
+    
+    :root {
+      --admin-sidebar: #1e293b;
+      --admin-sidebar-foreground: #9ca3af; /* default text */
+      --admin-sidebar-hover: #2a2a2a;
+      --admin-sidebar-active: #ea5d0d;
+      --admin-sidebar-active-fg: #ffffff;
+      --admin-sidebar-border: #2a2a2a;
+      --admin-accent: #ea5d0d;
+    }
+    
+    html {
+      overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden; /* Prevent horizontal scroll */
+    }
+    
+    /* Ensure all text elements use consistent font metrics */
+    table th, table td, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, select, label {
+      font-size-adjust: 0.52;
+    }
+    
+    /* CRITICAL CSS - Prevent black borders and layout shift */
+    /* All containers and cards */
+    * {
+      box-sizing: border-box;
+    }
+    
+    .dashboard-container,
+    .main-content,
+    .main-container,
+    .opportunities-container,
+    .kpi-cards-container,
+    .kpi-cards-grid,
+    .kpi-card,
+    .user-item,
+    .users-listing-container,
+    .users-header-row,
+    .users-list,
+    .opportunities-listing-container,
+    .opportunities-header-row,
+    .opportunities-list,
+    .opportunity-card-entry,
+    .page-header,
+    .header-actions {
+      background-color: #ffffff !important;
+      border-color: #e5e7eb !important;
+    }
+    
+    /* Specific border styles */
+    .kpi-card,
+    .ai-router-status-bar {
+      border: 1px solid #e5e7eb !important;
+      border-radius: 8px !important;
+      box-shadow: none !important;
+    }
+    
+    .user-item {
+      border-bottom: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+    
+    .users-listing-container,
+    .opportunities-listing-container {
+      border: 1px solid #e5e7eb !important;
+      border-radius: 12px !important;
+      box-shadow: 0 1px 2px rgba(0,0,0,.03) !important;
+    }
+    
+    .users-header-row,
+    .opportunities-header-row {
+      border-bottom: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+    
+    .opportunity-card-entry {
+      border-bottom: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background-color: #ffffff !important;
+      border-right: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      border-left: none !important;
+    }
+    
+    .logo-section {
+      border-bottom: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+    
+    /* Main header */
+    .main-header {
+      background: white !important;
+      border-bottom: 1px solid #e5e7eb !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+    
+    /* Buttons and inputs */
+    .btn-primary,
+    .users-search-input,
+    .users-dropdown,
+    .opportunities-search-input,
+    .opportunities-dropdown {
+      border: 1px solid #e5e7eb !important;
+    }
+    
+    .btn-primary {
+      background: #ea5d0d !important;
+      border-color: #ea5d0d !important;
+    }
+    
+    /* Remove ALL default borders from all elements to prevent black lines */
+    * {
+      border-width: 0 !important;
+      border-style: none !important;
+      border-color: transparent !important;
+    }
+    
+    /* Only allow specific borders on specific elements */
+    /* Card containers that need full borders - whitelist approach only */
+    .kpi-card,
+    .detail-card,
+    .monthly-growth-card,
+    .user-card,
+    .user-warning-card,
+    .settings-card,
+    .company-card,
+    .ai-card,
+    .ai-router-status-bar,
+    .next-steps-card,
+    .info-card,
+    .benefits-card-modern,
+    .calendar-day,
+    .calendar-main,
+    .sidebar-section {
+      border-width: 0.5px !important;
+      border-style: solid !important;
+      border-color: #e5e7eb !important;
+    }
+    
+    /* Modal borders */
+    .modal-header {
+      border-bottom-width: 1px !important;
+      border-bottom-style: solid !important;
+      border-bottom-color: #e5e7eb !important;
+    }
+    
+    .modal-footer {
+      border-top-width: 1px !important;
+      border-top-style: solid !important;
+      border-top-color: #e5e7eb !important;
+    }
+    
+    /* Form field borders */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea,
+    select,
+    .form-input,
+    .form-select,
+    .form-textarea,
+    .form-control {
+      border-width: 1px !important;
+      border-style: solid !important;
+      border-color: #e5e7eb !important;
+    }
+    
+    .users-listing-container,
+    .opportunities-listing-container {
+      border-width: 1px !important;
+      border-style: solid !important;
+      border-color: #e5e7eb !important;
+    }
+    
+    .users-header-row,
+    .opportunities-header-row {
+      border-bottom-width: 1px !important;
+      border-bottom-style: solid !important;
+      border-bottom-color: #e5e7eb !important;
+    }
+    
+    .user-item,
+    .opportunity-card-entry {
+      border-bottom-width: 1px !important;
+      border-bottom-style: solid !important;
+      border-bottom-color: #e5e7eb !important;
+    }
+    
+    .sidebar {
+      border-right-width: 1px !important;
+      border-right-style: solid !important;
+      border-right-color: #e5e7eb !important;
+    }
+    
+    .logo-section {
+      border-bottom-width: 1px !important;
+      border-bottom-style: solid !important;
+      border-bottom-color: #e5e7eb !important;
+    }
+    
+    .main-header {
+      border-bottom-width: 1px !important;
+      border-bottom-style: solid !important;
+      border-bottom-color: #e5e7eb !important;
+    }
+    
+    .btn-primary,
+    .users-search-input,
+    .users-dropdown,
+    .opportunities-search-input,
+    .opportunities-dropdown {
+      border-width: 1px !important;
+      border-style: solid !important;
+      border-color: #e5e7eb !important;
+    }
+    
+    .btn-primary {
+      border-color: #ea5d0d !important;
+    }
+    
+    .dashboard-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ============================================
+       SIDEBAR - EXACTE KLEUREN EN HOVER EFFECTEN
+       ============================================ */
+    
+    /* Sidebar Container */
+    .sidebar {
+      width: 80px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      position: fixed;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: width 200ms ease-in-out;
+      overflow: hidden;
+      z-index: 1000;
+    }
+    
+    .sidebar.expanded {
+      width: 240px;
+    }
+    
+    /* ============================================
+       SIDEBAR HEADER
+       ============================================ */
+    
+    .logo-section {
+      height: 63px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #e5e7eb;
+      padding-left: 12px;
+      flex-shrink: 0;
+    }
+    
+    .logo-container {
+      width: 56px;
+      height: 63px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .logo-image {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ea5d0d;
+      white-space: nowrap;
+      margin-left: 0;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .logo-text {
+      opacity: 1;
+      width: auto;
+    }
+    
+    /* ============================================
+       SIDEBAR NAVIGATION
+       ============================================ */
+    
+    .nav-section {
+      flex: 1;
+      padding: 24px 0 0 0;
+      overflow-y: auto;
+    }
+    
+    /* ============================================
+       SIDEBAR LINKS - EXACT COLORS & HOVER
+       ============================================ */
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      margin: 0 12px 4px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #4d4d4d;
+      text-decoration: none;
+      transition: background 200ms ease-in-out;
+    }
+    
+    .menu-item:hover {
+      background: #fef5f0;
+      text-decoration: none;
+    }
+    
+    .menu-item.active {
+      background: #ea5d0d;
+      color: #ffffff;
+    }
+    
+    .icon-container {
+      width: 56px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .menu-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+    
+    .menu-label {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .menu-label {
+      opacity: 1;
+      width: auto;
+    }
+    
+    /* Submenu items */
+    .submenu {
+      display: none;
+      margin-bottom: 12px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .menu-item.has-submenu.expanded + .submenu {
+      display: block;
+      max-height: 500px;
+    }
+    
+    .menu-item.has-submenu {
+      position: relative;
+    }
+    
+    .menu-chevron {
+      width: 12px;
+      height: 12px;
+      margin-left: auto;
+      margin-right: 12px;
+      opacity: 0;
+      transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+      flex-shrink: 0;
+      transform: rotate(90deg); /* Start pointing down */
+      cursor: pointer;
+      pointer-events: all;
+      color: inherit;
+    }
+    
+    .sidebar.expanded .menu-chevron {
+      opacity: 1;
+    }
+    
+    .menu-item.has-submenu.expanded .menu-chevron {
+      transform: rotate(0deg); /* Rotate to point right when expanded */
+    }
+    
+    .submenu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      margin: 0 0 2px 0;
+      padding: 8px 12px 8px 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 150ms ease;
+    }
+    
+    .submenu-item svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2;
+      flex-shrink: 0;
+      color: inherit;
+    }
+    
+    .submenu-item:hover {
+      background-color: #f3f4f6;
+      color: #111827;
+      text-decoration: none;
+    }
+    
+    .submenu-item.active {
+      background-color: #ea5d0d;
+      color: #ffffff;
+      font-weight: 500;
+    }
+    
+    /* ============================================
+       SIDEBAR FOOTER
+       ============================================ */
+    
+    .toggle-section {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .toggle-btn {
+      width: 32px;
+      height: 32px;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 200ms ease-in-out;
+      color: #6b7280;
+    }
+    
+    .toggle-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .toggle-btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .toggle-btn svg {
+      transform: rotate(180deg);
+    }
+    
+    /* ============================================
+       SCROLLBAR STYLING (OPTIONAL)
+       ============================================ */
+    
+    .nav-section::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .nav-section::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .nav-section::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+    
+    .nav-section::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+    
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 64px;
+      }
+      
+      .logo-text,
+      .menu-label,
+      .sidebar-footer-text {
+        display: none;
+      }
+      
+      .logo-section {
+        justify-content: center;
+        padding: 16px;
+      }
+      
+      .menu-item {
+        justify-content: center;
+        padding: 12px;
+      }
+      
+      .toggle-btn span {
+        display: none;
+      }
+      
+      .toggle-btn {
+        justify-content: center;
+      }
+    }
+    
+    /* Main content */
+    .main-content {
+      margin-left: 80px;
+      transition: margin-left 200ms ease-in-out;
+      width: calc(100% - 80px);
+      min-width: 0; /* Prevent overflow */
+      overflow-x: hidden; /* Prevent horizontal scroll */
+    }
+    
+    .sidebar.expanded ~ .main-content {
+      margin-left: 240px;
+      width: calc(100% - 240px);
+    }
+    
+    /* Main header */
+    .main-header {
+      height: 63px;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .main-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .main-header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .back-link-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #6b7280;
+      text-decoration: none;
+      transition: color 150ms ease;
+      padding: 4px 0;
+    }
+    
+    .back-link-header:hover {
+      color: #111827;
+      text-decoration: none;
+    }
+    
+    .back-link-header i {
+      font-size: 12px;
+    }
+    
+    /* User dropdown styling */
+    .user-dropdown {
+      position: relative;
+    }
+    
+    .user-dropdown-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .user-dropdown-toggle:hover {
+      background: #f3f4f6;
+    }
+    
+    .user-avatar {
+      flex-shrink: 0;
+    }
+    
+    .user-avatar .avatar-placeholder {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      background: #f3f4f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    
+    .user-avatar img {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    
+    .user-info {
+      padding-left: 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-name {
+      color: #9ca3af;
+      font-weight: 500;
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    .user-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      min-width: 200px;
+      z-index: 1000;
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    }
+    
+    .user-dropdown-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      color: #9ca3af !important;
+      font-size: 14px;
+      text-decoration: none !important;
+      transition: background 0.2s, color 0.2s;
+    }
+    
+    .user-dropdown-item:hover {
+      background: rgba(234, 93, 13, 0.1) !important;
+      color: #ea5d0d !important;
+      text-decoration: none !important;
+    }
+    
+    .user-dropdown-item:hover svg,
+    .user-dropdown-item:hover i {
+      color: #ea5d0d !important;
+    }
+    
+    .user-dropdown-item svg,
+    .user-dropdown-item i {
+      color: inherit;
+    }
+    
+    .user-dropdown-icon {
+      margin-right: 12px;
+      width: 16px;
+    }
+    
+    .main-container {
+      margin-top: 16px;
+      padding: 0 24px 24px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Notification Container -->
+  <div class="notification-container"></div>
+  
+  <div class="dashboard-container">
+    <!-- Perfect Admin Sidebar -->
+    <aside class="sidebar expanded" id="sidebar">
+      <!-- Logo Section -->
+      <div class="logo-section">
+        <div class="logo-container">
+          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial Admin" class="logo-image">
+        </div>
+        <span class="logo-text">Admin</span>
+      </div>
+      
+      <!-- Navigation Section -->
+      <nav class="nav-section">
+        <% 
+          // Check if user is admin - use isUserAdmin if provided, otherwise fallback to res.locals.isAdmin or user.is_admin
+          // Note: In EJS, locals is available as a global, and isUserAdmin is passed from the route
+          const userIsAdmin = (typeof isUserAdmin !== 'undefined' && isUserAdmin === true) || 
+                              (typeof locals !== 'undefined' && locals.isAdmin === true) || 
+                              (typeof user !== 'undefined' && (user.is_admin === true || (user.user_metadata && user.user_metadata.is_admin === true)));
+          
+          // Force show all menu items if we're on an admin route (temporary debug)
+          // Remove this after fixing
+          const forceShowAll = true; // Set to false after debugging
+        %>
+        <!-- Dashboard -->
+        <a href="/admin" class="menu-item <%= activeMenu === 'dashboard' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+              <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+            </svg>
+          </div>
+          <span class="menu-label">Dashboard</span>
+        </a>
+        
+        <!-- Aanvragen (with submenu) -->
+        <a href="/admin/leads" class="menu-item has-submenu <%= (activeMenu === 'leads' || locals.activeSubmenu === 'industries' || locals.activeSubmenu === 'activities') ? 'active' : '' %> <%= (locals.activeSubmenu === 'industries' || locals.activeSubmenu === 'activities') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Aanvragen</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/leads/industries" class="submenu-item <%= locals.activeSubmenu === 'industries' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Branches
+          </a>
+          <a href="/admin/leads/activities" class="submenu-item <%= locals.activeSubmenu === 'activities' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            Activiteiten
+          </a>
+        </div>
+        
+        <!-- Leadstroom (standalone menu item) -->
+        <a href="/admin/leads/engine" class="menu-item <%= activeMenu === 'leadstroom' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+              <polyline points="16 7 22 7 22 13"></polyline>
+            </svg>
+          </div>
+          <span class="menu-label">Leadstroom</span>
+        </a>
+        
+        <!-- Klanten (Customers) -->
+        <a href="/admin/customers" class="menu-item <%= activeMenu === 'customers' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <span class="menu-label">Klanten</span>
+        </a>
+
+        <!-- Kansen (with submenu) -->
+        <a href="/admin/opportunities" class="menu-item has-submenu <%= (activeMenu === 'opportunities') ? 'active' : '' %> <%= (locals.activeSubmenu === 'deals') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+              <path d="M16 7V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"></path>
+              <path d="M12 12v5"></path>
+              <path d="M9 15h6"></path>
+            </svg>
+          </div>
+          <span class="menu-label">Kansen</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/opportunities/deals" class="submenu-item <%= locals.activeSubmenu === 'deals' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"></path>
+              <path d="M4 13h16"></path>
+              <path d="M8 17h8"></path>
+            </svg>
+            Deals
+          </a>
+        </div>
+
+        <!-- Taken (Tasks) - Main menu item -->
+        <% if (userIsAdmin || forceShowAll) { %>
+        <a href="/admin/tasks" class="menu-item <%= activeMenu === 'tasks' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Taken</span>
+        </a>
+        <% } %>
+
+        <!-- Tickets -->
+        <a href="/admin/tickets" class="menu-item <%= activeMenu === 'tickets' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <span class="menu-label">Tickets</span>
+        </a>
+
+        <!-- Mail -->
+        <a href="/admin/mail" class="menu-item <%= activeMenu === 'mail' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+          <span class="menu-label">Mail</span>
+        </a>
+
+        <!-- Contactpersonen -->
+        <a href="/admin/contacts" class="menu-item <%= activeMenu === 'contacts' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <span class="menu-label">Contactpersonen</span>
+        </a>
+
+        <!-- Agenda -->
+        <a href="/admin/calendar" class="menu-item <%= activeMenu === 'calendar' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Agenda</span>
+        </a>
+
+        <!-- Diensten (Services) with submenu -->
+        <a href="/admin/services" class="menu-item has-submenu <%= (activeMenu === 'services' || locals.activeSubmenu === 'catalog' || locals.activeSubmenu === 'analytics' || locals.activeSubmenu === 'settings') ? 'active' : '' %> <%= (locals.activeSubmenu === 'catalog' || locals.activeSubmenu === 'analytics' || locals.activeSubmenu === 'settings') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Diensten</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/services" class="submenu-item <%= (activeMenu === 'services' && !locals.activeSubmenu) ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            Overzicht
+          </a>
+          <a href="/admin/services/catalog" class="submenu-item <%= locals.activeSubmenu === 'catalog' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Catalogus
+          </a>
+          <a href="/admin/services/analytics" class="submenu-item <%= locals.activeSubmenu === 'analytics' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            Analytics
+          </a>
+          <a href="/admin/services/settings" class="submenu-item <%= locals.activeSubmenu === 'settings' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m9.5-8.5L8.5 8.5m7 7l-3-3m-4 0l-3 3m7-7l3-3"></path>
+            </svg>
+            Instellingen
+          </a>
+        </div>
+
+        <!-- Tijdregistratie (Time Entries) - Main menu item -->
+        <% if (userIsAdmin || forceShowAll) { %>
+        <a href="/admin/time-entries" class="menu-item <%= activeMenu === 'time-entries' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <span class="menu-label">Tijdregistratie</span>
+        </a>
+        <% } %>
+
+        <!-- Scraper - Main menu item (Admin/Manager only) -->
+        <% if (userIsAdmin || forceShowAll) { %>
+        <a href="/admin/scraper" class="menu-item <%= activeMenu === 'scraper' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Scraper</span>
+        </a>
+        <% } %>
+
+        <!-- Werknemers (Employees) with submenu (only Payroll) -->
+        <% if (userIsAdmin || forceShowAll) { %>
+        <a href="/admin/employees" class="menu-item has-submenu <%= (activeMenu === 'employees' || locals.activeSubmenu === 'payroll') ? 'active' : '' %> <%= (locals.activeSubmenu === 'payroll') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <span class="menu-label">Werknemers</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/payroll" class="submenu-item <%= locals.activeSubmenu === 'payroll' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="2" y2="22"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Payroll
+          </a>
+        </div>
+        <% } %>
+
+        <!-- Betalingen (with submenu) -->
+        <a href="/admin/payments" class="menu-item has-submenu <%= (activeMenu === 'payments' || locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates') ? 'active' : '' %> <%= (locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+              <line x1="2" x2="22" y1="10" y2="10"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Betalingen</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/payments/invoices" class="submenu-item <%= locals.activeSubmenu === 'invoices' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="18"></line>
+              <line x1="12" y1="14" x2="12" y2="14"></line>
+            </svg>
+            Facturen
+          </a>
+          <a href="/admin/payments/mandates" class="submenu-item <%= locals.activeSubmenu === 'mandates' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M9 12h6M9 16h6M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM6 8h12v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"></path>
+            </svg>
+            Mandaten
+          </a>
+        </div>
+
+        <% if (userIsAdmin || forceShowAll) { %>
+        <!-- Gebruikers (with submenu) -->
+        <a href="/admin/users" class="menu-item has-submenu <%= (activeMenu === 'users' || locals.activeSubmenu === 'subscriptions' || locals.activeSubmenu === 'roles') ? 'active' : '' %> <%= (locals.activeSubmenu === 'subscriptions' || locals.activeSubmenu === 'roles') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <span class="menu-label">Gebruikers</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/users/subscriptions" class="submenu-item <%= locals.activeSubmenu === 'subscriptions' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            Abonnementen
+          </a>
+          <a href="/admin/users/roles" class="submenu-item <%= locals.activeSubmenu === 'roles' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Rollen
+          </a>
+        </div>
+        <% } %>
+
+        <!-- Instellingen (with submenu) -->
+        <a href="/admin/settings" class="menu-item has-submenu <%= (activeMenu === 'settings' || locals.activeSubmenu === 'bugs' || locals.activeSubmenu === 'todos') ? 'active' : '' %> <%= (locals.activeSubmenu === 'billing' || locals.activeSubmenu === 'activities' || locals.activeSubmenu === 'bugs' || locals.activeSubmenu === 'todos') ? 'expanded' : '' %>" data-submenu-toggle>
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <span class="menu-label">Instellingen</span>
+          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </a>
+        <div class="submenu">
+          <a href="/admin/settings/billing" class="submenu-item <%= locals.activeSubmenu === 'billing' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 2v20M2 12h20"></path>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            Facturering
+          </a>
+          <a href="/admin/settings/activities" class="submenu-item <%= locals.activeSubmenu === 'activities' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Activiteit
+          </a>
+          <a href="/admin/settings/bugs" class="submenu-item <%= locals.activeSubmenu === 'bugs' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+              <path d="M8 8h8M8 12h8M8 16h8"></path>
+              <circle cx="8" cy="8" r="1" fill="currentColor"></circle>
+              <circle cx="16" cy="8" r="1" fill="currentColor"></circle>
+            </svg>
+            Bugs
+          </a>
+          <a href="/admin/settings/todos" class="submenu-item <%= locals.activeSubmenu === 'todos' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            To-Do's
+          </a>
+        </div>
+      </nav>
+      
+      <!-- Toggle Section -->
+      <div class="toggle-section">
+        <button class="toggle-btn" id="toggleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="main-header-left">
+          <% if (locals.showBackButton) { %>
+            <a href="<%= locals.backButtonUrl || '/admin/users' %>" class="back-link-header">
+              <i class="fas fa-arrow-left"></i>
+              <span><%= locals.backButtonText || 'Terug' %></span>
+            </a>
+          <% } %>
+          <h1><%= title %></h1>
+        </div>
+        
+        <div class="main-header-right">
+          <div class="user-dropdown">
+            <div class="user-dropdown-toggle">
+              <div class="user-avatar">
+                <% if (user && user.profile_picture) { %>
+                  <img src="<%= user.profile_picture %>" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                <% } else { %>
+                  <div class="avatar-placeholder">
+                    <i class="fas fa-user"></i>
+                  </div>
+                <% } %>
+              </div>
+              <div class="user-info">
+                <div class="user-name">
+                  <%= user && user.company_name ? user.company_name : (user && user.first_name && user.last_name ? user.first_name + ' ' + user.last_name : (user && user.email ? user.email : 'Admin')) %>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; color: #9ca3af;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            
+            <div class="user-dropdown-menu">
+              <a href="/dashboard/settings" class="user-dropdown-item">
+                <i class="fas fa-circle-user user-dropdown-icon"></i>
+                Profiel
+              </a>
+              <a href="/admin/settings" class="user-dropdown-item">
+                <i class="fas fa-cog user-dropdown-icon"></i>
+                Instellingen
+              </a>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/dashboard" class="user-dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="user-dropdown-icon" style="margin-right: 12px;">
+                  <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                  <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                  <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                  <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                </svg>
+                User Dashboard
+              </a>
+              <% if (user && (user.user_metadata?.is_admin === true || user.is_admin === true)) { %>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="https://opsportal2.vercel.app" target="_blank" rel="noopener noreferrer" class="user-dropdown-item">
+                <i class="fas fa-chart-line user-dropdown-icon"></i>
+                Sales portal
+              </a>
+              <% } %>
+              <% 
+                // Check if user is admin or manager for Arcade Mode
+                const userIsAdminOrManager = (typeof isUserAdmin !== 'undefined' && isUserAdmin === true) || 
+                                            (typeof user !== 'undefined' && (user.user_metadata?.is_admin === true || user.is_admin === true));
+              %>
+              <% if (userIsAdminOrManager) { %>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/admin/arcade" class="user-dropdown-item">
+                <i class="fas fa-gamepad user-dropdown-icon"></i>
+                Arcade Mode
+              </a>
+              <% } %>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/logout" class="user-dropdown-item">
+                <i class="fas fa-rectangle-xmark user-dropdown-icon"></i>
+                Uitloggen
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div class="main-container">
+        <% if (typeof bodyPartial !== 'undefined' && bodyPartial) { %>
+          <%- include('../' + bodyPartial) %>
+        <% } else if (typeof content !== 'undefined' && content) { %>
+          <%- content %>
+        <% } else if (typeof body !== 'undefined' && body) { %>
+          <%- body %>
+        <% } %>
+      </div>
+    </main>
+  </div>
+  
+  <script src="/js/main.js"></script>
+  <% if (typeof scripts !== 'undefined' && scripts) { %>
+    <% scripts.forEach(function(script) { %>
+      <script src="<%= script %>"></script>
+    <% }); %>
+  <% } %>
+  
+  <script>
+    // Perfect Sidebar Toggle
+    (function() {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('toggleBtn');
+      
+      if (!sidebar || !toggleBtn) return;
+      
+      // Load saved state - default to expanded
+      const savedState = localStorage.getItem('adminSidebarExpanded');
+      if (savedState === 'false') {
+        sidebar.classList.remove('expanded');
+      }
+      
+      // Toggle handler
+      toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('expanded');
+        localStorage.setItem('adminSidebarExpanded', sidebar.classList.contains('expanded'));
+      });
+      
+      // Submenu toggle functionality
+      const submenuToggles = document.querySelectorAll('[data-submenu-toggle]');
+      submenuToggles.forEach(toggle => {
+        const chevron = toggle.querySelector('.menu-chevron');
+        const submenu = toggle.nextElementSibling;
+        
+        // Toggle submenu when clicking the chevron
+        if (chevron) {
+          chevron.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (submenu && submenu.classList.contains('submenu')) {
+              toggle.classList.toggle('expanded');
+              
+              // Close other expanded submenus
+              submenuToggles.forEach(otherToggle => {
+                if (otherToggle !== toggle && otherToggle.classList.contains('expanded')) {
+                  otherToggle.classList.remove('expanded');
+                }
+              });
+            }
+          });
+        }
+        
+        // Handle clicks on the menu item - allow navigation unless clicking chevron
+        toggle.addEventListener('click', (e) => {
+          // If clicking the chevron or its path, prevent navigation and toggle submenu
+          const clickedChevron = e.target.closest('.menu-chevron');
+          if (clickedChevron) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (submenu && submenu.classList.contains('submenu')) {
+              toggle.classList.toggle('expanded');
+              
+              // Close other expanded submenus
+              submenuToggles.forEach(otherToggle => {
+                if (otherToggle !== toggle && otherToggle.classList.contains('expanded')) {
+                  otherToggle.classList.remove('expanded');
+                }
+              });
+            }
+          }
+          // Otherwise, allow normal link navigation to the href
+        });
+      });
+    })();
+  </script>
+  
+  <!-- Global KPI Simulation Updater - Works on all admin pages -->
+  <script>
+  (function() {
+    'use strict';
+
+    // Mark global KPI simulation runtime as available (used by /admin/money)
+    window.__kpiSimulationProducerActive = true;
+    
+    // Format currency helper
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+    }
+
+    // -----------------------------
+    // GLOBAL SIMULATION PRODUCER
+    // Keeps simulation running on ANY /admin/* page when enabled
+    // -----------------------------
+    const SIM_ACTIVE_KEY = 'kpi_simulation_active';
+    const SIM_PERSIST_KEY = 'kpi_simulation_persistent';
+    const SIM_DATA_KEY = 'kpi_simulation_data';
+    const SIM_TS_KEY = 'kpi_simulation_timestamp';
+
+    let producerRunning = false;
+    let producerTimer = null;
+    let simStatsInMemory = null;
+
+    // Apply one "event" per tick so it feels more natural:
+    // sometimes a lead, sometimes revenue, sometimes a user, etc.
+    function applyRandomEvent(stats) {
+      const r = Math.random();
+
+      // Helpers
+      const addUsers = (min, max) => { stats.totalUsers = (stats.totalUsers || 0) + (Math.floor(Math.random() * (max - min + 1)) + min); };
+      const addLeads = (min, max) => { stats.totalLeads = (stats.totalLeads || 0) + (Math.floor(Math.random() * (max - min + 1)) + min); };
+      const addRevenue = (min, max) => { stats.totalRevenue = (stats.totalRevenue || 0) + (Math.floor(Math.random() * (max - min + 1)) + min); };
+      const addPending = (min, max) => { stats.pendingLeads = Math.max(0, (stats.pendingLeads || 0) + (Math.floor(Math.random() * (max - min + 1)) + min)); };
+
+      // Occasional "burst" (rare)
+      if (r < 0.04) {
+        addLeads(6, 14);
+        addPending(2, 8);
+        // Bigger occasional payments
+        if (Math.random() < 0.70) addRevenue(220, 1100);
+        return;
+      }
+
+      // Most common: lead event
+      if (r < 0.52) {
+        addLeads(1, 4);
+        addPending(0, 3);
+        // Small chance a lead converts quickly
+        if (Math.random() < 0.12) addRevenue(120, 550);
+        return;
+      }
+
+      // Revenue event
+      if (r < 0.80) {
+        // Higher average revenue so it feels meaningful
+        addRevenue(180, 900);
+        if (Math.random() < 0.22) addLeads(0, 1);
+        if (Math.random() < 0.15) addPending(0, 2);
+        return;
+      }
+
+      // New user event
+      if (r < 0.92) {
+        addUsers(0, 2);
+        if (Math.random() < 0.30) addLeads(0, 2);
+        if (Math.random() < 0.20) addPending(0, 2);
+        return;
+      }
+
+      // Pending clears down a bit
+      addPending(-5, -1);
+    }
+
+    function writeSimToStorage(stats) {
+      localStorage.setItem(SIM_ACTIVE_KEY, 'true');
+      localStorage.setItem(SIM_DATA_KEY, JSON.stringify(stats));
+      localStorage.setItem(SIM_TS_KEY, Date.now().toString());
+      // Same-tab notification (storage event does not fire in same tab)
+      window.dispatchEvent(new CustomEvent('kpiSimulationDataUpdate', { detail: { stats } }));
+    }
+
+    async function fetchBaseKpisForInit() {
+      try {
+        const resp = await fetch('/admin/api/admin/dashboard-kpis?period=lifetime', {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data?.success || !data?.stats) return null;
+        return {
+          totalUsers: data.stats.totalUsers || 0,
+          totalLeads: data.stats.totalLeads || 0,
+          totalRevenue: data.stats.totalRevenue || 0,
+          pendingLeads: data.stats.pendingLeads || 0
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function ensureSimStatsLoaded() {
+      if (simStatsInMemory) return simStatsInMemory;
+
+      const stored = localStorage.getItem(SIM_DATA_KEY);
+      if (stored) {
+        try {
+          simStatsInMemory = JSON.parse(stored);
+          return simStatsInMemory;
+        } catch (_) {
+          // fall through
+        }
+      }
+
+      const base = await fetchBaseKpisForInit();
+      simStatsInMemory = base || { totalUsers: 0, totalLeads: 0, totalRevenue: 0, pendingLeads: 0 };
+      writeSimToStorage(simStatsInMemory);
+      return simStatsInMemory;
+    }
+
+    function scheduleNextProducerTick() {
+      if (!producerRunning) return;
+      // Slower + more "human" rhythm
+      const nextInterval = Math.floor(Math.random() * 3200) + 1200; // 1200-4400ms
+      producerTimer = setTimeout(async () => {
+        try {
+          const persistent = localStorage.getItem(SIM_PERSIST_KEY) === 'true';
+          const active = localStorage.getItem(SIM_ACTIVE_KEY) === 'true';
+          if (!persistent || !active) {
+            stopSimulationProducer();
+            return;
+          }
+
+          const stats = await ensureSimStatsLoaded();
+          applyRandomEvent(stats);
+
+          simStatsInMemory = stats;
+          writeSimToStorage(simStatsInMemory);
+        } finally {
+          scheduleNextProducerTick();
+        }
+      }, nextInterval);
+    }
+
+    function startSimulationProducer() {
+      if (producerRunning) return;
+      const persistent = localStorage.getItem(SIM_PERSIST_KEY) === 'true';
+      const active = localStorage.getItem(SIM_ACTIVE_KEY) === 'true';
+      if (!persistent || !active) return;
+
+      producerRunning = true;
+      // (debug removed)
+      scheduleNextProducerTick();
+    }
+
+    function stopSimulationProducer() {
+      if (!producerRunning) return;
+      producerRunning = false;
+      if (producerTimer) {
+        clearTimeout(producerTimer);
+        producerTimer = null;
+      }
+      simStatsInMemory = null;
+      // (debug removed)
+    }
+    
+    // -----------------------------
+    // NEXT-LEVEL SMOOTH KPI ANIMATION
+    // Single continuous animation loop with exponential smoothing (no "restart jitter")
+    // -----------------------------
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const kpiAnim = {
+      running: false,
+      rafId: null,
+      lastTs: 0,
+      items: new Map() // element -> { current, target, isInteger, formatter, lastText }
+    };
+
+    function parseIntFromText(text) {
+      return parseInt(String(text || '').replace(/[^\d]/g, ''), 10) || 0;
+    }
+
+    function parseEuroFromText(text) {
+      const t = String(text || '')
+        .replace(/[€\s\u00A0]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+      return parseFloat(t) || 0;
+    }
+
+    function formatEuro(amount) {
+      return formatCurrency(amount);
+    }
+
+    function ensureAnimItem(el, initialValue, isInteger, formatter) {
+      if (!el) return null;
+      if (kpiAnim.items.has(el)) return kpiAnim.items.get(el);
+      const item = {
+        current: initialValue,
+        target: initialValue,
+        isInteger,
+        formatter: formatter || null,
+        lastText: null
+      };
+      kpiAnim.items.set(el, item);
+      return item;
+    }
+
+    function setAnimatedTarget(el, nextTarget, opts) {
+      if (!el) return;
+      if (prefersReducedMotion) {
+        if (opts?.formatter) el.textContent = opts.formatter(nextTarget);
+        else el.textContent = (opts?.isInteger ? Math.round(nextTarget).toLocaleString('nl-NL') : String(nextTarget));
+        return;
+      }
+
+      const isInteger = !!opts?.isInteger;
+      const formatter = opts?.formatter || null;
+      let initial = 0;
+
+      if (formatter === formatEuro) initial = parseEuroFromText(el.textContent);
+      else if (isInteger) initial = parseIntFromText(el.textContent);
+      else initial = parseFloat(el.textContent) || 0;
+
+      const item = ensureAnimItem(el, initial, isInteger, formatter);
+      item.target = nextTarget;
+
+      if (!kpiAnim.running) {
+        kpiAnim.running = true;
+        kpiAnim.lastTs = performance.now();
+        kpiAnim.rafId = requestAnimationFrame(tickKpiAnim);
+      }
+    }
+
+    function tickKpiAnim(ts) {
+      const dt = Math.min(0.05, Math.max(0.001, (ts - kpiAnim.lastTs) / 1000)); // seconds, clamped
+      kpiAnim.lastTs = ts;
+
+      // Spring animation (velocity-based) feels more "2026" than easing:
+      // critically damped-ish spring tuned for UI counters.
+      // Semi-implicit Euler integration.
+      const stiffness = 210; // k
+      const damping = 32;    // c
+
+      let anyActive = false;
+
+      for (const [el, item] of kpiAnim.items.entries()) {
+        if (!el || !el.isConnected) {
+          kpiAnim.items.delete(el);
+          continue;
+        }
+
+        if (typeof item.velocity !== 'number') item.velocity = 0;
+
+        const diff = item.target - item.current;
+        // Spring force + damping force
+        const accel = stiffness * diff - damping * item.velocity;
+        item.velocity += accel * dt;
+        item.current += item.velocity * dt;
+
+        // Stop condition
+        const posEps = item.isInteger ? 0.02 : 0.005;
+        const velEps = item.isInteger ? 0.06 : 0.02;
+        if (Math.abs(diff) < posEps && Math.abs(item.velocity) < velEps) {
+          item.current = item.target;
+          item.velocity = 0;
+        } else {
+          anyActive = true;
+        }
+
+        let displayText;
+        if (item.formatter) {
+          // Stabilize currency formatting to cents to avoid noisy reformatting
+          const rounded = Math.round(item.current * 100) / 100;
+          displayText = item.formatter(rounded);
+        } else if (item.isInteger) {
+          displayText = Math.round(item.current).toLocaleString('nl-NL');
+        } else {
+          displayText = String(item.current);
+        }
+
+        if (displayText !== item.lastText) {
+          el.textContent = displayText;
+          item.lastText = displayText;
+        }
+      }
+
+      if (anyActive && kpiAnim.items.size > 0) {
+        kpiAnim.rafId = requestAnimationFrame(tickKpiAnim);
+      } else {
+        // Stop loop when settled
+        kpiAnim.running = false;
+        kpiAnim.rafId = null;
+      }
+    }
+    
+    // Update KPI elements with simulation data
+    function updateKPIElements(stats, animate = true) {
+      const usersEl = document.getElementById('kpi-total-users');
+      const leadsEl = document.getElementById('kpi-total-leads');
+      const revenueEl = document.getElementById('kpi-total-revenue');
+      const pendingEl = document.getElementById('kpi-pending-leads');
+      
+      // Log which elements were found
+      const foundElements = {
+        users: !!usersEl,
+        leads: !!leadsEl,
+        revenue: !!revenueEl,
+        pending: !!pendingEl
+      };
+      
+      // (debug removed)
+      
+      // Store current values for animation
+      let currentUsers = usersEl ? parseFloat(usersEl.textContent.replace(/[^\d]/g, '')) || 0 : 0;
+      let currentLeads = leadsEl ? parseFloat(leadsEl.textContent.replace(/[^\d]/g, '')) || 0 : 0;
+      // Parse revenue: handle €, &nbsp;, spaces, dots (thousands), and comma (decimal)
+      let currentRevenue = 0;
+      if (revenueEl) {
+        const revenueText = revenueEl.textContent
+          .replace(/[€\s\u00A0]/g, '') // Remove €, spaces, and non-breaking spaces
+          .replace(/\./g, '') // Remove thousands separators
+          .replace(',', '.'); // Convert decimal comma to dot
+        currentRevenue = parseFloat(revenueText) || 0;
+      }
+      let currentPending = pendingEl ? parseFloat(pendingEl.textContent.replace(/[^\d]/g, '')) || 0 : 0;
+      
+      if (usersEl && stats.totalUsers !== undefined) {
+        if (currentUsers !== stats.totalUsers) {
+          if (animate) setAnimatedTarget(usersEl, stats.totalUsers, { isInteger: true });
+          else usersEl.textContent = stats.totalUsers.toLocaleString('nl-NL');
+        }
+      }
+      
+      if (leadsEl && stats.totalLeads !== undefined) {
+        if (currentLeads !== stats.totalLeads) {
+          if (animate) setAnimatedTarget(leadsEl, stats.totalLeads, { isInteger: true });
+          else leadsEl.textContent = stats.totalLeads.toLocaleString('nl-NL');
+        }
+      }
+      
+      if (revenueEl && stats.totalRevenue !== undefined) {
+        if (Math.abs(currentRevenue - stats.totalRevenue) > 0.01) { // Use small threshold for revenue
+          if (animate) setAnimatedTarget(revenueEl, stats.totalRevenue, { isInteger: false, formatter: formatEuro });
+          else revenueEl.textContent = formatCurrency(stats.totalRevenue);
+        }
+      }
+      
+      if (pendingEl && stats.pendingLeads !== undefined) {
+        if (currentPending !== stats.pendingLeads) {
+          if (animate) setAnimatedTarget(pendingEl, stats.pendingLeads, { isInteger: true });
+          else pendingEl.textContent = stats.pendingLeads.toLocaleString('nl-NL');
+        }
+      }
+    }
+    
+    // Check for simulation updates
+    let lastProcessedTimestamp = 0;
+    let lastProcessedDataHash = null; // Track data hash to detect changes
+    let isFirstCheck = true;
+    let simulationCheckInterval = null;
+    
+    // Create a simple hash of the stats object
+    function hashStats(stats) {
+      return `${stats.totalUsers}_${stats.totalLeads}_${stats.totalRevenue}_${stats.pendingLeads}`;
+    }
+    
+    function checkSimulation() {
+      const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+      
+      if (simulationActive) {
+        const simData = localStorage.getItem('kpi_simulation_data');
+        const lastUpdate = parseInt(localStorage.getItem('kpi_simulation_timestamp') || '0');
+        
+        if (simData) {
+          try {
+            const simStats = JSON.parse(simData);
+            const dataHash = hashStats(simStats);
+            
+            // Always check if data changed, regardless of timestamp
+            // Update if:
+            // 1. This is the first check, OR
+            // 2. Data hash changed (data actually changed)
+            // Note: We check data hash first because timestamp updates every 500ms even if data doesn't change
+            const dataChanged = dataHash !== lastProcessedDataHash;
+            const shouldUpdate = isFirstCheck || dataChanged;
+            
+            if (shouldUpdate) {
+              const shouldAnimate = !isFirstCheck && dataChanged;
+              
+              // (debug removed)
+              
+              lastProcessedTimestamp = lastUpdate;
+              lastProcessedDataHash = dataHash;
+              isFirstCheck = false;
+              
+              // Update KPI elements if they exist on this page
+              updateKPIElements(simStats, shouldAnimate);
+              
+              // Dispatch custom event so other scripts can react
+              window.dispatchEvent(new CustomEvent('kpiSimulationUpdate', {
+                detail: { stats: simStats, animate: shouldAnimate }
+              }));
+            }
+          } catch (error) {
+            console.error('[KPI Simulator] Error parsing simulation data:', error);
+          }
+        } else {
+          // (debug removed)
+        }
+      } else {
+        // Reset when simulation stops
+        if (lastProcessedTimestamp > 0 || lastProcessedDataHash !== null) {
+          lastProcessedTimestamp = 0;
+          lastProcessedDataHash = null;
+          isFirstCheck = true;
+          // (debug removed)
+        }
+      }
+    }
+    
+    // Start checking for simulation updates
+    function startSimulationCheck() {
+      // (debug removed)
+      
+      // Check immediately on page load
+      checkSimulation();
+      
+      // Listen for storage events (when localStorage changes in other tabs/windows)
+      window.addEventListener('storage', function(e) {
+        if (
+          e.key === SIM_DATA_KEY ||
+          e.key === SIM_TS_KEY ||
+          e.key === SIM_ACTIVE_KEY ||
+          e.key === SIM_PERSIST_KEY
+        ) {
+          // (debug removed)
+          // Small delay to ensure data is written
+          setTimeout(checkSimulation, 50);
+          // Start/stop producer based on toggles (cross-tab)
+          if (e.key === SIM_ACTIVE_KEY || e.key === SIM_PERSIST_KEY) {
+            startSimulationProducer();
+            if (localStorage.getItem(SIM_PERSIST_KEY) !== 'true' || localStorage.getItem(SIM_ACTIVE_KEY) !== 'true') {
+              stopSimulationProducer();
+            }
+          }
+        }
+      });
+      
+      // Listen for custom events from simulation page (same tab)
+      window.addEventListener('kpiSimulationDataUpdate', function() {
+        // (debug removed)
+        setTimeout(checkSimulation, 50);
+      });
+      
+      // Also check periodically (fallback)
+      if (simulationCheckInterval) {
+        clearInterval(simulationCheckInterval);
+      }
+      simulationCheckInterval = setInterval(checkSimulation, 1200);
+      // (debug removed)
+
+      // Start producer if simulation is enabled (same tab)
+      startSimulationProducer();
+    }
+    
+    // Stop checking
+    function stopSimulationCheck() {
+      if (simulationCheckInterval) {
+        clearInterval(simulationCheckInterval);
+        simulationCheckInterval = null;
+      }
+    }
+    
+    // Initialize when DOM is ready - use setTimeout to ensure DOM is fully loaded
+    function initializeSimulationCheck() {
+      // Small delay to ensure all page-specific scripts have loaded
+      setTimeout(() => {
+        startSimulationCheck();
+      }, 100);
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeSimulationCheck);
+    } else {
+      initializeSimulationCheck();
+    }
+    
+    // Pause when page is hidden, resume when visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopSimulationCheck();
+      } else {
+        isFirstCheck = true; // Reset to check immediately when visible
+        startSimulationCheck();
+      }
+    });
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', stopSimulationCheck);
+  })();
+  </script>
+</body>
+</html>

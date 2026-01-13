@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrowSocial Lead Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .hero {
+      background-color: var(--primary-light);
+      padding: 4rem 0;
+    }
+    
+    .hero-content {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    
+    .hero-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+    
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--secondary);
+      margin-bottom: 2rem;
+    }
+    
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+    
+    .features {
+      padding: 4rem 0;
+    }
+    
+    .feature-card {
+      height: 100%;
+      transition: var(--transition);
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--box-shadow-lg);
+    }
+    
+    .feature-icon {
+      font-size: 2.5rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+    
+    .cta {
+      background-color: var(--secondary);
+      color: var(--white);
+      padding: 4rem 0;
+      text-align: center;
+    }
+    
+    .cta-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    
+    .cta-subtitle {
+      font-size: 1.25rem;
+      margin-bottom: 2rem;
+      opacity: 0.8;
+    }
+    
+    .footer {
+      background-color: var(--dark);
+      color: var(--white);
+      padding: 3rem 0;
+    }
+    
+    .footer-logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 1rem;
+    }
+    
+    .footer-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .footer-link {
+      margin-bottom: 0.5rem;
+    }
+    
+    .footer-link a {
+      color: var(--gray);
+      transition: var(--transition);
+    }
+    
+    .footer-link a:hover {
+      color: var(--white);
+    }
+    
+    .social-links {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .social-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+      transition: var(--transition);
+    }
+    
+    .social-link:hover {
+      background-color: var(--primary);
+    }
+    
+    .copyright {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.875rem;
+      color: var(--gray);
+    }
+  </style>
+</head>
+<body>
+  <header class="main-header">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="sidebar-logo">
+          <img src="/img/logo.png" alt="GrowSocial" width="32" height="32">
+          <span>GrowSocial</span>
+        </div>
+        <nav>
+          <ul class="d-flex">
+            <li><a href="#features" class="btn btn-outline">Functies</a></li>
+            <li><a href="#pricing" class="btn btn-outline">Prijzen</a></li>
+            <li><a href="/login" class="btn btn-primary">Inloggen</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">Ontvang hoogwaardige leads voor jouw bedrijf</h1>
+        <p class="hero-subtitle">Ons platform verbindt jou met potentiële klanten die op zoek zijn naar jouw diensten.</p>
+        <div class="hero-buttons">
+          <a href="/register" class="btn btn-primary btn-lg">Gratis starten</a>
+          <a href="#features" class="btn btn-outline btn-lg">Meer informatie</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2>Waarom kiezen voor ons platform?</h2>
+        <p class="text-muted">Ontdek de voordelen van ons lead generatie platform</p>
+      </div>
+      <div class="row">
+        <div class="col" style="flex: 0 0 33.333333%; max-width: 33.333333%;">
+          <div class="card feature-card">
+            <div class="card-body text-center">
+              <div class="feature-icon">
+                <i class="fas fa-bullseye"></i>
+              </div>
+              <h3>Gerichte leads</h3>
+              <p>Ontvang alleen leads die relevant zijn voor jouw bedrijf en diensten.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col" style="flex: 0 0 33.333333%; max-width: 33.333333%;">
+          <div class="card feature-card">
+            <div class="card-body text-center">
+              <div class="feature-icon">
+                <i class="fas fa-hand-holding-usd"></i>
+              </div>
+              <h3>Betaal per lead</h3>
+              <p>Betaal alleen voor de leads die je accepteert, geen verborgen kosten.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col" style="flex: 0 0 33.333333%; max-width: 33.333333%;">
+          <div class="card feature-card">
+            <div class="card-body text-center">
+              <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <h3>Groei je bedrijf</h3>
+              <p>Verhoog je omzet door een constante stroom van nieuwe potentiële klanten.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="container">
+      <h2 class="cta-title">Klaar om te beginnen?</h2>
+      <p class="cta-subtitle">Meld je vandaag nog aan en ontvang je eerste leads binnen 24 uur.</p>
+      <a href="/register" class="btn btn-primary btn-lg">Maak een account aan</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col" style="flex: 0 0 25%; max-width: 25%;">
+          <div class="footer-logo">GrowSocial</div>
+          <p>Wij helpen bedrijven groeien door ze te verbinden met potentiële klanten.</p>
+          <div class="social-links mt-3">
+            <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+          </div>
+        </div>
+        <div class="col" style="flex: 0 0 25%; max-width: 25%;">
+          <h4>Links</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><a href="#">Home</a></li>
+            <li class="footer-link"><a href="#features">Functies</a></li>
+            <li class="footer-link"><a href="#pricing">Prijzen</a></li>
+            <li class="footer-link"><a href="#">Over ons</a></li>
+            <li class="footer-link"><a href="#">Contact</a></li>
+          </ul>
+        </div>
+        <div class="col" style="flex: 0 0 25%; max-width: 25%;">
+          <h4>Juridisch</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><a href="#">Algemene voorwaarden</a></li>
+            <li class="footer-link"><a href="#">Privacybeleid</a></li>
+            <li class="footer-link"><a href="#">Cookiebeleid</a></li>
+          </ul>
+        </div>
+        <div class="col" style="flex: 0 0 25%; max-width: 25%;">
+          <h4>Contact</h4>
+          <ul class="footer-links">
+            <li class="footer-link"><i class="fas fa-map-marker-alt mr-2"></i> Hoofdstraat 123, Amsterdam</li>
+            <li class="footer-link"><i class="fas fa-phone mr-2"></i> +31 (0)20 123 4567</li>
+            <li class="footer-link"><i class="fas fa-envelope mr-2"></i> info@grows  +31 (0)20 123 4567</li>
+            <li class="footer-link"><i class="fas fa-envelope mr-2"></i> info@growsocial.nl</li>
+          </ul>
+        </div>
+      </div>
+      <div class="copyright text-center">
+        &copy; 2024 GrowSocial Lead Platform. Alle rechten voorbehouden.
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

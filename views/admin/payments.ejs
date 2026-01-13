@@ -1,0 +1,1084 @@
+<%- include('../partials/header') %>
+
+<!-- Add custom CSS for payments page -->
+<link rel="stylesheet" href="/css/admin/adminPayments.css">
+<link rel="stylesheet" href="/css/components/custom-select.css">
+  <link rel="stylesheet" href="/css/admin/revenue-chart.css">
+  <link rel="stylesheet" href="/css/admin/monthly-growth.css">
+  <link rel="stylesheet" href="/css/admin/payments-table.css">
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<%
+  // Server-side helpers for EJS rendering only
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  const formatAmount = (amount) => {
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+  
+  const getStatusLabel = (status) => {
+    switch(status) {
+      case 'paid': return 'Betaald';
+      case 'pending': return 'In afwachting';
+      case 'failed': return 'Mislukt';
+      case 'expired': return 'Verlopen';
+      case 'cancelled': return 'Geannuleerd';
+      default: return 'Onbekend';
+    }
+  };
+  
+  const getPaymentMethodLabel = (method) => {
+    switch(method) {
+      case 'ideal': return 'iDEAL';
+      case 'creditcard': return 'Creditcard';
+      case 'sepa': return 'SEPA Incasso';
+      case 'balance': return 'Saldo';
+      default: return 'Onbekend';
+    }
+  };
+
+  // Use real data from the route
+  var displayPayments = payments || [];
+
+  // Build the payments page content as a string (like users.ejs)
+  var paymentsContent = `
+    <style>
+      /* Ensure admin/payments has 8px top space above main container */
+      .main-container { padding-top: 8px; }
+    </style>
+    <div class="payments-container">
+      <div class="page-header">
+        <div>
+          <h1>Betalingen</h1>
+          <p class="text-muted">Beheer alle betalingen, facturen en abonnementen</p>
+        </div>
+        <div class="custom-select" data-select-id="dateRangeSelect" style="margin-bottom: 16px;">
+          <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" data-select-trigger>
+            <span class="custom-select-value" data-select-value>Laatste 30 dagen</span>
+            <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="custom-select-dropdown" role="listbox" data-select-dropdown>
+            <div class="custom-select-items">
+              <div class="custom-select-item" role="option" data-value="7d" tabindex="0">
+                <span class="custom-select-item-text">Laatste 7 dagen</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item selected" role="option" data-value="30d" tabindex="0">
+                <span class="custom-select-item-text">Laatste 30 dagen</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item" role="option" data-value="90d" tabindex="0">
+                <span class="custom-select-item-text">Laatste 90 dagen</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item" role="option" data-value="1y" tabindex="0">
+                <span class="custom-select-item-text">Laatste jaar</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="dateRange" value="30d" data-select-input>
+        </div>
+      </div>
+      
+      <!-- KPI Cards Section -->
+      <div class="kpi-cards-container">
+        <div class="kpi-cards-grid">
+          <!-- Total Lead Revenue Card -->
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totale omzet</p>
+              <p class="kpi-value" id="totalRevenue">€0,00</p>
+              <p class="kpi-subtitle" id="revenueSubtitle">Laatste 30 dagen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                <polyline points="16 7 22 7 22 13"></polyline>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Payment Success Rate Card -->
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Betaalsucces</p>
+              <p class="kpi-value" id="successRate">0.0%</p>
+              <p class="kpi-subtitle">Geslaagde betalingen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar">
+                <path d="M8 2v4"></path>
+                <path d="M16 2v4"></path>
+                <rect width="18" height="18" x="3" y="4" rx="2"></rect>
+                <path d="M3 10h18"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Active Account Holders Card -->
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Actieve rekeninghouders</p>
+              <p class="kpi-value" id="activeAccountHolders">0</p>
+              <p class="kpi-subtitle">Met automatische incasso</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- Pending Payments Card -->
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Openstaande betalingen</p>
+              <p class="kpi-value" id="failedPayments">0</p>
+              <p class="kpi-subtitle" id="failedSubtitle">Laatste 30 dagen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" x2="12" y1="8" y2="12"></line>
+                <line x1="12" x2="12.01" y1="16" y2="16"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Charts Section -->
+      <div class="charts-container">
+        <!-- Revenue Chart (2/3 width) -->
+        <div class="chart-col-2">
+          <div class="revenue-chart-card">
+            <div class="revenue-chart-header">
+              <h3 class="revenue-chart-title">Omzet over tijd</h3>
+            </div>
+            <div class="revenue-chart-filters">
+              <div class="period-buttons">
+                <button class="period-btn active" data-period="dag">Dag</button>
+                <button class="period-btn" data-period="week">Week</button>
+                <button class="period-btn" data-period="maand">Maand</button>
+                <button class="period-btn" data-period="jaar">Jaar</button>
+              </div>
+              <div class="year-select-wrapper">
+                <select class="year-select" id="revenueYearSelect">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+                <svg class="year-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+            <div class="revenue-chart-body">
+              <canvas id="revenueChart" width="800" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Monthly Growth (1/3 width) -->
+        <div class="chart-col-1">
+          <div class="monthly-growth-card">
+            <h3 class="monthly-growth-title">Maandelijkse groei</h3>
+            
+            <!-- SECTION 1: Current Month -->
+            <div class="current-month-section">
+              <p class="current-month-label" id="currentMonthLabel">September 2025</p>
+              <div class="current-month-stats">
+                <p class="current-revenue" id="currentRevenue">€ 436</p>
+                <p class="current-payments" id="currentPayments">56 betalingen</p>
+              </div>
+            </div>
+            
+            <!-- SECTION 2: Comparison -->
+            <div class="comparison-section">
+              <p class="comparison-label" id="comparisonLabel">vs Augustus 2025</p>
+              
+              <div class="growth-metrics">
+                <!-- Revenue Growth -->
+                <div class="growth-metric-row">
+                  <span class="metric-label">Omzet</span>
+                  <div class="metric-value" id="revenueGrowth">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="growth-trend growth-trend-up">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                      <polyline points="16 7 22 7 22 13"></polyline>
+                    </svg>
+                    <span class="growth-percentage growth-percentage-positive">+65.8%</span>
+                  </div>
+                </div>
+                
+                <!-- Payments Growth -->
+                <div class="growth-metric-row">
+                  <span class="metric-label">Betalingen</span>
+                  <div class="metric-value" id="paymentsGrowth">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="growth-trend growth-trend-up">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                      <polyline points="16 7 22 7 22 13"></polyline>
+                    </svg>
+                    <span class="growth-percentage growth-percentage-positive">+409.1%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- SECTION 3: Previous Month Details -->
+              <div class="previous-month-details">
+                <p class="previous-revenue" id="previousRevenue">€ 263</p>
+                <p class="previous-payments" id="previousPayments">11 betalingen</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tabs Section -->
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-button tab-button-active" data-tab="betalingen">Betalingen</button>
+          <button class="tab-button" data-tab="facturen">Facturen</button>
+          <button class="tab-button" data-tab="mandaten">Mandaten</button>
+        </div>
+        
+        <!-- Betalingen Tab -->
+        <div class="tab-content tab-content-active" id="betalingen">
+          <!-- Filters Section -->
+          <div class="filters-container">
+            <!-- Search Input -->
+            <div class="search-wrapper">
+              <input 
+                type="text" 
+                placeholder="Zoek op klant, lead ID of titel..."
+                class="search-input"
+                id="searchInput"
+              />
+            </div>
+            
+            <!-- Status Filter with Results Info -->
+            <div class="status-filter-section">
+              <select class="status-select" id="statusSelect">
+                <option value="all">Alle statussen</option>
+                <option value="paid">Betaald</option>
+                <option value="pending">In behandeling</option>
+                <option value="failed">Mislukt</option>
+                <option value="refunded">Terugbetaald</option>
+              </select>
+              
+              <!-- Results Info - positioned under status select, aligned right -->
+              <div class="results-info" id="paginationInfo">
+                Toont 1 tot 10 van 67 resultaten
+              </div>
+            </div>
+          </div>
+          
+          <!-- Table Container -->
+          <div class="table-container">
+            <div class="table-scroll">
+              <table class="payments-table">
+                <thead>
+                  <tr class="table-header-row">
+                    <th class="table-header-cell">Datum</th>
+                    <th class="table-header-cell">Aanvragen</th>
+                    <th class="table-header-cell">Klant</th>
+                    <th class="table-header-cell">Bedrag</th>
+                    <th class="table-header-cell">Status</th>
+                    <th class="table-header-cell">Acties</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody">
+                  <!-- Table rows will be populated by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+      <!-- Pagination -->
+      <div class="pagination-container">
+        <!-- Items Per Page Selector - Bottom Left -->
+        <div class="items-per-page-wrapper">
+          <label for="itemsPerPageSelect" class="items-per-page-label">Toon:</label>
+          <select class="items-per-page-select" id="itemsPerPageSelect">
+            <option value="10" selected>10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          <span class="items-per-page-suffix">per pagina</span>
+        </div>
+        
+        <!-- Page Buttons - Right Aligned -->
+        <div class="pagination-buttons" id="paginationButtons">
+          <!-- Previous Button -->
+          <button class="pagination-nav" id="prevButton" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          
+          <!-- Page Numbers -->
+          <button class="pagination-page pagination-page-active">1</button>
+          <button class="pagination-page">2</button>
+          <button class="pagination-page">3</button>
+          <button class="pagination-page">4</button>
+          <button class="pagination-page">5</button>
+          <button class="pagination-page">6</button>
+          <button class="pagination-page">7</button>
+          <button class="pagination-page">8</button>
+          
+          <!-- Next Button -->
+          <button class="pagination-nav" id="nextButton">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+        </div>
+        
+        <!-- Facturen Tab -->
+        <div class="tab-content" id="facturen">
+          <div class="tab-placeholder">
+            <p>Facturen tabel komt binnenkort beschikbaar</p>
+          </div>
+        </div>
+        
+        <!-- Mandaten Tab -->
+        <div class="tab-content" id="mandaten">
+          <div class="tab-placeholder">
+            <p>Mandaten tabel komt binnenkort beschikbaar</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+%>
+
+<%- include('../layouts/admin', {
+  title: 'Betalingenbeheer',
+  activeMenu: 'payments',
+  user: user,
+  body: paymentsContent,
+  scripts: ['/js/admin/dashboard.js', '/js/admin/payments.js', '/js/components/custom-select.js', '/js/admin/revenue-chart.js', '/js/admin/monthly-growth.js', '/js/admin/payments-table.js']
+}) %>
+
+<script>
+// KPI Cards Data Fetching and Display
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('[KPI] Starting KPI data fetch...');
+  
+  // Show loading state
+  showKPILoading();
+  
+  // Fetch KPI data
+  fetchKPIData();
+  
+  // Add event listener for date range changes
+  const dateRangeInput = document.querySelector('[name="dateRange"]');
+  console.log('[KPI] Date range input element:', dateRangeInput);
+  if (dateRangeInput) {
+    console.log('[KPI] Adding event listener to date range input');
+    dateRangeInput.addEventListener('change', function() {
+      console.log('[KPI] Date range changed to:', this.value);
+      fetchKPIData();
+    });
+  } else {
+    console.error('[KPI] Date range input element not found!');
+  }
+});
+
+async function fetchKPIData() {
+  try {
+    const dateRangeInput = document.querySelector('[name="dateRange"]');
+    const dateRange = dateRangeInput?.value || '30d';
+    console.log('[KPI] Fetching KPI data from server for range:', dateRange);
+    
+    const response = await fetch(`/admin/api/admin/kpi-data?range=${dateRange}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('[KPI] KPI data received:', data);
+    
+    // Update KPI cards with data
+    updateKPICards(data);
+    
+  } catch (error) {
+    console.error('[KPI] Error fetching KPI data:', error);
+    // Show fallback values on error
+    showKPIError();
+  }
+}
+
+function showKPILoading() {
+  const kpiValues = document.querySelectorAll('.kpi-value');
+  kpiValues.forEach(value => {
+    value.classList.add('loading');
+    value.textContent = '';
+  });
+}
+
+function updateKPICards(data) {
+  console.log('[KPI] Updating KPI cards with data:', data);
+  
+  // Remove loading state
+  const kpiValues = document.querySelectorAll('.kpi-value');
+  kpiValues.forEach(value => {
+    value.classList.remove('loading');
+  });
+  
+  // Get date range label
+  const dateRangeInput = document.querySelector('[name="dateRange"]');
+  const dateRange = dateRangeInput?.value || '30d';
+  const dateRangeLabels = {
+    '7d': 'Laatste 7 dagen',
+    '30d': 'Laatste 30 dagen',
+    '90d': 'Laatste 90 dagen',
+    '1y': 'Laatste jaar'
+  };
+  const dateRangeLabel = dateRangeLabels[dateRange] || 'Laatste 30 dagen';
+  
+  // Update Total Revenue with comparison
+  const totalRevenue = document.getElementById('totalRevenue');
+  if (totalRevenue && data.totalRevenue !== undefined) {
+    const formattedRevenue = formatCurrency(data.totalRevenue);
+    totalRevenue.textContent = formattedRevenue;
+    
+    // Add comparison text using new system
+    if (data.comparison && data.comparison.revenueChange !== undefined) {
+      addComparisonBadge(totalRevenue, data.comparison.revenueChange, false);
+    } else {
+      // Fallback to date range if no comparison data
+      const revenueSubtitle = document.getElementById('revenueSubtitle');
+      if (revenueSubtitle) revenueSubtitle.textContent = dateRangeLabel;
+    }
+  }
+  
+  // Update Success Rate with comparison
+  const successRate = document.getElementById('successRate');
+  if (successRate && data.successRate !== undefined) {
+    const formattedRate = `${data.successRate.toFixed(1)}%`;
+    successRate.textContent = formattedRate;
+    
+    // Add comparison text (percentage change for success rate)
+    if (data.comparison && data.comparison.successRateChange !== undefined) {
+      addComparisonBadge(successRate, data.comparison.successRateChange, false);
+    } else {
+      // Fallback to default subtitle if no comparison data
+      const successRateSubtitle = document.querySelector('#successRate').parentNode.querySelector('.kpi-subtitle');
+      if (successRateSubtitle) successRateSubtitle.textContent = 'Geslaagde betalingen';
+    }
+  }
+  
+  // Update Active Account Holders (no comparison)
+  const activeAccountHolders = document.getElementById('activeAccountHolders');
+  if (activeAccountHolders && data.activeAccountHolders !== undefined) {
+    activeAccountHolders.textContent = data.activeAccountHolders.toString();
+  }
+  
+  // Update Failed Payments with comparison
+  const failedPayments = document.getElementById('failedPayments');
+  if (failedPayments && data.failedPayments !== undefined) {
+    failedPayments.textContent = data.failedPayments.toString();
+    
+    // Add comparison text
+    if (data.comparison && data.comparison.failedChange !== undefined) {
+      addComparisonBadge(failedPayments, data.comparison.failedChange, false);
+    } else {
+      // Fallback to date range if no comparison data
+      const failedSubtitle = document.getElementById('failedSubtitle');
+      if (failedSubtitle) failedSubtitle.textContent = dateRangeLabel;
+    }
+  }
+  
+  // Update subtitles with date range (only if not already updated by comparison)
+  const revenueSubtitle = document.getElementById('revenueSubtitle');
+  const failedSubtitle = document.getElementById('failedSubtitle');
+  if (revenueSubtitle && !revenueSubtitle.textContent.includes('vs vorige periode')) {
+    revenueSubtitle.textContent = dateRangeLabel;
+  }
+  if (failedSubtitle && !failedSubtitle.textContent.includes('vs vorige periode')) {
+    failedSubtitle.textContent = dateRangeLabel;
+  }
+}
+
+/**
+ * Generate comparison text with dynamic color
+ * @param {number} currentValue - Current period value
+ * @param {number} previousValue - Previous period value
+ * @param {string} format - 'percentage' or 'currency' or 'number'
+ * @returns {object} Text and CSS class
+ */
+function generateComparisonText(currentValue, previousValue, format = 'percentage') {
+  // Handle edge cases
+  if (previousValue === 0 || previousValue === null || previousValue === undefined) {
+    return {
+      text: 'Geen vorige data',
+      class: 'kpi-comparison-neutral'
+    };
+  }
+  
+  // Calculate percentage change
+  const change = ((currentValue - previousValue) / previousValue) * 100;
+  
+  // Format the change value
+  const sign = change > 0 ? '+' : '';
+  const changeText = `${sign}${change.toFixed(1)}%`;
+  
+  // Determine color class
+  let colorClass = 'kpi-comparison-neutral';
+  if (change > 0) {
+    colorClass = 'kpi-comparison-positive';
+  } else if (change < 0) {
+    colorClass = 'kpi-comparison-negative';
+  }
+  
+  // Build full text
+  const fullText = `${changeText} vs vorige periode`;
+  
+  return {
+    text: fullText,
+    class: colorClass,
+    change: change
+  };
+}
+
+/**
+ * Update KPI card comparison text by replacing subtitle
+ * @param {string} elementId - ID of the KPI value element
+ * @param {number} currentValue - Current value
+ * @param {number} previousValue - Previous value
+ */
+function updateKPIComparison(elementId, currentValue, previousValue) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  // Generate comparison data
+  const comparison = generateComparisonText(currentValue, previousValue);
+  
+  // Find the subtitle element to replace
+  const subtitleEl = element.parentNode.querySelector('.kpi-subtitle');
+  
+  if (subtitleEl) {
+    // Update subtitle with comparison text and class
+    subtitleEl.textContent = comparison.text;
+    subtitleEl.className = `kpi-subtitle ${comparison.class}`;
+  }
+}
+
+function addComparisonBadge(element, change, isAbsolute = false) {
+  // Find the subtitle element to replace
+  const subtitleEl = element.parentNode.querySelector('.kpi-subtitle');
+  
+  if (subtitleEl) {
+    // Determine chevron direction and color
+    const isPositive = change > 0;
+    const chevronClass = isPositive ? 'kpi-chevron-up' : 'kpi-chevron-down';
+    const chevronPath = isPositive 
+      ? 'M2 8L6 4L10 8'  // Up arrow
+      : 'M2 4L6 8L10 4'; // Down arrow
+    
+    // Format change value
+    let comparisonText;
+    if (isAbsolute) {
+      // For success rate, show absolute change in percentage points
+      comparisonText = `${change > 0 ? '+' : ''}${change.toFixed(1)}pt vs vorige periode`;
+    } else {
+      // For other metrics, show percentage change (cap at 100% for readability)
+      const displayChange = Math.abs(change) > 100 ? 100 : change;
+      const sign = displayChange > 0 ? '+' : '';
+      comparisonText = `${sign}${displayChange.toFixed(0)}% vs vorige periode`;
+    }
+    
+    // Create comparison HTML with chevron
+    const comparisonHTML = `
+      <svg class="kpi-chevron ${chevronClass}" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="${chevronPath}" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="kpi-comparison-text">${comparisonText}</span>
+    `;
+    
+    // Update subtitle with comparison HTML
+    subtitleEl.className = 'kpi-comparison';
+    subtitleEl.innerHTML = comparisonHTML;
+  }
+}
+
+function showKPIError() {
+  console.log('[KPI] Showing error state with fallback values');
+  
+  // Remove loading state
+  const kpiValues = document.querySelectorAll('.kpi-value');
+  kpiValues.forEach(value => {
+    value.classList.remove('loading');
+  });
+  
+  // Set fallback values
+  document.getElementById('totalRevenue').textContent = '€0,00';
+  document.getElementById('successRate').textContent = '0.0%';
+  document.getElementById('activeAccountHolders').textContent = '0';
+  document.getElementById('failedPayments').textContent = '0';
+}
+
+function formatCurrency(amountInCents) {
+  // Convert cents to euros and format with Dutch locale
+  const euros = amountInCents / 100;
+  return new Intl.NumberFormat('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(euros);
+}
+</script>
+
+<!-- Invoice Creation Modal -->
+<div class="modal fade" id="invoiceCreationModal" role="dialog" aria-labelledby="invoiceCreationModalLabel">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="invoiceCreationModalLabel">Factuur aanmaken</h5>
+        <button type="button" class="close" id="closeInvoiceModal" aria-label="Sluiten">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="invoiceValidationMessage" class="alert" style="display: none;"></div>
+        <form id="invoiceForm" class="needs-validation" novalidate>
+          <div class="form-group">
+            <label for="customerSearch">Klant zoeken</label>
+            <input type="text" class="form-control" id="customerSearch" placeholder="Begin met typen om een klant te zoeken..." autocomplete="off">
+            <input type="hidden" id="customer_id" name="customer_id">
+            <div id="customerResults" class="customer-search-results" style="display: none;"></div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="amount">Bedrag (€)</label>
+              <div class="input-group">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">€</span>
+                </div>
+                <input type="number" class="form-control" id="amount" name="amount" min="0" step="0.01" required>
+                <div class="invalid-feedback">Vul een geldig bedrag in.</div>
+              </div>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="due_date">Vervaldatum</label>
+              <input type="date" class="form-control" id="due_date" name="due_date" required>
+              <div class="invalid-feedback">Selecteer een vervaldatum.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Beschrijving</label>
+            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+            <div class="invalid-feedback">Vul een beschrijving in.</div>
+          </div>
+
+          <div class="form-group">
+            <label for="payment_method">Betaalmethode</label>
+            <select class="form-control" id="payment_method" name="payment_method" required>
+              <option value="">Selecteer een betaalmethode</option>
+              <option value="ideal">iDEAL</option>
+              <option value="creditcard">Creditcard</option>
+              <option value="bancontact">Bancontact</option>
+            </select>
+            <div class="invalid-feedback">Selecteer een betaalmethode.</div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Modal centering and backdrop styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  overflow-y: auto;
+}
+
+.modal.show {
+  display: block;
+}
+
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 1.75rem auto;
+  pointer-events: none;
+}
+
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100% - 3.5rem);
+}
+
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 0.3rem;
+  outline: 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1040;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+}
+
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+
+/* Customer search results styling */
+.customer-search-results {
+  position: absolute;
+  top: calc(100% + 4px); /* Position right below the input with a small gap */
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 1050; /* Ensure it's above other modal content */
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.customer-result-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s ease;
+}
+
+.customer-result-item:last-child {
+  border-bottom: none;
+}
+
+.customer-result-item:hover {
+  background-color: #f8f9fa;
+}
+
+.customer-result-item .customer-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.customer-result-item .customer-email {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+/* Ensure the form group has relative positioning for the dropdown */
+.form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+/* Style the search input */
+#customerSearch {
+  padding-right: 30px; /* Space for potential icon */
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#customerSearch:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+  outline: none;
+}
+
+/* Add a subtle animation for the dropdown */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.customer-search-results {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Ensure the modal content has proper z-indexing */
+.modal-content {
+  position: relative;
+  z-index: 1050;
+}
+
+.modal-backdrop {
+  z-index: 1040;
+}
+
+/* Form validation styling */
+.was-validated .form-control:invalid {
+  border-color: #dc3545;
+  padding-right: calc(1.5em + 0.75rem);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23dc3545' viewBox='0 0 12 12'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.was-validated .form-control:valid {
+  border-color: #28a745;
+  padding-right: calc(1.5em + 0.75rem);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right calc(0.375em + 0.1875rem) center;
+  background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+/* ============================================
+   KPI COMPARISON WITH CHEVRON
+   ============================================ */
+.kpi-comparison {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 300;
+  color: #9498a0;
+}
+
+/* Chevron Icon */
+.kpi-chevron {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+/* Chevron Up (Green) */
+.kpi-chevron-up {
+  color: #059669;
+}
+
+/* Chevron Down (Red) */
+.kpi-chevron-down {
+  color: #dc2626;
+}
+
+/* Comparison Text (Always Gray) */
+.kpi-comparison-text {
+  font-size: 13px;
+  font-weight: 300;
+  color: #9498a0;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('invoiceCreationModal');
+  const closeBtn = document.getElementById('closeInvoiceModal');
+  const customerSearch = document.getElementById('customerSearch');
+  const customerResults = document.getElementById('customerResults');
+  let lastFocusedElement = null;
+  let searchTimeout = null;
+
+  // Function to handle modal open
+  function openModal() {
+    lastFocusedElement = document.activeElement;
+    modal.style.display = 'block';
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = '15px'; // Prevent content shift
+    modal.classList.add('show');
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade show';
+    document.body.appendChild(backdrop);
+    
+    customerSearch.focus();
+  }
+
+  // Function to handle modal close
+  function closeModal() {
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Remove backdrop
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+      backdrop.remove();
+    }
+    
+    if (lastFocusedElement) {
+      lastFocusedElement.focus();
+    }
+  }
+
+  // Customer search functionality
+  customerSearch.addEventListener('input', function() {
+    const query = this.value.trim();
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Clear results if query is too short
+    if (query.length < 2) {
+      customerResults.style.display = 'none';
+      return;
+    }
+    
+    // Set new timeout for search
+    searchTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+        if (!response.ok) {
+          throw new Error(`Search failed: ${response.statusText}`);
+        }
+        
+        const users = await response.json();
+        
+        // Display results
+        if (users.length > 0) {
+          customerResults.innerHTML = users.map(user => `
+            <div class="customer-result-item" data-id="${user.id}" data-email="${user.email}">
+              <div class="customer-name">${user.company_name || `${user.first_name} ${user.last_name}`}</div>
+              <div class="customer-email">${user.email}</div>
+            </div>
+          `).join('');
+          
+          customerResults.style.display = 'block';
+        } else {
+          customerResults.innerHTML = '<div class="customer-result-item">Geen resultaten gevonden</div>';
+          customerResults.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error searching users:', error);
+        customerResults.innerHTML = '<div class="customer-result-item text-danger">Er is een fout opgetreden bij het zoeken</div>';
+        customerResults.style.display = 'block';
+      }
+    }, 300); // 300ms debounce
+  });
+
+  // Handle customer selection
+  customerResults.addEventListener('click', function(e) {
+    const resultItem = e.target.closest('.customer-result-item');
+    if (resultItem) {
+      const userId = resultItem.dataset.id;
+      const userEmail = resultItem.dataset.email;
+      
+      document.getElementById('customer_id').value = userId;
+      customerSearch.value = resultItem.querySelector('.customer-name').textContent;
+      customerResults.style.display = 'none';
+    }
+  });
+
+  // Close results when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!customerSearch.contains(e.target) && !customerResults.contains(e.target)) {
+      customerResults.style.display = 'none';
+    }
+  });
+
+  // Event listeners for modal
+  const createInvoiceBtn = document.getElementById('createInvoiceBtn');
+  if (createInvoiceBtn) {
+    createInvoiceBtn.addEventListener('click', openModal);
+  }
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+
+  // Handle escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal.classList.contains('show')) {
+      closeModal();
+    }
+  });
+
+  // Handle tab key within modal
+  modal.addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const firstFocusableElement = focusableElements[0];
+      const lastFocusableElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstFocusableElement) {
+          e.preventDefault();
+          lastFocusableElement.focus();
+        }
+      } else {
+        if (document.activeElement === lastFocusableElement) {
+          e.preventDefault();
+          firstFocusableElement.focus();
+        }
+      }
+    }
+  });
+});
+</script>
+</script>

@@ -1,0 +1,840 @@
+<% 
+// Formateer datum
+const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+};
+
+// Formateer tijd
+const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+// Functie om status label te genereren
+const getStatusLabel = (status) => {
+    switch(status) {
+        case 'new': return 'Nieuw';
+        case 'accepted': return 'Geaccepteerd';
+        case 'rejected': return 'Afgewezen';
+        case 'in_progress': return 'In behandeling';
+        default: return 'Onbekend';
+    }
+};
+
+// Functie om prioriteit label te genereren
+const getPriorityLabel = (priority) => {
+    switch(priority) {
+        case 'low': return 'Laag';
+        case 'medium': return 'Gemiddeld';
+        case 'high': return 'Hoog';
+        default: return 'Onbekend';
+    }
+};
+
+// Functie om initialen te genereren
+const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+};
+
+// Gebruik de echte leads data
+var displayLeads = leads || [];
+%>
+
+<% 
+// Build body content with EJS output
+var bodyContent = '';
+%>
+
+<%- include('../layouts/admin', { 
+    title: 'Aanvragenbeheer', 
+    activeMenu: 'leads', 
+    user: user,
+    stylesheets: ['/css/admin/leads.css', '/css/admin/leads-additional.css', '/css/admin/adminPayments.css', '/css/admin/revenue-chart.css', '/css/admin/monthly-growth.css', '/css/components/custom-select.css', '/css/components/netherlands-map.css', '/css/admin/payments-table.css', '/css/admin/users.css', '/css/admin/ai-lead-router.css', '/css/admin/lead-engine.css'],
+    scripts: ['/js/admin/leads.js', '/js/components/custom-select.js', '/js/ai-lead-router.js'],
+    body: (function() {
+        var output = '';
+        output += `
+        <div class="payments-container">
+            <div class="page-header">
+                <div>
+                    <h1>Aanvragenbeheer</h1>
+                    <p class="text-muted">Beheer alle ingediende aanvragen</p>
+                </div>
+                <div class="header-actions">
+                    <div class="custom-select" data-select-id="dateRangeSelect" style="margin-bottom: 16px;">
+                        <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" data-select-trigger>
+                            <span class="custom-select-value" data-select-value>Laatste 30 dagen</span>
+                            <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <div class="custom-select-dropdown" role="listbox" data-select-dropdown>
+                            <div class="custom-select-items">
+                                <div class="custom-select-item" role="option" data-value="7d" tabindex="0">
+                                    <span class="custom-select-item-text">Laatste 7 dagen</span>
+                                    <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="custom-select-item selected" role="option" data-value="30d" tabindex="0">
+                                    <span class="custom-select-item-text">Laatste 30 dagen</span>
+                                    <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="custom-select-item" role="option" data-value="90d" tabindex="0">
+                                    <span class="custom-select-item-text">Laatste 90 dagen</span>
+                                    <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="custom-select-item" role="option" data-value="1y" tabindex="0">
+                                    <span class="custom-select-item-text">Laatste jaar</span>
+                                    <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                        <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="dateRange" value="30d" data-select-input>
+                    </div>
+                    <button class="btn-primary" id="addRequestBtn">Aanvraag toevoegen</button>
+                </div>
+            </div>
+            
+            <!-- KPI Cards Section -->
+            <div class="kpi-cards-container">
+                <div class="kpi-cards-grid">
+                    <!-- Total Leads Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-content">
+                            <p class="kpi-title">Totaal Leads</p>
+                            <p class="kpi-value" id="totalLeads">` + (displayLeads ? displayLeads.length : 0) + `</p>
+                            <p class="kpi-subtitle">Alle aanvragen</p>
+                        </div>
+                        <div class="kpi-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- New Leads Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-content">
+                            <p class="kpi-title">Nieuwe Leads</p>
+                            <p class="kpi-value" id="newLeads">` + (displayLeads ? displayLeads.filter(lead => lead.status === 'new').length : 0) + `</p>
+                            <p class="kpi-subtitle">Nog niet behandeld</p>
+                        </div>
+                        <div class="kpi-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-plus">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <line x1="19" x2="19" y1="8" y2="14"></line>
+                                <line x1="22" x2="16" y1="11" y2="11"></line>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Accepted Leads Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-content">
+                            <p class="kpi-title">Geaccepteerde Leads</p>
+                            <p class="kpi-value" id="acceptedLeads">` + (displayLeads ? displayLeads.filter(lead => lead.status === 'accepted').length : 0) + `</p>
+                            <p class="kpi-subtitle">Succesvol geaccepteerd</p>
+                        </div>
+                        <div class="kpi-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle">
+                                <path d="M9 12l2 2 4-4"></path>
+                                <circle cx="12" cy="12" r="10"></circle>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Conversion Rate Card -->
+                    <div class="kpi-card">
+                        <div class="kpi-content">
+                            <p class="kpi-title">Conversie Ratio</p>
+                            <p class="kpi-value" id="conversionRate">` + (displayLeads && displayLeads.length > 0 ? Math.round((displayLeads.filter(lead => lead.status === 'accepted').length / displayLeads.length) * 100) : 0) + `%</p>
+                            <p class="kpi-subtitle">Acceptatie percentage</p>
+                        </div>
+                        <div class="kpi-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                                <polyline points="16 7 22 7 22 13"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Router Status Bar -->
+            <div class="ai-router-status-bar">
+                <div class="ai-router-status-content">
+                    <div class="ai-router-status-left">
+                        <div class="trust-score-ai-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width: 16px; height: 16px;">
+                                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                                <path d="M20 3v4"></path>
+                                <path d="M22 5h-4"></path>
+                                <path d="M4 17v2"></path>
+                                <path d="M5 18H3"></path>
+                            </svg>
+                        </div>
+                        <div class="ai-router-status-text">
+                            <div class="ai-router-status-title">AI Lead Router</div>
+                            <div class="ai-router-status-description">
+                                Automatische toewijzing op basis van branche, regio, prestaties en eerlijke verdeling.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ai-router-status-right">
+                        <div class="ai-router-status-badge" data-status="enabled">
+                            <span class="ai-router-status-indicator-dot" style="margin-right: 6px;">●</span>
+                            <span class="ai-router-status-label">Automatische toewijzing: Aan</span>
+                        </div>
+                        <button class="btn-secondary btn-sm ai-router-settings-btn" id="aiRoutingSettingsBtn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings">
+                                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <span class="ai-router-settings-text">Instellingen</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabs Section -->
+            <div class="tabs-container">
+                <!-- Tab Navigation -->
+                <div class="border-b border-gray-200 bg-white">
+                    <nav class="flex space-x-8" role="tablist">
+                        <button 
+                            class="tab-button px-1 pb-3 pt-4 text-sm font-medium transition-colors"
+                            data-tab="leads"
+                            role="tab"
+                            aria-selected="true"
+                        >
+                            Leads
+                        </button>
+                        <button 
+                            class="tab-button px-1 pb-3 pt-4 text-sm font-medium transition-colors"
+                            data-tab="conversies"
+                            role="tab"
+                            aria-selected="false"
+                        >
+                            Conversies
+                        </button>
+                        <button 
+                            class="tab-button px-1 pb-3 pt-4 text-sm font-medium transition-colors"
+                            data-tab="analytics"
+                            role="tab"
+                            aria-selected="false"
+                        >
+                            Analytics
+                        </button>
+                        <button 
+                            class="tab-button px-1 pb-3 pt-4 text-sm font-medium transition-colors"
+                            data-tab="distributie"
+                            role="tab"
+                            aria-selected="false"
+                        >
+                            Distributie & Capaciteit
+                        </button>
+                    </nav>
+                </div>
+                
+                <!-- Leads Tab -->
+                <div class="tab-content tab-content-active" id="leads">
+                    <div class="table-container">
+                        <div class="table-scroll">
+                            <table class="payments-table">
+                                <thead>
+                                    <tr class="table-header-row">
+                                        <th class="table-header-cell">Naam</th>
+                                        <th class="table-header-cell">Status</th>
+                                        <th class="table-header-cell">Prioriteit</th>
+                                        <th class="table-header-cell">Branche</th>
+                                        <th class="table-header-cell">Toegewezen aan</th>
+                                        <th class="table-header-cell">Ingediend</th>
+                                        <th class="table-header-cell">Acties</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">`;
+        if (displayLeads && displayLeads.length > 0) {
+            displayLeads.forEach(function(lead) {
+                const statusLabel = getStatusLabel(lead.status || 'new');
+                const priorityLabel = getPriorityLabel(lead.priority || 'medium');
+                // Get industry name - check industry_name first, then industry object, then fallback
+                let industryName = '-';
+                if (lead.industry_name) {
+                    industryName = lead.industry_name;
+                } else if (lead.industry && lead.industry.name) {
+                    industryName = lead.industry.name;
+                } else if (lead.industry_id === 1) {
+                    industryName = 'Dakdekkers';
+                } else if (lead.industry_id === 2) {
+                    industryName = 'Schilders';
+                }
+                const assignedTo = lead.assigned_to || 'Niet toegewezen';
+                const createdDate = lead.created_at ? formatDate(lead.created_at) + ' ' + formatTime(lead.created_at) : '-';
+                
+                // Status badge color - using same styling as payments
+                let statusBadgeClass = 'status-badge ';
+                if (lead.status === 'accepted') {
+                    statusBadgeClass += 'status-paid'; // green
+                } else if (lead.status === 'rejected') {
+                    statusBadgeClass += 'status-failed'; // red
+                } else if (lead.status === 'in_progress') {
+                    statusBadgeClass += 'status-pending'; // gray
+                } else {
+                    statusBadgeClass += 'status-new'; // blue for new - match is-new
+                }
+                
+                // Priority badge color - using same styling as payments
+                let priorityBadgeClass = 'status-badge ';
+                if (lead.priority === 'high') {
+                    priorityBadgeClass += 'status-failed'; // red
+                } else if (lead.priority === 'medium') {
+                    priorityBadgeClass += 'status-pending'; // gray
+                } else {
+                    priorityBadgeClass += 'status-pending'; // gray for low
+                }
+                
+                output += `
+                                    <tr class="table-body-row" data-lead-id="` + lead.id + `">
+                                        <td class="table-cell">
+                                            <span class="cell-text">
+                                                <a href="/admin/leads/` + lead.id + `" style="color: #111827; text-decoration: none;" onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#111827'">` + (lead.name || '-') + `</a>
+                                            </span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="` + statusBadgeClass + `">` + statusLabel + `</span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="` + priorityBadgeClass + `">` + priorityLabel + `</span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="cell-text">` + industryName + `</span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="cell-text">` + assignedTo + `</span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <span class="cell-text">` + createdDate + `</span>
+                                        </td>
+                                        <td class="table-cell">
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <button class="actions-button view-button" onclick="event.stopPropagation(); event.preventDefault(); viewLeadDetailsModal('` + lead.id + `')" title="Bekijk details">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                </button>
+                                            <button class="actions-button" onclick="event.stopPropagation(); event.preventDefault(); showLeadActions('` + lead.id + `', event)" title="Meer acties">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <circle cx="12" cy="12" r="1"></circle>
+                                                    <circle cx="12" cy="5" r="1"></circle>
+                                                    <circle cx="12" cy="19" r="1"></circle>
+                                                </svg>
+                                            </button>
+                                            </div>
+                                        </td>
+                                    </tr>`;
+            });
+        } else {
+            output += `
+                                    <tr class="table-body-row">
+                                        <td colspan="7" class="table-cell" style="text-align: center;">
+                                            <span class="cell-text" style="color: #6b7280;">Geen leads gevonden</span>
+                                        </td>
+                                    </tr>`;
+        }
+        output += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Conversies Tab -->
+                <div class="tab-content" id="conversies">
+                    <div class="table-container">
+                        <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+                            <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Conversies</h3>
+                        </div>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Lead</th>
+                                        <th>Partner</th>
+                                        <th>Branche</th>
+                                        <th>Regio</th>
+                                        <th>Datum</th>
+                                        <th>Status</th>
+                                        <th>Waarde</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="conversionsTableBody">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analytics Tab -->
+                <div class="tab-content" id="analytics">
+                    <div class="users-listing-container">
+                        <div class="users-header-row">
+                            <div>
+                                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Analytics Dashboard</h3>
+                                <p style="font-size: 14px; color: #6b7280; margin: 0;">Inzicht in lead prestaties en trends</p>
+                            </div>
+                        </div>
+                        <div style="padding: 24px;">
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                                    <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Leads over tijd</h4>
+                                    <canvas id="leadsOverTijdChart" width="400" height="200"></canvas>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                                    <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Conversie ratio per branche</h4>
+                                    <canvas id="conversiePerBrancheChart" width="400" height="200"></canvas>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                                    <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Top partners</h4>
+                                    <div id="topPartnersList" class="top-partners-list">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                                <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                                    <h4 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Leads per provincie</h4>
+                                    <p style="font-size: 12px; color: #6b7280; margin: 0 0 16px 0;">Verdeling van leads over Nederland</p>
+                                    <div id="regioDistributieMap" class="netherlands-map-container">
+                                        <!-- Map will be rendered here by D3.js -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Distributie & Capaciteit Tab -->
+                <div class="tab-content" id="distributie">
+                    <div class="users-listing-container">
+                        <div class="users-header-row">
+                            <div>
+                                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 4px 0;">Distributie & Capaciteit</h3>
+                                <p style="font-size: 14px; color: #6b7280; margin: 0;">Overzicht van lead distributie en partner capaciteit</p>
+                            </div>
+                        </div>
+                        <div style="padding: 24px;">
+                            <!-- Summary Cards -->
+                            <div class="distribution-summary-cards">
+                        <div class="distribution-card">
+                            <div class="distribution-card-header">
+                                <h4>Branches met overcapaciteit</h4>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                                    <polyline points="16 7 22 7 22 13"/>
+                                </svg>
+                            </div>
+                            <div class="distribution-card-list" id="overcapacityList">
+                                <div class="distribution-list-item">
+                                    <span class="branch-name">Laden...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="distribution-card">
+                            <div class="distribution-card-header">
+                                <h4>Branches met tekorten</h4>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </div>
+                            <div class="distribution-card-list" id="shortageList">
+                                <div class="distribution-list-item">
+                                    <span class="branch-name">Laden...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="distribution-card">
+                            <div class="distribution-card-header">
+                                <h4>Eerlijke verdeling</h4>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/>
+                                    <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
+                                    <path d="M12 2v2"/>
+                                    <path d="M12 22v-2"/>
+                                    <path d="m17 20.66-1-1.73"/>
+                                </svg>
+                            </div>
+                            <div class="distribution-metric">
+                                <div class="metric-value" id="avgWaitTime">-</div>
+                                <div class="metric-label">Gemiddelde tijd sinds laatste lead per partner</div>
+                                <div class="metric-bar">
+                                    <div class="metric-bar-fill" id="fairnessBar" style="width: 0%;"></div>
+                                </div>
+                                <div class="metric-variance" id="fairnessVariance">-</div>
+                            </div>
+                        </div>
+                            </div>
+                            <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6" style="margin-top: 24px;">
+                                <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Leads vs beschikbare partners (7 dagen)</h3>
+                                <canvas id="distributionChart" width="800" height="300"></canvas>
+                            </div>
+                            <div class="table-container" style="margin-top: 24px;">
+                                <div style="padding: 16px; border-bottom: 1px solid #e5e7eb;">
+                                    <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Distributie overzicht</h3>
+                                </div>
+                                <div class="table-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Branche</th>
+                                                <th>Regio</th>
+                                                <th># Leads (7d)</th>
+                                                <th># Partners</th>
+                                                <th>Indicator</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="distributionTableBody">
+                                            <tr>
+                                                <td colspan="5" style="text-align: center; padding: 16px; color: #6b7280;">Laden...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Request Modal -->
+        <div class="modal" id="addRequestModal">
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>Nieuwe Aanvraag Toevoegen</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="addRequestForm">
+                        <div class="form-group">
+                            <label for="name">Naam *</label>
+                            <input type="text" id="name" name="name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">E-mail *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Telefoon</label>
+                            <input type="tel" id="phone" name="phone">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="company">Bedrijf</label>
+                            <input type="text" id="company" name="company">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="industry_id">Branche *</label>
+                            <select id="industry_id" name="industry_id" required>
+                                <option value="">Selecteer branche</option>
+                                <option value="1">Dakdekkers</option>
+                                <option value="2">Schilders</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="budget">Budget</label>
+                            <select id="budget" name="budget">
+                                <option value="">Selecteer budget</option>
+                                <option value="under_5k">Onder €5.000</option>
+                                <option value="5k_10k">€5.000 - €10.000</option>
+                                <option value="10k_25k">€10.000 - €25.000</option>
+                                <option value="25k_50k">€25.000 - €50.000</option>
+                                <option value="over_50k">Boven €50.000</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="deadline">Deadline</label>
+                            <input type="datetime-local" id="deadline" name="deadline">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="priority">Prioriteit</label>
+                            <select id="priority" name="priority">
+                                <option value="low">Laag</option>
+                                <option value="medium" selected>Gemiddeld</option>
+                                <option value="high">Hoog</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="requestAssignedTo">Toewijzen aan</label>
+                            <div class="searchable-dropdown">
+                                <input type="text" id="userSearchInput" placeholder="Zoek gebruiker..." autocomplete="off">
+                                <input type="hidden" id="requestAssignedTo" name="assigned_to">
+                                <div class="dropdown-arrow">▼</div>
+                                <div class="dropdown-options" id="userDropdownOptions">
+                                    <!-- Options will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">Beschrijving</label>
+                            <textarea id="description" name="description" rows="4" placeholder="Beschrijf de aanvraag..."></textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline" id="cancelAddRequestBtn">Annuleren</button>
+                            <button type="submit" class="btn btn-primary">Aanvraag Toevoegen</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Router Settings Modal -->
+        <div class="modal ai-router-settings-modal" id="aiRouterSettingsModal">
+            <div class="modal-content ai-router-modal-content">
+                <div class="ai-router-modal-header">
+                    <div>
+                        <h2 class="ai-router-modal-title">Instellingen Lead Routing</h2>
+                        <p class="ai-router-modal-description">Pas de weging van verschillende factoren aan voor de AI-gestuurde lead toewijzing.</p>
+                    </div>
+                    <button class="ai-router-modal-close" data-modal="aiRouterSettingsModal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6 6 18"></path>
+                            <path d="m6 6 12 12"></path>
+                        </svg>
+                        <span class="sr-only">Close</span>
+                    </button>
+                </div>
+                <div class="ai-router-modal-body">
+                    <div class="ai-settings-section">
+                        <div class="ai-settings-label-row">
+                            <label class="ai-settings-label" for="region-weight">Belang regio</label>
+                            <span class="ai-settings-value" id="regionWeightValue">50%</span>
+                        </div>
+                        <div class="ai-settings-slider-wrapper">
+                            <input type="range" class="ai-settings-slider-new" id="regionWeight" min="0" max="100" value="50">
+                            <div class="ai-settings-slider-track">
+                                <div class="ai-settings-slider-range" id="regionWeightRange"></div>
+                            </div>
+                            <div class="ai-settings-slider-thumb" id="regionWeightThumb"></div>
+                        </div>
+                        <p class="ai-settings-hint">Hoe belangrijk is geografische nabijheid bij het matchen van leads?</p>
+                    </div>
+                    <div class="ai-settings-section">
+                        <div class="ai-settings-label-row">
+                            <label class="ai-settings-label" for="performance-weight">Prestaties</label>
+                            <span class="ai-settings-value" id="performanceWeightValue">50%</span>
+                        </div>
+                        <div class="ai-settings-slider-wrapper">
+                            <input type="range" class="ai-settings-slider-new" id="performanceWeight" min="0" max="100" value="50">
+                            <div class="ai-settings-slider-track">
+                                <div class="ai-settings-slider-range" id="performanceWeightRange"></div>
+                            </div>
+                            <div class="ai-settings-slider-thumb" id="performanceWeightThumb"></div>
+                        </div>
+                        <p class="ai-settings-hint">Hoe sterk moeten de prestaties van de gebruiker meewegen?</p>
+                    </div>
+                    <div class="ai-settings-section">
+                        <div class="ai-settings-label-row">
+                            <label class="ai-settings-label" for="fair-distribution-weight">Belang eerlijke verdeling</label>
+                            <span class="ai-settings-value" id="fairnessWeightValue">50%</span>
+                        </div>
+                        <div class="ai-settings-slider-wrapper">
+                            <input type="range" class="ai-settings-slider-new" id="fairnessWeight" min="0" max="100" value="50">
+                            <div class="ai-settings-slider-track">
+                                <div class="ai-settings-slider-range" id="fairnessWeightRange"></div>
+                            </div>
+                            <div class="ai-settings-slider-thumb" id="fairnessWeightThumb"></div>
+                        </div>
+                        <p class="ai-settings-hint">Hoe belangrijk is het om leads eerlijk te verdelen over partners?</p>
+                    </div>
+                    <div class="ai-settings-toggle-section">
+                        <div class="ai-settings-toggle-content">
+                            <label class="ai-settings-toggle-label" for="auto-assign">Automatische toewijzing</label>
+                            <p class="ai-settings-toggle-description">Wijs alle nieuwe leads automatisch toe aan de beste match</p>
+                        </div>
+                        <label class="ai-settings-switch">
+                            <input type="checkbox" id="autoAssignToggle" checked>
+                            <span class="ai-settings-switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="ai-router-modal-footer">
+                    <button class="btn btn-outline ai-router-modal-cancel" data-modal="aiRouterSettingsModal">Annuleren</button>
+                    <button class="btn btn-primary ai-router-modal-save" id="saveAiSettings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Opslaan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assignment Drawer -->
+        <div class="drawer-overlay" id="aiAssignmentDrawer">
+            <div class="drawer-panel">
+                <div class="drawer-header">
+                    <div>
+                        <h3 class="drawer-title">AI-toewijzing voor lead #<span id="drawerLeadId">-</span></h3>
+                        <div class="drawer-subtitle">
+                            <span id="drawerLeadBranch">-</span> in 
+                            <span id="drawerLeadProvince">-</span>
+                            <span class="badge-urgent" id="drawerUrgentBadge" style="display: none;">Urgent</span>
+                        </div>
+                    </div>
+                    <button class="drawer-close" onclick="closeAiAssignmentDrawer()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="drawer-body">
+                    <div class="drawer-card drawer-lead-info">
+                        <div class="drawer-card-title">Lead informatie</div>
+                        <div class="drawer-info-grid">
+                            <div class="drawer-info-item">
+                                <span class="drawer-info-label">Naam</span>
+                                <span class="drawer-info-value" id="drawerLeadName">-</span>
+                            </div>
+                            <div class="drawer-info-item">
+                                <span class="drawer-info-label">Bedrijf</span>
+                                <span class="drawer-info-value" id="drawerLeadCompany">-</span>
+                            </div>
+                            <div class="drawer-info-item">
+                                <span class="drawer-info-label">Branche</span>
+                                <span class="badge-inline" id="drawerLeadBranchBadge">-</span>
+                            </div>
+                            <div class="drawer-info-item">
+                                <span class="drawer-info-label">Regio</span>
+                                <span class="drawer-info-value" id="drawerLeadRegion">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="drawer-card drawer-best-match">
+                        <div class="drawer-card-title">Beste match</div>
+                        <div class="best-match-header">
+                            <div class="best-match-name" id="bestMatchName">Laden...</div>
+                            <div class="best-match-score">
+                                <div class="score-circle">
+                                    <span class="score-value" id="bestMatchScore">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="best-match-stats" id="bestMatchStats">
+                            <!-- Stats will be populated by JavaScript -->
+                        </div>
+                        <div class="best-match-actions">
+                            <button class="btn btn-primary btn-block" id="assignToBestMatch">
+                                Toewijzen aan <span id="assignButtonName">-</span>
+                            </button>
+                            <button class="btn btn-outline btn-block" onclick="document.getElementById('alternativeMatches').scrollIntoView({behavior: 'smooth'})">
+                                Andere partner kiezen
+                            </button>
+                        </div>
+                    </div>
+                    <div class="drawer-section" id="alternativeMatches">
+                        <div class="drawer-section-title">Alternatieve matches</div>
+                        <div class="alternative-match-list" id="alternativeMatchList">
+                            <!-- Alternative matches will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="drawer-card drawer-ai-explanation">
+                        <div class="drawer-explanation-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            <span>Waarom deze keuze?</span>
+                        </div>
+                        <p class="drawer-explanation-text" id="aiExplanationText">
+                            Laden...
+                        </p>
+                    </div>
+                </div>
+                <div class="drawer-footer">
+                    <label class="drawer-footer-checkbox">
+                        <input type="checkbox" id="autoAssignThreshold">
+                        <span>Deze lead automatisch toewijzen als de score ≥ 70</span>
+                    </label>
+                    <button class="btn btn-outline" onclick="closeAiAssignmentDrawer()">Sluiten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lead Details View Modal -->
+        <div class="modal" id="leadDetailsViewModal">
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <h3>Lead Details</h3>
+                    <button class="modal-close" onclick="closeLeadDetailsModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="leadDetailsModalBody">
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="color: #6b7280;">Laden...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+        return output;
+    })()
+}) %>
+
+<!-- Tailwind CSS CDN (voor utility classes) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Configure Tailwind after it's loaded
+  if (typeof tailwind !== 'undefined') {
+    tailwind.config = {
+      corePlugins: {
+        preflight: false, // Disable Tailwind's base styles to avoid conflicts
+      }
+    }
+  }
+</script>
+<!-- Chart.js for distribution chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- D3.js for map visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- Netherlands Map Component -->
+<script src="/js/components/netherlands-map.js"></script>

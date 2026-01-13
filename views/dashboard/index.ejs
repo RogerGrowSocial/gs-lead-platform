@@ -1,0 +1,1796 @@
+<%
+  // Use only real data from the database - no sample data
+  var displayLeads = leads || []; // Alleen voor de tabel (eerste 5)
+  var currentLeadsCount = displayLeads.length;
+
+  // Use chart data from backend
+  var leadsMonthlyData = chartData ? chartData.leadsPerMonth : Array(12).fill(0);
+  var revenueMonthlyData = chartData ? chartData.revenuePerMonth : Array(12).fill(0);
+  
+  // Calculate real statistics from backend stats (alle leads, niet alleen recente)
+  var realStats = {
+    totalLeads: (locals.stats && locals.stats.totalLeads !== undefined) ? locals.stats.totalLeads : displayLeads.length,
+    newLeads: (locals.stats && locals.stats.newLeads !== undefined) ? locals.stats.newLeads : displayLeads.filter(lead => lead.status === 'new').length,
+    acceptedLeads: (locals.stats && locals.stats.acceptedLeads !== undefined) ? locals.stats.acceptedLeads : displayLeads.filter(lead => lead.status === 'accepted').length,
+    totalRevenue: displayLeads.filter(lead => lead.status === 'accepted').reduce((sum, lead) => sum + (parseFloat(lead.price_at_purchase) || 0), 0)
+  };
+  
+  // Get monthly usage and quota from stats
+  var monthlyUsage = (locals.stats && locals.stats.monthlyUsage !== undefined) ? locals.stats.monthlyUsage : 0;
+  var monthlyQuota = (locals.stats && locals.stats.monthlyQuota !== undefined) ? locals.stats.monthlyQuota : 50;
+  var usagePercentage = monthlyQuota > 0 ? Math.min((monthlyUsage / monthlyQuota) * 100, 100) : 0;
+  var usageDisplay = monthlyQuota === 100 ? 'Geen limiet' : monthlyUsage + '/' + monthlyQuota;
+  
+  var dashboardContent = `
+    ${realStats.newLeads > 0 ? `
+    <div class="alert alert-info-new-leads" role="alert">
+      <div class="alert-content">
+        <div class="alert-icon">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="alert-text">
+          <strong>Je hebt ${realStats.newLeads} nieuwe aanvraag${realStats.newLeads > 1 ? 'en' : ''} die actie vereisen!</strong>
+          <span class="alert-subtitle">Bekijk en beheer je nieuwe aanvragen om niets te missen.</span>
+        </div>
+        <a href="/dashboard/leads" class="alert-action-btn">
+          Bekijk aanvragen <i class="fas fa-arrow-right" style="font-size: 16px;"></i>
+        </a>
+      </div>
+    </div>
+    ` : ''}
+    
+    ${!user || !user.payment_method ? `
+    <div class="alert alert-info-payment-method" role="alert">
+      <div class="alert-content">
+        <div class="alert-icon">
+          <i class="fas fa-credit-card"></i>
+        </div>
+        <div class="alert-text">
+          <strong>Tip: stel je betaalmethode in</strong>
+          <span class="alert-subtitle">Koppel je betaalmethode om automatisch te betalen voor nieuwe aanvragen.</span>
+        </div>
+        <a href="/dashboard/payments" class="alert-action-btn">
+          Betaalmethode instellen <i class="fas fa-arrow-right" style="font-size: 16px;"></i>
+        </a>
+      </div>
+    </div>
+    ` : ''}
+    
+    <div class="card-container" id="dashboard-kpis" data-tour-id="kpi">
+      <!-- Totaal aantal aanvragen -->
+      <div class="card">
+        <div class="card-content">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <p class="card-title">Totaal aantal aanvragen</p>
+              <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;" data-stat="total-leads">
+                ${realStats.totalLeads}
+              </p>
+            </div>
+            <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-bullseye" style="font-size: 1.5rem; color: #4B5563;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Nieuwe aanvragen -->
+      <div class="card">
+        <div class="card-content">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <p class="card-title">Nieuwe aanvragen</p>
+              <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;" data-stat="new-leads">
+                ${realStats.newLeads}
+              </p>
+            </div>
+            <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-bell" style="font-size: 1.5rem; color: #4B5563;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Geaccepteerde aanvragen -->
+      <div class="card">
+        <div class="card-content">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <p class="card-title">Geaccepteerde aanvragen</p>
+              <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0;" data-stat="accepted-leads">
+                ${realStats.acceptedLeads}
+              </p>
+            </div>
+            <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #4B5563;"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+      <!-- Deze maand gebruikt -->
+      <div class="card">
+        <div class="card-content">
+          <div class="d-flex align-items-center justify-content-between">
+            <div style="flex: 1;">
+              <p class="card-title">Deze maand gebruikt</p>
+              <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-top: 0.25rem; margin-bottom: 0.5rem;" data-stat="monthly-usage">
+                ${usageDisplay}
+              </p>
+              ${monthlyQuota !== 100 ? `
+              <div class="progress-bar-container">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: ${usagePercentage}%; background-color: ${usagePercentage >= 90 ? '#EF4444' : usagePercentage >= 70 ? '#F59E0B' : '#10B981'};"></div>
+          </div>
+        </div>
+              ` : ''}
+        </div>
+            <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-chart-line" style="font-size: 1.5rem; color: #4B5563;"></i>
+      </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+    <div class="row">
+      <!-- Recente aanvragen -->
+      <div class="col-lg-8" data-tour-id="recent-requests">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recente aanvragen</h5>
+            <a href="/dashboard/leads" class="btn btn-sm btn-outline">Alle aanvragen bekijken</a>
+          </div>
+          <div class="card-body">
+            ${displayLeads.length === 0 ? `
+              <p class="text-center text-muted">Je hebt nog geen aanvragen ontvangen.</p>
+            ` : `
+              <div class="table-responsive">
+                <table class="table table-hover" id="leadsTable">
+                  <thead>
+                    <tr>
+                      <th class="text-left">Naam</th>
+                      <th class="text-left">Telefoon</th>
+                      <th class="text-left">Status</th>
+                      <th class="text-left">Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${displayLeads.map(function(lead, index) {
+                      return `
+                        <tr style="cursor: pointer;" onclick="document.getElementById('popup-${index}').style.display='flex'" data-lead-id="${lead.id}">
+                          <td class="text-left">${lead.name || 'Onbekend'}</td>
+                          <td class="text-left">${lead.phone || '-'}</td>
+                          <td class="text-left">
+                            <span class="lead-status status-${lead.status}">
+                              ${lead.status === 'new' ? 'Nieuw' :
+                                lead.status === 'assigned' ? 'Toegewezen' :
+                                lead.status === 'accepted' ? 'Geaccepteerd' :
+                                lead.status === 'rejected' ? 'Geweigerd' : 
+                                lead.status === 'completed' ? 'Voltooid' : lead.status}
+                            </span>
+                          </td>
+                          <td class="text-left">${new Date(lead.created_at).toLocaleDateString('nl-NL')}</td>
+                        </tr>
+                        
+                        <!-- Popup voor deze aanvraag -->
+                        <div id="popup-${index}" class="modern-popup" style="display: none;" data-index="${index}" data-id="${lead.id}">
+                          <div class="modern-popup-content">
+                            <div class="modern-popup-header">
+                              <h5>Aanvraag van ${lead.name || 'Onbekend'}</h5>
+                              <button class="close-popup">&times;</button>
+                            </div>
+                            <div class="modern-popup-body">
+                              <div class="popup-section">
+                                <div class="popup-status-date">
+                                  <span class="lead-status status-${lead.status}">
+                                    ${lead.status === 'new' ? 'Nieuw' :
+                                      lead.status === 'assigned' ? 'Toegewezen' :
+                                      lead.status === 'accepted' ? 'Geaccepteerd' :
+                                      lead.status === 'rejected' ? 'Geweigerd' : ''}
+                                  </span>
+                                  <span class="popup-date">Ontvangen op: ${new Date(lead.created_at).toLocaleDateString('nl-NL')}</span>
+                                </div>
+                              </div>
+                              
+                              <div class="popup-section">
+                                <h6>Contactgegevens</h6>
+                                <div class="popup-contact-item">
+                                  <i class="fas fa-user"></i>
+                                  <span>${lead.name || 'Onbekend'}</span>
+                                </div>
+                                <div class="popup-contact-item">
+                                  <i class="fas fa-envelope"></i>
+                                  <span>${lead.email}</span>
+                                </div>
+                                <div class="popup-contact-item">
+                                  <i class="fas fa-phone"></i>
+                                  <span>${lead.phone}</span>
+                                </div>
+                              </div>
+                              
+                              <div class="popup-section">
+                                <h6>Beschrijving</h6>
+                                <p>${lead.message || lead.description || 'Geen beschrijving beschikbaar'}</p>
+                              </div>
+
+                              <div class="popup-section">
+                                <h6>Status</h6>
+                                <div class="form-group">
+                                  <select class="form-control status-select" id="leadStatus" data-index="${index}">
+                                    <option value="new" ${lead.status === 'new' ? 'selected' : ''}>Nieuw</option>
+                                    <option value="accepted" ${lead.status === 'accepted' ? 'selected' : ''}>Geaccepteerd</option>
+                                    <option value="rejected" ${lead.status === 'rejected' ? 'selected' : ''}>Geweigerd</option>
+                                    <option value="in_progress" ${lead.status === 'in_progress' ? 'selected' : ''}>In behandeling</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div class="popup-section invoice-section" style="display: none;" data-index="${index}">
+                                <h6>Factuurbedrag</h6>
+                                <div class="form-group">
+                                  <div class="input-group">
+                                    <input type="number" class="form-control invoice-amount" id="invoiceAmount" data-index="${index}" placeholder="€0.00" step="0.01" min="0" style="padding-left: 25px;">
+                                    <div class="input-group-prepend" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 10;">
+                                      <span style="color: #666;">€</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="modern-popup-footer">
+                              <button class="btn btn-secondary close-popup">Sluiten</button>
+                              <button class="btn btn-primary save-status" type="submit">Opslaan</button>
+                              <a href="tel:${lead.phone.replace(/[^0-9]/g, '')}" class="btn btn-success">Contact opnemen</a>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Instellingen en saldo -->
+      <div class="col-lg-4">
+        <!-- Accountinformatie Card -->
+        <div class="account-info-card" data-tour-id="account-info">
+          <h3 class="account-info-title">Accountinformatie</h3>
+          
+          <div class="account-info-items">
+            <!-- Aanvraag limiet -->
+            <div class="account-info-item">
+              <div class="account-info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <line x1="19" y1="8" x2="19" y2="14"></line>
+                  <line x1="22" y1="11" x2="16" y2="11"></line>
+                </svg>
+          </div>
+              <div class="account-info-content">
+                <div class="account-info-label">Aanvraag limiet</div>
+                <div class="account-info-value">${monthlyQuota === 100 ? 'Geen limiet' : monthlyQuota + ' per maand'}</div>
+            </div>
+            </div>
+
+            <!-- Betaalmethode -->
+            <div class="account-info-item">
+              <div class="account-info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+              </div>
+              <div class="account-info-content">
+                <div class="account-info-label">Betaalmethode</div>
+                ${user && user.payment_method ? `<span class="badge badge-blue">Actief</span>` : `<span class="badge badge-warning">Niet ingesteld</span>`}
+            </div>
+              </div>
+
+            <!-- Status -->
+            <div class="account-info-item">
+              <div class="account-info-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="m9 12 2 2 4-4"></path>
+                </svg>
+            </div>
+              <div class="account-info-content">
+                <div class="account-info-label">Status</div>
+                ${settings && settings.paused === 1 ? `<span class="badge badge-warning">Gepauzeerd</span>` : `<span class="badge badge-green">Actief</span>`}
+          </div>
+          </div>
+        </div>
+
+          <!-- Settings Button -->
+          <a href="/dashboard/settings" class="btn-settings">Instellingen beheren</a>
+          </div>
+
+        <!-- Snelle Acties Card -->
+        <div class="quick-actions-card">
+          <h3 class="quick-actions-title">Snelle acties</h3>
+          
+          <div class="quick-actions-buttons">
+            <a href="/dashboard/leads" class="quick-action-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <span>Aanvragen bekijken</span>
+            </a>
+
+            <a href="/dashboard/payments" class="quick-action-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+              <span>Betalingen bekijken</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+%>
+
+<style>
+  /* ============================================
+     ONBOARDING INTAKE WIZARD STYLES
+     ============================================ */
+  .intake-wizard {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .intake-wizard.hidden {
+    display: none;
+  }
+  
+  .intake-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+  }
+  
+  .intake-modal {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: 16px;
+  }
+  
+  .intake-step {
+    animation: fadeIn 0.3s ease;
+  }
+  
+  .intake-step.hidden {
+    display: none;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .intake-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+  }
+  
+  .intake-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0 0 24px 0;
+  }
+  
+  .intake-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .form-input,
+  .form-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    transition: all 150ms ease;
+  }
+  
+  .form-input:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: #ea5d0d;
+    box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+  }
+  
+  .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: -8px;
+  }
+  
+  .tag-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .tag-btn {
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    background: white;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .tag-btn:hover {
+    border-color: #ea5d0d;
+    color: #ea5d0d;
+  }
+  
+  .tag-btn.active {
+    background: #111827;
+    border-color: #111827;
+    color: white;
+  }
+  
+  .intake-actions {
+    display: flex;
+    gap: 12px;
+  }
+  
+  .btn-primary {
+    flex: 1;
+    padding: 12px 24px;
+    background: #ea5d0d;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-primary:hover {
+    background: #d14d00;
+    transform: translateY(-1px);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+  
+  .btn-secondary {
+    padding: 12px 24px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-secondary:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+  
+  /* ============================================
+     SPOTLIGHT TOUR STYLES
+     ============================================ */
+  .spotlight-tour {
+    position: fixed;
+    inset: 0;
+    z-index: 99999999 !important;
+    pointer-events: none;
+  }
+  
+  .spotlight-tour.hidden {
+    display: none;
+  }
+  
+  .spotlight-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    transition: clip-path 0.15s ease;
+    z-index: 99999999 !important;
+  }
+  
+  .spotlight-tooltip {
+    position: absolute;
+    width: 380px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    pointer-events: auto;
+    transition: all 0.15s ease;
+    z-index: 100000000 !important;
+  }
+  
+  .spotlight-tooltip-wide {
+    width: 500px;
+  }
+  
+  .spotlight-content {
+    margin-bottom: 20px;
+  }
+  
+  .spotlight-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+  }
+  
+  .spotlight-text {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  .spotlight-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .btn-skip,
+  .btn-back {
+    padding: 10px 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-skip:hover,
+  .btn-back:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+  
+  .btn-next {
+    flex: 1;
+    padding: 10px 20px;
+    background: #ea5d0d;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-next:hover {
+    background: #d14d00;
+  }
+  
+  .btn-finish {
+    flex: 1;
+    padding: 10px 20px;
+    background: #ea5d0d;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-finish:hover {
+    background: #d14d00;
+  }
+  
+  .btn-later {
+    padding: 10px 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+  
+  .btn-later:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+  
+  .btn-back.hidden,
+  .btn-finish.hidden,
+  .btn-next.hidden,
+  .btn-later.hidden {
+    display: none;
+  }
+  
+  .success-notification {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 3000;
+    background: white;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+  }
+  
+  .success-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .success-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #166534;
+  }
+  
+  .success-content svg {
+    flex-shrink: 0;
+  }
+  
+  .success-content span {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  /* Responsive */
+  @media (max-width: 640px) {
+    .intake-modal {
+      padding: 24px;
+      margin: 16px;
+    }
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    .intake-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<style>
+  /* Alert banner voor nieuwe aanvragen - minder agressief */
+  .alert-info-new-leads {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    border: 1px solid #93C5FD;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  }
+  
+  .alert-info-payment-method {
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+    border: 1px solid #FCD34D;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.1);
+  }
+  
+  .alert-info-payment-method .alert-icon {
+    background: #EA5D0D;
+  }
+  
+  .alert-info-payment-method .alert-text strong {
+    color: #92400E;
+  }
+  
+  .alert-info-payment-method .alert-subtitle {
+    color: #EA5D0D;
+  }
+  
+  .alert-info-payment-method .alert-action-btn {
+    background: #EA5D0D;
+  }
+  
+  .alert-info-payment-method .alert-action-btn:hover {
+    background: #D14D00;
+    box-shadow: 0 4px 12px rgba(234, 93, 13, 0.3);
+  }
+  
+  .alert-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .alert-icon {
+    width: 40px;
+    height: 40px;
+    background: #3B82F6;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .alert-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .alert-text strong {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E40AF;
+    line-height: 1.4;
+  }
+  
+  .alert-subtitle {
+    font-size: 14px;
+    color: #3B82F6;
+    line-height: 1.4;
+  }
+  
+  .alert-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #3B82F6;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .alert-action-btn:hover {
+    background: #2563EB;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    color: white;
+    text-decoration: none;
+  }
+  
+  .alert-action-btn i {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  /* Progress bar styling */
+  .progress-bar-container {
+    margin-top: 8px;
+  }
+  
+  .progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background-color: #F3F4F6;
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+  
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+  
+  /* Card container - 4 kolommen grid (override voor dashboard) - FORCEER 4 KOLOMMEN */
+  .card-container {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    margin-top: 16px;
+    margin-bottom: 16px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+  
+  .card-container .card {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  .card-container .card .card-content {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  
+  @media (max-width: 1400px) {
+    .card-container {
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 12px !important;
+    }
+  }
+  
+  @media (max-width: 1200px) {
+    .card-container {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .card-container {
+      grid-template-columns: 1fr !important;
+    }
+    
+    .alert-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .alert-action-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+  
+  /* ============================================
+     ACCOUNTINFORMATIE CARD
+     ============================================ */
+  .account-info-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-bottom: 16px;
+  }
+
+  .account-info-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 20px 0;
+  }
+
+  /* Account Info Items Container */
+  .account-info-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  /* Individual Account Info Item */
+  .account-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Icon Container */
+  .account-info-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    border-radius: 8px;
+    color: #6b7280;
+    flex-shrink: 0;
+  }
+  
+  .account-info-icon svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Content Container */
+  .account-info-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .account-info-label {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .account-info-value {
+    font-size: 14px;
+    color: #111827;
+    font-weight: 600;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    width: fit-content;
+  }
+
+  .badge-blue {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .badge-green {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+
+  /* Settings Button */
+  .btn-settings {
+    width: 100%;
+    padding: 10px 16px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 150ms ease;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+  }
+
+  .btn-settings:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    text-decoration: none;
+    color: #374151;
+  }
+
+  .btn-settings:active {
+    transform: scale(0.98);
+  }
+
+  /* ============================================
+     SNELLE ACTIES CARD
+     ============================================ */
+  .quick-actions-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .quick-actions-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 16px 0;
+  }
+
+  /* Quick Actions Buttons Container */
+  .quick-actions-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Individual Quick Action Button */
+  .quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .quick-action-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+    flex-shrink: 0;
+    color: #6b7280;
+    transition: color 150ms ease;
+  }
+
+  .quick-action-btn:hover {
+    background: #f9fafb;
+    border-color: #ea5d0d;
+    color: #ea5d0d;
+    text-decoration: none;
+  }
+
+  .quick-action-btn:hover svg {
+    color: #ea5d0d;
+  }
+
+  .quick-action-btn:active {
+    transform: scale(0.98);
+  }
+  
+  /* Ensure columns don't stretch beyond their width */
+  .row .col-lg-4 {
+    max-width: 33.333333%;
+    flex: 0 0 33.333333%;
+  }
+  
+  .row .col-lg-4 .card {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  @media (max-width: 1024px) {
+    .account-info-card,
+    .quick-actions-card {
+      padding: 20px;
+    }
+
+    .account-info-items {
+      gap: 14px;
+    }
+  }
+  
+  /* Voeg extra styling toe voor de tabel */
+  .table th, .table td {
+    vertical-align: middle;
+    text-align: left;
+  }
+  
+  /* Zorg ervoor dat de tekst links uitgelijnd is */
+  .text-left {
+    text-align: left !important;
+  }
+  
+  /* Status badge styling */
+  .lead-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .lead-status.status-new {
+    background-color: #e0f2fe;
+    color: #0369a1;
+  }
+  
+  .lead-status.status-assigned {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  
+  .lead-status.status-accepted {
+    background-color: #dcfce7;
+    color: #15803d;
+  }
+  
+  .lead-status.status-rejected {
+    background-color: #fee2e2;
+    color: #b91c1c;
+  }
+  
+  .lead-status.status-in_progress {
+    background-color: #f3f4f6;
+    color: #4b5563;
+  }
+  
+  /* Moderne popup styling */
+  .modern-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modern-popup-content {
+    background-color: #fff;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .modern-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .modern-popup-header h5 {
+    margin: 0;
+    font-weight: 600;
+  }
+  
+  .modern-popup-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: #999;
+  }
+  
+  .modern-popup-header button:hover {
+    color: #333;
+  }
+  
+  .modern-popup-body {
+    padding: 20px;
+  }
+  
+  .modern-popup-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  
+  .popup-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .popup-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+  
+  .popup-section h6 {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  .popup-status-date {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  
+  .popup-date {
+    font-size: 0.85rem;
+    color: #777;
+  }
+  
+  .popup-contact-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  
+  .popup-contact-item i {
+    width: 20px;
+    margin-right: 10px;
+    color: #777;
+  }
+  
+  /* Responsive styling */
+  @media (max-width: 576px) {
+    .modern-popup-content {
+      width: 95%;
+      margin: 10px;
+    }
+  }
+</style>
+
+<%- include('../layouts/dashboard', { 
+    title: 'Dashboard', 
+    activeMenu: 'dashboard',
+    pageClass: 'dashboard',
+    user: user || {
+      balance: 250.00,
+      payment_method: 'ideal'
+    },
+    error: typeof error !== 'undefined' && error ? error : null,
+    body: dashboardContent
+}) %>
+
+<script>
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Tour initialization is now handled in dashboard.ejs layout
+
+  // Charts verwijderd — dashboard werkt zonder grafieken
+
+  // Function to update statistics
+  async function updateStatistics() {
+    try {
+      const response = await fetch('/dashboard/statistics', {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Update statistics cards
+      const totalLeadsElement = document.querySelector('[data-stat="total-leads"]');
+      const newLeadsElement = document.querySelector('[data-stat="new-leads"]');
+      const acceptedLeadsElement = document.querySelector('[data-stat="accepted-leads"]');
+      const totalRevenueElement = document.querySelector('[data-stat="total-revenue"]');
+      
+      if (totalLeadsElement) totalLeadsElement.textContent = data.totalLeads;
+      if (newLeadsElement) newLeadsElement.textContent = data.newLeads;
+      if (acceptedLeadsElement) acceptedLeadsElement.textContent = data.acceptedLeads;
+      if (totalRevenueElement) totalRevenueElement.textContent = `€${data.totalRevenue.toFixed(2)}`;
+      
+    } catch (error) {
+      console.error('Error updating statistics:', error);
+      showNotification('error', 'Er is een fout opgetreden bij het bijwerken van de statistieken');
+    }
+  }
+
+  // Event listeners voor alle popups
+  document.querySelectorAll('.modern-popup').forEach(popup => {
+    const index = popup.dataset.index;
+    const leadId = popup.dataset.id;
+    const tableRow = document.querySelector(`tr[data-lead-id="${leadId}"]`);
+
+    // Status select change handler
+    const statusSelect = popup.querySelector('.status-select');
+    if (statusSelect) {
+      statusSelect.addEventListener('change', function() {
+        const invoiceSection = popup.querySelector('.invoice-section');
+        if (this.value === 'accepted') {
+          invoiceSection.style.display = 'block';
+        } else {
+          invoiceSection.style.display = 'none';
+        }
+      });
+    }
+
+    // Save status handler - Volledig nieuwe implementatie
+    const saveButton = popup.querySelector('.save-status');
+    if (saveButton) {
+      saveButton.onclick = async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 1. Validatie van de input
+        const statusSelect = popup.querySelector('.status-select');
+        const invoiceInput = popup.querySelector('.invoice-amount');
+        
+        if (!statusSelect || !leadId) {
+          showNotification('error', 'Verplichte velden ontbreken');
+          return false;
+        }
+
+        const status = statusSelect.value;
+        let invoiceAmount = null;
+
+        // 2. Validatie van het factuurbedrag voor geaccepteerde leads
+        if (status === 'accepted') {
+          invoiceAmount = parseFloat(invoiceInput.value);
+          if (!invoiceInput.value || isNaN(invoiceAmount) || invoiceAmount <= 0) {
+            showNotification('error', 'Voer een geldig factuurbedrag in voor een geaccepteerde lead');
+            return false;
+          }
+        }
+
+        // 3. UI voorbereiden voor de update
+        saveButton.disabled = true;
+        saveButton.textContent = 'Bezig met opslaan...';
+        
+        // Voeg een loading indicator toe
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.innerHTML = '<div class="spinner"></div>';
+        popup.querySelector('.modern-popup-content').appendChild(loadingIndicator);
+
+        try {
+          // 4. Verstuur de update request
+          const response = await fetch('/dashboard/leads/' + leadId + '/status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+              status: status,
+              invoice_amount: invoiceAmount
+            })
+          });
+
+          // 5. Verwerk de response
+          const result = await response.json();
+          
+          if (result.success) {
+            // 6. Update de UI
+            updateLeadStatusInUI(leadId, status, result.data);
+            
+            // 7. Update statistieken en grafieken
+            await updateStatistics();
+
+            // 8. Toon succes notificatie
+            showNotification('success', result.message || 'Status succesvol bijgewerkt');
+            
+            // 9. Sluit de popup
+            popup.style.display = 'none';
+          } else {
+            // 10. Toon foutmelding
+            showNotification('error', result.message || 'Er is een fout opgetreden bij het bijwerken van de status');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showNotification('error', 'Er is een fout opgetreden bij het bijwerken van de status. Probeer het later opnieuw.');
+        } finally {
+          // 11. Herstel de UI
+          saveButton.disabled = false;
+          saveButton.textContent = 'Opslaan';
+          if (loadingIndicator && loadingIndicator.parentNode) {
+            loadingIndicator.parentNode.removeChild(loadingIndicator);
+          }
+        }
+
+        return false;
+      };
+    }
+
+    // Helper functie om de lead status in de UI bij te werken
+    function updateLeadStatusInUI(leadId, status, leadData) {
+      // Update status badge in table
+      const statusCell = tableRow.querySelector('td:nth-child(3)');
+      if (statusCell) {
+        const statusText = {
+          'new': 'Nieuw',
+          'accepted': 'Geaccepteerd',
+          'rejected': 'Geweigerd',
+          'in_progress': 'In behandeling'
+        }[status] || status;
+
+        statusCell.innerHTML = `
+          <span class="lead-status status-${status}">
+            ${statusText}
+          </span>
+        `;
+      }
+      
+      // Update status in popup
+      const popupStatus = popup.querySelector('.lead-status');
+      if (popupStatus) {
+        popupStatus.className = `lead-status status-${status}`;
+        popupStatus.textContent = statusText;
+      }
+    }
+
+    // Voeg CSS toe voor de loading indicator
+    const style = document.createElement('style');
+    style.textContent = `
+      .loading-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Close popup handlers
+    popup.querySelectorAll('.close-popup').forEach(button => {
+      button.onclick = function(e) {
+        if (e) {
+          e.preventDefault();
+        }
+        popup.style.display = 'none';
+        return false;
+      };
+    });
+
+    // Prevent popup close when clicking content
+    const popupContent = popup.querySelector('.modern-popup-content');
+    if (popupContent) {
+      popupContent.onclick = function(e) {
+        e.stopPropagation();
+      };
+    }
+
+    // Close popup when clicking outside
+    popup.onclick = function(e) {
+      if (e.target === popup) {
+        popup.style.display = 'none';
+      }
+    };
+  });
+});
+
+// Function to show notification
+function showNotification(type, message) {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.top = '20px';
+  notification.style.right = '20px';
+  notification.style.padding = '15px 25px';
+  notification.style.borderRadius = '4px';
+  notification.style.zIndex = '9999';
+  notification.style.animation = 'slideIn 0.5s ease-out';
+  notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  
+  if (type === 'success') {
+    notification.style.backgroundColor = '#4CAF50';
+    notification.style.color = 'white';
+  } else {
+    notification.style.backgroundColor = '#f44336';
+    notification.style.color = 'white';
+  }
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.5s ease-in';
+    setTimeout(() => {
+      notification.remove();
+    }, 500);
+  }, 2500);
+}
+
+// Add CSS for notifications
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
+</script>
+
+<div id="leadStatusModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Lead Status Bijwerken</h2>
+    <form id="updateLeadStatusForm">
+      <input type="hidden" id="leadId" name="leadId">
+      <div class="form-group">
+        <label for="leadStatus">Status:</label>
+        <select id="leadStatus" name="status" class="form-control" required>
+          <option value="new">Nieuw</option>
+          <option value="in_progress">In behandeling</option>
+          <option value="gewonnen">Gewonnen</option>
+          <option value="verloren">Verloren</option>
+        </select>
+      </div>
+      <div id="invoiceAmountGroup" class="form-group" style="display: none;">
+        <label for="invoiceAmount">Factuurbedrag (€):</label>
+        <input type="number" id="invoiceAmount" name="invoice_amount" class="form-control" step="0.01" min="0">
+      </div>
+      <button type="submit" class="btn btn-primary">Opslaan</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// Status update modal functionality
+const modal = document.getElementById('leadStatusModal');
+const closeBtn = modal.querySelector('.close');
+const statusForm = document.getElementById('updateLeadStatusForm');
+const statusSelect = document.getElementById('leadStatus');
+const invoiceAmountGroup = document.getElementById('invoiceAmountGroup');
+const invoiceAmount = document.getElementById('invoiceAmount');
+
+// Show/hide invoice amount based on status
+statusSelect.addEventListener('change', function() {
+  const invoiceSection = document.querySelector('.invoice-section[data-index="' + this.dataset.index + '"]');
+  if (this.value === 'accepted') {
+    invoiceSection.style.display = 'block';
+  } else {
+    invoiceSection.style.display = 'none';
+  }
+});
+
+// Close modal when clicking close button or outside
+closeBtn.onclick = function() {
+  modal.style.display = 'none';
+}
+
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Function to show notification
+function showNotification(type, message) {
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.top = '20px';
+  notification.style.right = '20px';
+  notification.style.padding = '15px 25px';
+  notification.style.borderRadius = '4px';
+  notification.style.zIndex = '9999';
+  notification.style.animation = 'slideIn 0.5s ease-out';
+  notification.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  
+  if (type === 'success') {
+    notification.style.backgroundColor = '#4CAF50';
+    notification.style.color = 'white';
+  } else {
+    notification.style.backgroundColor = '#f44336';
+    notification.style.color = 'white';
+  }
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'slideOut 0.5s ease-in';
+    setTimeout(() => {
+      notification.remove();
+    }, 500);
+  }, 2500);
+}
+
+// Function to update recent requests
+async function updateRecentRequests() {
+  try {
+    const response = await fetch('/dashboard/recent-requests');
+    const html = await response.text();
+    const recentRequestsContainer = document.querySelector('.recent-requests');
+    if (recentRequestsContainer) {
+      recentRequestsContainer.innerHTML = html;
+    }
+  } catch (error) {
+    console.error('Error updating recent requests:', error);
+  }
+}
+
+// Function to open status modal
+function openStatusModal(leadId, currentStatus) {
+  document.getElementById('leadId').value = leadId;
+  const statusSelect = document.getElementById('leadStatus');
+  statusSelect.value = currentStatus;
+  
+  // Trigger change event to show/hide invoice amount field
+  const event = new Event('change');
+  statusSelect.dispatchEvent(event);
+  
+  modal.style.display = 'block';
+}
+
+// Add event listeners for status update buttons
+document.addEventListener('click', function(e) {
+  if (e.target.matches('.status-action')) {
+    const leadId = e.target.closest('tr').dataset.leadId;
+    const currentStatus = e.target.closest('tr').querySelector('.lead-status').textContent;
+    openStatusModal(leadId, currentStatus);
+  }
+});
+</script>
+
+<!-- Intake Wizard -->
+<div id="intakeWizard" class="intake-wizard hidden">
+  <div class="intake-overlay"></div>
+  <div class="intake-modal">
+    
+    <!-- Step 1: Basis info -->
+    <div class="intake-step" data-step="1">
+      <h2 class="intake-title">Welkom! Even kennismaken</h2>
+      <p class="intake-subtitle">Vertel ons iets over jezelf (optioneel)</p>
+      
+      <div class="intake-form">
+        <div class="form-row">
+          <input type="text" id="firstName" placeholder="Voornaam" class="form-input">
+          <input type="text" id="lastName" placeholder="Achternaam" class="form-input">
+        </div>
+        <input type="text" id="companyName" placeholder="Bedrijfsnaam" class="form-input">
+        <input type="tel" id="phone" placeholder="Telefoonnummer" class="form-input">
+      </div>
+      <div class="intake-actions">
+        <button class="btn-primary" onclick="nextStep()">Volgende</button>
+        <button class="btn-secondary" onclick="skipStep()">Sla over</button>
+      </div>
+    </div>
+    
+    <!-- Step 2: Hoe gevonden -->
+    <div class="intake-step hidden" data-step="2">
+      <h2 class="intake-title">Hoe heb je ons gevonden?</h2>
+      
+      <div class="intake-form">
+        <select id="referralSource" class="form-select">
+          <option value="">Kies een optie</option>
+          <option value="google">Google</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="partner">Via partner/klant</option>
+          <option value="email">E-mail</option>
+          <option value="anders">Anders</option>
+        </select>
+        <input type="text" id="referralNote" placeholder="Toelichting (optioneel)" class="form-input">
+      </div>
+      <div class="intake-actions">
+        <button class="btn-primary" onclick="nextStep()">Volgende</button>
+        <button class="btn-secondary" onclick="skipStep()">Sla over</button>
+      </div>
+    </div>
+    
+    <!-- Step 3: Lead voorkeuren -->
+    <div class="intake-step hidden" data-step="3">
+      <h2 class="intake-title">Waar wil je leads voor ontvangen?</h2>
+      
+      <div class="intake-form">
+        <label class="form-label">Branche(s)</label>
+        <div class="tag-group" id="industries">
+          <button class="tag-btn" data-value="dakdekker">Dakdekker</button>
+          <button class="tag-btn" data-value="schilder">Schilder</button>
+          <button class="tag-btn" data-value="advocaat">Advocaat</button>
+          <button class="tag-btn" data-value="installatie">Installatie</button>
+          <button class="tag-btn" data-value="marketing">Marketing</button>
+          <button class="tag-btn" data-value="andere">Andere</button>
+        </div>
+        
+        <label class="form-label">Locatie(s)</label>
+        <input type="text" id="locations" placeholder="Bijv. Rotterdam; Den Haag; 3061" class="form-input">
+        
+        <label class="form-label">Type leads</label>
+        <div class="tag-group" id="leadTypes">
+          <button class="tag-btn" data-value="b2b">B2B</button>
+          <button class="tag-btn" data-value="b2c">B2C</button>
+          <button class="tag-btn" data-value="spoed">Spoed</button>
+          <button class="tag-btn" data-value="phone">Telefoon</button>
+          <button class="tag-btn" data-value="form">Formulier</button>
+        </div>
+        
+        <label class="form-label">Budget per lead</label>
+        <div class="form-row">
+          <input type="number" id="budgetMin" placeholder="Min (€)" class="form-input">
+          <input type="number" id="budgetMax" placeholder="Max (€)" class="form-input">
+        </div>
+        
+        <label class="form-label">Notificaties</label>
+        <div class="tag-group" id="notifications">
+          <button class="tag-btn active" data-value="inapp">In-app</button>
+          <button class="tag-btn" data-value="email">E-mail</button>
+          <button class="tag-btn" data-value="whatsapp">WhatsApp</button>
+        </div>
+      </div>
+      <div class="intake-actions">
+        <button class="btn-primary" onclick="finishIntake()">Klaar (naar tour)</button>
+        <button class="btn-secondary" onclick="skipStep()">Sla over</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Spotlight Tour -->
+<div id="spotlightTour" class="spotlight-tour hidden">
+  <div class="spotlight-overlay"></div>
+  <div class="spotlight-tooltip">
+    <div class="spotlight-content">
+      <h3 class="spotlight-title"></h3>
+      <p class="spotlight-text"></p>
+    </div>
+    <div class="spotlight-actions">
+      <button class="btn-skip" onclick="skipTour()">Overslaan</button>
+      <button class="btn-back hidden" onclick="previousTourStep()">Terug</button>
+      <button class="btn-next" onclick="nextTourStep()">Volgende</button>
+      <button class="btn-finish hidden" onclick="finishTour()">Betaalmethode instellen</button>
+      <button class="btn-later hidden" onclick="laterTour()">Ik doe dit later</button>
+    </div>
+  </div>
+</div>

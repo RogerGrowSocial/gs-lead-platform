@@ -1,0 +1,70 @@
+/* Extracted from spec - Werknemers listing page */
+/* See user spec for full details; mirrors v0 design */
+@media (prefers-reduced-motion:no-preference){:root{--ease-in-out:cubic-bezier(0.4,0,0.2,1)}}
+.werknemers-page{min-height:100vh;background:#ffffff;padding:24px}
+.werknemers-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
+.werknemers-title{font-size:30px;font-weight:700;color:#111827;margin:0 0 8px 0}
+.werknemers-subtitle{font-size:16px;color:#6b7280;margin:0}
+.werknemers-header-actions{display:flex;gap:12px}
+.werknemers-date-select{padding:8px 16px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;color:#374151;background:#fff;cursor:pointer;outline:none;transition:all 150ms ease}
+.werknemers-date-select:hover{border-color:#d1d5db}
+.werknemers-add-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#ea5d0d;border:none;border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:all 150ms ease}
+.werknemers-add-btn:hover{background:#cf4a09}
+.werknemers-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:32px}
+.werknemers-kpi-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:24px;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:box-shadow 150ms ease}
+.werknemers-kpi-card:hover{box-shadow:0 4px 6px rgba(0,0,0,.07)}
+.werknemers-kpi-content{display:flex;justify-content:space-between;align-items:flex-start}
+.werknemers-kpi-left{flex:1}
+.werknemers-kpi-label{font-size:14px;color:#6b7280;margin:0 0 4px 0}
+.werknemers-kpi-value{font-size:30px;font-weight:700;color:#111827;margin:0 0 8px 0}
+.werknemers-kpi-change{display:flex;align-items:center;gap:4px;font-size:12px}
+.werknemers-kpi-change i{font-size:12px;color:#6b7280}
+.werknemers-kpi-change-value{font-weight:500;color:#6b7280}
+.werknemers-kpi-change-label{color:#9ca3af;margin-left:4px}
+.werknemers-kpi-icon{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:12px;flex-shrink:0}
+.werknemers-kpi-icon i{font-size:24px;color:#6b7280}
+.werknemers-list-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.05);overflow:hidden}
+.werknemers-search-header{display:flex;gap:12px;padding:16px;border-bottom:1px solid #e5e7eb;background:#fff}
+.werknemers-search-wrapper{position:relative;flex:1}
+.werknemers-search-wrapper i{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:#9ca3af}
+.werknemers-search-input{width:100%;padding:10px 12px 10px 40px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;color:#111827;outline:none;transition:all 150ms ease}
+.werknemers-search-input:focus{border-color:#d1d5db}
+.werknemers-search-input::placeholder{color:#9ca3af}
+.werknemers-filter-select{padding:10px 16px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;color:#374151;background:#fff;cursor:pointer;outline:none;min-width:200px}
+.werknemers-list{}
+.werknemer-item{padding:20px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background-color 150ms ease}
+.werknemer-item:hover{background:#f9fafb}
+.werknemer-item:last-child{border-bottom:none}
+.werknemer-item-inner{display:flex;gap:16px}
+.werknemer-avatar{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#e5e7eb;color:#6b7280;border-radius:12px;font-size:16px;font-weight:700;flex-shrink:0}
+.werknemer-content{flex:1;min-width:0}
+.werknemer-content-wrapper{display:flex;justify-content:space-between;gap:24px}
+.werknemer-info{flex:1;min-width:0}
+.werknemer-name-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.werknemer-name{font-size:16px;font-weight:600;color:#111827;margin:0}
+.werknemer-badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:500;border:1px solid}
+.werknemer-badge-active{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.werknemer-badge-excellent{background:#d1fae5;color:#065f46;border-color:#a7f3d0}
+.werknemer-role{display:flex;align-items:center;gap:6px;font-size:14px;color:#6b7280;margin:0 0 10px 0}
+.werknemer-role i{font-size:14px;color:#9ca3af}
+.werknemer-separator{color:#d1d5db;margin:0 2px}
+.werknemer-department-icon{color:#a855f7 !important}
+.werknemer-department{color:#7c3aed;font-weight:500}
+.werknemer-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:#6b7280}
+.werknemer-meta-item{display:flex;align-items:center;gap:6px}
+.werknemer-meta-item i{font-size:14px;color:#9ca3af}
+.werknemer-stats{display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+.werknemer-performance{text-align:right}
+.werknemer-performance-score{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:4px}
+.werknemer-performance-score i{font-size:16px;color:#fbbf24}
+.werknemer-performance-value{font-size:20px;font-weight:700;color:#111827}
+.werknemer-performance-max{font-size:14px;color:#9ca3af}
+.werknemer-performance-label{font-size:12px;color:#6b7280;margin:0}
+.werknemer-sales-stats{display:flex;align-items:center;gap:16px;text-align:right}
+.werknemer-stat-label{font-size:12px;color:#6b7280;margin:0 0 2px 0}
+.werknemer-stat-value{font-size:16px;font-weight:700;color:#111827;margin:0}
+.werknemer-stat-divider{width:1px;height:32px;background:#e5e7eb}
+@media (max-width:1280px){.werknemers-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:768px){.werknemers-kpi-grid{grid-template-columns:1fr}.werknemers-header{flex-direction:column;gap:16px}.werknemer-content-wrapper{flex-direction:column}.werknemer-stats{align-items:flex-start}.werknemer-performance{text-align:left}.werknemer-performance-score{justify-content:flex-start}}
+
+

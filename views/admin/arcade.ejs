@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Mode | GrowSocial Admin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .asset-pill {
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 2px solid #374151;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 140px;
+      flex-shrink: 0;
+    }
+    .asset-pill:active {
+      cursor: grabbing;
+      transform: scale(0.97);
+    }
+    .asset-pill:hover {
+      border-color: #ea5d0d;
+      background: #1a1f2e;
+      box-shadow: 0 4px 12px rgba(234, 93, 13, 0.2);
+    }
+    .asset-pill img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 4px;
+    }
+    #asset-scroll-container::-webkit-scrollbar {
+      height: 6px;
+    }
+    #asset-scroll-container::-webkit-scrollbar-track {
+      background: #111827;
+    }
+    #asset-scroll-container::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 3px;
+    }
+    #asset-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: #6b7280;
+    }
+    .grid-overlay {
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity:0;
+      transition: opacity 0.2s ease;
+      z-index: 1000;
+    }
+    body {
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    /* Arcade Mode Styles */
+    .arcade-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      overflow: hidden;
+      z-index: 10000;
+    }
+
+    #arcade-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* HUD Overlay - Reusing existing admin styles */
+    .arcade-hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* Default: clicks pass through */
+      z-index: 10001;
+    }
+    
+    /* HUD elements that need to be clickable */
+    .arcade-hud button,
+    .arcade-hud input,
+    .arcade-hud label,
+    .arcade-hud .asset-pill {
+      pointer-events: auto !important; /* Override parent's pointer-events: none */
+    }
+
+    .hud-top-left {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .hud-top-right {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .hud-top-center {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+
+    .ops-status-badge {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 120px;
+    }
+
+    .ops-status-badge.urgent {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+    }
+
+    .ops-status-badge.warning {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .ops-status-badge.info {
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.2);
+    }
+
+    .wallet-display {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 180px;
+    }
+
+    .wallet-balance {
+      font-size: 20px;
+      font-weight: 600;
+      color: #10b981;
+    }
+
+    .wallet-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Reuse existing button styles */
+    .hud-button {
+      background: #ea5d0d;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .hud-button:hover {
+      background: #d14d0b;
+    }
+
+    .hud-button.secondary {
+      background: #374151;
+    }
+
+    .hud-button.secondary:hover {
+      background: #4b5563;
+    }
+
+    .arcade-title {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Loading overlay */
+    .arcade-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 18px;
+      text-align: center;
+      z-index: 10002;
+    }
+
+    .arcade-loading-spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #ea5d0d;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="arcade-container">
+    <div id="arcade-canvas"></div>
+    <div class="grid-overlay"></div>
+    
+    <div class="arcade-hud">
+    <!-- Top Left: Toolbar -->
+    <div id="edit-toolbar" style="position:absolute; top:12px; left:12px; display:none; align-items:center; gap:8px; padding:10px 12px; background:rgba(17,24,39,0.95); border:1px solid #374151; border-radius:12px; pointer-events:auto; z-index:10004; box-shadow:0 10px 30px rgba(0,0,0,0.35);">
+      <button id="tool-cursor" class="tool-btn active" title="Plaatsen (Place)" style="padding:8px 12px; background:#1f2937; border:2px solid #ea5d0d; border-radius:8px; color:#e5e7eb; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px;">
+        <i class="fas fa-mouse-pointer"></i> Cursor
+      </button>
+      <button id="tool-delete" class="tool-btn" title="Verwijderen (Delete)" style="padding:8px 12px; background:#1f2937; border:2px solid #374151; border-radius:8px; color:#e5e7eb; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px;">
+        <i class="fas fa-eraser"></i> Gummetje
+      </button>
+    </div>
+    <!-- Top Right: HUD Controls -->
+    <div style="position:absolute; top:12px; right:12px; display:flex; align-items:center; gap:8px; z-index:10005; pointer-events:auto;">
+      <button id="debug-toggle" class="hud-button secondary" title="Toggle Debug Grid (Admin Only)" style="padding:8px 12px; font-size:12px; pointer-events:auto; cursor:pointer; z-index:10006;">
+        <i class="fas fa-bug"></i> Debug
+      </button>
+    </div>
+    <!-- Bottom Asset Bar -->
+    <div id="asset-bar" style="position:absolute; bottom:12px; left:0; right:0; display:flex; align-items:center; gap:12px; padding:12px 16px; background:rgba(17,24,39,0.95); border-top:1px solid #374151; pointer-events:auto; z-index:10003; box-shadow:0 -10px 30px rgba(0,0,0,0.35);">
+      <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#e5e7eb; cursor:pointer;">
+          <input type="checkbox" id="edit-mode-toggle" style="accent-color:#ea5d0d;"> Edit
+        </label>
+      </div>
+      <div id="asset-scroll-container" style="flex:1; overflow-x:auto; overflow-y:hidden; display:flex; gap:8px; padding:4px 0; scrollbar-width:thin; scrollbar-color:#4b5563 #111827;">
+        <div class="asset-pill workstation" draggable="true" data-asset="station_intake" data-model="structure-high" title="Intake - structure-high">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-high.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Intake</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-high</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_leadflow" data-model="structure-medium" title="Leadflow - structure-medium">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-medium.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Leadflow</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-medium</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_sales" data-model="structure-tall" title="Sales - structure-tall">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-tall.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Sales</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-tall</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_delivery" data-model="structure-short" title="Delivery - structure-short">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-short.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Delivery</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-short</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_services" data-model="structure-yellow-high" title="Services - structure-yellow-high">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-yellow-high.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Services</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-yellow-high</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_billing" data-model="structure-yellow-medium" title="Billing - structure-yellow-medium">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-yellow-medium.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Billing</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-yellow-medium</div>
+          </div>
+        </div>
+        <div class="asset-pill workstation" draggable="true" data-asset="station_payroll" data-model="structure-yellow-tall" title="Payroll - structure-yellow-tall">
+          <img src="/arcade/kenney/conveyor-kit/Previews/structure-yellow-tall.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-star" style="color:#ea5d0d;font-size:10px;"></i> Payroll</div>
+            <div style="font-size:10px;color:#9ca3af;">structure-yellow-tall</div>
+          </div>
+        </div>
+        <!-- Additional Kenney assets -->
+        <div class="asset-pill" draggable="true" data-asset="conveyor" data-model="conveyor" title="Conveyor - conveyor">
+          <img src="/arcade/kenney/conveyor-kit/Previews/conveyor.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Conveyor</div>
+            <div style="font-size:10px;color:#9ca3af;">conveyor</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="conveyor_long" data-model="conveyor-long" title="Conveyor Long - conveyor-long">
+          <img src="/arcade/kenney/conveyor-kit/Previews/conveyor-long.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Conveyor Long</div>
+            <div style="font-size:10px;color:#9ca3af;">conveyor-long</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="box_small" data-model="box-small" title="Box Small - box-small">
+          <img src="/arcade/kenney/conveyor-kit/Previews/box-small.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Box Small</div>
+            <div style="font-size:10px;color:#9ca3af;">box-small</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="box_large" data-model="box-large" title="Box Large - box-large">
+          <img src="/arcade/kenney/conveyor-kit/Previews/box-large.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Box Large</div>
+            <div style="font-size:10px;color:#9ca3af;">box-large</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="robot_arm_a" data-model="robot-arm-a" title="Robot Arm A - robot-arm-a">
+          <img src="/arcade/kenney/conveyor-kit/Previews/robot-arm-a.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Robot Arm A</div>
+            <div style="font-size:10px;color:#9ca3af;">robot-arm-a</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="scanner_high" data-model="scanner-high" title="Scanner High - scanner-high">
+          <img src="/arcade/kenney/conveyor-kit/Previews/scanner-high.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Scanner High</div>
+            <div style="font-size:10px;color:#9ca3af;">scanner-high</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="door" data-model="door" title="Door - door">
+          <img src="/arcade/kenney/conveyor-kit/Previews/door.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Door</div>
+            <div style="font-size:10px;color:#9ca3af;">door</div>
+          </div>
+        </div>
+        <div class="asset-pill" draggable="true" data-asset="cover" data-model="cover" title="Cover - cover">
+          <img src="/arcade/kenney/conveyor-kit/Previews/cover.png" onerror="this.style.display='none'">
+          <div>
+            <div style="font-weight:600;">Cover</div>
+            <div style="font-size:10px;color:#9ca3af;">cover</div>
+          </div>
+        </div>
+      </div>
+      <button id="save-edit-btn" class="btn btn-primary" style="padding:8px 12px; font-size:12px; display:none; margin-left:12px; flex-shrink:0;">Save layout</button>
+    </div>
+      <!-- Top Left: Ops Status -->
+      <div class="hud-top-left">
+        <div class="ops-status-badge urgent" id="tickets-urgent-badge" style="display: none;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="tickets-urgent-count">0</span> Urgent Tickets
+        </div>
+        <div class="ops-status-badge warning" id="tasks-overdue-badge" style="display: none;">
+          <i class="fas fa-clock"></i>
+          <span id="tasks-overdue-count">0</span> Overdue Tasks
+        </div>
+        <div class="ops-status-badge info" id="payments-pending-badge" style="display: none;">
+          <i class="fas fa-money-bill-wave"></i>
+          <span id="payments-pending-count">0</span> Pending Payments
+        </div>
+      </div>
+
+      <!-- Top Center: Title -->
+      <div class="hud-top-center">
+        <div class="arcade-title">
+          <i class="fas fa-gamepad"></i> Arcade Mode
+        </div>
+      </div>
+
+      <!-- Top Right: Wallet & Actions -->
+      <div class="hud-top-right">
+        <div class="wallet-display">
+          <div class="wallet-balance" id="wallet-balance">€0.00</div>
+          <div class="wallet-actions">
+            <button class="hud-button secondary" id="sync-wallet-btn">
+              <i class="fas fa-sync"></i> Sync
+            </button>
+            <button class="hud-button secondary" id="exit-arcade-btn">
+              <i class="fas fa-sign-out-alt"></i> Exit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div class="arcade-loading" id="arcade-loading">
+    <div class="arcade-loading-spinner"></div>
+    <div id="arcade-loading-text">Loading Arcade Mode...</div>
+  </div>
+  </div>
+
+  <!-- Notification container (reuse existing) -->
+  <div class="notification-container"></div>
+
+  <script type="module">
+    // Load iso utilities first
+    import * as isoUtils from '/js/arcade/iso.js';
+    window.isoUtils = isoUtils;
+    
+    // Load ArcadeEngine (Phaser 3)
+    import '/js/arcade/ArcadeEngine.js';
+
+    (async function() {
+      let engine = null;
+      let assetsAvailable = true;
+
+      function showNotification(message, type = 'success') {
+        if (window.showNotification) {
+          window.showNotification(message, type);
+          return;
+        }
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+          <div class="notification-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+          </div>
+          <button class="notification-close">
+            <i class="fas fa-times"></i>
+          </button>
+        `;
+        let container = document.querySelector('.notification-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.className = 'notification-container';
+          document.body.appendChild(container);
+        }
+        container.appendChild(notification);
+        const closeBtn = notification.querySelector('.notification-close');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            notification.classList.add('closing');
+            setTimeout(() => notification.remove(), 300);
+          });
+        }
+        setTimeout(() => {
+          notification.classList.add('closing');
+          setTimeout(() => notification.remove(), 300);
+        }, 3000);
+      }
+
+      async function assetsExist() {
+        try {
+          // Check for an extracted Kenney asset that exists when the pack is unpacked
+          const res = await fetch('/arcade/kenney/conveyor-kit/Previews/conveyor.png', { method: 'HEAD' });
+          return res.ok;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      async function fetchArcadeState() {
+        const response = await fetch('/api/admin/arcade/state');
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.error || 'Failed to fetch arcade state');
+      }
+
+      function updateHUD(state) {
+        const metrics = state.metrics || {};
+        const balance = state.wallet?.balance_cents || 0;
+        document.getElementById('wallet-balance').textContent = `€${(balance / 100).toFixed(2)}`;
+        if (metrics.tickets_urgent > 0) {
+          document.getElementById('tickets-urgent-badge').style.display = 'flex';
+          document.getElementById('tickets-urgent-count').textContent = metrics.tickets_urgent;
+        }
+        if (metrics.tasks_overdue > 0) {
+          document.getElementById('tasks-overdue-badge').style.display = 'flex';
+          document.getElementById('tasks-overdue-count').textContent = metrics.tasks_overdue;
+        }
+        if (metrics.payments_pending > 0) {
+          document.getElementById('payments-pending-badge').style.display = 'flex';
+          document.getElementById('payments-pending-count').textContent = metrics.payments_pending;
+        }
+      }
+
+      function showAssetsMissingOverlay() {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = '20px';
+        overlay.style.left = '50%';
+        overlay.style.transform = 'translateX(-50%)';
+        overlay.style.background = 'rgba(17,24,39,0.9)';
+        overlay.style.color = '#fff';
+        overlay.style.padding = '12px 16px';
+        overlay.style.borderRadius = '8px';
+        overlay.style.zIndex = '10002';
+        overlay.style.fontSize = '14px';
+        overlay.style.boxShadow = '0 10px 30px rgba(0,0,0,0.35)';
+        overlay.innerHTML = `
+          <div style="font-weight: 600; margin-bottom: 6px;">Kenney Conveyor assets not found.</div>
+          <div style="margin-bottom: 6px;">Place <code>kenney_conveyor-kit.zip</code> at <code>/assets/arcade/</code> and run:</div>
+          <div style="background:#111827;padding:6px 10px;border-radius:6px;font-family:monospace;">npm run arcade:assets</div>
+        `;
+        document.body.appendChild(overlay);
+      }
+
+      // Save placement to API
+      async function savePlacement(payload) {
+        try {
+          const res = await fetch('/api/admin/arcade/placements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'Failed to save placement');
+          showNotification('Placement saved', 'success');
+        } catch (err) {
+          showNotification('Save failed', 'error');
+          console.error(err);
+        }
+      }
+
+      async function init() {
+        try {
+          assetsAvailable = await assetsExist();
+          if (!assetsAvailable) showAssetsMissingOverlay();
+
+          const arcadeState = await fetchArcadeState();
+          updateHUD(arcadeState);
+          document.getElementById('arcade-loading').style.display = 'none';
+
+          // Use ArcadeEngine (Phaser 3) for isometric rendering
+          engine = new ArcadeEngine('arcade-canvas', arcadeState);
+          await engine.init();
+          
+          // Expose engine globally for debug toggle
+          window.arcadeEngine = engine;
+
+          // Delete placement function
+          async function deletePlacement(placementId) {
+            try {
+              const res = await fetch(`/api/admin/arcade/placements/${placementId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+              });
+              const data = await res.json();
+              if (!data.success) throw new Error(data.error || 'Failed to delete placement');
+              showNotification('Placement verwijderd', 'success');
+            } catch (err) {
+              showNotification('Verwijderen mislukt', 'error');
+              console.error(err);
+              throw err;
+            }
+          }
+
+          // UI wiring
+          const editToggle = document.getElementById('edit-mode-toggle');
+          const saveBtn = document.getElementById('save-edit-btn');
+          const toolCursor = document.getElementById('tool-cursor');
+          const toolDelete = document.getElementById('tool-delete');
+          
+          if (editToggle) {
+            editToggle.addEventListener('change', (e) => {
+              engine.isEditMode = e.target.checked;
+              if (saveBtn) saveBtn.style.display = e.target.checked ? 'block' : 'none';
+              const toolbar = document.getElementById('edit-toolbar');
+              if (toolbar) toolbar.style.display = e.target.checked ? 'flex' : 'none';
+              // Show/hide grid overlay
+              const gridOverlay = document.querySelector('.grid-overlay');
+              if (gridOverlay) gridOverlay.style.opacity = e.target.checked ? '1' : '0';
+              if (!e.target.checked) {
+                engine.editTool = 'place';
+                if (toolCursor) toolCursor.classList.add('active');
+                if (toolDelete) toolDelete.classList.remove('active');
+              }
+            });
+          }
+          
+          // Tool selection
+          if (toolCursor) {
+            toolCursor.addEventListener('click', () => {
+              engine.editTool = 'place';
+              toolCursor.classList.add('active');
+              toolCursor.style.borderColor = '#ea5d0d';
+              if (toolDelete) {
+                toolDelete.classList.remove('active');
+                toolDelete.style.borderColor = '#374151';
+              }
+            });
+          }
+          
+          if (toolDelete) {
+            toolDelete.addEventListener('click', () => {
+              engine.editTool = 'delete';
+              toolDelete.classList.add('active');
+              toolDelete.style.borderColor = '#ef4444';
+              if (toolCursor) {
+                toolCursor.classList.remove('active');
+                toolCursor.style.borderColor = '#374151';
+              }
+            });
+          }
+          
+          // Wire up delete placement hook
+          if (engine.deletePlacement !== undefined) {
+            engine.deletePlacement = deletePlacement;
+          }
+          
+          // Debug toggle
+          const debugToggle = document.getElementById('debug-toggle');
+          if (debugToggle) {
+            debugToggle.addEventListener('click', () => {
+              console.log('Debug toggle clicked, engine:', engine);
+              if (engine && typeof engine.toggleDebug === 'function') {
+                engine.toggleDebug();
+                if (engine.debugMode) {
+                  debugToggle.style.borderColor = '#00ff00';
+                  debugToggle.style.color = '#00ff00';
+                  debugToggle.style.backgroundColor = '#1f2937';
+                } else {
+                  debugToggle.style.borderColor = '';
+                  debugToggle.style.color = '';
+                  debugToggle.style.backgroundColor = '';
+                }
+              } else {
+                console.error('Engine or toggleDebug not available:', { 
+                  engine: !!engine, 
+                  hasToggle: typeof engine?.toggleDebug,
+                  engineType: typeof engine
+                });
+              }
+            });
+          } else {
+            console.warn('Debug toggle button not found');
+          }
+          
+          // Wire up drag-and-drop for asset pills
+          document.querySelectorAll('.asset-pill').forEach((pill) => {
+            pill.addEventListener('dragstart', (e) => {
+              const assetKey = pill.getAttribute('data-asset');
+              const modelName = pill.getAttribute('data-model') || assetKey;
+              engine.selectedAssetKey = assetKey;
+              engine.selectedModelName = modelName;
+              e.dataTransfer.effectAllowed = 'copy';
+              e.dataTransfer.setData('text/plain', assetKey);
+            });
+          });
+          
+          if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+              showNotification('Layout changes saved (placements persisted).', 'success');
+              if (editToggle) {
+                editToggle.checked = false;
+                editToggle.dispatchEvent(new Event('change'));
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error initializing factory scene:', error);
+          const text = document.getElementById('arcade-loading-text');
+          if (text) text.textContent = 'Error loading Arcade Mode. Check console.';
+        }
+      }
+
+      document.getElementById('sync-wallet-btn').addEventListener('click', async () => {
+        try {
+          const response = await fetch('/api/admin/arcade/wallet/sync', { method: 'POST' });
+          const result = await response.json();
+          if (result.success) {
+            const arcadeState = await fetchArcadeState();
+            updateHUD(arcadeState);
+            showNotification('Wallet synchronized', 'success');
+          } else {
+            showNotification(result.error || 'Failed to sync wallet', 'error');
+          }
+        } catch (error) {
+          showNotification('Error syncing wallet', 'error');
+        }
+      });
+
+      document.getElementById('exit-arcade-btn').addEventListener('click', () => {
+        if (confirm('Exit Arcade Mode?')) {
+          if (engine) engine.destroy();
+          window.location.href = '/admin';
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (engine) engine.destroy();
+      });
+
+      init();
+    })();
+  </script>
+</body>
+</html>

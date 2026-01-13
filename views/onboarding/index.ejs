@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welkom bij GrowSocial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Apple-inspired color palette */
+      --blur-bg: rgba(255, 255, 255, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --text-tertiary: #a1a1a6;
+      --accent: #f97316;
+      --accent-hover: #ea580c;
+      --accent-light: rgba(249, 115, 22, 0.1);
+      --success: #34c759;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 20px 64px rgba(0, 0, 0, 0.12);
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+    }
+
+    @supports (backdrop-filter: blur(20px)) {
+      :root {
+        --blur-bg: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+      background: #f5f5f7;
+      min-height: 100vh;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Subtle background pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(249, 115, 22, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 920px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .shell {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 20px 64px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 32px 40px 28px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .title-block {
+      flex: 1;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .progress-container {
+      padding: 24px 40px;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .progress-steps {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .progress-step {
+      flex: 1;
+      height: 4px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 999px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-step::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--accent) 0%, #ea580c 100%);
+      border-radius: 999px;
+      transform: scaleX(0);
+      transform-origin: left;
+    }
+
+    .progress-step[data-active="true"]::after,
+    .progress-step[data-complete="true"]::after {
+      transform: scaleX(1);
+    }
+
+    .progress-step[data-complete="true"]::after {
+      opacity: 0.6;
+    }
+
+    .content {
+      padding: 40px;
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 32px;
+      min-height: 480px;
+    }
+
+    .hero-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      position: relative;
+    }
+
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      margin: 0 0 12px;
+      line-height: 1.2;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+      position: relative;
+      z-index: 1;
+    }
+
+    .form-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card[style*="display: none"] {
+      display: none !important;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1.5px solid rgba(0, 0, 0, 0.1);
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-primary);
+      outline: none;
+      font-family: inherit;
+    }
+
+    input:focus,
+    select:focus {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-light);
+      transform: translateY(-1px);
+    }
+
+    input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .tags-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .tag {
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(0, 0, 0, 0.1);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tag:hover {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .tag[data-selected="true"] {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.08) 100%);
+      border-color: var(--accent);
+      color: var(--accent-hover);
+      font-weight: 600;
+    }
+
+    .tag-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .tag[data-selected="true"] .tag-icon {
+      color: var(--accent);
+    }
+
+    .tag-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notice {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 8px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.01em;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover::before {
+      opacity: 1;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      color: var(--text-primary);
+      border: 1.5px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .footer {
+      padding: 24px 40px;
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+    }
+
+    .footer-skip {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .footer-skip:hover {
+      color: var(--text-primary);
+      transform: translateX(4px);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 32px 24px;
+      }
+
+      .header {
+        padding: 24px;
+      }
+
+      .title {
+        font-size: 24px;
+      }
+
+      .subtitle {
+        font-size: 15px;
+      }
+
+      .progress-container {
+        padding: 20px 24px;
+      }
+
+      .hero-title {
+        font-size: 28px;
+      }
+
+      .hero-subtitle {
+        font-size: 16px;
+      }
+
+      .footer {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 16px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column-reverse;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="container">
+      <div class="shell">
+        <div class="header">
+          <div class="brand">GS</div>
+          <div class="title-block">
+            <h1 class="title">Welkom bij GrowSocial</h1>
+            <p class="subtitle">Laat ons je helpen opstarten</p>
+          </div>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-steps">
+            <div class="progress-step" id="stepBar1" data-active="true"></div>
+            <div class="progress-step" id="stepBar2"></div>
+            <div class="progress-step" id="stepBar3"></div>
+            <div class="progress-step" id="stepBar4"></div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="hero-panel">
+            <h2 class="hero-title" id="panelTitle">Welkom! Even kennismaken</h2>
+            <p class="hero-subtitle" id="panelSubtitle">Vertel ons iets over jezelf zodat we je beter kunnen helpen</p>
+          </div>
+
+          <div class="form-panel">
+            <!-- Step 1: Basic Info -->
+            <div class="card" id="step1">
+              <div class="form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="firstName">Voornaam</label>
+                    <input type="text" id="firstName" autocomplete="given-name" placeholder="Jan">
+                  </div>
+                  <div class="form-group">
+                    <label for="lastName">Achternaam</label>
+                    <input type="text" id="lastName" autocomplete="family-name" placeholder="de Vries">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="companyName">Bedrijfsnaam</label>
+                  <input type="text" id="companyName" autocomplete="organization" placeholder="Mijn Bedrijf B.V.">
+                </div>
+                <div class="form-group">
+                  <label for="phone">Telefoonnummer</label>
+                  <input type="tel" id="phone" autocomplete="tel" placeholder="+31 6 12345678">
+                </div>
+                <div class="actions">
+                  <button class="btn btn-secondary" id="skip1">Sla over</button>
+                  <button class="btn btn-primary" id="next1">Volgende</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: KVK Number and Address -->
+            <div class="card" id="step2" style="display:none">
+              <div class="form">
+                <div class="form-group">
+                  <label for="kvkNumber">KVK nummer</label>
+                  <input type="text" id="kvkNumber" autocomplete="organization" placeholder="12345678" maxlength="8">
+                  <p class="notice">8 cijfers (bijv. 12345678)</p>
+                </div>
+                <div class="form-group">
+                  <label for="street">Straat en huisnummer</label>
+                  <input type="text" id="street" autocomplete="street-address" placeholder="Hoofdstraat 123">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="postalCode">Postcode</label>
+                    <input type="text" id="postalCode" autocomplete="postal-code" placeholder="1234AB" maxlength="7">
+                  </div>
+                  <div class="form-group">
+                    <label for="city">Plaats</label>
+                    <input type="text" id="city" autocomplete="address-level2" placeholder="Amsterdam">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="country">Land</label>
+                  <select id="country" autocomplete="country">
+                    <option value="NL" selected>Nederland</option>
+                    <option value="BE">België</option>
+                    <option value="DE">Duitsland</option>
+                    <option value="FR">Frankrijk</option>
+                    <option value="GB">Verenigd Koninkrijk</option>
+                    <option value="OTHER">Anders</option>
+                  </select>
+                </div>
+                <div class="actions">
+                  <button class="btn btn-secondary" id="back2">Terug</button>
+                  <button class="btn btn-primary" id="next2">Volgende</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Industry Preferences -->
+            <div class="card" id="step3" style="display:none">
+              <div class="form">
+                <div class="form-group">
+                  <label>Voor welke branche wil je leads ontvangen?</label>
+                  <div class="tags-container" id="industriesContainer">
+                    <div class="tag" style="grid-column: 1/-1; padding: 12px; text-align: center; color: var(--text-secondary);">
+                      <i class="fas fa-spinner fa-spin"></i> Branches laden...
+                    </div>
+                  </div>
+                  <p class="notice">Je kunt dit later altijd aanpassen in je instellingen.</p>
+                </div>
+                <div class="actions">
+                  <button class="btn btn-secondary" id="back3">Terug</button>
+                  <button class="btn btn-primary" id="next3">Volgende</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: Referral (Last Step) -->
+            <div class="card" id="step4" style="display:none">
+              <div class="form">
+                <div class="form-group">
+                  <label for="referralSource">Hoe heb je GrowSocial gevonden?</label>
+                  <select id="referralSource">
+                    <option value="">Maak een keuze</option>
+                    <option value="google">Google zoeken</option>
+                    <option value="social">Social media</option>
+                    <option value="vriend">Via-via / Vriend</option>
+                    <option value="overig">Overig</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="referralNote">Toelichting (optioneel)</label>
+                  <input type="text" id="referralNote" placeholder="Bijv. via een collega...">
+                </div>
+                <div class="actions">
+                  <button class="btn btn-secondary" id="back4">Terug</button>
+                  <button class="btn btn-primary" id="finish">Start met GrowSocial</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p class="footer-text">Je kunt deze stappen overslaan en later invullen.</p>
+          <button class="footer-skip" id="skipAll">Later instellen →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Smooth step transitions - DIRECT, NO ANIMATIONS
+    function setStep(n) {
+      const steps = ['#step1', '#step2', '#step3', '#step4'];
+      const titles = [
+        'Welkom! Even kennismaken',
+        'Bedrijfsgegevens',
+        'Voor welke branche wil je leads ontvangen?',
+        'Hoe heb je ons gevonden?'
+      ];
+      const subtitles = [
+        'Vertel ons iets over jezelf zodat we je beter kunnen helpen',
+        'Vul je KVK nummer en adresgegevens in',
+        'Selecteer één of meer branches — later altijd aan te passen',
+        'Dit helpt ons om beter te begrijpen hoe je ons vond'
+      ];
+
+      // Hide all steps immediately
+      steps.forEach((selector, i) => {
+        const el = document.querySelector(selector);
+        if (el) {
+          el.style.display = (i + 1 === n) ? 'block' : 'none';
+        }
+      });
+
+      // Update hero panel
+      document.getElementById('panelTitle').textContent = titles[n - 1];
+      document.getElementById('panelSubtitle').textContent = subtitles[n - 1];
+
+      // Update progress bars
+      ['stepBar1', 'stepBar2', 'stepBar3', 'stepBar4'].forEach((id, i) => {
+        const bar = document.getElementById(id);
+        if (bar) {
+          bar.dataset.active = (i + 1 === n) ? 'true' : 'false';
+          bar.dataset.complete = (i + 1 < n) ? 'true' : 'false';
+        }
+      });
+    }
+
+    // API helpers - non-blocking, fire and forget
+    function save(data) {
+      fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(e => console.warn('Save error:', e));
+    }
+
+    function updateStep(step) {
+      fetch('/api/onboarding/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step })
+      }).catch(e => console.warn('Update step error:', e));
+    }
+
+    async function complete() {
+      try {
+        await fetch('/api/onboarding/complete', { method: 'POST' });
+      } catch (e) {
+        console.warn('Complete error:', e);
+      }
+    }
+
+    // Load industries for step 3
+    let availableIndustries = [];
+    const industryIcons = {
+      'Dakdekkers': 'fas fa-home',
+      'Glaszetters': 'fas fa-window-maximize',
+      'Hoveniers': 'fas fa-seedling',
+      'Installatiebedrijven': 'fas fa-tools',
+      'Schilders': 'fas fa-paint-brush',
+      'default': 'fas fa-building'
+    };
+
+    async function loadIndustries() {
+      try {
+        const response = await fetch('/api/industries', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          availableIndustries = result.success && result.data ? result.data : (Array.isArray(result) ? result : []);
+          renderIndustries();
+        } else {
+          throw new Error('Failed to load industries');
+        }
+      } catch (e) {
+        console.warn('Error loading industries:', e);
+        document.getElementById('industriesContainer').innerHTML = 
+          '<div class="tag" style="grid-column: 1/-1; padding: 12px; text-align: center; color: var(--text-secondary);">Geen branches beschikbaar</div>';
+      }
+    }
+
+    function renderIndustries() {
+      const container = document.getElementById('industriesContainer');
+      if (!container) return;
+
+      if (availableIndustries.length === 0) {
+        container.innerHTML = 
+          '<div class="tag" style="grid-column: 1/-1; padding: 12px; text-align: center; color: var(--text-secondary);">Geen branches beschikbaar</div>';
+        return;
+      }
+
+      container.innerHTML = availableIndustries.map(industry => {
+        const icon = industryIcons[industry.name] || industryIcons.default;
+        return `
+          <div class="tag" data-industry-id="${industry.id}" data-industry-name="${industry.name}">
+            <div class="tag-icon"><i class="${icon}"></i></div>
+            <div class="tag-text">${industry.name}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Add click listeners
+      container.querySelectorAll('.tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+          tag.dataset.selected = tag.dataset.selected === 'true' ? 'false' : 'true';
+        });
+      });
+    }
+
+    // Initialize
+    (async function init() {
+      try {
+        const res = await fetch('/api/onboarding/status');
+        const json = await res.json();
+        if (json?.data?.onboarding_completed) {
+          // Zet flag dat we vanaf onboarding komen (voor laadscherm)
+          sessionStorage.setItem('fromOnboarding', 'true');
+          window.location.href = '/dashboard';
+          return;
+        }
+      } catch (e) {
+        console.warn('Status check error:', e);
+      }
+      
+      // Load industries immediately
+      await loadIndustries();
+      setStep(1);
+    })();
+
+    // Event listeners - all non-blocking
+    document.getElementById('next1').addEventListener('click', () => {
+      save({
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        companyName: document.getElementById('companyName').value.trim(),
+        phone: document.getElementById('phone').value.trim()
+      });
+      updateStep(1);
+      setStep(2);
+    });
+
+    document.getElementById('skip1').addEventListener('click', () => {
+      updateStep(1);
+      setStep(2);
+    });
+
+    document.getElementById('back2').addEventListener('click', () => {
+      setStep(1);
+    });
+
+    document.getElementById('next2').addEventListener('click', () => {
+      // Save KVK and address data
+      save({
+        kvkNumber: document.getElementById('kvkNumber').value.trim(),
+        street: document.getElementById('street').value.trim(),
+        postalCode: document.getElementById('postalCode').value.trim(),
+        city: document.getElementById('city').value.trim(),
+        country: document.getElementById('country').value
+      });
+      updateStep(2);
+      setStep(3);
+    });
+
+    document.getElementById('back3').addEventListener('click', () => {
+      setStep(2);
+    });
+
+    document.getElementById('next3').addEventListener('click', () => {
+      const selected = Array.from(document.querySelectorAll('#industriesContainer .tag[data-selected="true"]'))
+        .map(x => x.dataset.industryId);
+      
+      // Save industry preferences
+      if (selected.length > 0) {
+        fetch('/api/users/current/industry-preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            preferences: selected.map(industryId => ({
+              industry_id: industryId,
+              is_enabled: true
+            }))
+          })
+        }).catch(e => console.warn('Error saving industry preferences:', e));
+      }
+
+      // Also save to onboarding data (legacy support)
+      const selectedNames = Array.from(document.querySelectorAll('#industriesContainer .tag[data-selected="true"]'))
+        .map(x => x.dataset.industryName);
+      save({ leadTypes: selectedNames });
+
+      updateStep(3);
+      setStep(4);
+    });
+
+    document.getElementById('back4').addEventListener('click', () => {
+      setStep(3);
+    });
+
+    document.getElementById('finish').addEventListener('click', async () => {
+      // Save referral data (last step)
+      save({
+        referralSource: document.getElementById('referralSource').value,
+        referralNote: document.getElementById('referralNote').value.trim()
+      });
+      updateStep(4);
+      const selected = Array.from(document.querySelectorAll('#industriesContainer .tag[data-selected="true"]'))
+        .map(x => x.dataset.industryId);
+      
+      // Save industry preferences
+      if (selected.length > 0) {
+        try {
+          await fetch('/api/users/current/industry-preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              preferences: selected.map(industryId => ({
+                industry_id: industryId,
+                is_enabled: true
+              }))
+            })
+          });
+        } catch (e) {
+          console.warn('Error saving industry preferences:', e);
+        }
+      }
+
+      // Also save to onboarding data (legacy support)
+      const selectedNames = Array.from(document.querySelectorAll('#industriesContainer .tag[data-selected="true"]'))
+        .map(x => x.dataset.industryName);
+      save({ leadTypes: selectedNames });
+
+      await complete();
+      // Zet flag dat we vanaf onboarding komen (voor laadscherm)
+      sessionStorage.setItem('fromOnboarding', 'true');
+      // Redirect to dashboard with tour flag
+      window.location.href = '/dashboard?tour=true&step=0';
+    });
+
+    document.getElementById('skipAll').addEventListener('click', async () => {
+      await complete();
+      // Zet flag dat we vanaf onboarding komen (voor laadscherm)
+      sessionStorage.setItem('fromOnboarding', 'true');
+      // Redirect to dashboard with tour flag
+      window.location.href = '/dashboard?tour=true&step=0';
+    });
+
+    // Enter key support for all inputs
+    document.getElementById('firstName')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('lastName')?.focus();
+      }
+    });
+
+    document.getElementById('lastName')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('companyName')?.focus();
+      }
+    });
+
+    document.getElementById('companyName')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('phone')?.focus();
+      }
+    });
+
+    document.getElementById('phone')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('next1')?.click();
+      }
+    });
+
+    // Enter key support for step 2 fields (KVK/Address)
+    document.getElementById('kvkNumber')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('street')?.focus();
+      }
+    });
+
+    document.getElementById('street')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('postalCode')?.focus();
+      }
+    });
+
+    document.getElementById('postalCode')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('city')?.focus();
+      }
+    });
+
+    document.getElementById('city')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('country')?.focus();
+      }
+    });
+
+    document.getElementById('country')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('next2')?.click();
+      }
+    });
+
+    // Enter key support for step 4 fields (Referral - last step)
+    document.getElementById('referralSource')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('referralNote')?.focus();
+      }
+    });
+
+    document.getElementById('referralNote')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('finish')?.click();
+      }
+    });
+
+    // Load industries when step 3 is shown
+    const originalSetStep = setStep;
+    setStep = function(n) {
+      originalSetStep(n);
+      if (n === 3 && availableIndustries.length === 0) {
+        loadIndustries();
+      }
+    };
+
+  </script>
+</body>
+</html>

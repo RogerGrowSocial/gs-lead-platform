@@ -1,0 +1,404 @@
+<%
+  const formatDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
+  const getUserAvatar = () => {
+    return user?.profile?.profile_picture 
+      || user?.profile_picture 
+      || user?.avatar_url 
+      || user?.avatar 
+      || user?.photo_url 
+      || user?.picture 
+      || null
+  }
+
+  const getUserInitial = () => {
+    const candidate = [
+      user?.profile?.display_name,
+      user?.profile?.full_name,
+      user?.profile?.first_name && user?.profile?.last_name ? `${user.profile.first_name} ${user.profile.last_name}` : '',
+      user?.display_name,
+      user?.full_name,
+      user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : '',
+      user?.name,
+      user?.email,
+      'U'
+    ].find(value => value && value.trim && value.trim().length)
+
+    return candidate ? candidate.trim().charAt(0).toUpperCase() : 'U'
+  }
+%>
+
+<%- include('../../layouts/admin', {
+  title: 'Mail Instellingen',
+  activeMenu: 'mail',
+  user: user,
+  body: `
+  <div class="settings-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>Mail Instellingen</h1>
+        <p class="text-muted">Beheer je mailboxes en verbindingen</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary" id="addMailboxBtn">
+          <i class="fas fa-plus"></i> Nieuwe mailbox toevoegen
+        </button>
+      </div>
+    </div>
+
+    <!-- Mailboxes Table Card -->
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <div>
+          <h2>E-mailadres</h2>
+          <p class="settings-card-subtitle">Overzicht van alle verbonden mailboxes</p>
+        </div>
+      </div>
+      
+      <div class="settings-table-container">
+        <table class="settings-table">
+          <thead>
+            <tr>
+              <th>E-mailadres</th>
+              <th>IMAP Server</th>
+              <th>SMTP Server</th>
+              <th>Status</th>
+              <th>Laatste sync</th>
+              <th class="text-right">Acties</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(mailboxes || []).map(mb => `
+              <tr data-mailbox-id="${mb.id}">
+                <td>
+                  <div class="table-cell-primary">${mb.email} ${mb.is_primary ? '<span class="primary-badge">Primair</span>' : ''}</div>
+                  <div class="table-cell-secondary">Actieve mailbox</div>
+                </td>
+                <td>
+                  <div class="table-cell-primary">${mb.imap_host || 'mail.mijndomein.nl'}</div>
+                  <div class="table-cell-secondary">Poort: ${mb.imap_port || '993'}</div>
+                </td>
+                <td>
+                  <div class="table-cell-primary">${mb.smtp_host || 'mail.mijndomein.nl'}</div>
+                  <div class="table-cell-secondary">Poort: ${mb.smtp_port || '465'}</div>
+                </td>
+                <td>
+                  <span class="status-badge-new status-active">
+                    <i class="fas fa-check-circle"></i> Actief
+                  </span>
+                </td>
+                <td>
+                  <div class="table-cell-primary">${formatDateTime(mb.last_sync || new Date())}</div>
+                </td>
+                <td class="text-right">
+                  <button class="action-menu-btn" onclick="showMailboxActions('${mb.id}', event)">
+                    <i class="fas fa-ellipsis-v"></i>
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+            ${(!mailboxes || mailboxes.length === 0) ? `
+              <tr>
+                <td colspan="6" class="empty-state-cell">
+                  <div class="table-empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nog geen mailboxes toegevoegd</p>
+                  </div>
+                </td>
+              </tr>
+            ` : ''}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AI Personaliteit Card (Stacked First) -->
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <div>
+          <h2>AI Personaliteit & Schrijfstijl</h2>
+          <p class="settings-card-subtitle">Configureer je AI schrijfstijl voor e-mails</p>
+        </div>
+        <div class="settings-card-actions">
+          <button class="btn-outline-sm" id="editAiBtn" onclick="toggleEditAi()">
+            <i class="fas fa-edit"></i> Bewerken
+          </button>
+          <div id="aiEditActions" style="display: none; gap: 8px;">
+            <button class="btn-outline-sm" onclick="cancelEditAi()">Annuleren</button>
+            <button class="btn-primary-sm" onclick="saveAiSettings()">
+              <i class="fas fa-save"></i> Opslaan
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-card-content">
+        <div class="settings-form">
+          <div class="form-group">
+            <label class="form-label">Toon</label>
+            <select class="form-select" id="aiTone" disabled>
+              <option value="professional" ${writingStyle?.tone === 'professional' ? 'selected' : ''}>Professioneel</option>
+              <option value="friendly" ${writingStyle?.tone === 'friendly' ? 'selected' : ''}>Vriendelijk</option>
+              <option value="casual" ${writingStyle?.tone === 'casual' ? 'selected' : ''}>Casual</option>
+              <option value="formal" ${writingStyle?.tone === 'formal' ? 'selected' : ''}>Formeel</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Formaliteit</label>
+            <select class="form-select" id="aiFormality" disabled>
+              <option value="formal" ${writingStyle?.formality === 'formal' ? 'selected' : ''}>Formeel</option>
+              <option value="semi-formal" ${writingStyle?.formality === 'semi-formal' ? 'selected' : ''}>Semi-formeel</option>
+              <option value="informal" ${writingStyle?.formality === 'informal' ? 'selected' : ''}>Informeel</option>
+              <option value="neutral" ${writingStyle?.formality === 'neutral' ? 'selected' : ''}>Neutraal</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Lengte</label>
+            <select class="form-select" id="aiLength" disabled>
+              <option value="short" ${writingStyle?.length === 'short' ? 'selected' : ''}>Kort</option>
+              <option value="medium" ${!writingStyle || writingStyle?.length === 'medium' ? 'selected' : ''}>Medium</option>
+              <option value="long" ${writingStyle?.length === 'long' ? 'selected' : ''}>Lang</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Aangepaste instructies (optioneel)</label>
+            <textarea 
+              class="form-textarea" 
+              id="aiInstructions" 
+              rows="5" 
+              placeholder="Bijv: Altijd beginnen met {{greeting}} {{name}}, gebruik variabelen: {{subject}}, {{mail_body}}"
+              disabled
+            >${writingStyle?.custom_instructions || ''}</textarea>
+            <p class="form-helper-text">Beschikbare variabelen: {greeting}, {name}, {subject}, {mail_body}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handtekening Card (Stacked Second) -->
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <div>
+          <h2>Handtekening</h2>
+          <p class="settings-card-subtitle">Configureer je e-mail handtekening</p>
+        </div>
+        <div class="settings-card-actions">
+          <button class="btn-outline-sm" id="editSignatureBtn" onclick="toggleEditSignature()">
+            <i class="fas fa-edit"></i> Bewerken
+          </button>
+          <div id="signatureEditActions" style="display: none; gap: 8px;">
+            <button class="btn-outline-sm" onclick="cancelEditSignature()">Annuleren</button>
+            <button class="btn-primary-sm" onclick="saveSignatureSettings()">
+              <i class="fas fa-save"></i> Opslaan
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-card-content">
+        <div class="settings-form">
+          <div class="form-group">
+            <label class="form-label">Weergavenaam <span class="required">*</span></label>
+            <input 
+              type="text" 
+              class="form-input" 
+              id="signatureName" 
+              placeholder="Admin User" 
+              value="${signature?.display_name || (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.email?.split('@')[0] || '')}"
+              disabled
+            />
+          </div>
+
+          <div class="form-row-2col">
+            <div class="form-group">
+              <label class="form-label">E-mailadres <span class="required">*</span></label>
+              <input 
+                type="email" 
+                class="form-input" 
+                id="signatureEmail" 
+                placeholder="rogier@growsocialmedia.nl" 
+                value="${signature?.email || profile?.email || user?.email || ''}"
+                disabled
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Telefoonnummer</label>
+              <input 
+                type="tel" 
+                class="form-input" 
+                id="signaturePhone" 
+                placeholder="+31 6 12345678" 
+                value="${signature?.phone || profile?.phone || ''}"
+                disabled
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Foto (optioneel)</label>
+            <div class="photo-upload-container">
+              <div class="photo-preview" id="signaturePhotoPreview" data-initial="${getUserInitial()}">
+                ${(() => {
+                  // Prioritize signature photo, then profile picture, then avatar
+                  const photoUrl = signature?.photo_url || profile?.profile_picture || getUserAvatar()
+                  if (photoUrl) {
+                    return `<img src="${photoUrl}" alt="Profile" />`
+                  }
+                  return `<div class="avatar-placeholder">${getUserInitial()}</div>`
+                })()}
+              </div>
+              <div class="photo-upload-actions">
+                <input type="file" id="signaturePhotoInput" accept="image/*" style="display: none;" disabled />
+                <button class="btn-outline-full" id="uploadPhotoBtn" disabled onclick="triggerSignaturePhotoUpload(event)">
+                  <i class="fas fa-upload"></i> Bestand kiezen
+                </button>
+                <p class="form-helper-text">Als je geen foto upload, wordt je profielfoto gebruikt</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Add Mailbox Modal -->
+  <div id="mailboxModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 8px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">Mailbox toevoegen</h2>
+        <button id="closeMailboxModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.15s;">
+          &times;
+        </button>
+      </div>
+      <form id="mailboxForm">
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">E-mailadres *</label>
+          <input type="email" id="mailboxEmail" placeholder="rogier@growsocialmedia.nl" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px;">IMAP Instellingen (Inkomend)</h3>
+          <div style="margin-bottom: 12px; padding: 12px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
+            <p style="font-size: 12px; color: #1e40af; margin: 0;">
+              <strong>📥 Voor het ontvangen van emails:</strong> Gebruik je Mijndomein IMAP server (mail.mijndomein.nl). Mailgun wordt alleen gebruikt voor het verzenden (SMTP).
+            </p>
+          </div>
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+            <div>
+              <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">IMAP Host *</label>
+              <input type="text" id="mailboxImapHost" placeholder="mail.mijndomein.nl" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">IMAP Port *</label>
+              <input type="number" id="mailboxImapPort" value="993" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px;">SMTP Instellingen (Uitgaand)</h3>
+          
+          <!-- Quick Presets -->
+          <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" id="presetMailgun" style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; color: #374151;">
+              📧 Mailgun (Aanbevolen)
+            </button>
+            <button type="button" id="presetMijndomein" style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; color: #374151;">
+              🏢 Mijndomein
+            </button>
+            <button type="button" id="presetGmail" style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; cursor: pointer; color: #374151;">
+              📨 Gmail
+            </button>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+            <div>
+              <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">SMTP Host *</label>
+              <input type="text" id="mailboxSmtpHost" placeholder="smtp.mailgun.org" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">SMTP Port *</label>
+              <input type="number" id="mailboxSmtpPort" value="587" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+          <div style="margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6b7280; cursor: pointer;">
+              <input type="checkbox" id="mailboxSmtpSecure" style="cursor: pointer;">
+              <span>SSL/TLS gebruiken (aan voor poort 465, uit voor poort 587)</span>
+            </label>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">IMAP Inloggegevens (Voor ophalen emails)</h3>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">IMAP Gebruikersnaam *</label>
+            <input type="text" id="mailboxImapUsername" placeholder="info@growsocialmedia.nl" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">IMAP Wachtwoord *</label>
+            <input type="password" id="mailboxImapPassword" placeholder="Je Mijndomein email wachtwoord" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">Voor het ophalen van emails via Mijndomein IMAP</p>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+          <h3 style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 12px;">SMTP Inloggegevens (Voor verzenden emails)</h3>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">SMTP Gebruikersnaam *</label>
+            <input type="text" id="mailboxSmtpUsername" placeholder="brad@growsocialmedia.nl (volledige email voor Mailgun)" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            <p style="font-size: 12px; color: #6b7280; margin-top: 4px; display: none;" id="mailgunUsernameHint">Voor Mailgun: gebruik je volledige email adres</p>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; color: #374151;">SMTP Wachtwoord *</label>
+            <input type="password" id="mailboxSmtpPassword" placeholder="Mailgun SMTP wachtwoord" required style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            <p style="font-size: 12px; color: #6b7280; margin-top: 4px; display: none;" id="mailgunPasswordHint">Voor Mailgun: Maak een SMTP password aan in Mailgun dashboard → Domain Settings → SMTP credentials → Add password</p>
+            <p style="font-size: 12px; color: #9ca3af; margin-top: 4px;" id="defaultPasswordHint">Voor Gmail gebruik een app-specifiek wachtwoord</p>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+          <button type="button" id="cancelMailboxBtn" class="btn-outline" style="padding: 10px 20px;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 10px 20px;">Mailbox toevoegen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Mailbox Actions Menu -->
+  <div id="mailboxActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; width: 180px; padding: 4px 0;">
+    <button class="mail-action-item" data-action="set-primary" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; transition: background 0.15s;">
+      <i class="fas fa-star" style="margin-right: 8px; width: 16px; color: #6b7280; font-size: 14px;"></i> Instellen als primair
+    </button>
+    <button class="mail-action-item" data-action="sync" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; transition: background 0.15s;">
+      <i class="fas fa-sync" style="margin-right: 8px; width: 16px; color: #6b7280; font-size: 14px;"></i> Synchroniseren
+    </button>
+    <button class="mail-action-item" data-action="edit" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; transition: background 0.15s;">
+      <i class="fas fa-edit" style="margin-right: 8px; width: 16px; color: #6b7280; font-size: 14px;"></i> Bewerken
+    </button>
+    <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+    <button class="mail-action-item" data-action="delete" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 14px; color: #dc2626; transition: background 0.15s;">
+      <i class="fas fa-trash" style="margin-right: 8px; width: 16px; font-size: 14px;"></i> Verwijderen
+    </button>
+  </div>
+  `,
+  scripts: ['/js/admin/mail-settings.js'],
+  stylesheets: ['/css/admin/adminSettings.css', '/css/admin/adminPayments.css', '/css/admin/payments-table.css', '/css/admin/mail.css', '/css/admin/mail-settings.css']
+}) %>

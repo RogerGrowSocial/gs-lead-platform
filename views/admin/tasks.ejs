@@ -1,0 +1,738 @@
+<%
+  const isAdmin = typeof isUserAdmin !== 'undefined' ? isUserAdmin : false;
+  const userIsManager = typeof isManager !== 'undefined' ? isManager : false;
+  const userCanViewAll = typeof canViewAll !== 'undefined' ? canViewAll : (isAdmin || userIsManager);
+  const currentUserId = user?.id;
+%>
+<%- include('../layouts/admin', {
+  title: 'Taken | GrowSocial',
+  activeMenu: 'tasks',
+  user: user,
+  isUserAdmin: isAdmin,
+  stylesheets: ['/css/admin/users.css', '/css/admin/tasks.css', '/css/admin/payments-table.css', '/css/components/custom-select.css', '/css/admin/employees-drawer.css', '/css/admin/ai-lead-router.css'],
+  scripts: ['/js/admin/tasks.js', '/js/admin/tasks-drawer.js', '/js/admin/task-router.js'],
+  body: `
+  <div class="tasks-page" data-can-view-all="${userCanViewAll}" data-user-id="${currentUserId}">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Taken</h1>
+        <p class="text-muted">${userCanViewAll ? 'Overzicht van alle taken' : 'Mijn taken en team taken'}</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <button id="addTaskBtn" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border-radius: 8px; border: none; background: #ea5d0d; color: #ffffff; cursor: pointer; transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+          </svg>
+          Taak toevoegen
+        </button>
+        <div class="view-select-wrapper">
+        <div class="custom-select" id="viewSelect">
+          <button type="button" class="custom-select-trigger" id="viewSelectTrigger">
+            <span class="custom-select-value" id="viewSelectValue">
+              <span class="view-select-icon-wrapper">
+                ${view === 'board' || !view ? `
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                    <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                    <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                    <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                  </svg>
+                ` : view === 'calendar' ? `
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                ` : `
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                `}
+              </span>
+              <span class="view-select-text">${view === 'board' || !view ? 'Bord' : view === 'calendar' ? 'Kalender' : 'Lijst'}</span>
+            </span>
+            <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="custom-select-dropdown">
+            <div class="custom-select-items">
+              <div class="custom-select-item ${view === 'board' || !view ? 'selected' : ''}" role="option" data-value="board" tabindex="0">
+                <span class="custom-select-item-text">
+                  <span class="view-select-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                      <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                      <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                      <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                    </svg>
+                  </span>
+                  <span>Bord</span>
+                </span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item ${view === 'calendar' ? 'selected' : ''}" role="option" data-value="calendar" tabindex="0">
+                <span class="custom-select-item-text">
+                  <span class="view-select-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </span>
+                  <span>Kalender</span>
+                </span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item ${view === 'list' ? 'selected' : ''}" role="option" data-value="list" tabindex="0">
+                <span class="custom-select-item-text">
+                  <span class="view-select-icon-wrapper">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="8" y1="6" x2="21" y2="6"></line>
+                      <line x1="8" y1="12" x2="21" y2="12"></line>
+                      <line x1="8" y1="18" x2="21" y2="18"></line>
+                      <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                      <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                      <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                  </span>
+                  <span>Lijst</span>
+                </span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Task Drawer -->
+    <div id="taskDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>
+    <aside id="taskDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe taak" style="position:fixed;top:0;right:0;height:100vh;width:min(520px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">
+      <div class="gs-drawer__header">
+        <div>
+          <h3 class="gs-drawer__title">Nieuwe taak</h3>
+          <p class="gs-drawer__subtitle">Maak een nieuwe taak aan en wijs deze toe aan een werknemer.</p>
+        </div>
+        <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      ${userCanViewAll ? `
+      <!-- AI Suggestion Section - Directly under subtitle -->
+      <div id="taskAiSuggestion" class="task-ai-suggestion" style="display: none; margin: 0 18px 16px 18px;">
+            <div class="task-ai-suggestion-header">
+              <div class="task-ai-header-left">
+                <div class="task-ai-header-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width:16px;height:16px;">
+                    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                    <path d="M20 3v4"></path>
+                    <path d="M22 5h-4"></path>
+                    <path d="M4 17v2"></path>
+                    <path d="M5 18H3"></path>
+                  </svg>
+                </div>
+                <h3 class="task-ai-suggestion-title">AI-taak toewijzing</h3>
+              </div>
+            </div>
+            <div class="task-ai-suggestion-content" id="taskAiSuggestionContent">
+              <div class="task-ai-loading" id="taskAiLoading" style="display: none;">
+                <div class="task-ai-spinner"></div>
+                <span>AI analyseert de taak...</span>
+              </div>
+              <div class="task-ai-suggestion-primary" id="taskAiSuggestionPrimary" style="display: none;">
+                <div class="task-ai-suggestion-header-inner">
+                  <span class="task-ai-employee-name" id="taskAiEmployeeName"></span>
+                  <span class="task-ai-match-badge" id="taskAiMatchBadge"></span>
+                </div>
+                <p class="task-ai-reason" id="taskAiReason"></p>
+                <div class="task-ai-actions">
+                  <button type="button" class="task-ai-approve-btn" id="taskAiApproveBtn">Toewijzing goedkeuren</button>
+                  <button type="button" class="task-ai-dismiss-btn" id="taskAiDismissBtn">Negeren</button>
+                </div>
+              </div>
+            </div>
+          </div>
+      ` : ''}
+      <div class="gs-drawer__body">
+        <form id="taskCreateForm">
+          <div class="gs-form-group">
+            <label for="taskTitle" class="gs-form-label">Titel <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="taskTitle" name="title" class="gs-form-input" required placeholder="Bijv. Website redesign">
+          </div>
+
+          <div class="gs-form-group">
+            <label for="taskDescription" class="gs-form-label">Beschrijving</label>
+            <textarea id="taskDescription" name="description" class="gs-form-input" rows="4" placeholder="Beschrijf de taak..."></textarea>
+          </div>
+
+          ${userCanViewAll ? `
+          <div class="gs-form-grid">
+            <div class="gs-form-group">
+              <label for="taskEmployee" class="gs-form-label">Werknemer <span style="color: #ef4444;">*</span></label>
+              <select id="taskEmployee" name="employee_id" class="gs-form-input" required>
+                <option value="">Selecteer werknemer...</option>
+                ${(employees || []).map(emp => `
+                  <option value="${emp.id}">${(emp.first_name || '') + ' ' + (emp.last_name || '')} ${emp.email ? '(' + emp.email + ')' : ''}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div class="gs-form-group">
+              <label for="taskPriority" class="gs-form-label">Prioriteit</label>
+              <select id="taskPriority" name="priority" class="gs-form-input">
+                <option value="low">Laag</option>
+                <option value="medium" selected>Normaal</option>
+                <option value="high">Hoog</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+          ` : `
+          <input type="hidden" id="taskEmployee" name="employee_id" value="${currentUserId}">
+          <div class="gs-form-group">
+            <label for="taskPriority" class="gs-form-label">Prioriteit</label>
+            <select id="taskPriority" name="priority" class="gs-form-input">
+              <option value="low">Laag</option>
+              <option value="medium" selected>Normaal</option>
+              <option value="high">Hoog</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          `}
+
+          <div class="gs-form-group">
+            <label class="gs-form-label">Bedrijf of Contactpersoon <span style="color: #ef4444;">*</span></label>
+            <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="taskRelationType" value="customer" id="taskRelationCustomer" checked>
+                <span>Bedrijf</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="taskRelationType" value="contact" id="taskRelationContact">
+                <span>Contactpersoon</span>
+              </label>
+            </div>
+            <div id="taskCustomerContainer" style="position: relative;">
+              <select id="taskCustomer" name="customer_id" class="gs-form-input">
+                <option value="">Selecteer bedrijf...</option>
+                ${(typeof customers !== 'undefined' && customers ? customers : []).map(cust => `
+                  <option value="${cust.id}">${cust.company_name || cust.name || ''}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div id="taskContactContainer" style="position: relative; display: none;">
+              <input type="text" id="taskContactSearch" class="gs-form-input" placeholder="Zoek contactpersoon..." autocomplete="off">
+              <input type="hidden" id="taskContactId" name="contact_id">
+              <div id="taskContactSearchResults" class="customer-search-results" style="display: none;"></div>
+            </div>
+          </div>
+
+          <div class="gs-form-group">
+            <label for="taskDueDate" class="gs-form-label">Deadline</label>
+            <input type="date" id="taskDueDate" name="due_at" class="gs-form-input">
+          </div>
+          
+          <!-- Recurrence Section -->
+          <div class="gs-form-group">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="taskIsRecurring" name="is_recurring" class="form-checkbox">
+              <label for="taskIsRecurring" style="margin: 0; font-weight: 500; cursor: pointer;">Terugkerend</label>
+            </div>
+            <div id="taskRecurrenceOptions" style="display: none; padding-left: 24px;">
+              <div class="gs-form-grid">
+                <div class="gs-form-group">
+                  <label for="taskRecurrenceFrequency" class="gs-form-label">Frequentie</label>
+                  <select id="taskRecurrenceFrequency" name="recurrence_frequency" class="gs-form-input">
+                    <option value="daily">Dagelijks</option>
+                    <option value="weekly" selected>Wekelijks</option>
+                    <option value="monthly">Maandelijks</option>
+                    <option value="yearly">Jaarlijks</option>
+                  </select>
+                </div>
+                <div class="gs-form-group">
+                  <label for="taskRecurrenceInterval" class="gs-form-label">Elke</label>
+                  <input type="number" id="taskRecurrenceInterval" name="recurrence_interval" class="gs-form-input" value="1" min="1">
+                </div>
+              </div>
+              <div class="gs-form-group" id="taskWeeklyDaysGroup" style="display: none;">
+                <label class="gs-form-label">Dagen van de week</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="1" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Ma
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="2" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Di
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="3" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Wo
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="4" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Do
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="5" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Vr
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="6" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Za
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <input type="checkbox" value="7" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Zo
+                  </label>
+                </div>
+              </div>
+              <div class="gs-form-group">
+                <label for="taskRecurrenceEndType" class="gs-form-label">Eindigt op</label>
+                <select id="taskRecurrenceEndType" name="recurrence_end_type" class="gs-form-input">
+                  <option value="never">Nooit</option>
+                  <option value="date">Op datum</option>
+                  <option value="count">Na aantal keren</option>
+                </select>
+              </div>
+              <div class="gs-form-group" id="taskRecurrenceEndDateGroup" style="display: none;">
+                <input type="date" id="taskRecurrenceEndDate" name="recurrence_end_date" class="gs-form-input">
+              </div>
+              <div class="gs-form-group" id="taskRecurrenceEndCountGroup" style="display: none;">
+                <input type="number" id="taskRecurrenceCount" name="recurrence_count" class="gs-form-input" value="10" min="1" placeholder="Aantal keren">
+              </div>
+            </div>
+          </div>
+
+          <div id="taskCreateError" style="display: none; padding: 12px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; margin-bottom: 16px; font-size: 14px;"></div>
+
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="button" class="gs-form-btn-secondary" data-drawer-close style="flex: 1;">Annuleren</button>
+            <button type="submit" id="taskCreateSubmit" class="gs-form-btn-primary" style="flex: 1;">Taak aanmaken</button>
+          </div>
+        </form>
+      </div>
+    </aside>
+
+    ${userCanViewAll && kpiData ? `
+    <!-- KPI Cards Section -->
+    <div class="kpi-cards-container">
+      <div class="kpi-cards-grid">
+        <!-- Total Tasks Card -->
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Totaal taken</p>
+            <p class="kpi-value">${kpiData.total}</p>
+            <p class="kpi-subtitle">Alle taken</p>
+          </div>
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+        </div>
+        
+        <!-- In Progress Card -->
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">In uitvoering</p>
+            <p class="kpi-value">${kpiData.inProgress}</p>
+            <p class="kpi-subtitle">Actieve taken</p>
+          </div>
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+        </div>
+        
+        <!-- Completed Card -->
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Voltooid</p>
+            <p class="kpi-value">${kpiData.completed}</p>
+            <p class="kpi-subtitle">Afgeronde taken</p>
+          </div>
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+        </div>
+        
+        <!-- Overdue Card -->
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Te laat</p>
+            <p class="kpi-value">${kpiData.overdue}</p>
+            <p class="kpi-subtitle">Achterstallige taken</p>
+          </div>
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    ${userCanViewAll ? `
+    <!-- AI Task Router Status Bar -->
+    <div class="ai-router-status-bar">
+      <div class="ai-router-status-content">
+        <div class="ai-router-status-left">
+          <div class="trust-score-ai-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width: 16px; height: 16px;">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+              <path d="M20 3v4"></path>
+              <path d="M22 5h-4"></path>
+              <path d="M4 17v2"></path>
+              <path d="M5 18H3"></path>
+            </svg>
+          </div>
+          <div class="ai-router-status-text">
+            <div class="ai-router-status-title">AI Task Router</div>
+            <div class="ai-router-status-description">
+              Automatische toewijzing op basis van skills, workload en prestaties.
+            </div>
+          </div>
+        </div>
+        <div class="ai-router-status-right">
+          <div class="ai-router-status-badge" id="taskRouterStatusBadge" data-status="enabled">
+            <span class="ai-router-status-indicator-dot" style="margin-right: 6px;">●</span>
+            <span class="ai-router-status-label" id="taskRouterStatusLabel">Automatische toewijzing: Aan</span>
+          </div>
+          <button class="btn-secondary btn-sm ai-router-settings-btn" id="taskRouterSettingsBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span class="ai-router-settings-text">Instellingen</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- Filters -->
+    <div class="tasks-filters">
+      <form method="GET" action="/admin/tasks" id="tasksFilterForm" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <input type="hidden" name="view" value="${view || 'board'}" id="viewInput">
+        ${userCanViewAll ? `
+        <select name="employee_id" class="filter-select" id="filterEmployee">
+          <option value="">Alle werknemers</option>
+          ${(employees || []).map(emp => `
+            <option value="${emp.id}" ${filters.employee_id === emp.id ? 'selected' : ''}>
+              ${(emp.first_name || '') + ' ' + (emp.last_name || '')} ${emp.email ? '(' + emp.email + ')' : ''}
+            </option>
+          `).join('')}
+        </select>
+        ` : ''}
+        <select name="status" class="filter-select" id="filterStatus">
+          <option value="">Alle statussen</option>
+          <option value="open" ${filters.status === 'open' ? 'selected' : ''}>Open</option>
+          <option value="in_progress" ${filters.status === 'in_progress' ? 'selected' : ''}>In uitvoering</option>
+          <option value="in_review" ${filters.status === 'in_review' ? 'selected' : ''}>In review</option>
+          <option value="done" ${filters.status === 'done' ? 'selected' : ''}>Afgerond</option>
+          <option value="rejected" ${filters.status === 'rejected' ? 'selected' : ''}>Afgewezen</option>
+        </select>
+        <select name="priority" class="filter-select" id="filterPriority">
+          <option value="">Alle prioriteiten</option>
+          <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
+          <option value="medium" ${filters.priority === 'medium' ? 'selected' : ''}>Normaal</option>
+          <option value="high" ${filters.priority === 'high' ? 'selected' : ''}>Hoog</option>
+          <option value="urgent" ${filters.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+        </select>
+      </form>
+    </div>
+
+    <!-- List View -->
+    <div class="tasks-view tasks-list-view" id="listView" style="display: ${view === 'list' ? 'block' : 'none'};">
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="tasks-table">
+            <thead>
+              <tr class="table-header-row">
+                <th class="table-header-cell">Taak</th>
+                ${userCanViewAll ? '<th class="table-header-cell">Werknemer</th>' : ''}
+                <th class="table-header-cell">Klant</th>
+                <th class="table-header-cell">Status</th>
+                <th class="table-header-cell">Prioriteit</th>
+                <th class="table-header-cell">Deadline</th>
+                ${userCanViewAll ? '<th class="table-header-cell">Acties</th>' : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${(tasks || []).length === 0 ? `
+                <tr class="table-body-row">
+                  <td class="table-cell" colspan="${userCanViewAll ? '7' : '5'}" style="text-align: center; padding: 3rem;">
+                    <div class="empty-state">
+                      <div class="empty-state-icon"><i class="fas fa-tasks"></i></div>
+                      <h3>Geen taken gevonden</h3>
+                      <p>Er zijn momenteel geen taken die voldoen aan de geselecteerde filters.</p>
+                    </div>
+                  </td>
+                </tr>
+              ` : (tasks || []).map(task => {
+                const employeeName = task.employee ? 
+                  ((task.employee.first_name || '') + ' ' + (task.employee.last_name || '')).trim() || task.employee.email : 
+                  'Onbekend';
+                const customerName = task.customer ? 
+                  (task.customer.company_name || ((task.customer.first_name || '') + ' ' + (task.customer.last_name || '')).trim()) : 
+                  null;
+                const statusLabels = {
+                  open: 'Open',
+                  in_progress: 'In uitvoering',
+                  in_review: 'In review',
+                  done: 'Afgerond',
+                  rejected: 'Afgewezen'
+                };
+                const priorityLabels = {
+                  low: 'Laag',
+                  medium: 'Normaal',
+                  high: 'Hoog',
+                  urgent: 'Urgent'
+                };
+                const statusClasses = {
+                  open: 'status-new',
+                  in_progress: 'status-pending',
+                  in_review: 'status-pending',
+                  done: 'status-paid',
+                  rejected: 'status-failed'
+                };
+                const isOverdue = task.due_at && new Date(task.due_at) < new Date() && !['done', 'rejected'].includes(task.status);
+                return `
+                  <tr class="table-body-row" data-task-id="${task.id}" onclick="if (!event.target.closest('.actions-button, .table-cell:last-child')) window.location.href='/admin/tasks/${task.id}'" style="cursor: pointer;">
+                    <td class="table-cell">
+                      <div class="cell-column">
+                        <span class="cell-text" style="font-weight: 500;">${task.title || 'Geen titel'}</span>
+                        ${task.description ? `<span class="lead-title">${task.description.substring(0, 80)}${task.description.length > 80 ? '...' : ''}</span>` : ''}
+                      </div>
+                    </td>
+                    ${userCanViewAll ? `
+                    <td class="table-cell">
+                      <span class="cell-text">${employeeName}</span>
+                    </td>
+                    ` : ''}
+                    <td class="table-cell">
+                      ${customerName ? `<span class="customer-name">${customerName}</span>` : '<span class="cell-text" style="color: #9ca3af;">—</span>'}
+                    </td>
+                    <td class="table-cell">
+                      <span class="status-badge ${statusClasses[task.status] || ''}">${statusLabels[task.status] || task.status}</span>
+                    </td>
+                    <td class="table-cell">
+                      <span class="cell-text">${priorityLabels[task.priority] || task.priority}</span>
+                    </td>
+                    <td class="table-cell">
+                      ${task.due_at ? `
+                        <div class="cell-column">
+                          <span class="cell-text">${new Date(task.due_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          ${isOverdue ? '<span class="overdue-label">Te laat</span>' : ''}
+                        </div>
+                      ` : '<span class="cell-text" style="color: #9ca3af;">—</span>'}
+                    </td>
+                    ${userCanViewAll ? `
+                    <td class="table-cell" onclick="event.stopPropagation();">
+                      <a href="/admin/employees/${task.employee_id}" class="actions-button" title="Bekijk werknemer" onclick="event.stopPropagation();">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </a>
+                    </td>
+                    ` : ''}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div class="tasks-view tasks-calendar-view" id="calendarView" style="display: ${view === 'calendar' ? 'block' : 'none'};">
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="calendar-nav-btn" onclick="changeMonth(-1)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <h2 class="calendar-month-year" id="calendarMonthYear"></h2>
+          <button class="calendar-nav-btn" onclick="changeMonth(1)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+    </div>
+
+    <!-- Board View (Kanban) -->
+    <div class="tasks-view tasks-kanban-view" id="boardView" style="display: ${view === 'board' || !view ? 'block' : 'none'};">
+      <div class="kanban-board">
+        <div class="kanban-column" data-status="open">
+          <div class="kanban-column-header">
+            <h3>Open</h3>
+            <span class="kanban-count" id="count-open">0</span>
+          </div>
+          <div class="kanban-column-content" ondrop="handleDrop(event)" ondragover="handleDragOver(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="in_progress">
+          <div class="kanban-column-header">
+            <h3>In uitvoering</h3>
+            <span class="kanban-count" id="count-in_progress">0</span>
+          </div>
+          <div class="kanban-column-content" ondrop="handleDrop(event)" ondragover="handleDragOver(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="in_review">
+          <div class="kanban-column-header">
+            <h3>In review</h3>
+            <span class="kanban-count" id="count-in_review">0</span>
+          </div>
+          <div class="kanban-column-content" ondrop="handleDrop(event)" ondragover="handleDragOver(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="done">
+          <div class="kanban-column-header">
+            <h3>Voltooid</h3>
+            <span class="kanban-count" id="count-done">0</span>
+          </div>
+          <div class="kanban-column-content" ondrop="handleDrop(event)" ondragover="handleDragOver(event)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${userCanViewAll ? `
+  <!-- AI Task Router Settings Modal -->
+  <div class="modal ai-router-settings-modal" id="taskRouterSettingsModal">
+    <div class="modal-content ai-router-modal-content">
+      <div class="ai-router-modal-header">
+        <div>
+          <h2 class="ai-router-modal-title">Instellingen Task Router</h2>
+          <p class="ai-router-modal-description">Pas de weging van verschillende factoren aan voor de AI-gestuurde taak toewijzing.</p>
+        </div>
+        <button class="ai-router-modal-close" id="taskRouterCloseBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+          <span class="sr-only">Close</span>
+        </button>
+      </div>
+      <div class="ai-router-modal-body">
+        <div class="ai-settings-section">
+          <div class="ai-settings-label-row">
+            <label class="ai-settings-label" for="task-skills-weight">Belang skills</label>
+            <span class="ai-settings-value" id="taskSkillsWeightValue">50%</span>
+          </div>
+          <div class="ai-settings-slider-wrapper">
+            <input type="range" class="ai-settings-slider-new" id="taskSkillsWeight" min="0" max="100" value="50">
+            <div class="ai-settings-slider-track">
+              <div class="ai-settings-slider-range" id="taskSkillsWeightRange"></div>
+            </div>
+            <div class="ai-settings-slider-thumb" id="taskSkillsWeightThumb"></div>
+          </div>
+          <p class="ai-settings-hint">Hoe belangrijk is het matchen van skills bij het toewijzen van taken?</p>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-settings-label-row">
+            <label class="ai-settings-label" for="task-workload-weight">Workload / Beschikbaarheid</label>
+            <span class="ai-settings-value" id="taskWorkloadWeightValue">30%</span>
+          </div>
+          <div class="ai-settings-slider-wrapper">
+            <input type="range" class="ai-settings-slider-new" id="taskWorkloadWeight" min="0" max="100" value="30">
+            <div class="ai-settings-slider-track">
+              <div class="ai-settings-slider-range" id="taskWorkloadWeightRange"></div>
+            </div>
+            <div class="ai-settings-slider-thumb" id="taskWorkloadWeightThumb"></div>
+          </div>
+          <p class="ai-settings-hint">Hoe belangrijk is de huidige workload en beschikbaarheid van werknemers?</p>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-settings-label-row">
+            <label class="ai-settings-label" for="task-completion-weight">Completion Rate</label>
+            <span class="ai-settings-value" id="taskCompletionWeightValue">20%</span>
+          </div>
+          <div class="ai-settings-slider-wrapper">
+            <input type="range" class="ai-settings-slider-new" id="taskCompletionWeight" min="0" max="100" value="20">
+            <div class="ai-settings-slider-track">
+              <div class="ai-settings-slider-range" id="taskCompletionWeightRange"></div>
+            </div>
+            <div class="ai-settings-slider-thumb" id="taskCompletionWeightThumb"></div>
+          </div>
+          <p class="ai-settings-hint">Hoe sterk moeten de prestaties (completion rate) van werknemers meewegen?</p>
+        </div>
+        <div class="ai-settings-section">
+          <div class="ai-settings-label-row">
+            <label class="ai-settings-label" for="task-auto-assign-threshold">Minimum score</label>
+            <span class="ai-settings-value" id="taskAutoAssignThresholdValue">60%</span>
+          </div>
+          <div class="ai-settings-slider-wrapper">
+            <input type="range" class="ai-settings-slider-new" id="taskAutoAssignThreshold" min="0" max="100" value="60">
+            <div class="ai-settings-slider-track">
+              <div class="ai-settings-slider-range" id="taskAutoAssignThresholdRange"></div>
+            </div>
+            <div class="ai-settings-slider-thumb" id="taskAutoAssignThresholdThumb"></div>
+          </div>
+          <p class="ai-settings-hint">Minimum score voor automatische toewijzing van taken (0-100).</p>
+        </div>
+        <div class="ai-settings-toggle-section">
+          <div class="ai-settings-toggle-content">
+            <label class="ai-settings-toggle-label" for="task-auto-assign">Automatische toewijzing</label>
+            <p class="ai-settings-toggle-description">Wijs alle nieuwe taken automatisch toe aan de beste match</p>
+          </div>
+          <label class="ai-settings-switch">
+            <input type="checkbox" id="taskAutoAssignToggle" checked>
+            <span class="ai-settings-switch-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="ai-router-modal-footer">
+        <button class="btn btn-outline ai-router-modal-cancel" id="taskRouterCancelBtn">Annuleren</button>
+        <button class="btn btn-primary ai-router-modal-save" id="taskRouterSaveBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Opslaan
+        </button>
+      </div>
+    </div>
+  </div>
+  ` : ''}
+
+  <script>
+    // Pass server data to JavaScript
+    window.userCustomerData = <%- JSON.stringify(typeof userCustomer !== 'undefined' ? userCustomer : null) %>;
+    
+    window.tasksData = {
+      tasks: ${JSON.stringify(tasks || [])},
+      canViewAll: ${userCanViewAll},
+      userId: '${currentUserId}'
+    };
+  </script>
+  `
+}) %>
+

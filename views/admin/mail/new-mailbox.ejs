@@ -1,0 +1,147 @@
+<%
+  const formatDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+%>
+
+<%- include('../../layouts/admin', {
+  title: editing ? 'Mailbox bewerken' : 'Nieuwe mailbox toevoegen',
+  activeMenu: 'mail',
+  user: user,
+  body: `
+  <div class="payments-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>${editing ? 'Mailbox bewerken' : 'Nieuwe mailbox toevoegen'}</h1>
+        <p class="text-muted">Configureer IMAP en SMTP instellingen voor je email mailbox</p>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/mail/settings" class="btn-outline">
+          <i class="fas fa-arrow-left"></i> Terug
+        </a>
+      </div>
+    </div>
+
+    <!-- Mailbox Form Card -->
+    <div class="settings-card">
+      </div>
+      
+      <div class="settings-card-content">
+        <form id="mailboxForm">
+          
+          <!-- Email Address -->
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label">E-mailadres *</label>
+            <input type="email" id="mailboxEmail" placeholder="info@growsocialmedia.nl" required class="form-control" value="${mailbox?.email || ''}">
+          </div>
+          
+          <!-- IMAP Settings Section -->
+          <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px;">IMAP Instellingen (Inkomend)</h3>
+            
+            <div style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
+              <p style="font-size: 12px; color: #1e40af; margin: 0;">
+                <strong>📥 Voor het ontvangen van emails:</strong> Gebruik je Mijndomein IMAP server (mail.mijndomein.nl). Mailgun wordt alleen gebruikt voor het verzenden (SMTP).
+              </p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label class="form-label">IMAP Host *</label>
+                <input type="text" id="mailboxImapHost" placeholder="mail.mijndomein.nl" required class="form-control" value="${mailbox?.imap_host || 'mail.mijndomein.nl'}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">IMAP Port *</label>
+                <input type="number" id="mailboxImapPort" value="${mailbox?.imap_port || 993}" required class="form-control">
+              </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">IMAP Gebruikersnaam *</label>
+              <input type="text" id="mailboxImapUsername" placeholder="info@growsocialmedia.nl" required class="form-control" value="${mailbox?.imap_username || mailbox?.username || ''}">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">IMAP Wachtwoord *</label>
+              <input type="password" id="mailboxImapPassword" placeholder="Je Mijndomein email wachtwoord" ${editing ? '' : 'required'} class="form-control">
+              <p style="font-size: 12px; color: #6b7280; margin-top: 6px;">${editing ? 'Laat leeg om niet te wijzigen' : 'Voor het ophalen van emails via Mijndomein IMAP'}</p>
+            </div>
+          </div>
+          
+          <!-- SMTP Settings Section -->
+          <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px;">SMTP Instellingen (Uitgaand)</h3>
+            
+            <!-- Quick Presets -->
+            <div style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="presetMailgun" class="btn-outline-sm">
+                📧 Mailgun (Aanbevolen)
+              </button>
+              <button type="button" id="presetMijndomein" class="btn-outline-sm">
+                🏢 Mijndomein
+              </button>
+              <button type="button" id="presetGmail" class="btn-outline-sm">
+                📨 Gmail
+              </button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label class="form-label">SMTP Host *</label>
+                <input type="text" id="mailboxSmtpHost" placeholder="smtp.mailgun.org" required class="form-control" value="${mailbox?.smtp_host || ''}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">SMTP Port *</label>
+                <input type="number" id="mailboxSmtpPort" value="${mailbox?.smtp_port || 587}" required class="form-control">
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #374151; cursor: pointer;">
+                <input type="checkbox" id="mailboxSmtpSecure" ${mailbox?.smtp_secure !== false ? 'checked' : ''} style="cursor: pointer;">
+                <span>SSL/TLS gebruiken (aan voor poort 465, uit voor poort 587)</span>
+              </label>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label">SMTP Gebruikersnaam *</label>
+              <input type="text" id="mailboxSmtpUsername" placeholder="brad@growsocialmedia.nl (volledige email voor Mailgun)" required class="form-control" value="${mailbox?.smtp_username || mailbox?.username || ''}">
+              <p style="font-size: 12px; color: #6b7280; margin-top: 6px; display: none;" id="mailgunUsernameHint">Voor Mailgun: gebruik je volledige email adres</p>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">SMTP Wachtwoord *</label>
+              <input type="password" id="mailboxSmtpPassword" placeholder="Mailgun SMTP wachtwoord" ${editing ? '' : 'required'} class="form-control">
+              <p style="font-size: 12px; color: #6b7280; margin-top: 6px; display: none;" id="mailgunPasswordHint">Voor Mailgun: Maak een SMTP password aan in Mailgun dashboard → Domain Settings → SMTP credentials → Add password</p>
+              <p style="font-size: 12px; color: #9ca3af; margin-top: 6px;" id="defaultPasswordHint">Voor Gmail gebruik een app-specifiek wachtwoord</p>
+            </div>
+          </div>
+          
+          <!-- Form Actions -->
+          <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <a href="/admin/mail/settings" class="btn-outline" style="padding: 10px 20px; text-decoration: none;">
+              Annuleren
+            </a>
+            <button type="submit" class="btn-primary" style="padding: 10px 20px;">
+              <i class="fas fa-save"></i> ${editing ? 'Mailbox bijwerken' : 'Mailbox toevoegen'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  `,
+  scripts: ['/js/admin/mailbox-form.js'],
+  stylesheets: ['/css/admin/adminPayments.css']
+}) %>
+

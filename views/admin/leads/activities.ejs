@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Activiteiten</h1>
+  <p>Bekijk en beheer lead activiteiten</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Activiteiten', 
+    activeMenu: 'leads',
+    activeSubmenu: 'activities',
+    user: user,
+    body: pageContent
+}) %>
+

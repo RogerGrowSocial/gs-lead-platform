@@ -1,0 +1,119 @@
+<!-- KPI Cards - EXACT zoals /admin/payments -->
+<div class="kpi-cards-container">
+  <div class="kpi-cards-grid">
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Totaal partners</p>
+        <p class="kpi-value" id="kpi-total-partners">-</p>
+        <p class="kpi-subtitle">Actief in platform</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Actieve partners (7d)</p>
+        <p class="kpi-value" id="kpi-active-partners">-</p>
+        <p class="kpi-subtitle">76% response rate</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Capaciteit per dag</p>
+        <p class="kpi-value" id="kpi-capacity-day">-</p>
+        <p class="kpi-subtitle">Gemiddeld over alle segmenten</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Bezettingsgraad</p>
+        <p class="kpi-value" id="kpi-occupancy">-</p>
+        <div class="mt-2">
+          <div class="w-full bg-gray-100 rounded-full h-2">
+            <div class="bg-gray-900 h-2 rounded-full" id="kpi-occupancy-bar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Capaciteitstabel - EXACT zoals /admin/leads -->
+<div class="table-container">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Segment</th>
+          <th>Partners</th>
+          <th>Capaciteit/dag</th>
+          <th>Bezetting</th>
+          <th>Gem. reactietijd</th>
+          <th>Conversie</th>
+        </tr>
+      </thead>
+      <tbody id="capacity-table-body">
+        <!-- Dynamisch gevuld -->
+      </tbody>
+      <tbody id="capacity-table-skeleton" style="display: none;">
+        <!-- Skeleton loader rows -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Insight Cards -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-4">
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <h3 class="text-base font-medium text-gray-900 mb-4">Segmenten met lage capaciteit</h3>
+      <div id="low-capacity-segments" class="space-y-3">
+        <!-- Dynamisch gevuld -->
+      </div>
+      <div id="low-capacity-segments-skeleton" class="space-y-3" style="display: none;">
+        <!-- Skeleton loader -->
+      </div>
+    </div>
+  </div>
+  
+  <div class="kpi-card">
+    <div class="kpi-content">
+      <h3 class="text-base font-medium text-gray-900 mb-4">Top performers (conversie)</h3>
+      <div id="top-performers" class="space-y-3">
+        <!-- Dynamisch gevuld -->
+      </div>
+      <div id="top-performers-skeleton" class="space-y-3" style="display: none;">
+        <!-- Skeleton loader -->
+      </div>
+    </div>
+  </div>
+</div>
+

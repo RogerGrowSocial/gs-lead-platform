@@ -1,0 +1,90 @@
+-- =====================================================
+-- TODO: FUTURE MIGRATION FOR INVOICE/PAYMENT MAPPING
+-- =====================================================
+-- This migration is a placeholder for future implementation
+-- when invoice_line_items and payment_line_items tables are created
+-- =====================================================
+
+-- STEP 1: Create invoice_line_items table (when needed)
+-- CREATE TABLE IF NOT EXISTS public.invoice_line_items (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   invoice_id UUID NOT NULL REFERENCES public.customer_invoices(id) ON DELETE CASCADE,
+--   service_id UUID REFERENCES public.services(id) ON DELETE SET NULL,
+--   description TEXT,
+--   quantity NUMERIC NOT NULL DEFAULT 1,
+--   unit_price_cents INTEGER NOT NULL,
+--   total_cents INTEGER NOT NULL,
+--   cost_cents INTEGER, -- Optional: can be calculated from service or set manually
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- );
+-- 
+-- CREATE INDEX IF NOT EXISTS idx_invoice_line_items_invoice_id ON public.invoice_line_items(invoice_id);
+-- CREATE INDEX IF NOT EXISTS idx_invoice_line_items_service_id ON public.invoice_line_items(service_id);
+
+-- STEP 2: Create payment_line_items table (when needed)
+-- CREATE TABLE IF NOT EXISTS public.payment_line_items (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   payment_id UUID NOT NULL REFERENCES public.payments(id) ON DELETE CASCADE,
+--   service_id UUID REFERENCES public.services(id) ON DELETE SET NULL,
+--   description TEXT,
+--   quantity NUMERIC NOT NULL DEFAULT 1,
+--   revenue_cents INTEGER NOT NULL,
+--   cost_cents INTEGER, -- Optional: can be calculated from service or set manually
+--   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- );
+-- 
+-- CREATE INDEX IF NOT EXISTS idx_payment_line_items_payment_id ON public.payment_line_items(payment_id);
+-- CREATE INDEX IF NOT EXISTS idx_payment_line_items_service_id ON public.payment_line_items(service_id);
+
+-- STEP 3: Update service_sales_view to include invoice and payment line items
+-- DROP VIEW IF EXISTS public.service_sales_view;
+-- CREATE VIEW public.service_sales_view AS
+-- SELECT 
+--   id,
+--   service_id,
+--   sold_at,
+--   quantity,
+--   revenue_cents,
+--   cost_cents,
+--   customer_id,
+--   source,
+--   external_ref,
+--   created_at
+-- FROM public.service_sales
+-- UNION ALL
+-- SELECT 
+--   ili.id,
+--   ili.service_id,
+--   inv.invoice_date::TIMESTAMPTZ as sold_at,
+--   ili.quantity,
+--   ili.total_cents as revenue_cents,
+--   COALESCE(ili.cost_cents, s.cost_cents * ili.quantity) as cost_cents,
+--   inv.customer_id,
+--   'invoice' as source,
+--   inv.id::TEXT as external_ref,
+--   inv.created_at
+-- FROM public.invoice_line_items ili
+-- JOIN public.customer_invoices inv ON ili.invoice_id = inv.id
+-- LEFT JOIN public.services s ON ili.service_id = s.id
+-- WHERE inv.status IN ('paid', 'pending')
+-- UNION ALL
+-- SELECT 
+--   pli.id,
+--   pli.service_id,
+--   p.paid_at as sold_at,
+--   pli.quantity,
+--   pli.revenue_cents,
+--   COALESCE(pli.cost_cents, s.cost_cents * pli.quantity) as cost_cents,
+--   p.customer_id,
+--   'payment' as source,
+--   p.id::TEXT as external_ref,
+--   p.created_at
+-- FROM public.payment_line_items pli
+-- JOIN public.payments p ON pli.payment_id = p.id
+-- LEFT JOIN public.services s ON pli.service_id = s.id
+-- WHERE p.status = 'paid';
+
+-- Comments (commented out until tables are created)
+-- COMMENT ON TABLE public.invoice_line_items IS 'TODO: Create this table to map invoice items to services';
+-- COMMENT ON TABLE public.payment_line_items IS 'TODO: Create this table to map payment items to services';
+

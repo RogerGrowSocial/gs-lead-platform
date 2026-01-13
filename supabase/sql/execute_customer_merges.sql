@@ -1,0 +1,68 @@
+-- =====================================================
+-- EXECUTE CUSTOMER MERGES
+-- =====================================================
+-- This script merges the 3 duplicate customer pairs found by query E.
+-- Run this in Supabase SQL Editor.
+--
+-- IMPORTANT: Make sure you've reviewed the merge_customers function
+-- and the duplicate pairs before running this!
+--
+-- NOTE: These merges have already been executed (2025-01-16).
+-- If you run this again, you'll get errors because the "from" customers
+-- have already been deleted. Use the verification queries below instead.
+-- =====================================================
+
+-- Check if merges are already complete (run this first):
+-- SELECT 
+--   CASE WHEN EXISTS (SELECT 1 FROM public.customers WHERE id = 'e7d18629-117f-4167-99a1-c5e99dc53aa6'::uuid)
+--     THEN '❌ Koos Kluytmans still exists - merge not done'
+--     ELSE '✅ Koos Kluytmans already merged'
+--   END AS merge1_status,
+--   CASE WHEN EXISTS (SELECT 1 FROM public.customers WHERE id = '2ee8936c-9404-4052-b6c3-8a7aff365cba'::uuid)
+--     THEN '❌ Koos Kluytmans Interieurs still exists - merge not done'
+--     ELSE '✅ Koos Kluytmans Interieurs already merged'
+--   END AS merge2_status,
+--   CASE WHEN EXISTS (SELECT 1 FROM public.customers WHERE id = 'ba9b4985-995d-4c7b-a454-7754ca962d15'::uuid)
+--     THEN '❌ Steck013 still exists - merge not done'
+--     ELSE '✅ Steck013 already merged'
+--   END AS merge3_status;
+
+-- 1) Merge Koos Kluytmans into Kluytmans Beheer B.V.
+-- (Only run if the customer still exists - check above first)
+-- SELECT public.merge_customers(
+--   'e7d18629-117f-4167-99a1-c5e99dc53aa6'::uuid,  -- Koos Kluytmans (merge from)
+--   '3cf95c6f-9be0-4b8a-bef5-d6f2f146e2f6'::uuid,  -- Kluytmans Beheer B.V. (keep)
+--   true  -- Delete the merged customer
+-- );
+
+-- 2) Merge Koos Kluytmans Interieurs B.V. into Kluytmans Beheer B.V.
+-- (Only run if the customer still exists - check above first)
+-- SELECT public.merge_customers(
+--   '2ee8936c-9404-4052-b6c3-8a7aff365cba'::uuid,  -- Koos Kluytmans Interieurs B.V. (merge from)
+--   '3cf95c6f-9be0-4b8a-bef5-d6f2f146e2f6'::uuid,  -- Kluytmans Beheer B.V. (keep)
+--   true  -- Delete the merged customer
+-- );
+
+-- 3) Merge Steck013 into Steck 013
+-- (Only run if the customer still exists - check above first)
+-- SELECT public.merge_customers(
+--   'ba9b4985-995d-4c7b-a454-7754ca962d15'::uuid,  -- Steck013 (merge from)
+--   '6a6baa8a-b42e-48b8-92ee-84896503f247'::uuid,  -- Steck 013 (keep)
+--   true  -- Delete the merged customer
+-- );
+
+-- =====================================================
+-- VERIFICATION: Check that merges were successful
+-- =====================================================
+-- Run query C again to verify no duplicate invoices remain:
+-- SELECT
+--   i.invoice_number,
+--   COUNT(*) AS rows,
+--   COUNT(DISTINCT i.customer_id) AS distinct_customers,
+--   array_agg(DISTINCT i.customer_id) AS customer_ids,
+--   array_agg(DISTINCT COALESCE(c.company_name, c.name)) AS customer_names
+-- FROM public.customer_invoices i
+-- LEFT JOIN public.customers c ON c.id = i.customer_id
+-- GROUP BY i.invoice_number
+-- HAVING COUNT(DISTINCT i.customer_id) > 1
+-- ORDER BY distinct_customers DESC, rows DESC, i.invoice_number;

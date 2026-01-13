@@ -1,0 +1,94 @@
+<%- include('../layouts/admin', {
+  title: 'Tijdregistratie - Werknemers | GrowSocial Admin',
+  activeMenu: 'time-entries',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  stylesheets: ['/css/admin/users.css'],
+  body: `
+  <div class="page-header">
+    <div>
+      <h1>Tijdregistratie</h1>
+      <p class="text-muted">Overzicht van alle urenregistraties</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="users-header-row" style="margin-bottom: 1.5rem;">
+    <form method="GET" action="/admin/time-entries" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <select name="status" class="users-dropdown" onchange="this.form.submit()">
+        <option value="">Alle statussen</option>
+        <option value="draft" ${filters.status === 'draft' ? 'selected' : ''}>Concept</option>
+        <option value="submitted" ${filters.status === 'submitted' ? 'selected' : ''}>Ingediend</option>
+        <option value="approved" ${filters.status === 'approved' ? 'selected' : ''}>Goedgekeurd</option>
+        <option value="rejected" ${filters.status === 'rejected' ? 'selected' : ''}>Afgewezen</option>
+      </select>
+      <select name="employee_id" class="users-dropdown" onchange="this.form.submit()">
+        <option value="">Alle werknemers</option>
+        ${(employees || []).map(emp => `
+          <option value="${emp.id}" ${filters.employee_id === emp.id ? 'selected' : ''}>
+            ${(emp.first_name || '') + ' ' + (emp.last_name || '')} ${emp.email ? '(' + emp.email + ')' : ''}
+          </option>
+        `).join('')}
+      </select>
+      <input type="date" name="start_date" class="users-dropdown" value="${filters.start_date || ''}" placeholder="Van datum" onchange="this.form.submit()" style="padding: 0.5rem;">
+      <input type="date" name="end_date" class="users-dropdown" value="${filters.end_date || ''}" placeholder="Tot datum" onchange="this.form.submit()" style="padding: 0.5rem;">
+    </form>
+  </div>
+
+  <!-- Time Entries List -->
+  <div class="users-list">
+    ${(timeEntries || []).length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-clock"></i></div>
+        <h3>Geen urenregistraties gevonden</h3>
+        <p>Er zijn momenteel geen urenregistraties die voldoen aan de geselecteerde filters.</p>
+      </div>
+    ` : (timeEntries || []).map(entry => {
+      const employeeName = entry.employee ? 
+        ((entry.employee.first_name || '') + ' ' + (entry.employee.last_name || '')).trim() || entry.employee.email : 
+        'Onbekend';
+      const hours = Math.floor((entry.duration_minutes || 0) / 60);
+      const minutes = (entry.duration_minutes || 0) % 60;
+      const duration = hours > 0 ? `${hours}u ${minutes}min` : `${minutes}min`;
+      const statusLabels = {
+        draft: 'Concept',
+        submitted: 'Ingediend',
+        approved: 'Goedgekeurd',
+        rejected: 'Afgewezen'
+      };
+      const statusColors = {
+        draft: 'bg-gray-100 text-gray-800',
+        submitted: 'bg-blue-100 text-blue-800',
+        approved: 'bg-green-100 text-green-800',
+        rejected: 'bg-red-100 text-red-800'
+      };
+      return `
+        <div class="user-item" style="padding: 1rem;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+              <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">${new Date(entry.start_at).toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</h3>
+              <span class="badge ${statusColors[entry.status] || 'bg-gray-100 text-gray-800'}" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">
+                ${statusLabels[entry.status] || entry.status}
+              </span>
+              <span class="badge bg-blue-100 text-blue-800" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">
+                ${duration}
+              </span>
+            </div>
+            ${entry.note ? `<p style="margin: 0.5rem 0; color: #6b7280; font-size: 0.875rem;">${entry.note}</p>` : ''}
+            <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+              <span><i class="fas fa-user"></i> ${employeeName}</span>
+              ${entry.task ? `<span><i class="fas fa-tasks"></i> ${entry.task.title}</span>` : ''}
+            </div>
+          </div>
+          <div>
+            <a href="/admin/employees/${entry.employee_id}" class="btn btn-sm btn-secondary">
+              <i class="fas fa-eye"></i> Bekijk werknemer
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  </div>
+  `
+}) %>
+

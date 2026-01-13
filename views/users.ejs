@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gebruikersbeheer | Admin Dashboard</title>
+  <link rel="stylesheet" href="/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/css/admin/dashboard.css">
+  <link rel="stylesheet" href="/css/admin/users.css">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <i class="fa-solid fa-bolt"></i>
+          <span>LeadPlatform</span>
+        </div>
+        <button class="sidebar-toggle" id="sidebarToggle">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="/admin/dashboard" class="nav-item">
+              <i class="fa-solid fa-gauge-high"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/leads" class="nav-item">
+              <i class="fa-solid fa-bullseye"></i>
+              <span>Leads</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/users" class="nav-item active">
+              <i class="fa-solid fa-users"></i>
+              <span>Gebruikers</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/payments" class="nav-item">
+              <i class="fa-solid fa-credit-card"></i>
+              <span>Betalingen</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/settings" class="nav-item">
+              <i class="fa-solid fa-gear"></i>
+              <span>Instellingen</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <a href="/admin/profile" class="user-profile">
+          <div class="avatar">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div class="user-info">
+            <p class="user-name">Admin Gebruiker</p>
+            <p class="user-role">Beheerder</p>
+          </div>
+        </a>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="content-header">
+        <div class="header-left">
+          <h1>Gebruikersbeheer</h1>
+          <p class="breadcrumb">Dashboard / Gebruikers</p>
+        </div>
+        <div class="header-right">
+          <div class="search-container">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="userSearch" placeholder="Zoek gebruikers...">
+          </div>
+          <div class="notifications">
+            <i class="fa-solid fa-bell"></i>
+            <span class="notification-badge">3</span>
+          </div>
+        </div>
+      </header>
+      
+      <div class="content-body">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <h2>Gebruikersoverzicht</h2>
+              <p>Beheer alle geregistreerde gebruikers</p>
+            </div>
+            <div class="card-actions">
+              <div class="filter-dropdown">
+                <button class="btn btn-outline">
+                  <i class="fa-solid fa-filter"></i>
+                  <span>Filter</span>
+                </button>
+                <div class="dropdown-content">
+                  <a href="#" data-filter="all">Alle gebruikers</a>
+                  <a href="#" data-filter="active">Actieve gebruikers</a>
+                  <a href="#" data-filter="inactive">Inactieve gebruikers</a>
+                </div>
+              </div>
+              <button class="btn btn-primary" id="addUserBtn">
+                <i class="fa-solid fa-plus"></i>
+                <span>Nieuwe gebruiker</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="users-table">
+                <thead>
+                  <tr>
+                    <th>
+                      <div class="th-content">
+                        <span>Gebruiker</span>
+                        <i class="fa-solid fa-sort"></i>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Email</span>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Rol</span>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Status</span>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Aangemeld op</span>
+                        <i class="fa-solid fa-sort"></i>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Laatste login</span>
+                        <i class="fa-solid fa-sort"></i>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Betaalmethode</span>
+                      </div>
+                    </th>
+                    <th>
+                      <div class="th-content">
+                        <span>Acties</span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (users && users.length > 0) { %>
+                    <% users.forEach(function(user) { %>
+                      <tr>
+                        <td>
+                          <div class="user-info-cell">
+                            <div class="user-avatar">
+                              <% if (user.first_name && user.last_name) { %>
+                                <%= user.first_name.charAt(0).toUpperCase() %><%= user.last_name.charAt(0).toUpperCase() %>
+                              <% } else if (user.company_name) { %>
+                                <%= user.company_name.charAt(0).toUpperCase() %>
+                              <% } else { %>
+                                <%= user.email.charAt(0).toUpperCase() %>
+                              <% } %>
+                            </div>
+                            <div class="user-details">
+                              <div class="user-name">
+                                <% if (user.first_name && user.last_name) { %>
+                                  <%= user.first_name %> <%= user.last_name %>
+                                <% } else { %>
+                                  <%= user.company_name || 'Onbekend' %>
+                                <% } %>
+                              </div>
+                              <% if (user.company_name && user.first_name && user.last_name) { %>
+                                <div class="user-company"><%= user.company_name %></div>
+                              <% } %>
+                            </div>
+                          </div>
+                        </td>
+                        <td><%= user.email %></td>
+                        <td>
+                          <span class="role-badge <%= user.is_admin ? 'admin' : 'user' %>">
+                            <%= user.is_admin ? 'Admin' : 'Gebruiker' %>
+                          </span>
+                        </td>
+                        <td>
+                          <% 
+                            const status = user.status || 'active';
+                            let statusClass = 'badge-success';
+                            let statusText = 'Actief';
+                            
+                            if (status === 'inactive') {
+                              statusClass = 'badge-danger';
+                              statusText = 'Inactief';
+                            } else if (status === 'pending') {
+                              statusClass = 'badge-warning';
+                              statusText = 'In afwachting';
+                            } else if (user.last_login) {
+                              const lastLogin = new Date(user.last_login);
+                              const now = new Date();
+                              const daysSinceLogin = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+                              
+                              if (daysSinceLogin > 30) {
+                                statusClass = 'badge-danger';
+                                statusText = 'Inactief';
+                              } else if (daysSinceLogin > 14) {
+                                statusClass = 'badge-warning';
+                                statusText = 'Afwezig';
+                              }
+                            }
+                          %>
+                          <span class="badge <%= statusClass %>"><%= statusText %></span>
+                        </td>
+                        <td><%= new Date(user.created_at).toLocaleDateString('nl-NL') %></td>
+                        <td>
+                          <% if (user.last_login) { %>
+                            <div class="date-info">
+                              <div><%= new Date(user.last_login).toLocaleDateString('nl-NL') %></div>
+                              <div class="time-info"><%= new Date(user.last_login).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) %></div>
+                            </div>
+                          <% } else { %>
+                            <div class="date-info">
+                              <div>-</div>
+                            </div>
+                          <% } %>
+                        </td>
+                        <td>
+                          <% 
+                            const hasPaymentMethod = user.has_payment_method || (user.payment_method && user.payment_method !== '');
+                          %>
+                          <% if (hasPaymentMethod) { %>
+                            <span class="status-badge payment-badge accepted has-payment">
+                              Ingesteld
+                            </span>
+                          <% } else { %>
+                            <span class="status-badge payment-badge rejected no-payment">
+                              Niet ingesteld
+                            </span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <div class="action-buttons">
+                            <button class="btn-icon edit-user" data-id="<%= user.id %>" title="Bewerken">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon view-user" data-id="<%= user.id %>" title="Bekijken">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                            <div class="dropdown">
+                              <button class="btn-icon dropdown-toggle" data-id="<%= user.id %>" title="Meer acties">
+                                <i class="fas fa-ellipsis-v"></i>
+                              </button>
+                              <div class="dropdown-menu">
+                                <% if (status !== 'active') { %>
+                                  <a href="#" class="dropdown-item activate-user" data-id="<%= user.id %>">
+                                    <i class="fas fa-check-circle"></i> Activeren
+                                  </a>
+                                <% } else { %>
+                                  <a href="#" class="dropdown-item deactivate-user" data-id="<%= user.id %>">
+                                    <i class="fas fa-ban"></i> Deactiveren
+                                  </a>
+                                <% } %>
+                                <a href="#" class="dropdown-item change-role" data-id="<%= user.id %>">
+                                  <i class="fas fa-user-tag"></i> Rol wijzigen
+                                </a>
+                                <a href="#" class="dropdown-item reset-password" data-id="<%= user.id %>">
+                                  <i class="fas fa-key"></i> Wachtwoord resetten
+                                </a>
+                                <a href="#" class="dropdown-item text-danger delete-user" data-id="<%= user.id %>">
+                                  <i class="fas fa-trash-alt"></i> Verwijderen
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="8" class="text-center text-muted">
+                        Geen gebruikers gevonden
+                      </td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="pagination-container">
+              <div class="pagination-info">
+                Weergave <%= pagination.startItem %>-<%= pagination.endItem %> van <%= pagination.totalItems %> items
+              </div>
+              <div class="pagination-controls">
+                <button class="pagination-btn" id="prevPage" <%= !pagination.hasPrevPage ? 'disabled' : '' %>>
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="pagination-pages">
+                  <% for(let i = 1; i <= pagination.totalPages; i++) { %>
+                    <button class="pagination-page <%= i === pagination.currentPage ? 'active' : '' %>" data-page="<%= i %>"><%= i %></button>
+                  <% } %>
+                </div>
+                <button class="pagination-btn" id="nextPage" <%= !pagination.hasNextPage ? 'disabled' : '' %>>
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="pagination-options">
+                <label for="itemsPerPage">Toon:</label>
+                <select id="itemsPerPage" class="items-per-page">
+                  <option value="10" <%= pagination.itemsPerPage === 10 ? 'selected' : '' %>>10</option>
+                  <option value="25" <%= pagination.itemsPerPage === 25 ? 'selected' : '' %>>25</option>
+                  <option value="50" <%= pagination.itemsPerPage === 50 ? 'selected' : '' %>>50</option>
+                  <option value="100" <%= pagination.itemsPerPage === 100 ? 'selected' : '' %>>100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- User Edit Modal -->
+  <div id="userEditModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Gebruiker bewerken</h2>
+        <button class="close-btn">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editUserForm">
+          <input type="hidden" id="userId" name="userId">
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="companyName">Bedrijfsnaam</label>
+              <input type="text" id="companyName" name="companyName" class="form-control">
+            </div>
+            
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" class="form-control">
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="balance">Saldo</label>
+              <div class="input-with-icon">
+                <i class="fa-solid fa-euro-sign"></i>
+                <input type="number" id="balance" name="balance" class="form-control" step="0.01">
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status" name="status" class="form-control">
+                <option value="active">Actief</option>
+                <option value="inactive">Inactief</option>
+                <option value="suspended">Geschorst</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="payment-method-section">
+            <div class="section-header">
+              <h3>Betaalmethode</h3>
+              <span class="section-badge" id="paymentMethodBadge"></span>
+            </div>
+            <div id="paymentMethodStatus" class="payment-status">
+              <!-- Will be populated by JavaScript -->
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancelEdit">Annuleren</button>
+            <button type="submit" class="btn btn-primary">Opslaan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <script src="/js/admin/dashboard.js"></script>
+  <script src="/js/admin/users.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const itemsPerPageSelect = document.getElementById('itemsPerPage');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const usersTableBody = document.querySelector('.users-table tbody');
+    const paginationInfo = document.querySelector('.pagination-info');
+
+    // Get current page from URL or default to 1
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentPage = parseInt(urlParams.get('page')) || 1;
+    const currentItemsPerPage = parseInt(urlParams.get('itemsPerPage')) || 10;
+
+    async function loadUsers(page, itemsPerPage) {
+      try {
+        const response = await fetch(`/admin/users?page=${page}&itemsPerPage=${itemsPerPage}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update users table
+        usersTableBody.innerHTML = data.users.map(user => `
+          <tr>
+            <td>
+              <div class="user-info-cell">
+                <div class="user-avatar">
+                  ${user.first_name && user.last_name ? 
+                    user.first_name.charAt(0).toUpperCase() + user.last_name.charAt(0).toUpperCase() :
+                    user.company_name ? 
+                      user.company_name.charAt(0).toUpperCase() :
+                      user.email.charAt(0).toUpperCase()
+                  }
+                </div>
+                <div class="user-details">
+                  <div class="user-name">
+                    ${user.first_name && user.last_name ? 
+                      user.first_name + ' ' + user.last_name :
+                      user.company_name || 'Onbekend'
+                    }
+                  </div>
+                  ${user.company_name && user.first_name && user.last_name ? 
+                    `<div class="user-company">${user.company_name}</div>` : ''
+                  }
+                </div>
+              </div>
+            </td>
+            <td>${user.email}</td>
+            <td>
+              <span class="role-badge ${user.is_admin ? 'admin' : 'user'}">
+                ${user.is_admin ? 'Admin' : 'Gebruiker'}
+              </span>
+            </td>
+            <td>
+              ${(() => {
+                const status = user.status || 'active';
+                let statusClass = 'badge-success';
+                let statusText = 'Actief';
+                
+                if (status === 'inactive') {
+                  statusClass = 'badge-danger';
+                  statusText = 'Inactief';
+                } else if (status === 'pending') {
+                  statusClass = 'badge-warning';
+                  statusText = 'In afwachting';
+                } else if (user.last_login) {
+                  const lastLogin = new Date(user.last_login);
+                  const now = new Date();
+                  const daysSinceLogin = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+                  
+                  if (daysSinceLogin > 30) {
+                    statusClass = 'badge-danger';
+                    statusText = 'Inactief';
+                  } else if (daysSinceLogin > 14) {
+                    statusClass = 'badge-warning';
+                    statusText = 'Afwezig';
+                  }
+                }
+                return `<span class="badge ${statusClass}">${statusText}</span>`;
+              })()}
+            </td>
+            <td>${new Date(user.created_at).toLocaleDateString('nl-NL')}</td>
+            <td>
+              ${user.last_login ? 
+                `<div class="date-info">
+                  <div>${new Date(user.last_login).toLocaleDateString('nl-NL')}</div>
+                  <div class="time-info">${new Date(user.last_login).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>` :
+                `<div class="date-info">
+                  <div>-</div>
+                </div>`
+              }
+            </td>
+            <td>
+              ${(() => {
+                const hasPaymentMethod = user.has_payment_method || (user.payment_method && user.payment_method !== '');
+                return hasPaymentMethod ? 
+                  `<span class="status-badge payment-badge accepted has-payment">Ingesteld</span>` :
+                  `<span class="status-badge payment-badge rejected no-payment">Niet ingesteld</span>`;
+              })()}
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-icon edit-user" data-id="${user.id}" title="Bewerken">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon view-user" data-id="${user.id}" title="Bekijken">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <div class="dropdown">
+                  <button class="btn-icon dropdown-toggle" data-id="${user.id}" title="Meer acties">
+                    <i class="fas fa-ellipsis-v"></i>
+                  </button>
+                  <div class="dropdown-menu">
+                    ${(user.status || 'active') !== 'active' ? 
+                      `<a href="#" class="dropdown-item activate-user" data-id="${user.id}">
+                        <i class="fas fa-check-circle"></i> Activeren
+                      </a>` :
+                      `<a href="#" class="dropdown-item deactivate-user" data-id="${user.id}">
+                        <i class="fas fa-ban"></i> Deactiveren
+                      </a>`
+                    }
+                    <a href="#" class="dropdown-item change-role" data-id="${user.id}">
+                      <i class="fas fa-user-tag"></i> Rol wijzigen
+                    </a>
+                    <a href="#" class="dropdown-item reset-password" data-id="${user.id}">
+                      <i class="fas fa-key"></i> Wachtwoord resetten
+                    </a>
+                    <a href="#" class="dropdown-item text-danger delete-user" data-id="${user.id}">
+                      <i class="fas fa-trash-alt"></i> Verwijderen
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        // Update pagination info
+        paginationInfo.textContent = `Weergave ${data.pagination.startItem}-${data.pagination.endItem} van ${data.pagination.totalItems} items`;
+
+        // Update pagination controls
+        const paginationPages = document.querySelector('.pagination-pages');
+        paginationPages.innerHTML = '';
+        for (let i = 1; i <= data.pagination.totalPages; i++) {
+          paginationPages.innerHTML += `
+            <button class="pagination-page ${i === data.pagination.currentPage ? 'active' : ''}" data-page="${i}">${i}</button>
+          `;
+        }
+
+        // Update prev/next buttons
+        prevPageBtn.disabled = !data.pagination.hasPrevPage;
+        nextPageBtn.disabled = !data.pagination.hasNextPage;
+
+        // Update URL without page reload
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', page);
+        url.searchParams.set('itemsPerPage', itemsPerPage);
+        window.history.pushState({}, '', url);
+
+        // Reattach event listeners
+        attachEventListeners();
+      } catch (error) {
+        console.error('Error loading users:', error);
+        usersTableBody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center text-danger">
+              Er is een fout opgetreden bij het laden van de gebruikers. Probeer het later opnieuw.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function attachEventListeners() {
+      // Handle items per page change
+      if (itemsPerPageSelect) {
+        itemsPerPageSelect.addEventListener('change', function() {
+          loadUsers(1, this.value);
+        });
+      }
+
+      // Handle previous page button
+      if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', function() {
+          if (!this.disabled) {
+            const currentPage = parseInt(document.querySelector('.pagination-page.active').dataset.page);
+            loadUsers(currentPage - 1, itemsPerPageSelect.value);
+          }
+        });
+      }
+
+      // Handle next page button
+      if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', function() {
+          if (!this.disabled) {
+            const currentPage = parseInt(document.querySelector('.pagination-page.active').dataset.page);
+            loadUsers(currentPage + 1, itemsPerPageSelect.value);
+          }
+        });
+      }
+
+      // Handle page number buttons
+      document.querySelectorAll('.pagination-page').forEach(button => {
+        button.addEventListener('click', function() {
+          const page = parseInt(this.dataset.page);
+          loadUsers(page, itemsPerPageSelect.value);
+        });
+      });
+    }
+
+    // Initial load with current page and items per page
+    loadUsers(currentPage, currentItemsPerPage);
+  });
+  </script>
+</body>
+</html>
+

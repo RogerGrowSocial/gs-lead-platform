@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Twee-factor verificatie | GrowSocial</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Poppins', sans-serif; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      padding: 20px;
+    }
+    .container { 
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 24px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 32px;
+      font-weight: 400;
+    }
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .code-input {
+      width: 100%;
+      height: 56px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 28px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 8px;
+      color: #1f2937;
+      outline: none;
+      transition: all 0.2s;
+      padding: 0 16px;
+      font-family: 'Courier New', monospace;
+    }
+    .code-input:focus {
+      border-color: #ea5d0d;
+      box-shadow: 0 0 0 4px rgba(234, 93, 13, 0.1);
+    }
+    .btn {
+      width: 100%;
+      height: 48px;
+      background: #ea5d0d;
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn:hover {
+      background: #d35400;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(234, 93, 13, 0.3);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .hint {
+      margin-top: 24px;
+      padding: 16px;
+      background: #f9fafb;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+    .hint i {
+      color: #ea5d0d;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <% 
+    const err = (typeof error !== 'undefined' && error) ? error : null;
+  %>
+
+  <div class="container">
+    <div class="logo">
+      <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial">
+    </div>
+    
+    <h1>Twee-factor verificatie</h1>
+    <p class="subtitle">Voer de 6-cijferige code in van je authenticator app</p>
+
+    <% if (err) { %>
+      <div class="error">
+        <i class="fas fa-exclamation-circle"></i> <%= err %>
+      </div>
+    <% } %>
+
+    <form action="/verify-2fa" method="POST" autocomplete="off" novalidate id="verifyForm">
+      <input 
+        type="text" 
+        name="code" 
+        class="code-input" 
+        placeholder="000000" 
+        required 
+        autocomplete="off"
+        inputmode="numeric"
+        pattern="[0-9]{6}"
+        maxlength="6"
+        autofocus
+        id="codeInput"
+      />
+
+      <button type="submit" class="btn">
+        Verifiëren
+        <i class="fas fa-arrow-right" style="font-size: 14px;"></i>
+      </button>
+    </form>
+
+    <div class="hint">
+      <i class="fas fa-info-circle"></i>
+      Open je authenticator app (Google Authenticator, Authy, etc.) en voer de code in die daar wordt weergegeven.
+    </div>
+  </div>
+
+  <script>
+    const codeInput = document.getElementById('codeInput');
+    const form = document.getElementById('verifyForm');
+
+    // Format input - only numbers, max 6
+    codeInput.addEventListener('input', function(e) {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+      
+      // Auto-submit when 6 digits entered
+      if (this.value.length === 6) {
+        setTimeout(() => form.submit(), 100);
+      }
+    });
+
+    // Paste handler
+    codeInput.addEventListener('paste', function(e) {
+      e.preventDefault();
+      const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+      this.value = pasted;
+      if (pasted.length === 6) {
+        setTimeout(() => form.submit(), 100);
+      }
+    });
+
+    // Focus first character position
+    codeInput.addEventListener('focus', function() {
+      this.setSelectionRange(0, this.value.length);
+    });
+  </script>
+</body>
+</html>
+
+

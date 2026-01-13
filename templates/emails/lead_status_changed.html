@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead status gewijzigd - GrowSocial</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background-color: #ffffff;
+            padding: 30px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .info-badge {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .status-box {
+            background-color: #F9FAFB;
+            border-left: 4px solid #3B82F6;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 25px 0;
+        }
+        .status-row {
+            padding: 10px 0;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .status-row:last-child {
+            border-bottom: none;
+        }
+        .status-label {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .status-value {
+            font-weight: 600;
+            color: #111827;
+            font-size: 16px;
+        }
+        .status-old {
+            color: #9CA3AF;
+            text-decoration: line-through;
+        }
+        .status-new {
+            color: #10B981;
+        }
+        .button {
+            display: inline-block;
+            background-color: #EA5d0d;
+            color: white;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            margin: 25px 0;
+            font-weight: 500;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #d4500b;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 12px;
+            color: #6b7280;
+            padding: 20px;
+        }
+        h1 {
+            color: #111827;
+            font-size: 24px;
+            margin: 0 0 20px 0;
+        }
+        p {
+            color: #374151;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; color: #EA5d0d;">GrowSocial</h1>
+        </div>
+        
+        <div class="content">
+            <div class="info-badge">
+                📝 Lead status gewijzigd
+            </div>
+            
+            <h1>De status van een lead is gewijzigd</h1>
+            
+            <p>Beste {{first_name}},</p>
+            
+            <p>De status van een lead is gewijzigd van <span class="status-old">{{old_status}}</span> naar <span class="status-new">{{new_status}}</span>.</p>
+            
+            <div class="status-box">
+                <div class="status-row">
+                    <div class="status-label">Bedrijfsnaam</div>
+                    <div class="status-value">{{company_name}}</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">Oude status</div>
+                    <div class="status-value status-old">{{old_status}}</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">Nieuwe status</div>
+                    <div class="status-value status-new">{{new_status}}</div>
+                </div>
+            </div>
+            
+            <p>Bekijk de volledige lead details:</p>
+            
+            <a href="{{lead_url}}" class="button">Bekijk lead</a>
+            
+            <p>Met vriendelijke groet,<br>Het GrowSocial Team</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>GrowSocial B.V.</strong></p>
+            <p>Monseigneur Bekkersplein 2, 5076 AV Haaren</p>
+            <p>BTW: NL860638285B01 | KvK: 76478793</p>
+            <p>Tel: 0132340434 | Email: info@growsocialmedia.nl</p>
+        </div>
+    </div>
+</body>
+</html>
+

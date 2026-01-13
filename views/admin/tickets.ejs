@@ -1,0 +1,247 @@
+<%- include('../layouts/admin', {
+  content: `
+    <div class="payments-container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <h1>Tickets</h1>
+          <p class="text-muted">Beheer support tickets en klantvragen</p>
+        </div>
+        <button class="btn-primary" id="createTicketBtn" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+          <i class="fas fa-plus"></i> Nieuw Ticket
+        </button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-cards-container">
+        <div class="kpi-cards-grid">
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totaal</p>
+              <p class="kpi-value">${kpis.total || 0}</p>
+              <p class="kpi-subtitle">Tickets totaal</p>
+            </div>
+            <div class="kpi-icon">
+              <i class="fas fa-ticket-alt" style="font-size: 24px; color: #ea5d0d;"></i>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Open</p>
+              <p class="kpi-value" style="color: #3b82f6;">${kpis.open || 0}</p>
+              <p class="kpi-subtitle">Nog openstaand</p>
+            </div>
+            <div class="kpi-icon">
+              <i class="fas fa-circle" style="font-size: 24px; color: #3b82f6;"></i>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">In behandeling</p>
+              <p class="kpi-value" style="color: #f59e0b;">${kpis.in_progress || 0}</p>
+              <p class="kpi-subtitle">In behandeling</p>
+            </div>
+            <div class="kpi-icon">
+              <i class="fas fa-spinner" style="font-size: 24px; color: #f59e0b;"></i>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Urgent</p>
+              <p class="kpi-value" style="color: #ef4444;">${kpis.urgent || 0}</p>
+              <p class="kpi-subtitle">Urgente tickets</p>
+            </div>
+            <div class="kpi-icon">
+              <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #ef4444;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-container">
+        <div class="search-wrapper">
+          <input 
+            type="text" 
+            placeholder="Zoek op ticketnummer, onderwerp of beschrijving..."
+            class="search-input"
+            id="searchInput"
+            value="${filters.search || ''}"
+          />
+        </div>
+        
+        <div class="status-filter-section">
+          <select class="status-select" id="statusSelect">
+            <option value="all" ${filters.status === 'all' ? 'selected' : ''}>Alle statussen</option>
+            <option value="new" ${filters.status === 'new' ? 'selected' : ''}>Nieuw</option>
+            <option value="open" ${filters.status === 'open' ? 'selected' : ''}>Open</option>
+            <option value="waiting_on_customer" ${filters.status === 'waiting_on_customer' ? 'selected' : ''}>Wachten op klant</option>
+            <option value="waiting_on_internal" ${filters.status === 'waiting_on_internal' ? 'selected' : ''}>Wachten intern</option>
+            <option value="resolved" ${filters.status === 'resolved' ? 'selected' : ''}>Opgelost</option>
+            <option value="closed" ${filters.status === 'closed' ? 'selected' : ''}>Gesloten</option>
+          </select>
+          
+          <select class="status-select" id="prioritySelect" style="margin-left: 12px;">
+            <option value="all" ${filters.priority === 'all' ? 'selected' : ''}>Alle prioriteiten</option>
+            <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
+            <option value="normal" ${filters.priority === 'normal' ? 'selected' : ''}>Normaal</option>
+            <option value="high" ${filters.priority === 'high' ? 'selected' : ''}>Hoog</option>
+            <option value="urgent" ${filters.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+          </select>
+          
+          <select class="status-select" id="assignedSelect" style="margin-left: 12px;">
+            <option value="all" ${filters.assigned_to === 'all' ? 'selected' : ''}>Alle toegewezen</option>
+            <option value="unassigned">Niet toegewezen</option>
+            ${(admins || []).map(admin => `
+              <option value="${admin.id}" ${filters.assigned_to === admin.id ? 'selected' : ''}>
+                ${admin.first_name || ''} ${admin.last_name || ''} ${admin.email ? `(${admin.email})` : ''}
+              </option>
+            `).join('')}
+          </select>
+          
+          <div class="results-info" id="paginationInfo">
+            Toont ${tickets.length} tickets
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="payments-table">
+            <thead>
+              <tr class="table-header-row">
+                <th class="table-header-cell">Ticketnummer</th>
+                <th class="table-header-cell">Onderwerp</th>
+                <th class="table-header-cell">Klant</th>
+                <th class="table-header-cell">Status</th>
+                <th class="table-header-cell">Prioriteit</th>
+                <th class="table-header-cell">Toegewezen aan</th>
+                <th class="table-header-cell">Aangemaakt</th>
+                <th class="table-header-cell">Acties</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTableBody">
+              ${
+                (tickets || []).map(t => {
+                  const statusLabels = {
+                    'open': 'Open',
+                    'in_progress': 'In behandeling',
+                    'waiting': 'Wachten',
+                    'resolved': 'Opgelost',
+                    'closed': 'Gesloten'
+                  };
+                  
+                  const statusStyles = {
+                    'open': 'status-paid',
+                    'in_progress': 'status-pending',
+                    'waiting': 'status-pending',
+                    'resolved': 'status-paid',
+                    'closed': 'status-cancelled'
+                  };
+                  
+                  const priorityLabels = {
+                    'low': 'Laag',
+                    'normal': 'Normaal',
+                    'high': 'Hoog',
+                    'urgent': 'Urgent'
+                  };
+                  
+                  const priorityColors = {
+                    'low': '#6b7280',
+                    'normal': '#3b82f6',
+                    'high': '#f59e0b',
+                    'urgent': '#ef4444'
+                  };
+                  
+                  const customerName = t.customers?.name || t.customers?.email || 'Onbekend';
+                  const assignedName = t.profiles ? 
+                    `${t.profiles.first_name || ''} ${t.profiles.last_name || ''}`.trim() || t.profiles.email : 
+                    'Niet toegewezen';
+                  
+                  const createdDate = t.created_at ? new Date(t.created_at).toLocaleDateString('nl-NL', { 
+                    day: '2-digit', 
+                    month: 'short', 
+                    year: 'numeric' 
+                  }) : '-';
+                  
+                  return `
+                    <tr class="table-body-row">
+                      <td class="table-cell">
+                        <span class="customer-name" style="font-weight: 600; color: #111827;">${t.ticket_number || '-'}</span>
+                      </td>
+                      <td class="table-cell">
+                        <div class="cell-column">
+                          <span class="customer-name">${t.subject || '-'}</span>
+                          ${t.description ? `<span class="lead-title">${(t.description || '').substring(0, 60)}${t.description.length > 60 ? '...' : ''}</span>` : ''}
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="cell-column">
+                          <span class="customer-name">${customerName}</span>
+                          ${t.customers?.email ? `<span class="lead-title">${t.customers.email}</span>` : ''}
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <span class="status-badge ${statusStyles[t.status] || 'status-pending'}">${statusLabels[t.status] || t.status}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="status-badge" style="background-color: ${priorityColors[t.priority] || '#6b7280'}20; color: ${priorityColors[t.priority] || '#6b7280'};">
+                          ${priorityLabels[t.priority] || t.priority}
+                        </span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="cell-text">${assignedName}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="cell-text">${createdDate}</span>
+                      </td>
+                      <td class="table-cell">
+                        <button class="actions-button" onclick="showTicketActions('${t.id}', event)" title="Meer acties">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="12" cy="5" r="1"></circle>
+                            <circle cx="12" cy="19" r="1"></circle>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')
+              }
+              ${
+                (!tickets || tickets.length === 0) ? `
+                  <tr class="table-body-row">
+                    <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+                      Geen tickets gevonden. Klik op "Nieuw Ticket" om er een aan te maken.
+                    </td>
+                  </tr>
+                ` : ''
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Menu -->
+    <div id="ticketActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 200px; padding: 8px 0;">
+      <button class="mail-action-item" data-action="view" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-eye" style="margin-right: 8px; width: 16px;"></i> Bekijken
+      </button>
+      <button class="mail-action-item" data-action="edit" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-edit" style="margin-right: 8px; width: 16px;"></i> Bewerken
+      </button>
+      <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+      <button class="mail-action-item" data-action="delete" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #dc2626;">
+        <i class="fas fa-trash" style="margin-right: 8px; width: 16px;"></i> Verwijderen
+      </button>
+    </div>
+  `,
+  scripts: (scripts || []),
+  stylesheets: stylesheets || []
+}) %>
+

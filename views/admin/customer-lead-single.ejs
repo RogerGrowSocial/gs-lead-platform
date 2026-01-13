@@ -1,0 +1,305 @@
+<%
+  // Helper functions
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function formatTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function getStatusConfig(status) {
+    const configs = {
+      'accepted': { label: 'Geaccepteerd', bg: '#dcfce7', text: '#16a34a', border: '#86efac' },
+      'new': { label: 'Nieuw', bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
+      'rejected': { label: 'Afgewezen', bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' },
+      'in_progress': { label: 'In behandeling', bg: '#fef3c7', text: '#92400e', border: '#fde68a' },
+      'won': { label: 'Opdracht gewonnen', bg: '#dbeafe', text: '#2563eb', border: '#93c5fd' },
+      'lost': { label: 'Opdracht verloren', bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' }
+    };
+    return configs[status] || { label: status, bg: '#f3f4f6', text: '#6b7280', border: '#d1d5db' };
+  }
+
+  const statusConfig = getStatusConfig(lead.status);
+  const receivedDate = formatDate(lead.created_at);
+%>
+
+<%- include('../layouts/admin', {
+  title: title || 'Klantaanvraag',
+  activeMenu: activeMenu || 'leads',
+  user: user,
+  stylesheets: [],
+  scripts: [],
+  body: (function() {
+    var output = '';
+    output += '<style>';
+    output += '  .customer-lead-page { background-color: #f9fafb; min-height: 100vh; padding: 16px; }';
+    output += '  .customer-lead-container { max-width: 1400px; margin: 0 auto; }';
+    output += '  .back-button { display: inline-flex; align-items: center; gap: 8px; color: #6b7280; text-decoration: none; font-size: 14px; margin-bottom: 16px; transition: color 0.2s; }';
+    output += '  .back-button:hover { color: #111827; }';
+    output += '  .main-card { background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden; }';
+    output += '  .header-section { padding: 20px; border-bottom: 1px solid #e5e7eb; }';
+    output += '  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }';
+    output += '  .customer-info { display: flex; align-items: center; gap: 12px; }';
+    output += '  .customer-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #f3f4f6; display: flex; align-items: center; justify-content: center; }';
+    output += '  .customer-name { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }';
+    output += '  .status-badge { background-color: ' + statusConfig.bg + '; color: ' + statusConfig.text + '; border: 1px solid ' + statusConfig.border + '; padding: 6px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; }';
+    output += '  .info-cards-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }';
+    output += '  .info-card { display: flex; align-items: start; gap: 12px; min-width: 200px; }';
+    output += '  .info-card-icon { width: 36px; height: 36px; border-radius: 8px; background-color: #f9fafb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }';
+    output += '  .info-card-content { flex: 1; min-width: 0; }';
+    output += '  .info-card-label { font-size: 12px; font-weight: 500; color: #6b7280; margin: 0 0 4px 0; }';
+    output += '  .info-card-value { font-size: 14px; font-weight: 600; color: #111827; margin: 0; }';
+    output += '  .received-date { display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }';
+    output += '  .two-column-layout { display: grid; grid-template-columns: 2fr 1fr; border-top: 1px solid #e5e7eb; }';
+    output += '  .conversation-section { display: flex; flex-direction: column; height: 700px; border-right: 1px solid #e5e7eb; }';
+    output += '  .conversation-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }';
+    output += '  .conversation-title { font-size: 16px; font-weight: 600; color: #111827; margin: 0; }';
+    output += '  .messages-area { flex: 1; overflow-y: auto; padding: 20px; background-color: #fafafa; }';
+    output += '  .initial-request-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }';
+    output += '  .request-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }';
+    output += '  .request-type-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }';
+    output += '  .request-type-badge { background-color: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }';
+    output += '  .request-title { font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 12px 0; }';
+    output += '  .request-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }';
+    output += '  .request-detail-label { font-size: 12px; color: #6b7280; margin: 0 0 4px 0; }';
+    output += '  .request-detail-value { font-size: 14px; color: #111827; margin: 0; font-weight: 500; }';
+    output += '  .request-content { border-top: 1px solid #e5e7eb; padding-top: 12px; }';
+    output += '  .request-content-label { font-size: 13px; color: #6b7280; margin: 0 0 4px 0; }';
+    output += '  .request-content-value { font-size: 14px; color: #111827; margin: 0 0 12px 0; }';
+    output += '  .message-bubble { border-radius: 8px; padding: 10px 14px; max-width: 80%; margin-bottom: 12px; }';
+    output += '  .message-bubble.partner { background-color: #fff5f0; border: 1px solid #ea5d0d; margin-left: auto; }';
+    output += '  .message-bubble.customer { background-color: #f3f4f6; }';
+    output += '  .message-text { font-size: 14px; color: #111827; margin: 0; }';
+    output += '  .message-time { font-size: 11px; color: #9ca3af; margin: 4px 0 0 0; }';
+    output += '  .message-time.right { text-align: right; }';
+    output += '  .chat-input-area { border-top: 1px solid #e5e7eb; padding: 16px 20px; background-color: #ffffff; }';
+    output += '  .chat-input-wrapper { display: flex; gap: 8px; align-items: end; }';
+    output += '  .chat-textarea { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; font-size: 14px; resize: none; font-family: inherit; min-height: 40px; }';
+    output += '  .chat-send-button { width: 40px; height: 40px; background-color: #ea5d0d; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }';
+    output += '  .whatsapp-button-wrapper { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; }';
+    output += '  .whatsapp-button { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: #10b981; color: #ffffff; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; justify-content: center; }';
+    output += '  .activities-section { height: 700px; overflow-y: auto; }';
+    output += '  .activities-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; }';
+    output += '  .activities-title { font-size: 16px; font-weight: 600; color: #111827; margin: 0; }';
+    output += '  .activities-list { padding: 20px; }';
+    output += '  .activity-item { display: flex; gap: 12px; margin-bottom: 20px; }';
+    output += '  .activity-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }';
+    output += '  .activity-icon.active { background-color: #ea5d0d; box-shadow: 0 0 0 4px rgba(234, 93, 13, 0.1); }';
+    output += '  .activity-icon.inactive { background-color: #e5e7eb; }';
+    output += '  .activity-icon-dot { width: 8px; height: 8px; border-radius: 50%; }';
+    output += '  .activity-icon.active .activity-icon-dot { background-color: #ffffff; }';
+    output += '  .activity-icon.inactive .activity-icon-dot { background-color: #9ca3af; }';
+    output += '  .activity-content { flex: 1; }';
+    output += '  .activity-description { font-size: 14px; font-weight: 500; color: #111827; margin: 0 0 4px 0; }';
+    output += '  .activity-time { font-size: 12px; color: #6b7280; margin: 0; }';
+    output += '  @media (max-width: 768px) { .two-column-layout { grid-template-columns: 1fr; } .info-cards-grid { flex-direction: column; } }';
+    output += '</style>';
+    
+    output += '<div class="customer-lead-page">';
+    output += '  <div class="customer-lead-container">';
+    output += '    <a href="/admin/leads" class="back-button">';
+    output += '      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+    output += '      Terug naar overzicht';
+    output += '    </a>';
+    output += '    <div class="main-card">';
+    output += '      <div class="header-section">';
+    output += '        <div class="header-top">';
+    output += '          <div class="customer-info">';
+    output += '            <div class="customer-avatar">';
+    output += '              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    output += '            </div>';
+    output += '            <h1 class="customer-name">' + (lead.name || 'Onbekend') + '</h1>';
+    output += '          </div>';
+    output += '          <div class="status-badge">' + statusConfig.label + '</div>';
+    output += '        </div>';
+    output += '        <div class="info-cards-grid">';
+    
+    if (lead.province) {
+      output += '          <div class="info-card">';
+      output += '            <div class="info-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></div>';
+      output += '            <div class="info-card-content"><p class="info-card-label">Plaats</p><p class="info-card-value">' + lead.province + '</p></div>';
+      output += '          </div>';
+    }
+    
+    if (lead.industry_name) {
+      output += '          <div class="info-card">';
+      output += '            <div class="info-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg></div>';
+      output += '            <div class="info-card-content"><p class="info-card-label">Aanvraag voor</p><p class="info-card-value">' + lead.industry_name + '</p></div>';
+      output += '          </div>';
+    }
+    
+    if (lead.deadline) {
+      output += '          <div class="info-card">';
+      output += '            <div class="info-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+      output += '            <div class="info-card-content"><p class="info-card-label">Gewenste reactietermijn</p><p class="info-card-value">' + lead.deadline + '</p></div>';
+      output += '          </div>';
+    }
+    
+    if (lead.budget) {
+      output += '          <div class="info-card">';
+      output += '            <div class="info-card-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M4 10h12M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/></svg></div>';
+      output += '            <div class="info-card-content"><p class="info-card-label">Budget</p><p class="info-card-value">' + lead.budget + '</p></div>';
+      output += '          </div>';
+    }
+    
+    output += '        </div>';
+    output += '        <div class="received-date">';
+    output += '          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    output += '          <span>Ontvangen op: ' + receivedDate + '</span>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '      <div class="two-column-layout">';
+    output += '        <div class="conversation-section">';
+    output += '          <div class="conversation-header"><h3 class="conversation-title">Conversatie</h3></div>';
+    output += '          <div class="messages-area">';
+    output += '            <div class="initial-request-card">';
+    output += '              <div class="request-header">';
+    output += '                <span class="request-type-label">Type aanvraag</span>';
+    output += '                <span class="request-type-badge">Nieuw</span>';
+    output += '              </div>';
+    output += '              <h4 class="request-title">Prijsaanvraag</h4>';
+    output += '              <div class="request-details-grid">';
+    
+    if (lead.industry_name) {
+      output += '                <div><p class="request-detail-label">Aanvraag voor</p><p class="request-detail-value">' + lead.industry_name + '</p></div>';
+    }
+    output += '                <div><p class="request-detail-label">Naam</p><p class="request-detail-value">' + (lead.name || '-') + '</p></div>';
+    if (lead.province) {
+      output += '                <div><p class="request-detail-label">Plaats</p><p class="request-detail-value">' + lead.province + '</p></div>';
+    }
+    if (lead.deadline) {
+      output += '                <div><p class="request-detail-label">Gewenste reactietermijn</p><p class="request-detail-value">' + lead.deadline + '</p></div>';
+    }
+    
+    output += '              </div>';
+    if (lead.message) {
+      output += '              <div class="request-content">';
+      output += '                <p class="request-content-label">Bericht van de klant</p>';
+      output += '                <p class="request-content-value">' + lead.message + '</p>';
+      output += '              </div>';
+    }
+    output += '            </div>';
+    output += '            <div id="chatMessages"></div>';
+    output += '          </div>';
+    output += '          <div class="chat-input-area">';
+    output += '            <div class="chat-input-wrapper">';
+    output += '              <textarea class="chat-textarea" id="chatMessageInput" placeholder="Typ je bericht..." rows="2"></textarea>';
+    output += '              <button class="chat-send-button" id="chatSendBtn">';
+    output += '                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+    output += '              </button>';
+    output += '            </div>';
+    if (lead.phone) {
+      const phoneNumber = lead.phone.replace(/[^0-9]/g, '');
+      output += '            <div class="whatsapp-button-wrapper">';
+      output += '              <button class="whatsapp-button" onclick="window.open(\'https://wa.me/' + phoneNumber + '\', \'_blank\')">';
+      output += '                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>';
+      output += '                WhatsApp bericht sturen';
+      output += '              </button>';
+      output += '            </div>';
+    }
+    output += '          </div>';
+    output += '        </div>';
+    output += '        <div class="activities-section">';
+    output += '          <div class="activities-header"><h3 class="activities-title">Activiteiten</h3></div>';
+    output += '          <div class="activities-list">';
+    
+    if (activities && activities.length > 0) {
+      activities.forEach(function(activity, index) {
+        output += '            <div class="activity-item">';
+        output += '              <div class="activity-icon ' + (index === 0 ? 'active' : 'inactive') + '">';
+        output += '                <div class="activity-icon-dot"></div>';
+        output += '              </div>';
+        output += '              <div class="activity-content">';
+        output += '                <p class="activity-description">' + (activity.description || activity.type) + '</p>';
+        output += '                <p class="activity-time">' + formatDate(activity.created_at);
+        if (activity.created_by_info) {
+          output += ' • ' + activity.created_by_info.name;
+        }
+        output += '</p>';
+        output += '              </div>';
+        output += '            </div>';
+      });
+    } else {
+      output += '            <p style="color: #6b7280; font-size: 14px;">Geen activiteiten</p>';
+    }
+    
+    output += '          </div>';
+    output += '        </div>';
+    output += '      </div>';
+    output += '    </div>';
+    output += '  </div>';
+    output += '</div>';
+    
+    output += '<script>';
+    output += '  async function loadChatMessages() {';
+    output += '    try {';
+    output += '      const response = await fetch(\'/dashboard/api/leads/' + lead.id + '/activities\', { credentials: \'include\' });';
+    output += '      if (!response.ok) return;';
+    output += '      const data = await response.json();';
+    output += '      if (!data.success) return;';
+    output += '      const messagesContainer = document.getElementById(\'chatMessages\');';
+    output += '      if (!messagesContainer) return;';
+    output += '      const messageActivities = data.activities.filter(a => a.type === \'message\');';
+    output += '      messageActivities.forEach(activity => {';
+    output += '        const isPartner = activity.metadata?.channel === \'dashboard\' || activity.type === \'message\';';
+    output += '        const messageDiv = document.createElement(\'div\');';
+    output += '        messageDiv.className = \'message-bubble \' + (isPartner ? \'partner\' : \'customer\');';
+    output += '        const text = document.createElement(\'p\');';
+    output += '        text.className = \'message-text\';';
+    output += '        text.textContent = activity.description || activity.type;';
+    output += '        const time = document.createElement(\'p\');';
+    output += '        time.className = \'message-time \' + (isPartner ? \'right\' : \'\');';
+    output += '        time.textContent = new Date(activity.created_at).toLocaleTimeString(\'nl-NL\', { hour: \'2-digit\', minute: \'2-digit\' });';
+    output += '        messageDiv.appendChild(text);';
+    output += '        messageDiv.appendChild(time);';
+    output += '        messagesContainer.appendChild(messageDiv);';
+    output += '      });';
+    output += '      messagesContainer.scrollTop = messagesContainer.scrollHeight;';
+    output += '    } catch (error) { console.error(\'Error loading chat messages:\', error); }';
+    output += '  }';
+    output += '  async function sendMessage() {';
+    output += '    const input = document.getElementById(\'chatMessageInput\');';
+    output += '    const message = input?.value.trim();';
+    output += '    if (!message) return;';
+    output += '    try {';
+    output += '      const response = await fetch(\'/dashboard/api/leads/' + lead.id + '/message\', {';
+    output += '        method: \'POST\',';
+    output += '        headers: { \'Content-Type\': \'application/json\' },';
+    output += '        credentials: \'include\',';
+    output += '        body: JSON.stringify({ message })';
+    output += '      });';
+    output += '      if (response.ok) {';
+    output += '        input.value = \'\';';
+    output += '        await loadChatMessages();';
+    output += '        setTimeout(() => window.location.reload(), 500);';
+    output += '      }';
+    output += '    } catch (error) { console.error(\'Error sending message:\', error); }';
+    output += '  }';
+    output += '  document.getElementById(\'chatSendBtn\')?.addEventListener(\'click\', sendMessage);';
+    output += '  document.getElementById(\'chatMessageInput\')?.addEventListener(\'keydown\', (e) => {';
+    output += '    if (e.key === \'Enter\' && !e.shiftKey) { e.preventDefault(); sendMessage(); }';
+    output += '  });';
+    output += '  if (document.readyState === \'loading\') {';
+    output += '    document.addEventListener(\'DOMContentLoaded\', loadChatMessages);';
+    output += '  } else {';
+    output += '    loadChatMessages();';
+    output += '  }';
+    output += '</script>';
+    
+    return output;
+  })()
+}) %>

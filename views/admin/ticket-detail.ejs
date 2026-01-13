@@ -1,0 +1,354 @@
+<%
+  const formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  
+  const formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleString('nl-NL', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+  
+  const formatRelativeTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var now = new Date()
+    var diffMs = now - d
+    var diffMins = Math.floor(diffMs / 60000)
+    var diffHours = Math.floor(diffMs / 3600000)
+    var diffDays = Math.floor(diffMs / 86400000)
+    
+    if (diffMins < 1) return 'Zojuist'
+    if (diffMins < 60) return diffMins + ' minuten geleden'
+    if (diffHours < 24) return diffHours + ' uur geleden'
+    if (diffDays < 7) return diffDays + ' dagen geleden'
+    return formatDate(iso)
+  }
+  
+  const getStatusLabel = function(status) {
+    const labels = {
+      'new': 'Nieuw',
+      'open': 'Open',
+      'waiting_on_customer': 'Wachten op klant',
+      'waiting_on_internal': 'Wachten intern',
+      'resolved': 'Opgelost',
+      'closed': 'Gesloten'
+    }
+    return labels[status] || status
+  }
+  
+  const getStatusColor = function(status) {
+    const colors = {
+      'new': '#3b82f6',
+      'open': '#3b82f6',
+      'waiting_on_customer': '#f59e0b',
+      'waiting_on_internal': '#f59e0b',
+      'resolved': '#10b981',
+      'closed': '#6b7280'
+    }
+    return colors[status] || '#6b7280'
+  }
+  
+  const getPriorityLabel = function(priority) {
+    const labels = {
+      'low': 'Laag',
+      'normal': 'Normaal',
+      'high': 'Hoog',
+      'urgent': 'Urgent'
+    }
+    return labels[priority] || priority
+  }
+  
+  const getPriorityColor = function(priority) {
+    const colors = {
+      'low': '#6b7280',
+      'normal': '#3b82f6',
+      'high': '#f59e0b',
+      'urgent': '#ef4444'
+    }
+    return colors[priority] || '#6b7280'
+  }
+  
+  const ticketId = ticket.id
+  const daysOpen = ticket.created_at ? Math.floor((new Date() - new Date(ticket.created_at)) / (1000 * 60 * 60 * 24)) : 0
+  const slaRisk = ticket.due_at && new Date(ticket.due_at) < new Date()
+  const assigneeName = ticket.assignee ? 
+    `${ticket.assignee.first_name || ''} ${ticket.assignee.last_name || ''}`.trim() || ticket.assignee.email : 
+    'Niet toegewezen'
+  const customerName = ticket.customers?.name || ticket.requester_name || 'Onbekend'
+  const customerEmail = ticket.customers?.email || ticket.requester_email || ''
+%>
+<%- include('../layouts/admin', {
+  title: ticket.subject + ' - Tickets | GrowSocial Admin',
+  activeMenu: 'tickets',
+  user: user,
+  isUserAdmin: isUserAdmin,
+  showBackButton: true,
+  backButtonUrl: '/admin/tickets',
+  backButtonText: 'Terug naar tickets',
+  stylesheets: stylesheets || ['/css/admin/users.css', '/css/admin/employee-detail.css', '/css/admin/tickets.css'],
+  scripts: scripts || ['/js/admin/ticket-detail.js'],
+  body: `
+  <div class="user-detail-page" data-ticket-id="${ticketId}">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Ticket Header Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                  <h1 class="user-info-name-new" style="margin: 0; flex: 1;">${ticket.subject || 'Geen onderwerp'}</h1>
+                  <span class="status-badge" style="background-color: ${getStatusColor(ticket.status)}20; color: ${getStatusColor(ticket.status)}; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
+                    ${getStatusLabel(ticket.status)}
+                  </span>
+                  <span class="status-badge" style="background-color: ${getPriorityColor(ticket.priority)}20; color: ${getPriorityColor(ticket.priority)}; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
+                    ${getPriorityLabel(ticket.priority)}
+                  </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                  <span style="font-size: 0.875rem; color: #6b7280; font-family: 'Courier New', monospace;">${ticket.ticket_number || ticket.id.substring(0, 8)}</span>
+                  ${ticket.category ? `<span style="font-size: 0.875rem; color: #6b7280;">• ${ticket.category}</span>` : ''}
+                  ${daysOpen > 0 ? `<span style="font-size: 0.875rem; color: #6b7280;">• ${daysOpen} dagen open</span>` : ''}
+                  ${slaRisk ? `<span style="font-size: 0.875rem; color: #ef4444; font-weight: 500;">• SLA overschreden</span>` : ''}
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="assignTicketBtn" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 6px;">
+                  <i class="fas fa-user-plus"></i> Toewijzen
+                </button>
+                <button id="changeStatusBtn" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 6px;">
+                  <i class="fas fa-edit"></i> Status
+                </button>
+                <button id="changePriorityBtn" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 6px;">
+                  <i class="fas fa-exclamation"></i> Prioriteit
+                </button>
+              </div>
+            </div>
+            
+            <!-- Quick Info -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Klant</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${customerName}</p>
+                ${customerEmail ? `<p style="font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0 0;">${customerEmail}</p>` : ''}
+              </div>
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Toegewezen aan</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${assigneeName}</p>
+              </div>
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Aangemaakt</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${formatDateTime(ticket.created_at)}</p>
+              </div>
+              ${ticket.due_at ? `
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Vervaldatum</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: ${slaRisk ? '#ef4444' : '#111827'}; margin: 0;">${formatDateTime(ticket.due_at)}</p>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <div id="kpiCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0;">Status & Leeftijd</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;">${daysOpen} dagen</p>
+              </div>
+              <div style="padding: 1rem; background: ${slaRisk ? '#fef2f2' : '#f0f9ff'}; border: 1px solid ${slaRisk ? '#fecaca' : '#bae6fd'}; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: ${slaRisk ? '#991b1b' : '#0369a1'}; margin: 0 0 0.5rem 0;">SLA</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: ${slaRisk ? '#dc2626' : '#0369a1'}; margin: 0;" id="slaStatus">${slaRisk ? 'Overschreden' : 'OK'}</p>
+              </div>
+              <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0;">Reacties</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #111827; margin: 0;" id="commentCount">0</p>
+              </div>
+              <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0;">Laatste activiteit</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="lastActivity">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div class="service-tabs-header" style="display: flex; gap: 0.5rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 1.5rem; overflow-x: auto;">
+              <button class="service-tab-btn active" data-tab="overview" onclick="switchTab('overview')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid #2563eb; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #2563eb; transition: all 0.2s; white-space: nowrap;">Overzicht</button>
+              <button class="service-tab-btn" data-tab="comments" onclick="switchTab('comments')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Reacties</button>
+              <button class="service-tab-btn" data-tab="attachments" onclick="switchTab('attachments')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Bijlagen</button>
+              ${isUserAdmin ? `<button class="service-tab-btn" data-tab="activity" onclick="switchTab('activity')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Activity</button>` : ''}
+            </div>
+
+            <!-- Overview Tab -->
+            <div class="service-tab-content active" id="tab-overview">
+              <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0 0 0.75rem 0;">Beschrijving</h3>
+                <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; white-space: pre-wrap; color: #374151; line-height: 1.6;">
+                  ${ticket.description || 'Geen beschrijving'}
+                </div>
+              </div>
+              
+              ${ticket.tags && ticket.tags.length > 0 ? `
+              <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0 0 0.75rem 0;">Tags</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  ${ticket.tags.map(tag => `
+                    <span style="padding: 0.25rem 0.75rem; background: #e0f2fe; color: #0369a1; border-radius: 12px; font-size: 0.75rem; font-weight: 500;">${tag}</span>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
+              
+              <div id="timelineWidget" style="margin-top: 1.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0 0 0.75rem 0;">Tijdlijn</h3>
+                <div id="timelineContent" style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Tijdlijn laden...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comments Tab -->
+            <div class="service-tab-content" id="tab-comments" style="display: none;">
+              <div style="margin-bottom: 1.5rem;">
+                ${isUserAdmin ? `
+                <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; cursor: pointer;">
+                  <input type="checkbox" id="showInternalComments" style="cursor: pointer;">
+                  <span style="font-size: 0.875rem; color: #374151;">Toon interne notities</span>
+                </label>
+                ` : ''}
+                <div id="commentsList" style="margin-bottom: 1.5rem; max-height: 600px; overflow-y: auto;">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Reacties laden...</div>
+                </div>
+                <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                  <textarea id="commentInput" placeholder="Typ je reactie hier..." style="width: 100%; min-height: 100px; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; resize: vertical; margin-bottom: 0.75rem;"></textarea>
+                  ${isUserAdmin ? `
+                  <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; cursor: pointer;">
+                    <input type="checkbox" id="isInternalNote" style="cursor: pointer;">
+                    <span style="font-size: 0.875rem; color: #374151;">Interne notitie</span>
+                  </label>
+                  ` : ''}
+                  <button id="submitCommentBtn" class="btn-primary" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; border-radius: 6px;">
+                    <i class="fas fa-paper-plane"></i> Reactie toevoegen
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attachments Tab -->
+            <div class="service-tab-content" id="tab-attachments" style="display: none;">
+              <div id="attachmentsList" style="margin-bottom: 1.5rem;">
+                <div style="text-align: center; padding: 2rem; color: #6b7280;">Bijlagen laden...</div>
+              </div>
+              <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <input type="file" id="attachmentInput" multiple style="margin-bottom: 0.75rem;">
+                <button id="uploadAttachmentBtn" class="btn-primary" style="padding: 0.625rem 1.25rem; font-size: 0.875rem; border-radius: 6px;">
+                  <i class="fas fa-upload"></i> Bijlage uploaden
+                </button>
+              </div>
+            </div>
+
+            <!-- Activity Tab (Admin only) -->
+            ${isUserAdmin ? `
+            <div class="service-tab-content" id="tab-activity" style="display: none;">
+              <div id="activityLog" style="max-height: 600px; overflow-y: auto;">
+                <div style="text-align: center; padding: 2rem; color: #6b7280;">Activity log laden...</div>
+              </div>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Quick Actions Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Snelle acties</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <button id="quickResolveBtn" class="btn-primary" style="width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem; border-radius: 6px; text-align: left;">
+                <i class="fas fa-check-circle"></i> Oplossen
+              </button>
+              <button id="quickCloseBtn" class="btn-secondary" style="width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem; border-radius: 6px; text-align: left;">
+                <i class="fas fa-times-circle"></i> Sluiten
+              </button>
+              <button id="quickReopenBtn" class="btn-secondary" style="width: 100%; padding: 0.625rem 1rem; font-size: 0.875rem; border-radius: 6px; text-align: left; display: none;">
+                <i class="fas fa-redo"></i> Heropenen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Info Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Ticket informatie</h3>
+            <div style="display: grid; gap: 0.75rem;">
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Bron</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${ticket.source === 'internal' ? 'Intern' : ticket.source === 'email' ? 'E-mail' : ticket.source === 'phone' ? 'Telefoon' : ticket.source === 'system' ? 'Systeem' : ticket.source || '-'}</p>
+              </div>
+              ${ticket.first_response_at ? `
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Eerste reactie</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${formatDateTime(ticket.first_response_at)}</p>
+              </div>
+              ` : ''}
+              ${ticket.resolved_at ? `
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Opgelost op</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${formatDateTime(ticket.resolved_at)}</p>
+              </div>
+              ` : ''}
+              ${ticket.closed_at ? `
+              <div>
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Gesloten op</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;">${formatDateTime(ticket.closed_at)}</p>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Watchers Card (if implemented) -->
+        ${isUserAdmin ? `
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Volgers</h3>
+            <div id="watchersList" style="margin-bottom: 0.75rem;">
+              <div style="text-align: center; padding: 1rem; color: #6b7280; font-size: 0.875rem;">Volgers laden...</div>
+            </div>
+            <button id="addWatcherBtn" class="btn-secondary" style="width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 6px;">
+              <i class="fas fa-plus"></i> Volger toevoegen
+            </button>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.ticketData = ${JSON.stringify(ticket)};
+    window.isUserAdmin = ${isUserAdmin};
+    window.employees = ${JSON.stringify(employees || [])};
+  </script>
+  `
+}) %>
+

@@ -1,0 +1,2663 @@
+<style>
+        /* Scoped CSS reset only for payment component */
+        .payment-method-container * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .payment-method-container {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #fafafa;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            text-align: left;
+            margin-bottom: 24px;
+            padding: 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            text-wrap: balance;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 18px;
+            margin: 0;
+        }
+
+        /* Single container with two sections inside */
+        .payment-container {
+            background: white;
+            border-radius: 12px;
+            padding: 0 17px 0 0;
+            border: none;
+            margin: 0;
+            width: calc(100% + 9.41px);
+            box-sizing: border-box;
+        }
+        .main-layout {
+            display: block;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        @media (max-width: 768px) {
+            .payment-sections {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+
+        .payment-section {
+            padding: 0;
+            border-radius: 8px;
+            border: none;
+            background: white;
+        }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .payment-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            font-size: 16px;
+            color: #64748b;
+        }
+
+        .form-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .form-subtitle {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        input {
+            width: calc(100% - 3px);
+            height: 48px;
+            padding: 0 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+            margin-top: 4px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ea5d0d;
+            box-shadow: 0 0 0 3px #ea5d0d1a;
+        }
+
+        input::placeholder {
+            color: #94a3b8;
+        }
+
+        .submit-button {
+            width: 100%;
+            height: 44px;
+            background-color: #ffffff;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 16px;
+        }
+
+        .submit-button:hover {
+            background-color: #f8f9fa;
+            border-color: #d1d5db;
+        }
+
+        /* Ensure buttons are aligned horizontally */
+        .payment-sections {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            align-items: start;
+            width: calc(100% + 9.41px);
+        }
+        @media (max-width: 1200px) {
+            .payment-sections {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+        @media (max-width: 768px) {
+            .payment-sections {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+
+        .payment-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+
+
+        .payment-section .submit-button {
+            margin-top: auto;
+        }
+
+        .security-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 32px 0;
+            margin-top: 32px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .security-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+
+        /* Mollie component styling */
+        #card-holder, #card-number, #expiry-date, #verification-code {
+            height: 44px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            transition: border-color 0.2s ease;
+        }
+
+        #card-holder:focus-within, #card-number:focus-within, 
+        #expiry-date:focus-within, #verification-code:focus-within {
+            border-color: #ea5d0d;
+            box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+        }
+        /* Saved card display styling */
+        .saved-card-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            background: #f8f9fa;
+            margin-bottom: 1rem;
+        }
+        .card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .card-number-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            letter-spacing: 0.1em;
+        }
+        .card-type {
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .edit-card-btn {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .edit-card-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+            color: #374151;
+        }
+        .edit-card-btn i {
+            font-size: 0.875rem;
+        }
+        /* Quick Top-up Card Styles */
+        .quick-topup-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            padding: 24px 24px 0 24px;
+            border-bottom: none;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 4px 0;
+            text-align: left;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0;
+            text-align: left;
+        }
+
+        .card-content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .amount-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .amount-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .amount-btn {
+            height: 48px;
+            font-size: 16px;
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .amount-btn:hover {
+            border-color: #ea5d0d;
+            background-color: #fff7ed;
+            box-shadow: none;
+        }
+
+        .amount-btn.selected {
+            background-color: #ea5d0d;
+            border-color: #ea5d0d;
+            color: white;
+            box-shadow: none;
+        }
+
+        .amount-btn.selected:hover {
+            background-color: #d45409;
+            box-shadow: none;
+        }
+
+        .custom-amount-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .amount-input {
+            width: 100%;
+            height: 48px;
+            padding: 0 16px 0 32px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #ea580c;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+        }
+
+        .topup-button {
+            width: 100%;
+            height: 48px;
+            background-color: #ea5d0d;
+            color: white;
+            border: 1px solid #ea5d0d;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            box-shadow: none;
+        }
+
+        .topup-button:hover:not(:disabled) {
+            background-color: #d45409;
+            border-color: #d45409;
+            box-shadow: none;
+        }
+
+        .topup-button:disabled {
+            background-color: #d1d5db;
+            border-color: #d1d5db;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Payment Method Display Styles */
+        .payment-method-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .payment-method-info {
+            display: flex;
+            justify-content: center;
+        }
+
+        .payment-method-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 20px;
+            background-color: #fff7ed;
+            border: 2px solid #ea5d0d;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 200px;
+        }
+
+        .payment-method-display .payment-logo {
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            font-size: 20px;
+            color: #ea5d0d;
+        }
+
+        .payment-method-display .payment-method-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ea5d0d;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .payment-method-display .payment-method-subtitle {
+            font-size: 11px;
+            color: #9a3412;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .icon-shield::before {
+            content: "🛡️";
+            font-size: 14px;
+        }
+
+        .icon-lock::before {
+            content: "🔒";
+            font-size: 14px;
+        }
+        /* Locked field display styling */
+        .locked-field-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #f8f9fa;
+            margin-top: 4px;
+            height: 48px;
+            width: calc(100% - 1px);
+            box-sizing: border-box;
+        }
+        .field-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        .field-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            line-height: 1;
+        }
+        .bank-logo-small {
+            width: 20px;
+            height: 14px;
+            object-fit: contain;
+        }
+        /* Custom bank select dropdown */
+        .bank-select-container {
+            position: relative;
+            width: 100%;
+        }
+        /* Form field containers need relative positioning for skeleton overlays */
+        #bankField, #ibanField, #accountHolderField {
+            position: relative;
+        }
+        /* Form group needs relative positioning for cancel button */
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        /* Extra spacing for form group with cancel button */
+        .form-group:has(.sepa-cancel-button) {
+            margin-bottom: 20px;
+        }
+        .bank-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .bank-select-trigger {
+            width: calc(100% - 3px);
+            height: 48px;
+            padding: 0 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: border-color 0.2s ease;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+        .bank-select-trigger:hover {
+            border-color: #d1d5db;
+        }
+        .bank-select-trigger:focus {
+            outline: none;
+            border-color: #ea5d0d;
+            box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+        }
+        .bank-select-trigger.open {
+            border-color: #ea5d0d;
+            box-shadow: 0 0 0 3px rgba(234, 93, 13, 0.1);
+        }
+        .bank-selected {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+        .bank-selected-logo {
+            width: 24px;
+            height: 16px;
+            object-fit: contain;
+            border-radius: 2px;
+        }
+        .bank-selected-text {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1;
+        }
+        .bank-dropdown-arrow {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s ease;
+        }
+        .bank-dropdown-arrow.open {
+            transform: rotate(180deg);
+        }
+        .bank-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .bank-dropdown.open {
+            display: block;
+        }
+        .bank-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background-color 0.2s ease;
+        }
+        .bank-option:hover {
+            background-color: #f8f9fa;
+        }
+        .bank-option.selected {
+            background-color: #fff7ed;
+            color: #ea5d0d;
+        }
+        .bank-option-logo {
+            width: 24px;
+            height: 16px;
+            object-fit: contain;
+            border-radius: 2px;
+        }
+        .bank-option-text {
+            font-size: 14px;
+            line-height: 1;
+        }
+        /* Hidden select for form submission */
+        .bank-select-hidden {
+            display: none;
+        }
+        /* Small cancel button for edit mode */
+        .sepa-cancel-button {
+            position: relative;
+            top: auto;
+            right: auto;
+            width: 80px;
+            height: 32px;
+            background-color: #f3f4f6;
+            color: #6b7280;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            display: none;
+            z-index: 20;
+            padding: 6px 12px;
+            margin-bottom: 16px;
+            margin-left: auto;
+            white-space: nowrap;
+            overflow: visible;
+        }
+        .sepa-cancel-button:hover:not(:disabled) {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .sepa-cancel-button:disabled {
+            background-color: #f9fafb;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+        .sepa-cancel-button.show {
+            display: block;
+        }
+        .edit-field-btn {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            opacity: 0.7;
+        }
+        .edit-field-btn:hover {
+            background: #f8f9fa;
+            border-color: #cbd5e1;
+            color: #475569;
+            opacity: 1;
+        }
+        .edit-field-btn i {
+            font-size: 12px;
+        }
+        /* Skeleton loading overlay for form fields */
+        .skeleton-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .skeleton-overlay.bank-skeleton {
+            height: 46px;
+            margin-top: 1px;
+        }
+        .skeleton-overlay.iban-skeleton {
+            height: 46px !important;
+            margin-top: 5px;
+            bottom: auto;
+        }
+        .skeleton-overlay.account-skeleton {
+            height: 46px !important;
+            margin-top: 5px;
+            bottom: auto;
+        }
+        .sepa-submit-btn {
+            margin-top: 10px;
+        }
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+        /* Loading spinner for form fields */
+        .field-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            color: #64748b;
+        }
+        .field-loading .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #64748b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+<div class="payment-method-container">
+<div class="container">
+    <form id="paymentForm" autocomplete="on">
+        <!-- Payment methods layout -->
+        <div class="main-layout">
+            <!-- Payment Methods Section -->
+            <div class="payment-container">
+                <div class="payment-sections">
+                <!-- SEPA Direct Debit Section -->
+                <div class="payment-section sepa-section" id="sepaSection">
+                    <button type="button" class="sepa-cancel-button" id="sepaCancelButton">
+                        Annuleren
+                    </button>
+                    <div class="form-group">
+                        <label for="bankSelect">Bank selecteren</label>
+                        <div id="bankField" class="bank-select-container">
+                            <div class="skeleton-overlay bank-skeleton" id="bankSkeleton"></div>
+                            <select id="bankSelect" class="bank-select-hidden">
+                                <option value="abn" data-logo="/img/payment-providers/abn-amro.png">ABN AMRO</option>
+                                <option value="asn" data-logo="/img/payment-providers/asn.png">ASN Bank</option>
+                                <option value="bunq" data-logo="/img/payment-providers/bunq.png">Bunq</option>
+                                <option value="ing" data-logo="/img/payment-providers/ing.png">ING Bank</option>
+                                <option value="knab" data-logo="/img/payment-providers/knab.png">Knab</option>
+                                <option value="rabobank" data-logo="/img/payment-providers/rabobank.png">Rabobank</option>
+                                <option value="sns" data-logo="/img/payment-providers/sns.png">SNS Bank</option>
+                                <option value="triodos" data-logo="/img/payment-providers/triodos.png">Triodos Bank</option>
+                            </select>
+                            <div class="bank-select-wrapper">
+                                <div class="bank-select-trigger" tabindex="0">
+                                    <div class="bank-selected">
+                                        <img class="bank-selected-logo" src="/img/payment-providers/rabobank.png" alt="Rabobank">
+                                        <span class="bank-selected-text">Rabobank</span>
+                                    </div>
+                                    <svg class="bank-dropdown-arrow" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="bank-dropdown">
+                                    <div class="bank-option" data-value="abn" data-logo="/img/payment-providers/abn-amro.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/abn-amro.png" alt="ABN AMRO">
+                                        <span class="bank-option-text">ABN AMRO</span>
+                                    </div>
+                                    <div class="bank-option" data-value="asn" data-logo="/img/payment-providers/asn.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/asn.png" alt="ASN Bank">
+                                        <span class="bank-option-text">ASN Bank</span>
+                                    </div>
+                                    <div class="bank-option" data-value="bunq" data-logo="/img/payment-providers/bunq.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/bunq.png" alt="Bunq">
+                                        <span class="bank-option-text">Bunq</span>
+                                    </div>
+                                    <div class="bank-option" data-value="ing" data-logo="/img/payment-providers/ing.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/ing.png" alt="ING Bank">
+                                        <span class="bank-option-text">ING Bank</span>
+                                    </div>
+                                    <div class="bank-option" data-value="knab" data-logo="/img/payment-providers/knab.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/knab.png" alt="Knab">
+                                        <span class="bank-option-text">Knab</span>
+                                    </div>
+                                    <div class="bank-option" data-value="rabobank" data-logo="/img/payment-providers/rabobank.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/rabobank.png" alt="Rabobank">
+                                        <span class="bank-option-text">Rabobank</span>
+                                    </div>
+                                    <div class="bank-option" data-value="sns" data-logo="/img/payment-providers/sns.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/sns.png" alt="SNS Bank">
+                                        <span class="bank-option-text">SNS Bank</span>
+                                    </div>
+                                    <div class="bank-option" data-value="triodos" data-logo="/img/payment-providers/triodos.png">
+                                        <img class="bank-option-logo" src="/img/payment-providers/triodos.png" alt="Triodos Bank">
+                                        <span class="bank-option-text">Triodos Bank</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="iban">IBAN</label>
+                        <div id="ibanField">
+                            <div class="skeleton-overlay iban-skeleton" id="ibanSkeleton"></div>
+                            <input type="text" id="iban" value="NL42 RABO 0357 3846 44" style="font-size: 14px; padding: 0 16px; width: 100%; height: 48px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; margin-top: 4px; box-sizing: border-box;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="accountHolder">Naam rekeninghouder</label>
+                        <div id="accountHolderField">
+                            <div class="skeleton-overlay account-skeleton" id="accountSkeleton"></div>
+                            <input type="text" id="accountHolder" value="GrowSocial" style="font-size: 14px; padding: 0 16px; width: 100%; height: 48px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; margin-top: 4px; box-sizing: border-box;">
+                        </div>
+                    </div>
+                    <script>
+                        // Define handleIBANInput and formatIBAN functions globally first to prevent reference errors
+                        window.formatIBAN = function(iban) {
+                            if (!iban) return '';
+                            const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+                            // Add spaces every 4 characters
+                            return cleanIban.replace(/(.{4})/g, '$1 ').trim();
+                        };
+                        window.handleIBANInput = function(event) {
+                            const input = event.target;
+                            const cursorPosition = input.selectionStart;
+                            const oldValue = input.value;
+                            const newValue = window.formatIBAN(input.value);
+                            input.value = newValue;
+                            // Adjust cursor position
+                            const lengthDiff = newValue.length - oldValue.length;
+                            input.setSelectionRange(cursorPosition + lengthDiff, cursorPosition + lengthDiff);
+                        };
+                        // Add IBAN formatting to existing input field
+                        let ibanInput = document.getElementById('iban');
+                        if (ibanInput) {
+                            ibanInput.addEventListener('input', window.handleIBANInput);
+                            ibanInput.addEventListener('paste', function(e) {
+                                setTimeout(() => window.handleIBANInput(e), 10);
+                            });
+                        }
+                        // Initialize custom bank dropdown
+                        window.initCustomBankDropdown = function() {
+                            const trigger = document.querySelector('.bank-select-trigger');
+                            const dropdown = document.querySelector('.bank-dropdown');
+                            const options = document.querySelectorAll('.bank-option');
+                            const hiddenSelect = document.getElementById('bankSelect');
+                            const selectedLogo = document.querySelector('.bank-selected-logo');
+                            const selectedText = document.querySelector('.bank-selected-text');
+                            const arrow = document.querySelector('.bank-dropdown-arrow');
+                            if (!trigger || !dropdown || !hiddenSelect) return;
+                            // Toggle dropdown
+                            function toggleDropdown() {
+                                const isOpen = dropdown.classList.contains('open');
+                                dropdown.classList.toggle('open');
+                                trigger.classList.toggle('open');
+                                arrow.classList.toggle('open');
+                            }
+                            // Close dropdown
+                            function closeDropdown() {
+                                dropdown.classList.remove('open');
+                                trigger.classList.remove('open');
+                                arrow.classList.remove('open');
+                            }
+                            // Select option
+                            function selectOption(option) {
+                                const value = option.dataset.value;
+                                const logo = option.dataset.logo;
+                                const text = option.querySelector('.bank-option-text').textContent;
+                                // Update display
+                                selectedLogo.src = logo;
+                                selectedLogo.alt = text;
+                                selectedText.textContent = text;
+                                // Update hidden select
+                                hiddenSelect.value = value;
+                                // Update selected state
+                                options.forEach(opt => opt.classList.remove('selected'));
+                                option.classList.add('selected');
+                                // Close dropdown
+                                closeDropdown();
+                                // Trigger change event
+                                hiddenSelect.dispatchEvent(new Event('change'));
+                            }
+                            // Event listeners
+                            trigger.addEventListener('click', toggleDropdown);
+                            trigger.addEventListener('keydown', function(e) {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    toggleDropdown();
+                                }
+                            });
+                            options.forEach(option => {
+                                option.addEventListener('click', function() {
+                                    selectOption(this);
+                                });
+                                option.addEventListener('keydown', function(e) {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        selectOption(this);
+                                    }
+                                });
+                            });
+                            // Close dropdown when clicking outside
+                            document.addEventListener('click', function(e) {
+                                if (!trigger.contains(e.target) && !dropdown.contains(e.target)) {
+                                    closeDropdown();
+                                }
+                            });
+                            // Initialize with the selected option from hidden select
+                            if (options.length > 0) {
+                                const selectedValue = hiddenSelect.value;
+                                const selectedOption = Array.from(options).find(option => option.dataset.value === selectedValue);
+                                if (selectedOption) {
+                                    selectOption(selectedOption);
+                                } else {
+                                    // Fallback to first option if no match found
+                                    selectOption(options[0]);
+                                }
+                            }
+                        }
+                        // Initialize the custom dropdown
+                        initCustomBankDropdown();
+                        // Add change listeners to detect when user modifies bank details
+                        window.addChangeListeners = function() {
+                            const bankSelect = document.getElementById('bankSelect');
+                            const ibanInput = document.getElementById('iban');
+                            const accountHolderInput = document.getElementById('accountHolder');
+                            function showConsentOnChange(event) {
+                                const sepaConsentBlock = document.querySelector('.sepa-consent');
+                                const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+                                if (sepaConsentBlock && sepaConsentBlock.style.display === 'none') {
+                                    sepaConsentBlock.style.display = 'block';
+                                }
+                                if (sepaSubmitBtn) {
+                                    sepaSubmitBtn.style.display = 'block';
+                                }
+                            }
+                            if (bankSelect) {
+                                bankSelect.addEventListener('change', showConsentOnChange);
+                            }
+                            if (ibanInput) {
+                                ibanInput.addEventListener('input', showConsentOnChange);
+                            }
+                            if (accountHolderInput) {
+                                accountHolderInput.addEventListener('input', showConsentOnChange);
+                            }
+                        }
+                        // Add listeners to initial form
+                        addChangeListeners();
+                        // Test function to manually trigger the change
+                        window.testChangeDetection = function() {
+                            const sepaConsentBlock = document.querySelector('.sepa-consent');
+                            const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+                            if (sepaConsentBlock) {
+                                sepaConsentBlock.style.display = 'block';
+                            }
+                            if (sepaSubmitBtn) {
+                                sepaSubmitBtn.style.display = 'block';
+                            }
+                        };
+                        // Skeleton loader control functions
+                        window.showSkeletonLoaders = function() {
+                            const bankSkeleton = document.getElementById('bankSkeleton');
+                            const ibanSkeleton = document.getElementById('ibanSkeleton');
+                            const accountSkeleton = document.getElementById('accountSkeleton');
+                            if (bankSkeleton) bankSkeleton.style.display = 'block';
+                            if (ibanSkeleton) ibanSkeleton.style.display = 'block';
+                            if (accountSkeleton) accountSkeleton.style.display = 'block';
+                        };
+                        window.hideSkeletonLoaders = function() {
+                            const bankSkeleton = document.getElementById('bankSkeleton');
+                            const ibanSkeleton = document.getElementById('ibanSkeleton');
+                            const accountSkeleton = document.getElementById('accountSkeleton');
+                            if (bankSkeleton) bankSkeleton.style.display = 'none';
+                            if (ibanSkeleton) ibanSkeleton.style.display = 'none';
+                            if (accountSkeleton) accountSkeleton.style.display = 'none';
+                        };
+                        // Show skeleton loaders initially
+                        showSkeletonLoaders();
+                        // Add cancel button functionality
+                        const cancelButton = document.getElementById('sepaCancelButton');
+                        if (cancelButton) {
+                            cancelButton.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Exit edit mode by reloading the payment methods
+                                if (typeof window.loadPaymentMethodsForToggle === 'function') {
+                                    window.loadPaymentMethodsForToggle();
+                                }
+                            });
+                        }
+                        // Load existing payment methods to fill the form
+                        setTimeout(() => {
+                            loadPaymentMethodsForToggle();
+                        }, 100);
+                    </script>
+                    <style>
+                        #sepa-consent-modal {
+                            display: none;
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background-color: rgba(0, 0, 0, 0.5);
+                            z-index: 10000;
+                            justify-content: center;
+                            align-items: center;
+                            animation: fadeIn 0.3s ease;
+                        }
+                        #sepa-consent-modal .modal-content {
+                            animation: slideIn 0.3s ease;
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes slideIn {
+                            from { 
+                                opacity: 0;
+                                transform: translateY(-50px) scale(0.9);
+                            }
+                            to { 
+                                opacity: 1;
+                                transform: translateY(0) scale(1);
+                            }
+                        }
+                        /* Topup Confirmation Modal Styles */
+                        .modal-overlay {
+                            display: none;
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background-color: rgba(0, 0, 0, 0.5);
+                            z-index: 10000;
+                            justify-content: center;
+                            align-items: center;
+                            animation: fadeIn 0.3s ease;
+                        }
+                        .modal-content {
+                            background: white;
+                            border-radius: 12px;
+                            padding: 0;
+                            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                            animation: slideIn 0.3s ease;
+                            overflow: hidden;
+                        }
+                        .modal-header {
+                            padding: 20px 24px 16px;
+                            border-bottom: 1px solid #e5e7eb;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .modal-header h3 {
+                            margin: 0;
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: #111827;
+                        }
+                        .modal-close {
+                            background: none;
+                            border: none;
+                            font-size: 24px;
+                            color: #6b7280;
+                            cursor: pointer;
+                            padding: 0;
+                            width: 24px;
+                            height: 24px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        .modal-close:hover {
+                            color: #374151;
+                        }
+                        .modal-body {
+                            padding: 24px;
+                        }
+                        .confirmation-details {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 16px;
+                        }
+                        .amount-display, .card-display, .expiry-display {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            padding: 12px 16px;
+                            background: #f9fafb;
+                            border-radius: 8px;
+                            border: 1px solid #e5e7eb;
+                        }
+                        .amount-label, .card-label, .expiry-label {
+                            font-weight: 500;
+                            color: #6b7280;
+                            font-size: 14px;
+                        }
+                        .amount-value {
+                            font-weight: 600;
+                            color: #059669;
+                            font-size: 16px;
+                        }
+                        .card-value, .expiry-value {
+                            font-weight: 500;
+                            color: #111827;
+                            font-size: 14px;
+                        }
+                        .modal-footer {
+                            padding: 16px 24px 24px;
+                            display: flex;
+                            gap: 12px;
+                            justify-content: flex-end;
+                        }
+                        .btn {
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            font-weight: 500;
+                            font-size: 14px;
+                            cursor: pointer;
+                            border: none;
+                            transition: all 0.2s ease;
+                        }
+                        .btn-secondary {
+                            background: #f3f4f6;
+                            color: #374151;
+                        }
+                        .btn-secondary:hover {
+                            background: #e5e7eb;
+                        }
+                        .btn-primary {
+                            background: #059669;
+                            color: white;
+                        }
+                        .btn-primary:hover {
+                            background: #047857;
+                        }
+                    </style>
+                    <!-- SEPA Consent Modal -->
+<div id="sepa-consent-modal">
+    <div class="modal-content" style="
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border: 0.5px solid #F3F4F6;
+    ">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="
+                width: 48px;
+                height: 48px;
+                background: #F3F4F6;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 12px auto;
+                border: 0.5px solid #E5E7EB;
+            ">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.5">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <circle cx="12" cy="16" r="1"></circle>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h3 style="margin: 0; color: #111827; font-size: 18px; font-weight: 600;">SEPA Direct Debit Bevestiging</h3>
+        </div>
+
+        <div style="margin-bottom: 24px; line-height: 1.6; color: #374151; font-size: 14px;">
+            <p style="margin-bottom: 16px;">
+                Je staat op het punt om een <strong>SEPA Direct Debit machtiging</strong> aan te maken.
+            </p>
+
+            <p style="margin-bottom: 16px;">
+                Dit betekent dat <strong>GrowSocial BV</strong> automatisch geld van je rekening kan afschrijven voor:
+            </p>
+
+            <ul style="margin: 16px 0; padding-left: 20px; color: #4B5563; list-style-type: disc;">
+                <li style="margin-bottom: 8px; display: list-item;">Kosten over de aanvragen die je hebt ontvangen</li>
+            </ul>
+
+            <div style="
+                background-color: #F9FAFB;
+                border: 0.5px solid #E5E7EB;
+                border-radius: 6px;
+                padding: 16px;
+                margin: 16px 0;
+            ">
+                <strong style="color: #374151;">Belangrijk:</strong> <span style="color: #6B7280;">Je kunt deze machtiging op elk moment intrekken via je account instellingen.</span>
+            </div>
+
+            <p style="margin-bottom: 0; color: #111827;">
+                Wil je doorgaan met het aanmaken van de SEPA machtiging?
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="sepa-modal-cancel" style="
+                padding: 8px 16px;
+                border: 0.5px solid #D1D5DB;
+                background: white;
+                color: #6B7280;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.backgroundColor='#F9FAFB'; this.style.borderColor='#9CA3AF';" onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#D1D5DB';">
+                Annuleren
+            </button>
+            <button id="sepa-modal-confirm" style="
+                padding: 8px 16px;
+                border: 0.5px solid #111827;
+                background: #111827;
+                color: white;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.backgroundColor='#374151';" onmouseout="this.style.backgroundColor='#111827';">
+                Bevestigen
+            </button>
+        </div>
+    </div>
+</div>
+
+                    <%
+                    // ensure a stable unique suffix so we don't duplicate IDs across hidden/visible states
+                    const sepaIdSuffix = (user && user.id) ? user.id : 'default';
+                    const initialConsent = !!sepaConsentAccepted;
+                    %>
+
+                    <!-- Incasso Accepteren Button -->
+                    <button type="button" class="submit-button sepa-submit-btn" id="sepaSubmitBtn" data-initial-consent="<%= initialConsent %>" style="
+                        margin: 8px 0 0 0; 
+                        padding: 12px 24px; 
+                        background-color: #f3f4f6; 
+                        border: 1px solid #d1d5db; 
+                        color: #374151; 
+                        border-radius: 6px; 
+                        cursor: pointer; 
+                        font-size: 14px; 
+                        font-weight: 500; 
+                        transition: all 0.2s ease;
+                        display: none
+                    " onmouseover="this.style.backgroundColor='#e5e7eb';" onmouseout="this.style.backgroundColor='#f3f4f6';">
+                        <i class="fas fa-save" style="margin-right: 8px;"></i>
+                        Incasso accepteren
+                    </button>
+                    <!-- SEPA Mandate Consent -->
+                    <div class="sepa-consent" 
+                         style="margin: 6px 0 0 0; padding: 16px; background-color: #f9fafb; border: 0.5px solid #f3f4f6; border-radius: 8px; display: none;" 
+                         data-sepa-consent="<%= initialConsent ? 'true' : 'false' %>"
+                         data-scope="sepa-consent-<%= sepaIdSuffix %>">
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                            <input type="checkbox" 
+                                   class="sepa-consent__checkbox"
+                                   id="sepa-consent-<%= sepaIdSuffix %>"
+                                   name="sepa_consent"
+                                   required 
+                                   style="margin-top: 2px; height: 16px; width: 16px; accent-color: #6b7280; border: 1px solid #d1d5db; border-radius: 3px;" 
+                                   <%= initialConsent ? 'checked' : '' %>>
+                            <div style="font-size: 14px;">
+                                <p style="font-weight: 500; color: #111827; margin: 0 0 8px 0;">SEPA Automatische incasso</p>
+                                <p style="color: #6b7280; line-height: 1.5; margin: 0;">
+                                    Door dit vakje aan te vinken geef ik de SEPA Direct Debit toestemming aan terugkerende
+                                    betalingen van mijn rekening te incasseren.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        // Set initial visibility of SEPA submit button
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+                            if (sepaSubmitBtn) {
+                                const hasConsent = sepaSubmitBtn.getAttribute('data-initial-consent') === 'true';
+                                sepaSubmitBtn.style.display = hasConsent ? 'none' : 'block';
+                            }
+                        });
+                    </script>
+                    <script>
+                        // Function to create SEPA mandate via iDEAL (SECURE)
+                        async function createSEPAMandate() {
+                            try {
+                                // Get form data
+                                const bank = document.getElementById('bankSelect')?.value || 'rabobank';
+                                const iban = document.getElementById('iban')?.value || 'NL42RABO0357384644';
+                                const accountHolder = document.getElementById('accountHolder')?.value || 'GrowSocial';
+                                // Show loading state
+                                const submitBtn = document.getElementById('sepaSubmitBtn');
+                                const originalText = submitBtn.innerHTML;
+                                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Bezig met verificatie...';
+                                submitBtn.disabled = true;
+                                const response = await fetch('/api/payments/methods/sepa-mandate-ideal', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({
+                                        accountName: accountHolder,
+                                        iban: iban,
+                                        bank: bank
+                                    })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    // Store payment ID for status checking
+                                    sessionStorage.setItem('pendingMandatePaymentId', result.paymentId);
+                                    // Redirect to iDEAL payment page (no notification yet)
+                                    window.location.href = result.redirectUrl;
+                                } else {
+                                    // Reset button state
+                                    submitBtn.innerHTML = originalText;
+                                    submitBtn.disabled = false;
+                                    if (window.showNotification) {
+                                        window.showNotification(result.error || 'Er is een fout opgetreden bij het aanmaken van de SEPA mandate', 'error');
+                                    }
+                                }
+                            } catch (error) {
+                                // Reset button state
+                                const submitBtn = document.getElementById('sepaSubmitBtn');
+                                if (submitBtn) {
+                                    submitBtn.innerHTML = '<i class="fas fa-save" style="margin-right: 8px;"></i>incasso accepteren';
+                                    submitBtn.disabled = false;
+                                }
+                                if (window.showNotification) {
+                                    window.showNotification('Er is een fout opgetreden bij het aanmaken van de SEPA mandate', 'error');
+                                }
+                            }
+                        }
+                        // Function to hide the payment method tip notification
+                        function hidePaymentMethodTip() {
+                            // Find the tip notification by looking for the alert with the specific text
+                            const alerts = document.querySelectorAll('.alert');
+                            alerts.forEach(alert => {
+                                const alertText = alert.textContent || alert.innerText;
+                                if (alertText.includes('Je hebt momenteel nog geen betaalrekening gekoppeld')) {
+                                    alert.style.display = 'none';
+                                    alert.style.opacity = '0';
+                                    alert.style.transition = 'opacity 0.3s ease';
+                                    // Remove from DOM after animation
+                                    setTimeout(() => {
+                                        if (alert.parentNode) {
+                                            alert.parentNode.removeChild(alert);
+                                        }
+                                    }, 300);
+                                }
+                            });
+                        }
+                        // SEPA revocation modal removed - users now contact support
+                        function showSEPARevocationModal() {
+                            // Function disabled - users should contact support
+                            return;
+                            // Create revocation modal HTML
+                            const revocationModalHTML = `
+                                <div id="sepa-revocation-modal" style="
+                                    position: fixed;
+                                    top: 0;
+                                    left: 0;
+                                    width: 100%;
+                                    height: 100%;
+                                    background-color: rgba(0, 0, 0, 0.5);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    z-index: 10000;
+                                ">
+                                    <div class="modal-content" style="
+                                        background: white;
+                                        border-radius: 8px;
+                                        padding: 24px;
+                                        max-width: 500px;
+                                        width: 90%;
+                                        max-height: 80vh;
+                                        overflow-y: auto;
+                                        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                                        border: 0.5px solid #F3F4F6;
+                                    ">
+                                        <div style="text-align: center; margin-bottom: 20px;">
+                                            <div style="
+                                                width: 48px;
+                                                height: 48px;
+                                                background: #FEF2F2;
+                                                border-radius: 50%;
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                margin: 0 auto 12px auto;
+                                                border: 0.5px solid #FECACA;
+                                            ">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="1.5">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                                </svg>
+                                            </div>
+                                            <h3 style="margin: 0; color: #111827; font-size: 18px; font-weight: 600;">SEPA Machtiging Intrekken</h3>
+                                        </div>
+
+                                        <div style="margin-bottom: 24px; line-height: 1.6; color: #374151; font-size: 14px;">
+                                            <p style="margin-bottom: 16px;">
+                                                <strong>Weet je zeker dat je je SEPA Direct Debit machtiging wilt intrekken?</strong>
+                                            </p>
+
+                                            <div style="
+                                                background-color: #FEF2F2;
+                                                border: 0.5px solid #FECACA;
+                                                border-radius: 6px;
+                                                padding: 16px;
+                                                margin: 16px 0;
+                                            ">
+                                                <strong style="color: #DC2626;">⚠️ Gevolgen van intrekken:</strong>
+                                                <ul style="margin: 8px 0; padding-left: 20px; color: #991B1B; list-style-type: disc;">
+                                                    <li style="margin-bottom: 4px;">Geen automatische incasso's meer mogelijk</li>
+                                                    <li style="margin-bottom: 4px;">Je moet handmatig betalen voor nieuwe aanvragen</li>
+                                                    <li style="margin-bottom: 4px;">Je kunt geen nieuwe aanvragen ontvangen zonder betaalmethode</li>
+                                                </ul>
+                                            </div>
+
+                                            <p style="margin-bottom: 0; color: #111827;">
+                                                Deze actie kan niet ongedaan worden gemaakt. Je kunt altijd een nieuwe machtiging aanmaken.
+                                            </p>
+                                        </div>
+
+                                        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                                            <button id="sepa-revocation-cancel" style="
+                                                padding: 8px 16px;
+                                                border: 0.5px solid #D1D5DB;
+                                                background: white;
+                                                color: #6B7280;
+                                                border-radius: 6px;
+                                                cursor: pointer;
+                                                font-size: 14px;
+                                                font-weight: 500;
+                                                transition: all 0.2s ease;
+                                            " onmouseover="this.style.backgroundColor='#F9FAFB'; this.style.borderColor='#9CA3AF';" onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#D1D5DB';">
+                                                Annuleren
+                                            </button>
+                                            <button id="sepa-revocation-confirm" style="
+                                                padding: 8px 16px;
+                                                border: 0.5px solid #DC2626;
+                                                background: #DC2626;
+                                                color: white;
+                                                border-radius: 6px;
+                                                cursor: pointer;
+                                                font-size: 14px;
+                                                font-weight: 500;
+                                                transition: all 0.2s ease;
+                                            " onmouseover="this.style.backgroundColor='#B91C1C';" onmouseout="this.style.backgroundColor='#DC2626';">
+                                                Ja, Intrekken
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            // Add modal to page
+                            document.body.insertAdjacentHTML('beforeend', revocationModalHTML);
+                            // Get modal elements
+                            const modal = document.getElementById('sepa-revocation-modal');
+                            const cancelBtn = document.getElementById('sepa-revocation-cancel');
+                            const confirmBtn = document.getElementById('sepa-revocation-confirm');
+                            // Cancel button
+                            cancelBtn.addEventListener('click', function() {
+                                modal.remove();
+                                document.body.style.overflow = 'auto';
+                            });
+                            // Confirm button
+                            confirmBtn.addEventListener('click', async function() {
+                                try {
+                                    // Revoke SEPA mandate in Mollie first
+                                    await revokeSEPAMandateInMollie();
+                                    // Then update database
+                                    const response = await fetch('/dashboard/payments/sepa-consent', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ consentAccepted: false })
+                                    });
+                                    if (response.ok) {
+                                        // Remove modal
+                                        modal.remove();
+                                        document.body.style.overflow = 'auto';
+                                        // Update checkbox state - find by class since ID is dynamic
+                                        const consentCheckbox = document.querySelector('.sepa-consent__checkbox');
+                                        if (consentCheckbox) {
+                                            consentCheckbox.checked = false;
+                                        }
+                                        // Also update the data attribute to reflect the new state
+                                        const consentWrapper = document.querySelector('.sepa-consent');
+                                        if (consentWrapper) {
+                                            consentWrapper.dataset.sepaConsent = 'false';
+                                        }
+                                        // Re-apply SEPA consent state to ensure UI consistency
+                                        if (typeof window.applySepaConsent === 'function') {
+                                            setTimeout(() => {
+                                                window.applySepaConsent();
+                                            }, 100);
+                                        }
+                                        // Show success message
+                                        if (window.showNotification) {
+                                            window.showNotification('SEPA machtiging succesvol ingetrokken', 'success');
+                                        }
+                                        // Reload payment methods to reflect changes
+                                        if (window.loadPaymentMethodsForToggle) {
+                                            setTimeout(() => {
+                                                window.loadPaymentMethodsForToggle();
+                                            }, 1000);
+                                        }
+                                    } else {
+                                        throw new Error('Failed to revoke SEPA consent');
+                                    }
+                                } catch (error) {
+                                    // Remove modal
+                                    modal.remove();
+                                    document.body.style.overflow = 'auto';
+                                    // Show error message
+                                    if (window.showNotification) {
+                                        window.showNotification('Fout bij intrekken SEPA machtiging. Probeer het opnieuw.', 'error');
+                                    }
+                                }
+                            });
+                            // Close modal on background click
+                            modal.addEventListener('click', function(e) {
+                                if (e.target === modal) {
+                                    modal.remove();
+                                    document.body.style.overflow = 'auto';
+                                }
+                            });
+                        }
+                        // Function to revoke SEPA mandate in Mollie
+                        async function revokeSEPAMandateInMollie() {
+                            try {
+                                const response = await fetch('/api/payments/methods/revoke-sepa-mandate', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials: 'include'
+                                });
+                                const result = await response.json();
+                                if (!result.success) {
+                                    throw new Error(result.error || 'Failed to revoke mandate in Mollie');
+                                }
+                            } catch (error) {
+                                throw error;
+                            }
+                        }
+                        // Check mandate status after returning from iDEAL
+                        async function checkMandateStatus() {
+                            const paymentId = sessionStorage.getItem('pendingMandatePaymentId');
+                            if (!paymentId) return;
+                            try {
+                                const response = await fetch(`/api/payments/methods/mandate-status/${paymentId}`, {
+                                    method: 'GET',
+                                    credentials: 'include'
+                                });
+                                const result = await response.json();
+                                if (result.success && result.status === 'completed') {
+                                    // Clear stored payment ID
+                                    sessionStorage.removeItem('pendingMandatePaymentId');
+                                    // NOW save SEPA consent to database after successful verification
+                                    try {
+                                        const consentResponse = await fetch('/dashboard/payments/sepa-consent', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({ consentAccepted: true })
+                                        });
+                                        if (consentResponse.ok) {
+                                        } else {
+                                        }
+                                    } catch (consentError) {
+                                    }
+                                    // Hide the payment method tip notification immediately
+                                    hidePaymentMethodTip();
+                                    // Show success message only after successful return
+                                    if (window.showNotification) {
+                                        window.showNotification('Incasso succesvol aangemaakt! Je kunt nu incasso\'s ontvangen.', 'success');
+                                    }
+                                    // Reload payment methods
+                                    if (window.loadPaymentMethodsForToggle) {
+                                        setTimeout(() => {
+                                            window.loadPaymentMethodsForToggle();
+                                        }, 1000);
+                                    }
+                                } else if (result.success && result.status === 'paid') {
+                                    // Clear stored payment ID
+                                    sessionStorage.removeItem('pendingMandatePaymentId');
+                                    // Save SEPA consent to database after successful payment
+                                    try {
+                                        const consentResponse = await fetch('/dashboard/payments/sepa-consent', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({ consentAccepted: true })
+                                        });
+                                        if (consentResponse.ok) {
+                                        } else {
+                                        }
+                                    } catch (consentError) {
+                                    }
+                                    // Hide the payment method tip notification immediately
+                                    hidePaymentMethodTip();
+                                    // Show success message only after successful return
+                                    if (window.showNotification) {
+                                        window.showNotification('✅ Betaling succesvol! SEPA mandate wordt aangemaakt...', 'success');
+                                    }
+                                    // Reload payment methods
+                                    if (window.loadPaymentMethodsForToggle) {
+                                        setTimeout(() => {
+                                            window.loadPaymentMethodsForToggle();
+                                        }, 1000);
+                                    }
+                                } else if (result.success && result.status === 'failed') {
+                                    // Clear stored payment ID
+                                    sessionStorage.removeItem('pendingMandatePaymentId');
+                                    // Show error message only after failed return
+                                    if (window.showNotification) {
+                                        window.showNotification('❌ Betaling mislukt. Probeer het opnieuw.', 'error');
+                                    }
+                                } else if (result.success && result.status === 'pending') {
+                                    // Don't clear payment ID yet, keep checking
+                                    // Don't show notification for pending status
+                                }
+                            } catch (error) {
+                            }
+                        }
+                        // Check mandate status on page load if returning from iDEAL
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Check if we're returning from a mandate verification
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const paymentId = sessionStorage.getItem('pendingMandatePaymentId');
+                            if (urlParams.get('mandate') === 'success' && paymentId) {
+                                setTimeout(checkMandateStatus, 1000);
+                            } else if (paymentId) {
+                                // If we have a pending payment ID but no success param, check status anyway
+                                setTimeout(checkMandateStatus, 1000);
+                            }
+                        });
+                        // Handle SEPA consent checkbox click with modal and state persistence
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Handle all instances, visible and hidden, but always set the checkbox inside the same wrapper.
+                            window.applySepaConsent = function() {
+                                document.querySelectorAll('.sepa-consent').forEach(wrapper => {
+                                    const input = wrapper.querySelector('.sepa-consent__checkbox');
+                                    if (!input) return;
+
+                                    // Read and normalize the dataset value
+                                    const raw = (wrapper.dataset.sepaConsent || '').trim().toLowerCase();
+                                    const fromBackend = (raw === 'true' || raw === '1' || raw === 'yes');
+
+                                    // If SSR already set checked, preserve it; otherwise use backend flag.
+                                    // This prevents a later script from unchecking a server-checked box to false.
+                                    const alreadyChecked = input.hasAttribute('checked') || input.defaultChecked;
+                                    input.checked = alreadyChecked || fromBackend;
+
+                                    // Don't dispatch change event during initialization to avoid triggering API calls
+
+                                    // Debug removed
+                                });
+                            }
+
+                            // First pass right after DOM is ready…
+                            window.applySepaConsent();
+                            // …and a tiny delayed pass in case some other initializer (e.g., form.reset/toggle) ran later.
+                            requestAnimationFrame(() => setTimeout(window.applySepaConsent, 0));
+
+                            // Handle modal interactions for the SEPA consent
+                            const consentCheckbox = document.querySelector('.sepa-consent__checkbox');
+                            const modal = document.getElementById('sepa-consent-modal');
+                            const cancelBtn = document.getElementById('sepa-modal-cancel');
+                            const confirmBtn = document.getElementById('sepa-modal-confirm');
+                            if (consentCheckbox && modal) {
+                                consentCheckbox.addEventListener('change', async function() {
+                                    if (this.checked) {
+                                        // Show modal
+                                        modal.style.display = 'flex';
+                                        document.body.style.overflow = 'hidden';
+                                    } else {
+                                        // Checkbox unchecked - show info message about contacting support
+                                        if (window.showNotification) {
+                                            window.showNotification(
+                                                'Neem contact op met support@growsocial.nl om je SEPA machtiging in te trekken', 
+                                                'info'
+                                            );
+                                        }
+                                        // Re-check the checkbox to prevent unchecking
+                                        setTimeout(() => {
+                                            consentCheckbox.checked = true;
+                                        }, 100);
+                                    }
+                                });
+                                // Cancel button
+                                cancelBtn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    consentCheckbox.checked = false;
+                                    modal.style.display = 'none';
+                                    document.body.style.overflow = 'auto';
+                                    if (window.showNotification) {
+                                        window.showNotification('SEPA machtiging geannuleerd', 'info');
+                                    }
+                                });
+                                // Confirm button
+                                confirmBtn.addEventListener('click', async function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    try {
+                                        // Close modal and start mandate creation process
+                                        modal.style.display = 'none';
+                                        document.body.style.overflow = 'auto';
+                                        // Hide the SEPA submit button since consent is now accepted
+                                        const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+                                        if (sepaSubmitBtn) {
+                                            sepaSubmitBtn.style.display = 'none';
+                                        }
+                                        // Automatically create SEPA mandate after consent is accepted
+                                        await createSEPAMandate();
+                                        // Note: SEPA consent will be saved to database only after successful iDEAL verification
+                                    } catch (error) {
+                                        consentCheckbox.checked = false;
+                                        modal.style.display = 'none';
+                                        document.body.style.overflow = 'auto';
+                                        if (window.showNotification) {
+                                            window.showNotification('Fout bij opslaan SEPA machtiging', 'error');
+                                        }
+                                    }
+                                });
+                                // Close modal when clicking outside
+                                modal.addEventListener('click', function(e) {
+                                    if (e.target === modal) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        consentCheckbox.checked = false;
+                                        modal.style.display = 'none';
+                                        document.body.style.overflow = 'auto';
+                                    }
+                                });
+                            }
+                        });
+                    </script>
+                    <script>
+                        // IBAN formatting functions
+                        function formatIBAN(iban) {
+                            if (!iban) return '';
+                            // Remove all spaces and convert to uppercase
+                            const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+                            // Add spaces every 4 characters
+                            return cleanIban.replace(/(.{4})/g, '$1 ').trim();
+                        }
+                        // Functions are now defined locally at the top of the script
+                        // Add click handler directly to button
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Add IBAN formatting to input field
+                            const ibanInput = document.getElementById('iban');
+                            if (ibanInput) {
+                                ibanInput.addEventListener('input', window.handleIBANInput);
+                                ibanInput.addEventListener('paste', function(e) {
+                                    setTimeout(() => window.handleIBANInput(e), 10);
+                                });
+                            }
+                            const button = document.getElementById('sepaSubmitBtn');
+                            if (button) {
+                                button.addEventListener('click', async function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Call SEPA submission directly
+                                    await submitSEPAMandate();
+                                });
+                            } else {
+                            }
+                        });
+                        // Direct SEPA submission function
+                        async function submitSEPAMandate() {
+                            const submitButton = document.getElementById('sepaSubmitBtn');
+                            if (!submitButton) {
+                                return;
+                            }
+                            const originalText = submitButton.innerHTML;
+                            // Get form data
+                            const bankSelect = document.getElementById('bankSelect');
+                            const bank = bankSelect.value;
+                            const iban = document.getElementById('iban').value.replace(/\s/g, ''); // Remove spaces for API
+                            const accountHolder = document.getElementById('accountHolder').value.trim();
+                            // Validation
+                            if (!iban || !accountHolder) {
+                                if (window.showNotification) {
+                                    window.showNotification('Alle velden zijn verplicht', 'error');
+                                }
+                                return;
+                            }
+                            // Check SEPA consent
+                            const consentCheckbox = document.getElementById('sepa-consent');
+                            if (!consentCheckbox || !consentCheckbox.checked) {
+                                if (window.showNotification) {
+                                    window.showNotification('Je moet akkoord gaan met de SEPA Direct Debit machtiging', 'error');
+                                }
+                                return;
+                            }
+                            // IBAN validation
+                            const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/;
+                            if (!ibanRegex.test(iban)) {
+                                if (window.showNotification) {
+                                    window.showNotification('Ongeldig IBAN nummer', 'error');
+                                }
+                                return;
+                            }
+                            // Show loading state
+                            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Incasso Accepteren...';
+                            submitButton.disabled = true;
+                            try {
+                                const response = await fetch('/api/payments/methods/sepa-mandate', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    credentials: 'include',
+                                    body: JSON.stringify({
+                                        accountName: accountHolder,
+                                        iban: iban,
+                                        bank: bank
+                                    })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    if (window.showNotification) {
+                                        window.showNotification('Incasso succesvol geaccepteerd! Je bankgegevens zijn opgeslagen.', 'success');
+                                    }
+                                    // Reload payment methods to show updated data
+                                    setTimeout(() => {
+                                        if (window.loadPaymentMethodsForToggle) {
+                                            window.loadPaymentMethodsForToggle();
+                                        }
+                                    }, 1000);
+                                } else {
+                                    if (window.showNotification) {
+                                        window.showNotification(result.error || 'Er is een fout opgetreden bij het accepteren van de incasso', 'error');
+                                    }
+                                }
+                            } catch (error) {
+                                if (window.showNotification) {
+                                    window.showNotification('Er is een fout opgetreden bij het accepteren van de incasso', 'error');
+                                }
+                            } finally {
+                                // Reset button
+                                submitButton.innerHTML = originalText;
+                                submitButton.disabled = false;
+                            }
+                        }
+                    </script>
+  </div>
+
+                <!-- Credit Card Section completely removed - only SEPA automatic billing is used -->
+                    <!-- Credit card form groups removed - only SEPA automatic billing is used -->
+                    <script>
+                        // Load credit card data immediately to check if we need skeletons
+                        // Check immediately if we have payment methods
+                        fetch('/api/payments/methods', {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => {
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.paymentMethods && data.paymentMethods.length > 0) {
+                                // Look for credit card method
+                                const creditCardMethod = data.paymentMethods.find(method => method.type === 'credit_card');
+                                if (creditCardMethod) {
+                                    // Show skeleton for a short time, then show saved data
+                                    setTimeout(() => {
+                                        // Replace skeleton fields with filled form
+                                    const cardHolderField = document.getElementById('card-holder');
+                                    const cardNumberField = document.getElementById('card-number');
+                                    const expiryDateField = document.getElementById('expiry-date');
+                                    const verificationCodeField = document.getElementById('verification-code');
+                                    // Only replace if still showing skeleton fields
+                                    if (cardHolderField && cardHolderField.querySelector('.skeleton-field')) {
+                                        // Create masked card number display
+                                        const cardNumber = creditCardMethod.card_last4 || creditCardMethod.details?.card_last4 || creditCardMethod.metadata?.card_last4 || '****';
+                                        const maskedNumber = cardNumber ? `**** **** **** ${cardNumber}` : '**** **** **** ****';
+                                        // Replace skeleton fields with saved card display
+                                        cardHolderField.innerHTML = `
+                                            <div class="locked-field-display">
+                                                <div class="field-content">
+                                                    <i class="fas fa-user" style="color: #6b7280; margin-right: 8px;"></i>
+                                                    <span class="field-value">${creditCardMethod.card_holder || creditCardMethod.account_name || creditCardMethod.details?.card_holder || creditCardMethod.metadata?.card_holder || 'Cardholder'}</span>
+                                                </div>
+                                                <button type="button" class="edit-field-btn" onclick="editCreditCard()" title="Bewerk creditcard">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                            </div>
+                                        `;
+                                        cardNumberField.innerHTML = `
+                                            <div class="locked-field-display">
+                                                <div class="field-content">
+                                                    <i class="fas fa-credit-card" style="color: #6b7280; margin-right: 8px;"></i>
+                                                    <span class="field-value">${maskedNumber}</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                        expiryDateField.innerHTML = `
+                                            <div class="locked-field-display">
+                                                <div class="field-content">
+                                                    <i class="fas fa-calendar" style="color: #6b7280; margin-right: 8px;"></i>
+                                                    <span class="field-value">${creditCardMethod.card_expiry_month && creditCardMethod.card_expiry_year ? `${creditCardMethod.card_expiry_month.toString().padStart(2, '0')}/${creditCardMethod.card_expiry_year}` : '**/**'}</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                        verificationCodeField.innerHTML = `
+                                            <div class="locked-field-display">
+                                                <div class="field-content">
+                                                    <i class="fas fa-shield-alt" style="color: #6b7280; margin-right: 8px;"></i>
+                                                    <span class="field-value">***</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                        // Replace the submit button with an edit button
+                                        const submitButton = document.querySelector('.card-section .submit-button');
+                                        if (submitButton) {
+                                            submitButton.innerHTML = '<i class="fas fa-pencil-alt"></i> Creditcard bewerken';
+                                            submitButton.onclick = editCreditCard;
+                                        }
+                                    }
+                                    }, 700); // Show skeleton for 0.7 seconds
+                                } else {
+                                    // Replace skeleton with empty Mollie components
+                                    const cardHolderField = document.getElementById('card-holder');
+                                    const cardNumberField = document.getElementById('card-number');
+                                    const expiryDateField = document.getElementById('expiry-date');
+                                    const verificationCodeField = document.getElementById('verification-code');
+                                    if (cardHolderField && cardHolderField.querySelector('.skeleton-field')) {
+                                        cardHolderField.innerHTML = '';
+                                        cardNumberField.innerHTML = '';
+                                        expiryDateField.innerHTML = '';
+                                        verificationCodeField.innerHTML = '';
+                                        // Wait a bit for DOM to update, then initialize Mollie components
+                                        setTimeout(() => {
+                                            if (typeof window.mountMollieComponents === 'function') {
+                                                window.mountMollieComponents();
+                                            } else {
+                                            }
+                                        }, 100);
+                                    }
+                                }
+                            } else {
+                                // No payment methods at all - immediately show empty form without skeleton
+                                const cardHolderField = document.getElementById('card-holder');
+                                const cardNumberField = document.getElementById('card-number');
+                                const expiryDateField = document.getElementById('expiry-date');
+                                const verificationCodeField = document.getElementById('verification-code');
+                                // Clear skeleton fields immediately
+                                cardHolderField.innerHTML = '';
+                                cardNumberField.innerHTML = '';
+                                expiryDateField.innerHTML = '';
+                                verificationCodeField.innerHTML = '';
+                                // Initialize Mollie components immediately
+                                setTimeout(() => {
+                                    if (typeof window.mountMollieComponents === 'function') {
+                                        window.mountMollieComponents();
+                                    } else {
+                                    }
+                                }, 100);
+                            }
+                        })
+                        .catch(error => {
+                            // Replace skeleton with empty Mollie components on error
+                            const cardHolderField = document.getElementById('card-holder');
+                            const cardNumberField = document.getElementById('card-number');
+                            const expiryDateField = document.getElementById('expiry-date');
+                            const verificationCodeField = document.getElementById('verification-code');
+                            if (cardHolderField && cardHolderField.querySelector('.skeleton-field')) {
+                                cardHolderField.innerHTML = '';
+                                cardNumberField.innerHTML = '';
+                                expiryDateField.innerHTML = '';
+                                verificationCodeField.innerHTML = '';
+                                // Wait a bit for DOM to update, then initialize Mollie components
+                                setTimeout(() => {
+                                    if (typeof window.mountMollieComponents === 'function') {
+                                        window.mountMollieComponents();
+                                    } else {
+                                    }
+                                }, 100);
+                            }
+                        });
+                    </script>
+                </div>
+                <!-- Topup section removed - only SEPA automatic billing is used -->
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+
+    // Store original SEPA data for comparison
+    let originalSEPAData = null;
+
+    async function submitPayment(method) {
+        if (method === 'sepa') {
+            await handleSEPASubmission();
+        }
+        // Credit card is handled by handleCreditCardSubmission() function
+    }
+    // Make functions globally available
+    window.submitPayment = submitPayment;
+    // Credit card functions removed - only SEPA automatic billing is used
+    window.loadPaymentMethodsForToggle = loadPaymentMethodsForToggle;
+    // Functions are now defined locally at the top of the script
+
+    async function handleSEPASubmission() {
+        const submitButton = document.getElementById('sepaSubmitBtn');
+        if (!submitButton) {
+            return;
+        }
+        const originalText = submitButton.innerHTML;
+        // Get form data
+        const bankSelect = document.getElementById('bankSelect');
+        const bank = bankSelect.value;
+        const bankName = bankSelect.options[bankSelect.selectedIndex].text;
+        const iban = document.getElementById('iban').value.replace(/\s/g, '');
+        const accountHolder = document.getElementById('accountHolder').value.trim();
+        // Check if values are the same as original (no changes made)
+        if (originalSEPAData) {
+            const currentData = {
+                bank: bank,
+                iban: iban,
+                account_name: accountHolder
+            };
+            const isSameData = (
+                currentData.bank === originalSEPAData.bank &&
+                currentData.iban === originalSEPAData.iban &&
+                currentData.account_name === originalSEPAData.account_name
+            );
+            if (isSameData) {
+                if (window.showNotification) {
+                    window.showNotification('Geen wijzigingen gedetecteerd', 'info');
+                }
+                // Close editing mode by calling fillSEPAForm with original data
+                fillSEPAForm(originalSEPAData);
+                return;
+            }
+        }
+        // Validation
+        if (!iban || !accountHolder) {
+            if (window.showNotification) {
+                window.showNotification('Alle velden zijn verplicht', 'error');
+            }
+            return;
+        }
+        // Check SEPA consent
+        const consentCheckbox = document.getElementById('sepa-consent');
+        if (!consentCheckbox || !consentCheckbox.checked) {
+            if (window.showNotification) {
+                window.showNotification('Je moet akkoord gaan met de SEPA Direct Debit machtiging', 'error');
+            }
+            return;
+        }
+        // IBAN validation
+        const ibanRegex = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/;
+        if (!ibanRegex.test(iban)) {
+            if (window.showNotification) {
+                window.showNotification('Ongeldig IBAN nummer', 'error');
+            }
+            return;
+        }
+        // Show loading state
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Incasso Accepteren...';
+        submitButton.disabled = true;
+        // Hide spinner after 0.1 seconds
+        setTimeout(() => {
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        }, 300);
+        try {
+            const response = await fetch('/api/payments/methods/sepa-mandate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Include cookies for authentication
+                body: JSON.stringify({
+                    accountName: accountHolder,
+                    iban: iban,
+                    bank: bank
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                if (window.showNotification) {
+                    window.showNotification('Incasso succesvol geaccepteerd! Je bankgegevens zijn opgeslagen.', 'success');
+                }
+                // Update original data with new values
+                originalSEPAData = {
+                    bank: bank,
+                    iban: iban,
+                    account_name: accountHolder
+                };
+                // Update form to show saved data in locked mode
+                fillSEPAForm({
+                    bank: bank,
+                    iban: iban,
+                    account_name: accountHolder,
+                    type: 'sepa'
+                });
+                // Reload payment methods to show updated data
+                setTimeout(() => {
+                    loadPaymentMethodsForToggle();
+                }, 1000);
+            } else {
+                if (window.showNotification) {
+                    window.showNotification(result.error || 'Er is een fout opgetreden bij het accepteren van de incasso', 'error');
+                }
+            }
+        } catch (error) {
+            if (window.showNotification) {
+                window.showNotification('Er is een fout opgetreden bij het accepteren van de incasso', 'error');
+            }
+        } finally {
+            // Button reset is now handled by timeout above
+        }
+    }
+
+    function fillSEPAForm(paymentMethod) {
+        // Hide SEPA consent block and button when showing saved data (locked mode)
+        const sepaConsentBlock = document.querySelector('.sepa-consent');
+        const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+        if (sepaConsentBlock) {
+            sepaConsentBlock.style.display = 'none';
+        }
+        if (sepaSubmitBtn) {
+            sepaSubmitBtn.style.display = 'none';
+        }
+        // Get bank name from bank code
+        const bankNameMap = {
+            'rabobank': 'Rabobank',
+            'ing': 'ING Bank',
+            'abn': 'ABN AMRO',
+            'asn': 'ASN Bank',
+            'bunq': 'Bunq',
+            'knab': 'Knab',
+            'sns': 'SNS Bank',
+            'triodos': 'Triodos Bank',
+            'regiobank': 'RegioBank',
+            'vanlanschot': 'Van Lanschot',
+            'nn': 'NN Bank',
+            'ohra': 'OHRA Bank'
+        };
+        const bankLogoMap = {
+            'rabobank': '/img/payment-providers/rabobank.png',
+            'ing': '/img/payment-providers/ing.png',
+            'abn': '/img/payment-providers/abn-amro.png',
+            'asn': '/img/payment-providers/asn.png',
+            'bunq': '/img/payment-providers/bunq.png',
+            'knab': '/img/payment-providers/knab.png',
+            'sns': '/img/payment-providers/sns.png',
+            'triodos': '/img/payment-providers/triodos.png'
+        };
+        const bankName = bankNameMap[paymentMethod.bank] || 'Rabobank';
+        const bankLogo = bankLogoMap[paymentMethod.bank] || '/img/payment-providers/rabobank.png';
+        // Replace loading spinner with Bank field (first field) with single edit button
+        const bankField = document.getElementById('bankField');
+        if (!bankField) {
+            return;
+        }
+        bankField.innerHTML = `
+            <div class="locked-field-display">
+                <div class="field-content">
+                    <img src="${bankLogo}" alt="${bankName}" class="bank-logo-small">
+                    <span class="field-value">${bankName}</span>
+                </div>
+                <button type="button" class="edit-field-btn" onclick="editSEPA()" title="Bewerk SEPA gegevens">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+            </div>
+        `;
+        // Replace loading spinner with IBAN field (no edit button)
+        const ibanField = document.getElementById('ibanField');
+        if (!ibanField) {
+            return;
+        }
+        ibanField.innerHTML = `
+            <div class="locked-field-display">
+                <div class="field-content">
+                    <span class="field-value">${formatIBAN(paymentMethod.iban || '')}</span>
+                </div>
+            </div>
+        `;
+        // Replace loading spinner with Account Holder field (no edit button)
+        const accountHolderField = document.getElementById('accountHolderField');
+        if (!accountHolderField) {
+            return;
+        }
+        accountHolderField.innerHTML = `
+            <div class="locked-field-display">
+                <div class="field-content">
+                    <span class="field-value">${paymentMethod.account_name || ''}</span>
+                </div>
+            </div>
+        `;
+        // Hide the submit button (not editing mode)
+        const submitButton = document.getElementById('sepaSubmitBtn');
+        if (submitButton) {
+            submitButton.style.display = 'none';
+        }
+        // Hide the cancel button (not editing mode)
+        const cancelButton = document.getElementById('sepaCancelButton');
+        if (cancelButton) {
+            cancelButton.classList.remove('show');
+        }
+    }
+
+    window.editSEPA = function() {
+        // Hide SEPA consent block and button initially - only show when user makes changes
+        const sepaConsentBlock = document.querySelector('.sepa-consent');
+        const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+        if (sepaConsentBlock) {
+            sepaConsentBlock.style.display = 'none';
+        }
+        if (sepaSubmitBtn) {
+            sepaSubmitBtn.style.display = 'none';
+        }
+        // Get the current payment method data from the locked display
+        const bankImg = document.querySelector('.bank-logo-small');
+        // Extract bank value from new path format: /img/payment-providers/rabobank.png
+        let bankValue = 'rabobank';
+        if (bankImg && bankImg.src) {
+            const filename = bankImg.src.split('/').pop().replace('.png', '');
+            // Map filename back to bank code
+            const filenameToCodeMap = {
+                'rabobank': 'rabobank',
+                'ing': 'ing',
+                'abn-amro': 'abn',
+                'asn': 'asn',
+                'bunq': 'bunq',
+                'knab': 'knab',
+                'sns': 'sns',
+                'triodos': 'triodos'
+            };
+            bankValue = filenameToCodeMap[filename] || 'rabobank';
+        }
+        const ibanValue = document.querySelectorAll('.locked-field-display .field-value')[1]?.textContent || '';
+        const accountHolderValue = document.querySelectorAll('.locked-field-display .field-value')[2]?.textContent || '';
+        // Replace Bank field with editable custom dropdown
+        const bankField = document.getElementById('bankField');
+        const bankNameMap = {
+            'rabobank': 'Rabobank',
+            'ing': 'ING Bank',
+            'abn': 'ABN AMRO',
+            'asn': 'ASN Bank',
+            'bunq': 'Bunq',
+            'knab': 'Knab',
+            'sns': 'SNS Bank',
+            'triodos': 'Triodos Bank'
+        };
+        const bankLogoMap = {
+            'rabobank': '/img/payment-providers/rabobank.png',
+            'ing': '/img/payment-providers/ing.png',
+            'abn': '/img/payment-providers/abn-amro.png',
+            'asn': '/img/payment-providers/asn.png',
+            'bunq': '/img/payment-providers/bunq.png',
+            'knab': '/img/payment-providers/knab.png',
+            'sns': '/img/payment-providers/sns.png',
+            'triodos': '/img/payment-providers/triodos.png'
+        };
+        // Store original data for comparison
+        originalSEPAData = {
+            bank: bankValue,
+            iban: ibanValue,
+            account_name: accountHolderValue
+        };
+        const currentBankName = bankNameMap[bankValue] || 'Rabobank';
+        const currentBankLogo = bankLogoMap[bankValue] || '/img/payment-providers/rabobank.png';
+        bankField.innerHTML = `
+            <select id="bankSelect" class="bank-select-hidden">
+                <option value="rabobank" data-logo="/img/payment-providers/rabobank.png" ${bankValue === 'rabobank' ? 'selected' : ''}>Rabobank</option>
+                <option value="ing" data-logo="/img/payment-providers/ing.png" ${bankValue === 'ing' ? 'selected' : ''}>ING Bank</option>
+                <option value="abn" data-logo="/img/payment-providers/abn-amro.png" ${bankValue === 'abn' ? 'selected' : ''}>ABN AMRO</option>
+                <option value="asn" data-logo="/img/payment-providers/asn.png" ${bankValue === 'asn' ? 'selected' : ''}>ASN Bank</option>
+                <option value="bunq" data-logo="/img/payment-providers/bunq.png" ${bankValue === 'bunq' ? 'selected' : ''}>Bunq</option>
+                <option value="knab" data-logo="/img/payment-providers/knab.png" ${bankValue === 'knab' ? 'selected' : ''}>Knab</option>
+                <option value="sns" data-logo="/img/payment-providers/sns.png" ${bankValue === 'sns' ? 'selected' : ''}>SNS Bank</option>
+                <option value="triodos" data-logo="/img/payment-providers/triodos.png" ${bankValue === 'triodos' ? 'selected' : ''}>Triodos Bank</option>
+            </select>
+            <div class="bank-select-wrapper">
+                <div class="bank-select-trigger" tabindex="0">
+                    <div class="bank-selected">
+                        <img class="bank-selected-logo" src="${currentBankLogo}" alt="${currentBankName}">
+                        <span class="bank-selected-text">${currentBankName}</span>
+                    </div>
+                    <svg class="bank-dropdown-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="bank-dropdown">
+                    <div class="bank-option" data-value="abn" data-logo="/img/payment-providers/abn-amro.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/abn-amro.png" alt="ABN AMRO">
+                        <span class="bank-option-text">ABN AMRO</span>
+                    </div>
+                    <div class="bank-option" data-value="asn" data-logo="/img/payment-providers/asn.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/asn.png" alt="ASN Bank">
+                        <span class="bank-option-text">ASN Bank</span>
+                    </div>
+                    <div class="bank-option" data-value="bunq" data-logo="/img/payment-providers/bunq.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/bunq.png" alt="Bunq">
+                        <span class="bank-option-text">Bunq</span>
+                    </div>
+                    <div class="bank-option" data-value="ing" data-logo="/img/payment-providers/ing.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/ing.png" alt="ING Bank">
+                        <span class="bank-option-text">ING Bank</span>
+                    </div>
+                    <div class="bank-option" data-value="knab" data-logo="/img/payment-providers/knab.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/knab.png" alt="Knab">
+                        <span class="bank-option-text">Knab</span>
+                    </div>
+                    <div class="bank-option" data-value="rabobank" data-logo="/img/payment-providers/rabobank.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/rabobank.png" alt="Rabobank">
+                        <span class="bank-option-text">Rabobank</span>
+                    </div>
+                    <div class="bank-option" data-value="sns" data-logo="/img/payment-providers/sns.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/sns.png" alt="SNS Bank">
+                        <span class="bank-option-text">SNS Bank</span>
+                    </div>
+                    <div class="bank-option" data-value="triodos" data-logo="/img/payment-providers/triodos.png">
+                        <img class="bank-option-logo" src="/img/payment-providers/triodos.png" alt="Triodos Bank">
+                        <span class="bank-option-text">Triodos Bank</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        // Re-initialize the custom dropdown
+        setTimeout(() => {
+            initCustomBankDropdown();
+            // Add change listeners to detect when user modifies bank details
+            if (typeof addChangeListeners === 'function') {
+                addChangeListeners();
+            }
+        }, 100);
+        // Replace IBAN field with editable input
+        const ibanField = document.getElementById('ibanField');
+        ibanField.innerHTML = `
+            <input type="text" id="iban" name="iban" placeholder="NL91 ABNA 0417 1643 00" autocomplete="off" data-lpignore="true" value="${formatIBAN(ibanValue)}" style="width: 100%; height: 48px; padding: 0 16px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 14px; margin-top: 4px; box-sizing: border-box;">
+        `;
+        // Add IBAN formatting to the new input
+        let ibanInput = document.getElementById('iban');
+        if (ibanInput) {
+            ibanInput.addEventListener('input', window.handleIBANInput);
+            ibanInput.addEventListener('paste', function(e) {
+                setTimeout(() => window.handleIBANInput(e), 10);
+            });
+        }
+        // Replace Account Holder field with editable input
+        const accountHolderField = document.getElementById('accountHolderField');
+        accountHolderField.innerHTML = `
+            <input type="text" id="accountHolder" name="accountHolder" placeholder="Jan de Vries" autocomplete="name" value="${accountHolderValue}" style="width: 100%; height: 48px; padding: 0 16px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; font-size: 14px; margin-top: 4px; box-sizing: border-box;">
+        `;
+        // Show the existing submit button
+        const submitButton = document.getElementById('sepaSubmitBtn');
+        if (submitButton) {
+            submitButton.style.display = 'block';
+        }
+        // Show the cancel button
+        const cancelButton = document.getElementById('sepaCancelButton');
+        if (cancelButton) {
+            cancelButton.classList.add('show');
+        }
+    }
+    window.editSEPAField = function(fieldType) {
+        // For now, just call editSEPA to restore the entire form
+        // In the future, we could implement individual field editing
+        window.editSEPA();
+    }
+
+
+    // Input formatting for IBAN (handled in DOMContentLoaded event)
+
+    // Use existing Mollie instance from payments.js
+    // Wait for Mollie to be initialized by payments.js
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1) Opvang van postMessage (nieuw tab/venster scenario)
+        window.addEventListener('message', (e) => {
+            if (e?.data?.type === 'mollie-consent-complete') {
+                handleConsentComplete();
+            }
+        });
+
+        // 2) Zelfde-tab scenario via URL param ?consent=complete
+        (function checkConsentParam() {
+            const u = new URL(window.location.href);
+            if (u.searchParams.get('consent') === 'complete') {
+                // Verwijder de param zónder reload
+                u.searchParams.delete('consent');
+                history.replaceState(null, '', u.toString());
+                handleConsentComplete();
+            }
+        })();
+
+        // Handle consent complete - no reload needed
+        async function handleConsentComplete() {
+            if (window.showNotification) {
+                window.showNotification('Betaalmethode succesvol toegevoegd', 'success');
+            }
+            // Hide SEPA consent block since mandate is now active
+            const sepaConsentBlock = document.querySelector('.sepa-consent');
+            if (sepaConsentBlock) {
+                sepaConsentBlock.style.display = 'none';
+            }
+            // Update UI zonder reload:
+            await refreshPaymentMethodsUI();
+            // Als user bezig was met top-up: hervat de flow (optioneel)
+            if (window.__pendingTopupAmount) {
+                startTopup(window.__pendingTopupAmount);
+                window.__pendingTopupAmount = null;
+            }
+        }
+
+        // Refresh payment methods UI without reload
+        async function refreshPaymentMethodsUI() {
+            try {
+                await loadPaymentMethodsForToggle();
+                // Re-apply SEPA consent checkbox state after UI refresh
+                setTimeout(() => {
+                    if (typeof applySepaConsent === 'function') {
+                        applySepaConsent();
+                    }
+                }, 100);
+            } catch (error) {
+            }
+        }
+
+        // Listen for balance updates from payment status checker
+        window.addEventListener('balanceUpdated', (event) => {
+            // Update balance display if it exists
+            const balanceElement = document.querySelector('.balance-display, .user-balance, [data-balance]');
+            if (balanceElement) {
+                balanceElement.textContent = `€${event.detail.newBalance}`;
+            }
+        });
+        // Check for success message from 3D Secure verification
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentSuccess = urlParams.get('payment_success');
+        const paymentMethod = urlParams.get('payment_method');
+        const topupSuccess = urlParams.get('topup_success');
+        // Credit card payment success handling removed - only SEPA automatic billing is used
+        // Topup success handling removed - only SEPA automatic billing is used
+        // Wait for the existing Mollie initialization to complete
+        const checkMollie = setInterval(() => {
+            if (typeof window.mollieInstance !== 'undefined' && window.mollieInstance) {
+                clearInterval(checkMollie);
+                mountMollieComponents();
+                // Load existing payment methods after Mollie is ready
+                loadPaymentMethodsForToggle();
+            }
+        }, 300);
+        // Also load payment methods immediately on page load
+        loadPaymentMethodsForToggle();
+    });
+
+    // Mount Mollie components using existing instance
+    function mountMollieComponents() {
+        try {
+            // Use the existing Mollie instance from payments.js
+            if (typeof window.mountMollieComponents === 'function') {
+                window.mountMollieComponents();
+            } else {
+            }
+        } catch (error) {
+        }
+    }
+
+    // Handle Mollie errors
+    function handleMollieError(event) {
+        const errorDiv = document.getElementById('card-errors');
+        if (event.error && errorDiv) {
+            errorDiv.textContent = event.error.message;
+            errorDiv.style.display = 'block';
+        } else if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    // Credit card submission function removed - only SEPA automatic billing is used
+
+    // Load payment methods when page loads
+
+    // Function to load existing payment methods and fill form
+    async function loadPaymentMethodsForToggle() {
+        try {
+            const response = await fetch('/api/payments/methods', {
+                method: 'GET',
+                credentials: 'include', // Include cookies for authentication
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to load payment methods: ${response.status} - ${errorText}`);
+            }
+            const data = await response.json();
+            if (data.paymentMethods && data.paymentMethods.length > 0) {
+                // Credit card handling removed - only SEPA automatic billing is used
+                const sepaMethod = data.paymentMethods.find(method => method.type === 'sepa');
+                if (sepaMethod) {
+                    fillSEPAForm(sepaMethod);
+                } else {
+                    showEmptySEPAForm();
+                }
+                // Hide skeleton loaders after data is loaded
+                setTimeout(() => {
+                    if (typeof window.hideSkeletonLoaders === 'function') {
+                        window.hideSkeletonLoaders();
+                    }
+                }, 500);
+            } else {
+                // Show empty form fields instead of loading spinners
+                showEmptySEPAForm();
+                // Hide skeleton loaders
+                setTimeout(() => {
+                    if (typeof window.hideSkeletonLoaders === 'function') {
+                        window.hideSkeletonLoaders();
+                    }
+                }, 500);
+            }
+        } catch (error) {
+            // Show empty form fields on error
+            showEmptySEPAForm();
+            // Hide skeleton loaders on error
+            setTimeout(() => {
+                if (typeof window.hideSkeletonLoaders === 'function') {
+                    window.hideSkeletonLoaders();
+                }
+            }, 500);
+        } finally {
+            // Ensure skeleton fields are always replaced
+            setTimeout(() => {
+                const bankField = document.getElementById('bankField');
+                if (bankField && bankField.querySelector('.skeleton-field')) {
+                    showEmptySEPAForm();
+                    // Hide skeleton loaders in fallback
+                    if (typeof window.hideSkeletonLoaders === 'function') {
+                        window.hideSkeletonLoaders();
+                    }
+                }
+            }, 100);
+        }
+    }
+    // Function to show empty SEPA form (no saved data)
+    function showEmptySEPAForm() {
+        // Show SEPA consent block and button for new mandate creation
+        const sepaConsentBlock = document.querySelector('.sepa-consent');
+        const sepaSubmitBtn = document.getElementById('sepaSubmitBtn');
+        if (sepaConsentBlock) {
+            sepaConsentBlock.style.display = 'block';
+        }
+        if (sepaSubmitBtn) {
+            // Only show button if there's no existing consent (new mandate)
+            const hasExistingConsent = sepaSubmitBtn.getAttribute('data-initial-consent') === 'true';
+            if (!hasExistingConsent) {
+                sepaSubmitBtn.style.display = 'block';
+            }
+        }
+        // Keep placeholder values instead of clearing them
+        const bankSelect = document.getElementById('bankSelect');
+        let ibanInput = document.getElementById('iban');
+        const accountHolderInput = document.getElementById('accountHolder');
+        if (bankSelect) bankSelect.value = 'rabobank';
+        if (ibanInput) ibanInput.value = 'NL42 RABO 0357 3846 44';
+        if (accountHolderInput) accountHolderInput.value = 'GrowSocial';
+        // Show the submit button
+        const submitButton = document.getElementById('sepaSubmitBtn');
+        if (submitButton) {
+            submitButton.style.display = 'block';
+            submitButton.innerHTML = 'Incasso Accepteren';
+        }
+    }
+    // Credit card form functions removed - only SEPA automatic billing is used
+
+
+
+    // Topup variables and event listeners removed - only SEPA automatic billing is used
+
+    // Topup functionality removed - only SEPA automatic billing is used
+
+    // Helper function to format amount
+    function formatAmount(value) {
+        return Number(value).toFixed(2);
+    }
+
+    // Topup functions removed - only SEPA automatic billing is used
+
+    // Topup confirmation modal removed - only SEPA automatic billing is used
+
+    // Payment polling function removed - only SEPA automatic billing is used
+</script>

@@ -1,0 +1,229 @@
+<!-- Page Header -->
+<div class="page-header">
+  <div>
+    <h1>Formulier editor</h1>
+    <p class="text-muted"><%= industry.name %></p>
+  </div>
+</div>
+
+<!-- Success/Error Messages -->
+<% if (saved) { %>
+  <div class="alert alert-success" id="successAlert">
+    <i class="fas fa-check-circle"></i> Formulier succesvol opgeslagen!
+  </div>
+<% } %>
+
+<% if (error) { %>
+  <div class="alert alert-error" id="errorAlert">
+    <i class="fas fa-exclamation-circle"></i> 
+    <% if (error === 'invalid_json') { %>
+      Ongeldige JSON. Controleer de syntax.
+    <% } else if (error === 'no_steps') { %>
+      Formulier moet minimaal één stap bevatten.
+    <% } else if (error === 'invalid_step') { %>
+      Elke stap moet een id en title hebben.
+    <% } else if (error === 'invalid_fields') { %>
+      Elke stap moet een fields array bevatten.
+    <% } else if (error === 'invalid_field') { %>
+      Elk veld moet een id en type hebben.
+    <% } else if (error === 'save_failed') { %>
+      Fout bij opslaan. Probeer het opnieuw.
+    <% } else { %>
+      Er is een fout opgetreden: <%= error %>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="form-builder-wrapper">
+  <!-- Top Toolbar for Field Types -->
+  <div class="form-builder-toolbar">
+    <div class="toolbar-section">
+      <span class="toolbar-label">Velden toevoegen:</span>
+      <div class="toolbar-buttons">
+        <button type="button" class="toolbar-btn" data-field-type="text" title="Tekstveld">
+          <i class="fas fa-font"></i>
+          <span>Tekst</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="email" title="E-mailadres">
+          <i class="fas fa-envelope"></i>
+          <span>Email</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="tel" title="Telefoonnummer">
+          <i class="fas fa-phone"></i>
+          <span>Telefoon</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="textarea" title="Tekstvak">
+          <i class="fas fa-align-left"></i>
+          <span>Tekstvak</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="number" title="Getal">
+          <i class="fas fa-hashtag"></i>
+          <span>Getal</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="select" title="Dropdown">
+          <i class="fas fa-chevron-down"></i>
+          <span>Dropdown</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="radio" title="Keuzerondjes">
+          <i class="fas fa-circle-dot"></i>
+          <span>Radio</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="checkbox" title="Checkbox">
+          <i class="fas fa-square-check"></i>
+          <span>Checkbox</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="yesno" title="Ja/Nee">
+          <i class="fas fa-toggle-on"></i>
+          <span>Ja/Nee</span>
+        </button>
+        <button type="button" class="toolbar-btn" data-field-type="heading" title="Koptekst">
+          <i class="fas fa-heading"></i>
+          <span>Koptekst</span>
+        </button>
+      </div>
+    </div>
+    
+    <div class="toolbar-actions">
+      <div class="device-preview-buttons">
+        <button type="button" class="device-btn active" data-device="desktop" title="Desktop weergave">
+          <i class="fas fa-desktop"></i>
+        </button>
+        <button type="button" class="device-btn" data-device="tablet" title="Tablet weergave">
+          <i class="fas fa-tablet-alt"></i>
+        </button>
+        <button type="button" class="device-btn" data-device="mobile" title="Mobiele weergave">
+          <i class="fas fa-mobile-alt"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three Column Layout -->
+  <div class="form-builder-layout">
+    <!-- LEFT: Collapsible Steps Sidebar -->
+    <div class="form-builder-steps-sidebar" id="stepsSidebar">
+      <div class="steps-sidebar-header">
+        <h3>
+          <i class="fas fa-layer-group"></i>
+          Formulier stappen
+        </h3>
+        <button type="button" id="toggleStepsSidebarBtn" class="btn-icon-small" title="Sidebar verbergen">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+      </div>
+      
+      <div class="steps-sidebar-list" id="stepsList">
+        <!-- Step items will be rendered here by JS -->
+      </div>
+      
+      <div class="steps-sidebar-footer">
+        <button type="button" id="addStepBtn" class="btn-add-step">
+          <i class="fas fa-plus"></i>
+          <span>Nieuwe stap</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- CENTER: Preview Area -->
+    <div class="form-builder-center-column">
+      <!-- AI Suggestions Section -->
+      <div class="ai-suggestions-section">
+        <div class="ai-suggestions-header">
+          <div class="header-content">
+            <h3>
+              <i class="fas fa-sparkles"></i>
+              AI formulier suggesties
+            </h3>
+            <p>Klik op een suggestie om automatisch het formulier te genereren</p>
+          </div>
+        </div>
+        
+        <div class="ai-suggestions-card-modern">
+          <div class="ai-card-content">
+            <div class="ai-card-icon">
+              <div class="trust-score-ai-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                  <path d="M20 3v4"></path>
+                  <path d="M22 5h-4"></path>
+                  <path d="M4 17v2"></path>
+                  <path d="M5 18H3"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="ai-card-text">
+              <h3>AI Formulier Suggesties</h3>
+              <p>Laat AI een compleet formulier genereren op basis van de branche. Het systeem analyseert automatisch en genereert relevante vragen.</p>
+              <button type="button" id="aiGenerateBtn" class="ai-generate-btn">
+                <i class="fas fa-sparkles"></i>
+                Genereer met AI
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="live-preview-section">
+      <div class="preview-header">
+        <div class="preview-title">
+          <i class="fas fa-eye"></i>
+          Live preview
+        </div>
+        <div class="preview-actions">
+          <button type="button" class="preview-action-btn" id="refreshPreviewBtn" title="Ververs preview">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <button type="button" class="preview-action-btn" id="fullscreenPreviewBtn" title="Volledig scherm">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="preview-viewport" id="previewViewport" data-device="desktop">
+        <div class="preview-container" id="previewContainer">
+          <!-- Preview will be rendered here by JS -->
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- RIGHT: Slide-in Inspector Panel -->
+    <div class="form-builder-inspector-panel" id="inspectorPanel">
+      <div class="inspector-header">
+        <div class="inspector-title">
+          <i class="fas fa-sliders-h"></i>
+          <span>Veld eigenschappen</span>
+        </div>
+        <button type="button" class="inspector-close-btn" id="closeInspectorBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="inspector-content" id="fieldInspector">
+        <!-- Field properties will be rendered here by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Button (Fixed at bottom right) -->
+  <div class="form-builder-save-button">
+    <button type="button" id="saveBtn" class="btn-modern btn-primary">
+      <i class="fas fa-save"></i> Opslaan
+    </button>
+  </div>
+</div>
+
+<!-- Bootstrap Data -->
+<script>
+  window.FORM_BUILDER_DATA = {
+    industryId: <%= industry.id %>,
+    industryName: "<%= industry.name %>",
+    slug: "<%= industry.slug || '' %>",
+    formConfig: <%- JSON.stringify(formConfig || null) %>,
+    existingTemplate: <%- JSON.stringify(existingTemplate || null) %>
+  };
+</script>
+
+<!-- Form Builder JS -->
+<script src="/js/admin/form-builder.js"></script>
+

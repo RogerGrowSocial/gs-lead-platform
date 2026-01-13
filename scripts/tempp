@@ -1,0 +1,1063 @@
+// === Lammy Yarns: minimal category data provider (normalized) ===
+// Paste in Code Snippets (run everywhere) or your child theme's functions.php
+
+if (!defined('ABSPATH')) exit;
+
+add_action('wp_enqueue_scripts', function () {
+    if (!function_exists('is_product_category') || !is_product_category()) return;
+
+    // Ensure jQuery + Woo scripts are present for AJAX add-to-cart
+    wp_enqueue_script('jquery');
+    if (wp_script_is('wc-add-to-cart', 'registered') || wp_script_is('wc-add-to-cart', 'enqueued')) {
+        wp_enqueue_script('wc-add-to-cart');
+    }
+
+    $term = get_queried_object();
+    if (!($term instanceof WP_Term) || $term->taxonomy !== 'product_cat') return;
+
+    $term_id = $term->term_id;
+    $slug    = $term->slug;
+    $parent  = $term->parent ? get_term($term->parent, 'product_cat') : null;
+
+    // Category image
+    $thumb_id  = get_term_meta($term_id, 'thumbnail_id', true);
+    $image_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'large') : '';
+
+    // Query products (include children)
+    $products_out = [];
+    $cat_specs    = [
+        'gewicht' => '', 'lengte' => '', 'materiaal' => '', 'naalddikte' => '',
+        'prijs_per_bol' => '', 'prijs_10' => '', 'prijs_per_kg' => ''
+    ];
+
+    if (function_exists('wc_get_products')) {
+        $wc_products = wc_get_products([
+            'status'  => 'publish',
+            'limit'   => -1,
+            'orderby' => 'menu_order',
+            'order'   => 'ASC',
+            'return'  => 'objects',
+            'tax_query' => [[
+                'taxonomy' => 'product_cat',
+                'field'    => 'term_id',
+                'terms'    => $term_id,
+                'include_children' => true,
+            ]],
+        ]);
+
+        foreach ($wc_products as $p) {
+            /** @var WC_Product $p */
+            $pid   = $p->get_id();
+            // Get full image URL, ensure it's not a lazy-loaded placeholder
+            $img   = get_the_post_thumbnail_url($pid, 'medium');
+            if (!$img) {
+                $img = get_the_post_thumbnail_url($pid, 'full');
+            }
+            if (!$img) {
+                $img = wc_placeholder_img_src('woocommerce_thumbnail');
+            }
+            // Ensure we have a full URL, not a data attribute
+            $img = esc_url_raw($img);
+            $price = $p->get_price();
+
+            // --- RAW custom meta ---
+            $raw_gewicht = trim((string) get_post_meta($pid, 'product-gewicht', true));      // e.g. "50"
+            $raw_lengte  = trim((string) get_post_meta($pid, 'product-lengte', true));       // e.g. "125"
+            $raw_naald   = trim((string) get_post_meta($pid, 'product-naalddikte', true));   // e.g. "3,5 - 4"
+            $materials   = [];
+            for ($i = 1; $i <= 5; $i++) {
+                $v = trim((string) get_post_meta($pid, "product-percentage-materiaal{$i}", true));
+                if ($v !== '') $materials[] = $v;
+            }
+
+            // --- Normalize display values ---
+            $gewicht    = $raw_gewicht !== '' && !preg_match('/\b(g|gram)\b/i', $raw_gewicht) ? $raw_gewicht . 'g' : $raw_gewicht;
+            $lengte     = $raw_lengte  !== '' && !preg_match('/\b(m|meter)\b/i', $raw_lengte) ? $raw_lengte . ' m' : $raw_lengte;
+            $naalddikte = $raw_naald   !== '' && !preg_match('/\bmm\b/i', $raw_naald)         ? $raw_naald . ' mm' : $raw_naald;
+            $materiaal  = $materials ? implode(' • ', $materials) : '';
+
+            // Prices from meta (formatted as Woo HTML). Fallback to product price.
+            $m_bol = get_post_meta($pid, 'product-prijs-per-bol', true);
+            $m_10  = get_post_meta($pid, 'product-prijs-10-bollen', true);
+            $m_kg  = get_post_meta($pid, 'product-prijs-per-kg', true);
+
+            $price_html       = wc_price($price);
+            $prijs_bol_html   = ($m_bol !== '' ? wc_price((float) str_replace(',', '.', $m_bol)) : $price_html);
+            $prijs_10_html    = ($m_10  !== '' ? wc_price((float) str_replace(',', '.', $m_10))  : '');
+            $prijs_perkg_html = ($m_kg  !== '' ? wc_price((float) str_replace(',', '.', $m_kg))  : '');
+
+            $meta_str = implode(' • ', array_filter([$gewicht, $lengte, $materiaal]));
+
+            // --- Product payload ---
+            $products_out[] = [
+                'id'          => $pid,
+                'name'        => $p->get_name(),
+                'price_html'  => $price_html,
+                'image'       => $img,
+                'meta'        => $meta_str,
+                'add_to_cart' => [
+                    'product_id'     => $pid,
+                    'is_purchasable' => $p->is_purchasable(),
+                ],
+                'raw' => [
+                    'gewicht'        => $gewicht,
+                    'lengte'         => $lengte,
+                    'naalddikte'     => $naalddikte,
+                    'materiaal'      => $materiaal,
+                    'prijs_bol_html' => $prijs_bol_html,
+                    'prijs_10_html'  => $prijs_10_html,
+                    'prijs_kg_html'  => $prijs_perkg_html,
+                ],
+            ];
+
+            // Fill category specs (first product with values wins)
+            if (!$cat_specs['gewicht']    && $gewicht)        $cat_specs['gewicht']     = $gewicht;
+            if (!$cat_specs['lengte']     && $lengte)         $cat_specs['lengte']      = $lengte;
+            if (!$cat_specs['materiaal']  && $materiaal)      $cat_specs['materiaal']   = $materiaal;
+            if (!$cat_specs['naalddikte'] && $naalddikte)     $cat_specs['naalddikte']  = $naalddikte;
+            if (!$cat_specs['prijs_per_bol'] && $prijs_bol_html)   $cat_specs['prijs_per_bol'] = $prijs_bol_html;
+            if (!$cat_specs['prijs_10']      && $prijs_10_html)    $cat_specs['prijs_10']      = $prijs_10_html;
+            if (!$cat_specs['prijs_per_kg']  && $prijs_perkg_html) $cat_specs['prijs_per_kg']  = $prijs_perkg_html;
+        }
+    }
+
+    // Fallbacks when no real products matched
+    if (!$products_out) {
+        if (strpos($slug, 'chenille') !== false) {
+            $defaults = [
+                'gewicht' => '50g', 'lengte' => '140 m', 'materiaal' => '100% Polyester', 'naalddikte' => '3.5–4.5 mm',
+                'prijs_per_bol' => wc_price(3.95), 'prijs_10' => wc_price(35.55), 'prijs_per_kg' => wc_price(79.00)
+            ];
+            $samples = [
+                ['name'=>'001','price'=>3.95],['name'=>'002','price'=>3.95],['name'=>'003','price'=>3.95],
+                ['name'=>'004','price'=>3.95],['name'=>'005','price'=>3.95],['name'=>'006','price'=>3.95],
+            ];
+        } elseif (strpos($slug, 'alaska') !== false) {
+            $defaults = [
+                'gewicht' => '50g', 'lengte' => '125 m', 'materiaal' => '100% Acryl', 'naalddikte' => '4–5 mm',
+                'prijs_per_bol' => wc_price(5.99), 'prijs_10' => wc_price(54.99), 'prijs_per_kg' => wc_price(119.80)
+            ];
+            $samples = [
+                ['name'=>'011','price'=>5.99],['name'=>'043','price'=>5.99],['name'=>'284','price'=>5.99],
+                ['name'=>'156','price'=>5.99],['name'=>'092','price'=>5.99],['name'=>'217','price'=>5.99],
+            ];
+        } else {
+            $defaults = [
+                'gewicht' => '50g', 'lengte' => '120 m', 'materiaal' => '100% Katoen', 'naalddikte' => '4 mm',
+                'prijs_per_bol' => wc_price(4.99), 'prijs_10' => wc_price(44.99), 'prijs_per_kg' => wc_price(99.80)
+            ];
+            $samples = [
+                ['name'=>'001','price'=>4.99],['name'=>'002','price'=>4.99],['name'=>'003','price'=>4.99],
+                ['name'=>'004','price'=>4.99],['name'=>'005','price'=>4.99],['name'=>'006','price'=>4.99],
+            ];
+        }
+
+        foreach ($samples as $i=>$s) {
+            $products_out[] = [
+                'id'         => 1000 + $i,
+                'name'       => $s['name'],
+                'price_html' => wc_price($s['price']),
+                'image'      => wc_placeholder_img_src('woocommerce_thumbnail'),
+                'meta'       => implode(' • ', [$defaults['gewicht'], $defaults['lengte'], $defaults['materiaal']]),
+                'add_to_cart'=> ['product_id'=>0,'is_purchasable'=>false],
+                'raw'        => [
+                    'gewicht'        => $defaults['gewicht'],
+                    'lengte'         => $defaults['lengte'],
+                    'naalddikte'     => $defaults['naalddikte'],
+                    'materiaal'      => $defaults['materiaal'],
+                    'prijs_bol_html' => $defaults['prijs_per_bol'],
+                    'prijs_10_html'  => $defaults['prijs_10'],
+                    'prijs_kg_html'  => $defaults['prijs_per_kg'],
+                ],
+            ];
+        }
+
+        foreach (['gewicht','lengte','materiaal','naalddikte'] as $k) {
+            if (!$cat_specs[$k]) $cat_specs[$k] = $defaults[$k];
+        }
+        if (!$cat_specs['prijs_per_bol']) $cat_specs['prijs_per_bol'] = $defaults['prijs_per_bol'];
+        if (!$cat_specs['prijs_10'])      $cat_specs['prijs_10']      = $defaults['prijs_10'];
+        if (!$cat_specs['prijs_per_kg'])  $cat_specs['prijs_per_kg']  = $defaults['prijs_per_kg'];
+    }
+
+    // Final payload (use these on the front-end; insert price HTML with innerHTML)
+    $payload = [
+        'category' => [
+            'id'         => $term_id,
+            'name'       => $term->name,
+            'slug'       => $slug,
+            'parentName' => $parent ? $parent->name : '',
+            'image'      => $image_url,
+            'specs'      => [
+                'gewicht'       => $cat_specs['gewicht']      ?: '50g',
+                'lengte'        => $cat_specs['lengte']       ?: '125 m',
+                'materiaal'     => $cat_specs['materiaal']    ?: '100% Acryl',
+                'naalddikte'    => $cat_specs['naalddikte']   ?: '4–5 mm',
+                'prijs_per_bol' => $cat_specs['prijs_per_bol']?: wc_price(4.99),
+                'prijs_10'      => $cat_specs['prijs_10']     ?: wc_price(44.99),
+                'prijs_per_kg'  => $cat_specs['prijs_per_kg'] ?: wc_price(99.80),
+            ],
+        ],
+        'products' => $products_out,
+    ];
+
+    // Expose data
+    $inline = 'window.lammyYarnsData = ' . wp_json_encode($payload) . ';';
+    wp_add_inline_script('jquery', $inline, 'after');
+});
+
+
+// === Lammy Yarns: category data provider (term meta first, robust fallbacks, gallery, price gating) ===
+if (!defined('ABSPATH')) exit;
+
+add_action('wp_enqueue_scripts', function () {
+    if (!function_exists('is_product_category') || !is_product_category()) return;
+
+    wp_enqueue_script('jquery');
+    if (wp_script_is('wc-add-to-cart', 'registered') || wp_script_is('wc-add-to-cart', 'enqueued')) {
+        wp_enqueue_script('wc-add-to-cart');
+    }
+
+    $term = get_queried_object();
+    if (!($term instanceof WP_Term) || $term->taxonomy !== 'product_cat') return;
+
+    $term_id = $term->term_id;
+    $slug    = $term->slug;
+    $parent  = $term->parent ? get_term($term->parent, 'product_cat') : null;
+
+    // Category thumbnail
+    $thumb_id  = get_term_meta($term_id, 'thumbnail_id', true);
+    $image_url = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'large') : '';
+
+    $show_prices = is_user_logged_in();
+
+    $fmt_price = function($val) {
+        if ($val === '' || $val === null) return '';
+        $num = (float) str_replace(',', '.', $val);
+        return wc_price($num);
+    };
+
+    // Normalize JetEngine gallery field (can be IDs/arrays/URLs/comma-list)
+    $normalize_gallery = function($raw) {
+        $urls = [];
+        if (is_array($raw)) {
+            foreach ($raw as $item) {
+                if (is_numeric($item)) {
+                    $u = wp_get_attachment_image_url((int)$item, 'large'); if ($u) $urls[] = $u;
+                } elseif (is_array($item) && !empty($item['id'])) {
+                    $u = wp_get_attachment_image_url((int)$item['id'], 'large'); if ($u) $urls[] = $u;
+                } elseif (is_array($item) && !empty($item['url'])) {
+                    $urls[] = esc_url_raw($item['url']);
+                } elseif (is_string($item) && filter_var($item, FILTER_VALIDATE_URL)) {
+                    $urls[] = esc_url_raw($item);
+                }
+            }
+        } elseif (is_string($raw) && $raw !== '') {
+            foreach (array_map('trim', explode(',', $raw)) as $p) {
+                if (is_numeric($p)) {
+                    $u = wp_get_attachment_image_url((int)$p, 'large'); if ($u) $urls[] = $u;
+                } elseif (filter_var($p, FILTER_VALIDATE_URL)) {
+                    $urls[] = esc_url_raw($p);
+                }
+            }
+        }
+        $urls = array_values(array_unique(array_filter($urls)));
+        return array_slice($urls, 0, 12);
+    };
+
+    /* =========================================================
+     * 1) TERM META (JetEngine) — primary source
+     * ========================================================= */
+    // Ruwe term meta (zonder eenheden)
+    $term_weight_raw    = trim((string) get_term_meta($term_id, 'product-gewicht', true));          // bv. "50" of "100"
+    $term_price_bol_raw = trim((string) get_term_meta($term_id, 'product-prijs-per-bol', true));    // bv. "2,09"
+    $term_price_kg_raw  = trim((string) get_term_meta($term_id, 'product-prijs-per-kg', true));     // optioneel
+    $term_aantal_bollen = trim((string) get_term_meta($term_id, 'aantal-bollen', true));            // bv. "10"
+
+    // Numerieke varianten
+    $weight_g_num      = $term_weight_raw !== ''    ? (float) str_replace(',', '.', $term_weight_raw)      : 0.0;
+    $price_per_bol_num = $term_price_bol_raw !== '' ? (float) str_replace(',', '.', $term_price_bol_raw)   : 0.0;
+    $price_per_kg_num  = $term_price_kg_raw !== ''  ? (float) str_replace(',', '.', $term_price_kg_raw)    : 0.0;
+    $balls_per_pack    = $term_aantal_bollen !== '' ? (int) $term_aantal_bollen                            : 10; // default 10
+
+    // Term specs (met eenheden voor display)
+    $term_specs = [
+        'gewicht'    => $term_weight_raw,
+        'lengte'     => trim((string) get_term_meta($term_id, 'product-lengte', true)),
+        'naalddikte' => trim((string) get_term_meta($term_id, 'product-naalddikte', true)),
+    ];
+
+    // Materials 1..5
+    $tmaterials = [];
+    for ($i=1; $i<=5; $i++) {
+        $v = trim((string) get_term_meta($term_id, "product-percentage-materiaal{$i}", true));
+        if ($v !== '') $tmaterials[] = $v;
+    }
+    $term_specs['materiaal'] = $tmaterials ? implode(' • ', $tmaterials) : '';
+
+    // Prices (term-level)
+    $term_prices = [
+        'prijs_per_bol' => $term_price_bol_raw,
+        'prijs_10'      => trim((string) get_term_meta($term_id, 'product-prijs-10-bollen', true)),
+        'prijs_per_kg'  => $term_price_kg_raw,
+    ];
+
+    // Normalize units for term specs (alleen voor display)
+    if ($term_specs['gewicht'] !== '' && !preg_match('/\b(g|gram)\b/i', $term_specs['gewicht']))    $term_specs['gewicht']    .= 'g';
+    if ($term_specs['lengte']  !== '' && !preg_match('/\b(m|meter)\b/i', $term_specs['lengte']))    $term_specs['lengte']     .= ' m';
+    if ($term_specs['naalddikte'] !== '' && !preg_match('/\bmm\b/i', $term_specs['naalddikte']))    $term_specs['naalddikte'] .= ' mm';
+
+    // Category-level gallery (extra-foto)
+    $term_gallery_raw = get_term_meta($term_id, 'extra-foto', true);
+    $hero_gallery = $normalize_gallery($term_gallery_raw);
+
+    /* =========================================================
+     * 2) PRODUCTS — secondary source + list render
+     * ========================================================= */
+    $products_out = [];
+    $tally = [
+        'gewicht'=>[],'lengte'=>[],'materiaal'=>[],'naalddikte'=>[],
+        'prijs_per_bol'=>[],'prijs_10'=>[],'prijs_per_kg'=>[]
+    ];
+
+    if (function_exists('wc_get_products')) {
+        $wc_products = wc_get_products([
+            'status'=>'publish','limit'=>-1,'orderby'=>'menu_order','order'=>'ASC','return'=>'objects',
+            'tax_query'=>[[ 'taxonomy'=>'product_cat','field'=>'term_id','terms'=>$term_id,'include_children'=>true ]]
+        ]);
+
+        foreach ($wc_products as $p) {
+            /** @var WC_Product $p */
+            $pid   = $p->get_id();
+            // Get full image URL, ensure it's not a lazy-loaded placeholder
+            $img   = get_the_post_thumbnail_url($pid, 'medium');
+            if (!$img) {
+                $img = get_the_post_thumbnail_url($pid, 'full');
+            }
+            if (!$img) {
+                $img = wc_placeholder_img_src('woocommerce_thumbnail');
+            }
+            // Ensure we have a full URL, not a data attribute
+            $img = esc_url_raw($img);
+            $price = $p->get_price();
+
+            // PRODUCT META (for tallies/card meta)
+            $raw_gewicht = trim((string) get_post_meta($pid, 'product-gewicht', true));
+            $raw_lengte  = trim((string) get_post_meta($pid, 'product-lengte', true));
+            $raw_naald   = trim((string) get_post_meta($pid, 'product-naalddikte', true));
+
+            $pmats = [];
+            for ($i=1; $i<=5; $i++) {
+                $v = trim((string) get_post_meta($pid, "product-percentage-materiaal{$i}", true));
+                if ($v !== '') $pmats[] = $v;
+            }
+
+            $gewicht    = $raw_gewicht !== '' && !preg_match('/\b(g|gram)\b/i', $raw_gewicht) ? $raw_gewicht.'g'   : $raw_gewicht;
+            $lengte     = $raw_lengte  !== '' && !preg_match('/\b(m|meter)\b/i', $raw_lengte)  ? $raw_lengte.' m'  : $raw_lengte;
+            $naalddikte = $raw_naald   !== '' && !preg_match('/\bmm\b/i', $raw_naald)          ? $raw_naald.' mm' : $raw_naald;
+            $materiaal  = $pmats ? implode(' • ', $pmats) : '';
+
+            $m_bol = get_post_meta($pid, 'product-prijs-per-bol', true);
+            $m_10  = get_post_meta($pid, 'product-prijs-10-bollen', true);
+            $m_kg  = get_post_meta($pid, 'product-prijs-per-kg', true);
+
+            $price_html       = $show_prices ? wc_price($price) : '';
+            $prijs_bol_html   = $show_prices ? ($m_bol !== '' ? $fmt_price($m_bol) : $price_html) : '';
+            $prijs_10_html    = $show_prices ? ($m_10  !== '' ? $fmt_price($m_10)  : '') : '';
+            $prijs_perkg_html = $show_prices ? ($m_kg  !== '' ? $fmt_price($m_kg)  : '') : '';
+
+            $meta_str = implode(' • ', array_filter([$gewicht, $lengte, $materiaal]));
+
+            $products_out[] = [
+                'id'=>$pid,'name'=>$p->get_name(),'price_html'=>$price_html,'image'=>$img,'meta'=>$meta_str,
+                'add_to_cart'=>['product_id'=>$pid,'is_purchasable'=>$p->is_purchasable()],
+                'raw'=>[
+                    'gewicht'=>$gewicht,'lengte'=>$lengte,'naalddikte'=>$naalddikte,'materiaal'=>$materiaal,
+                    'prijs_bol_html'=>$prijs_bol_html,'prijs_10_html'=>$prijs_10_html,'prijs_kg_html'=>$prijs_perkg_html,
+                ],
+            ];
+
+            foreach ([
+                'gewicht'=>$gewicht,'lengte'=>$lengte,'materiaal'=>$materiaal,'naalddikte'=>$naalddikte,
+                'prijs_per_bol'=>$prijs_bol_html,'prijs_10'=>$prijs_10_html,'prijs_per_kg'=>$prijs_perkg_html
+            ] as $k=>$v) {
+                if ($v !== '') { $tally[$k][$v] = ($tally[$k][$v] ?? 0) + 1; }
+            }
+        }
+    }
+
+    // If no term specs, pick the most common product values
+    $pick_most_common = function($arr){ arsort($arr); $k = array_key_first($arr); return $k ?: ''; };
+
+    $cat_specs = [
+        'gewicht'    => $term_specs['gewicht']    ?: (!empty($tally['gewicht'])    ? $pick_most_common($tally['gewicht'])    : ''),
+        'lengte'     => $term_specs['lengte']     ?: (!empty($tally['lengte'])     ? $pick_most_common($tally['lengte'])     : ''),
+        'materiaal'  => $term_specs['materiaal']  ?: (!empty($tally['materiaal'])  ? $pick_most_common($tally['materiaal'])  : ''),
+        'naalddikte' => $term_specs['naalddikte'] ?: (!empty($tally['naalddikte']) ? $pick_most_common($tally['naalddikte']) : ''),
+        'prijs_per_bol' => $show_prices ? (
+            $term_prices['prijs_per_bol'] !== '' ? $fmt_price($term_prices['prijs_per_bol']) :
+            (!empty($tally['prijs_per_bol']) ? $pick_most_common($tally['prijs_per_bol']) : '')
+        ) : '',
+        'prijs_10'      => $show_prices ? (
+            $term_prices['prijs_10']      !== '' ? $fmt_price($term_prices['prijs_10'])      :
+            (!empty($tally['prijs_10'])      ? $pick_most_common($tally['prijs_10'])      : '')
+        ) : '',
+        'prijs_per_kg'  => $show_prices ? (
+            $term_prices['prijs_per_kg']  !== '' ? $fmt_price($term_prices['prijs_per_kg'])  :
+            (!empty($tally['prijs_per_kg'])  ? $pick_most_common($tally['prijs_per_kg'])  : '')
+        ) : '',
+    ];
+
+    /* =========================================================
+     * 3) Dynamische fallback: prijs_10 en prijs_per_kg
+     *    op basis van gewicht & aantal bollen
+     * ========================================================= */
+    if ($show_prices && $price_per_bol_num > 0) {
+
+        // Fallback voor prijs_10 (of wat je maar invult bij 'aantal-bollen')
+        if ($cat_specs['prijs_10'] === '' && $balls_per_pack > 0) {
+            $calc_pack_price = $price_per_bol_num * $balls_per_pack;
+            $cat_specs['prijs_10'] = $fmt_price($calc_pack_price);
+        }
+
+        // Fallback voor prijs_per_kg als niet ingevuld
+        if ($cat_specs['prijs_per_kg'] === '' && $weight_g_num > 0) {
+            // prijs_per_bol / (gewicht in kg)
+            $kg = $weight_g_num / 1000.0;
+            if ($kg > 0) {
+                $calc_price_kg = $price_per_bol_num / $kg;
+                $cat_specs['prijs_per_kg'] = $fmt_price($calc_price_kg);
+            }
+        }
+    }
+
+    // Fallback samples if no products at all
+    if (!$products_out) {
+        $defaults = [
+            'gewicht'=>'50g','lengte'=>'120 m','materiaal'=>'100% Katoen','naalddikte'=>'4 mm',
+            'prijs_per_bol'=>$show_prices?wc_price(4.99):'',
+            'prijs_10'=>$show_prices?wc_price(44.99):'',
+            'prijs_per_kg'=>$show_prices?wc_price(99.80):''
+        ];
+        $samples = [['name'=>'001','price'=>4.99],['name'=>'002','price'=>4.99],['name'=>'003','price'=>4.99]];
+        foreach ($samples as $i=>$s) {
+            $products_out[] = [
+                'id'=>1000+$i,'name'=>$s['name'],'price_html'=>$show_prices?wc_price($s['price']):'',
+                'image'=>wc_placeholder_img_src('woocommerce_thumbnail'),
+                'meta'=>implode(' • ',[$defaults['gewicht'],$defaults['lengte'],$defaults['materiaal']]),
+                'add_to_cart'=>['product_id'=>0,'is_purchasable'=>false],
+            ];
+        }
+        foreach ($defaults as $k=>$v){ if ($cat_specs[$k]==='') $cat_specs[$k]=$v; }
+
+        // ook voor calc-fallback
+        if ($weight_g_num <= 0)      $weight_g_num      = 50;
+        if ($balls_per_pack <= 0)    $balls_per_pack    = 10;
+        if ($price_per_bol_num <= 0) $price_per_bol_num = 4.99;
+    }
+
+    $payload = [
+        'show_prices' => (bool) $show_prices,
+        'category' => [
+            'id'=>$term_id,
+            'name'=>$term->name,
+            'slug'=>$slug,
+            'parentName'=>$parent ? $parent->name : '',
+            'image'=>$image_url,
+            'hero' => [
+                'image'=>$image_url,
+                'gallery'=>$hero_gallery, // category-level gallery
+            ],
+            'specs'=>$cat_specs,
+            'calc' => [
+                'weight_g'          => $weight_g_num,
+                'balls_per_pack'    => $balls_per_pack,
+                'price_per_bol_num' => $price_per_bol_num,
+                'price_per_kg_num'  => $price_per_kg_num,
+            ],
+        ],
+        'products' => $products_out,
+    ];
+
+    wp_add_inline_script('jquery', 'window.lammyYarnsData = ' . wp_json_encode($payload) . ';', 'after');
+});
+
+
+/**
+ * Lammy Yarns — Combined:
+ * 1) AJAX add-to-cart + fragment updates (.cart-count)
+ * 2) Dynamic categories sidebar shortcode [lammy_categories_sidebar]
+ * 3) Parent (root) product category label on cards
+ */
+
+/* =========================================================
+ * 1) AJAX ADD-TO-CART (front-end inline script + fragments)
+ *    - correcte Woo dependencies
+ *    - betrouwbare Woo AJAX endpoints
+ *    - netjes fallback naar GET
+ * ========================================================= */
+add_action('wp_enqueue_scripts', function () {
+    if ( ! class_exists('WooCommerce') ) return;
+
+    // Zorg dat Woo scripts er zijn en dat ons script NA Woo laadt
+    wp_enqueue_script('jquery');
+    wp_enqueue_script('wc-add-to-cart');
+    wp_enqueue_script('wc-cart-fragments');
+
+    wp_register_script(
+        'lammy-cat-addtocart',
+        '', // inline
+        ['jquery','wc-add-to-cart','wc-cart-fragments'],
+        null,
+        true
+    );
+    wp_enqueue_script('lammy-cat-addtocart');
+
+    // Betrouwbare endpoints via Woo zelf
+    if ( class_exists('WC_AJAX') ) {
+        $ajax_add  = \WC_AJAX::get_endpoint('add_to_cart');
+        $ajax_frag = \WC_AJAX::get_endpoint('get_refreshed_fragments');
+    } else {
+        $ajax_add  = home_url('/?wc-ajax=add_to_cart');
+        $ajax_frag = home_url('/?wc-ajax=get_refreshed_fragments');
+    }
+
+    wp_localize_script('lammy-cat-addtocart', 'lammyAjax', [
+        'add_to_cart'            => esc_url_raw($ajax_add),
+        'get_refreshed_fragments'=> esc_url_raw($ajax_frag),
+        'added_msg'              => __('toegevoegd aan winkelwagen', 'woocommerce'),
+    ]);
+
+    $js = <<<'JS'
+(function(){
+  function applyFragments(fragments){
+    try{
+      if (!fragments) return;
+      if (window.jQuery){
+        jQuery.each(fragments, function(selector, html){
+          var $el = jQuery(selector);
+          if ($el.length) $el.replaceWith(html);
+        });
+        jQuery(document.body).trigger('wc_fragment_refresh');
+      } else {
+        Object.keys(fragments).forEach(function(selector){
+          var el = document.querySelector(selector);
+          if (!el) return;
+          var wrap = document.createElement('div');
+          wrap.innerHTML = fragments[selector];
+          if (wrap.firstElementChild) el.replaceWith(wrap.firstElementChild);
+        });
+      }
+    } catch(e){ console.warn('applyFragments failed', e); }
+  }
+
+  async function refreshFragments(){
+    try{
+      const res  = await fetch(lammyAjax.get_refreshed_fragments, {
+        method:'POST',
+        credentials:'same-origin',
+        headers:{ 'X-Requested-With':'XMLHttpRequest' }
+      });
+      const data = await res.json().catch(()=>({}));
+      if (data && data.fragments) applyFragments(data.fragments);
+    } catch(e){ console.warn('refreshFragments failed', e); }
+  }
+
+  function toast(msg, ok){
+    var n = document.createElement('div');
+    n.className = 'cart-notification';
+    n.style.background = ok ? '#10b981' : '#ef4444';
+    n.innerHTML = '<i class="fas '+(ok?'fa-check-circle':'fa-times-circle')+'"></i><span>'+msg+'</span>';
+    document.body.appendChild(n);
+    setTimeout(function(){ n.remove(); }, 3000);
+  }
+
+  function setBusy(btn){
+    if (!btn) return;
+    btn.dataset._orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Toevoegen...</span>';
+  }
+  function setDone(btn, ok){
+    if (!btn) return;
+    btn.innerHTML = ok ? '<i class="fas fa-check"></i><span>Toegevoegd!</span>' : '<i class="fas fa-times"></i><span>Mislukt</span>';
+    setTimeout(function(){
+      btn.innerHTML = btn.dataset._orig || '<i class="fas fa-shopping-cart"></i><span>In winkelwagen</span>';
+      btn.disabled = false;
+    }, 1000);
+  }
+
+  // Globaal: wordt aangeroepen vanuit je grid click-handlers
+  window.addToCart = async function(id, qty, btnEl, cardEl){
+    if (!id){ return; }
+    setBusy(btnEl);
+
+    try{
+      const fd = new FormData();
+      fd.append('product_id', String(id));
+      fd.append('quantity',   String(qty || 1));
+
+      const res  = await fetch(lammyAjax.add_to_cart, {
+        method:'POST',
+        body: fd,
+        credentials:'same-origin',
+        headers:{ 'X-Requested-With':'XMLHttpRequest' }
+      });
+
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch(e){ data = null; }
+
+      // Succes: Woo geeft fragments/cart_hash terug
+      if (data && (data.fragments || data.cart_hash)) {
+        setDone(btnEl, true);
+
+        var nm = (cardEl && cardEl.querySelector('.cname')) ? cardEl.querySelector('.cname').textContent.trim() : 'Artikel';
+        toast(nm+' '+(lammyAjax.added_msg||'toegevoegd'), true);
+
+        if (data.fragments) {
+          applyFragments(data.fragments);
+        } else {
+          await refreshFragments();
+        }
+
+        if (window.jQuery){
+          jQuery(document.body).trigger('wc_fragment_refresh');
+        }
+        return;
+      }
+
+      // Variabel product: Woo geeft product_url => ga daarheen
+      if (data && data.error && data.product_url) {
+        setDone(btnEl, false);
+        location.href = data.product_url;
+        return;
+      }
+
+      // Geen bruikbare JSON? nette fallback via GET
+      throw new Error('AJAX add_to_cart blocked; using GET fallback');
+    } catch(err){
+      console.warn(err);
+      var url = new URL(location.href);
+      url.searchParams.set('add-to-cart', String(id));
+      url.searchParams.set('quantity',    String(qty || 1));
+      location.href = url.toString();
+    }
+  };
+})();
+JS;
+    wp_add_inline_script('lammy-cat-addtocart', $js);
+});
+
+/** Fragment voor .cart-count zodat deze altijd meeververst */
+add_filter('woocommerce_add_to_cart_fragments', function ($fragments) {
+    if (!class_exists('WooCommerce')) return $fragments;
+    $count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+    $fragments['span.cart-count'] =
+        '<span class="cart-count" style="'.($count>0?'display:inline':'display:none').'">'.$count.'</span>';
+    return $fragments;
+});
+
+
+/* =========================================================
+ * 2) DYNAMIC CATEGORIES SIDEBAR SHORTCODE
+ *    Shortcode: [lammy_categories_sidebar]
+ * ========================================================= */
+add_shortcode('lammy_categories_sidebar', function () {
+
+    // Secties die je wilt tonen (slug => label)
+    $sections = [
+        'klassieke-garens' => 'Klassieke Garens',
+        'katoenen-garens'  => 'Katoenen Garens',
+        'fantasie-garens'  => 'Fantasie Garens',
+        'haakkatoen'       => 'Haakkatoen',
+        'aanbiedingen'     => 'Aanbiedingen',
+    ];
+
+    // Cache
+    $cache_key = 'lammy_dyn_cat_sidebar_v2';
+    if (false !== ($cached = get_transient($cache_key))) {
+        return $cached;
+    }
+
+    $esc_attr  = function($s){ return esc_attr($s); };
+    $esc_html  = function($s){ return esc_html($s); };
+    $term_link = function($term){
+        $link = get_term_link($term, 'product_cat');
+        return is_wp_error($link) ? '#' : $link;
+    };
+
+    $current_url = home_url( add_query_arg([], $_SERVER['REQUEST_URI'] ?? '') );
+
+    ob_start(); ?>
+    <div id="categories-container">
+      <ul class="categories-list">
+        <?php foreach ($sections as $parent_slug => $label): 
+            $parent = get_term_by('slug', $parent_slug, 'product_cat');
+            if (!$parent || is_wp_error($parent)) continue;
+
+            $children = get_terms([
+                'taxonomy'   => 'product_cat',
+                'parent'     => $parent->term_id,
+                'hide_empty' => false,
+                'orderby'    => 'name',
+                'order'      => 'ASC',
+            ]);
+
+            $parent_url = $term_link($parent);
+
+            // Is current/expanded?
+            $is_current = false;
+            if (is_tax('product_cat')) {
+                $qo = get_queried_object();
+                if ($qo && !is_wp_error($qo)) {
+                    $is_current = ($qo->term_id === $parent->term_id) || ($qo->parent === $parent->term_id);
+                }
+            } else {
+                $is_current = (strpos(trailingslashit($current_url), trailingslashit($parent_url)) !== false);
+            }
+        ?>
+          <li class="category-item<?php echo $is_current ? ' expanded current-category' : ''; ?>" data-section-slug="<?php echo $esc_attr($parent_slug); ?>">
+            <div class="category-header has-subcategories" data-category-link="<?php echo esc_url($parent_url); ?>">
+              <span class="category-name"><?php echo $esc_html($label); ?></span>
+              <button class="category-toggle" aria-label="Toggle <?php echo $esc_attr($label); ?>"><i class="fas fa-chevron-down"></i></button>
+            </div>
+
+            <div class="subcategories">
+              <ul>
+                <li class="subcategory-item">
+                  <a class="subcategory-link<?php echo (is_tax('product_cat', $parent->term_id) ? ' current-page' : ''); ?>" href="<?php echo esc_url($parent_url); ?>">
+                    <strong>Alle <?php echo $esc_html($label); ?></strong>
+                  </a>
+                </li>
+
+                <?php if (!empty($children) && !is_wp_error($children)): ?>
+                  <?php foreach ($children as $child):
+                      $child_url = $term_link($child);
+                      $child_active = false;
+                      if (is_tax('product_cat', $child->term_id)) {
+                          $child_active = true;
+                      } else {
+                          $child_active = (trailingslashit($current_url) === trailingslashit($child_url));
+                      }
+                  ?>
+                    <li class="subcategory-item">
+                      <a class="subcategory-link<?php echo $child_active ? ' current-page' : ''; ?>" href="<?php echo esc_url($child_url); ?>">
+                        <?php echo $esc_html($child->name); ?>
+                      </a>
+                    </li>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+              </ul>
+            </div>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+    <?php
+    $html = ob_get_clean();
+
+    set_transient($cache_key, $html, 10 * MINUTE_IN_SECONDS);
+    return $html;
+});
+
+/** Flush transient cache when product categories change */
+add_action('created_product_cat',  function(){ delete_transient('lammy_dyn_cat_sidebar_v2'); });
+add_action('edited_product_cat',   function(){ delete_transient('lammy_dyn_cat_sidebar_v2'); });
+add_action('delete_product_cat',   function(){ delete_transient('lammy_dyn_cat_sidebar_v2'); });
+add_action('clean_term_cache',     function($ids, $taxonomy){
+    if ($taxonomy === 'product_cat') delete_transient('lammy_dyn_cat_sidebar_v2');
+}, 10, 2);
+
+
+/* =========================================================
+ * 3) Parent (root) product category label op kaarten
+ * ========================================================= */
+add_action('wp_enqueue_scripts', function () {
+    if ( ! ( function_exists('is_woocommerce') && is_woocommerce() ) ) return;
+
+    // Collecteer zichtbare product IDs
+    $ids = [];
+
+    if (is_product()) {
+        $ids[] = get_the_ID();
+    }
+
+    global $wp_query;
+    if ($wp_query && ! empty($wp_query->posts)) {
+        foreach ($wp_query->posts as $p) {
+            if (!empty($p->ID) && (isset($p->post_type) ? $p->post_type === 'product' : get_post_type($p->ID) === 'product')) {
+                $ids[] = (int) $p->ID;
+            }
+        }
+    }
+
+    $ids = array_values(array_unique(array_filter($ids)));
+
+    // productId => ParentCategoryName map
+    $map = [];
+    foreach ($ids as $pid) {
+        $map[$pid] = ly_get_root_product_cat_name($pid);
+    }
+
+    wp_register_script('lammy-parent-cat', '', [], null, true);
+    wp_enqueue_script('lammy-parent-cat');
+
+    $js = 'window.lammyParentCats = ' . wp_json_encode($map) . ';
+(function(){
+  function applyParentCats(){
+    if (!window.lammyParentCats) return;
+
+    // 1) Enrich data model
+    var D = window.lammyYarnsData || {};
+    if (Array.isArray(D.products)) {
+      D.products.forEach(function(p){
+        if (!p || !p.id) return;
+        var name = window.lammyParentCats[p.id];
+        if (name) p.parent_category = name;
+      });
+    }
+
+    // 2) Patch rendered cards
+    document.querySelectorAll(".cards .card").forEach(function(card){
+      var id = parseInt(card.getAttribute("data-id"), 10);
+      if (!id) return;
+      var parentName = window.lammyParentCats[id];
+      if (!parentName) return;
+      var el = card.querySelector(".ccategory");
+      if (el) el.textContent = parentName;
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyParentCats);
+  } else {
+    applyParentCats();
+  }
+
+  if (window.jQuery) {
+    jQuery(document.body).on("wc_fragment_refreshed lammy:products_rendered", applyParentCats);
+  }
+})();';
+
+    wp_add_inline_script('lammy-parent-cat', $js);
+});
+
+/**
+ * Bepaal de top-level (root) product_cat naam voor een product.
+ */
+function ly_get_root_product_cat_name( $product_id ) {
+    $terms = get_the_terms( $product_id, 'product_cat' );
+    if ( empty( $terms ) || is_wp_error( $terms ) ) {
+        return '';
+    }
+
+    foreach ( $terms as $term ) {
+        $current = $term;
+        while ( $current && $current->parent ) {
+            $parent = get_term( $current->parent, 'product_cat' );
+            if ( is_wp_error( $parent ) || ! $parent ) break;
+            $current = $parent;
+        }
+        if ( $current ) {
+            return $current->name;
+        }
+    }
+
+    // Fallback: eerste termnaam
+    return $terms[0]->name;
+}
+
+
+// Lammy Yarns: update prijskaart label "10 x 50 gr." op basis van categorie-meta
+add_action('wp_enqueue_scripts', function () {
+    if (!function_exists('is_product_category') || !is_product_category()) return;
+
+    // Zorg dat jQuery (of iig een script-handle) bestaat
+    wp_enqueue_script('jquery');
+
+    $js = <<<'JS'
+(function(){
+  function updatePriceCardLabel(){
+    if (!window.lammyYarnsData || !lammyYarnsData.category) return;
+    var cat  = lammyYarnsData.category;
+    var calc = cat.calc || {};
+    if (!calc.weight_g || !calc.balls_per_pack) return;
+
+    var card = document.getElementById('price-card');
+    if (!card) return;
+
+    // tweede regel in de kaart ("10 x 50 gr.")
+    var rows = card.querySelectorAll('.price-row');
+    if (!rows || rows.length < 2) return;
+
+    var labelEl = rows[1].querySelector('.label');
+    if (!labelEl) return;
+
+    labelEl.textContent = calc.balls_per_pack + ' × ' + calc.weight_g + ' gr.';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updatePriceCardLabel);
+  } else {
+    updatePriceCardLabel();
+  }
+})();
+JS;
+
+    wp_add_inline_script('jquery', $js, 'after');
+});
+
+
+// === Fix for lazy loading / optimization issues with product images ===
+// Disable lazy loading for product category images to ensure they load properly
+add_filter('wp_get_attachment_image_attributes', function($attr, $attachment, $size) {
+    // Only apply to product category pages
+    if (!function_exists('is_product_category') || !is_product_category()) {
+        return $attr;
+    }
+    
+    // Force eager loading for product images
+    $attr['loading'] = 'eager';
+    $attr['fetchpriority'] = 'high';
+    
+    // Ensure src is set (not just data-src)
+    if (isset($attr['data-src']) && empty($attr['src'])) {
+        $attr['src'] = $attr['data-src'];
+    }
+    
+    return $attr;
+}, 10, 3);
+
+// Ensure get_the_post_thumbnail_url returns actual URLs (not lazy-loaded placeholders)
+add_filter('wp_get_attachment_image_url', function($url, $attachment_id, $size) {
+    if (!function_exists('is_product_category') || !is_product_category()) {
+        return $url;
+    }
+    
+    // Force return of actual image URL
+    if ($url) {
+        return $url;
+    }
+    
+    return $url;
+}, 10, 3);
+
+add_action('wp_enqueue_scripts', function () {
+    if (!function_exists('is_product_category') || !is_product_category()) return;
+
+    wp_enqueue_script('jquery');
+
+    $js = <<<'JS'
+(function(){
+  function fixLazyLoadedImages(){
+    // Find all product images in the grid
+    var productImages = document.querySelectorAll('.cards .card img, .product-grid img, [data-id] img, .woocommerce-loop-product__link img');
+    
+    productImages.forEach(function(img){
+      // Ensure image has proper src attribute (not just data-src)
+      if (img.dataset.src && !img.src) {
+        img.src = img.dataset.src;
+      }
+      
+      // Remove lazy loading for visible images (force eager loading)
+      if (img.getBoundingClientRect().top < window.innerHeight + 200) {
+        img.loading = 'eager';
+        img.removeAttribute('data-src');
+        img.removeAttribute('data-lazy-src');
+        img.removeAttribute('data-lazy-srcset');
+        
+        // Force image load
+        if (img.src && !img.complete) {
+          var newImg = new Image();
+          newImg.onload = function(){
+            if (img.src === this.src) {
+              img.src = this.src;
+            }
+          };
+          newImg.src = img.src;
+        }
+      }
+    });
+
+    // Trigger lazy loading libraries to re-scan
+    if (window.jQuery) {
+      // Autoptimize lazy load trigger
+      if (window.jQuery.fn.lazyload) {
+        jQuery('img[data-src], img[data-lazy-src]').lazyload();
+      }
+      
+      // Trigger common lazy load events
+      jQuery(document.body).trigger('lazyload');
+      jQuery(window).trigger('scroll');
+      
+      // Autoptimize specific
+      if (window.lazyLoad) {
+        window.lazyLoad.update();
+      }
+      
+      // Native IntersectionObserver lazy loading re-trigger
+      if ('IntersectionObserver' in window) {
+        var lazyImages = document.querySelectorAll('img[loading="lazy"]');
+        lazyImages.forEach(function(img){
+          if (img.getBoundingClientRect().top < window.innerHeight + 200) {
+            img.loading = 'eager';
+            img.src = img.src || img.dataset.src || img.getAttribute('data-lazy-src');
+          }
+        });
+      }
+    }
+
+    // Force load images that are in viewport
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting) {
+          var img = entry.target;
+          if (img.dataset.src && !img.src) {
+            img.src = img.dataset.src;
+            img.loading = 'eager';
+          }
+          if (img.dataset.lazySrc && !img.src) {
+            img.src = img.dataset.lazySrc;
+            img.loading = 'eager';
+          }
+          observer.unobserve(img);
+        }
+      });
+    }, { rootMargin: '200px' });
+
+    document.querySelectorAll('img[data-src], img[data-lazy-src], img[loading="lazy"]').forEach(function(img){
+      // If image is already visible, load it immediately
+      var rect = img.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 200) {
+        if (img.dataset.src && !img.src) img.src = img.dataset.src;
+        if (img.dataset.lazySrc && !img.src) img.src = img.dataset.lazySrc;
+        img.loading = 'eager';
+      } else {
+        observer.observe(img);
+      }
+    });
+  }
+
+  // Run immediately and after DOM updates
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fixLazyLoadedImages);
+  } else {
+    fixLazyLoadedImages();
+  }
+
+  // Re-run after products are rendered (for dynamic content)
+  if (window.jQuery) {
+    jQuery(document.body).on('lammy:products_rendered wc_fragment_refresh', function(){
+      setTimeout(fixLazyLoadedImages, 100);
+    });
+  }
+
+  // Also run after a short delay to catch late-loading content
+  setTimeout(fixLazyLoadedImages, 500);
+  setTimeout(fixLazyLoadedImages, 1500);
+})();
+JS;
+
+    wp_add_inline_script('jquery', $js, 'after');
+});

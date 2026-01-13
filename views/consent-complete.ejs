@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Verificatie voltooid</title>
+</head>
+<body>
+<script>
+  // Probeer de opener (als het in een nieuw tab/venster was)
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage({ type: 'mollie-consent-complete' }, '*');
+      // Sluit dit tabje rustig
+      window.close();
+    } else {
+      // Zelfde tab: push een lightweight flag en ga terug zonder reload-triggers
+      const url = new URL(window.location.origin + '/dashboard/payments');
+      url.searchParams.set('consent', 'complete');
+      window.location.replace(url.toString());
+    }
+  } catch(e) {
+    // Fallback: ga terug naar dashboard zonder query die reload triggert
+    window.location.replace('/dashboard/payments');
+  }
+</script>
+</body>
+</html>

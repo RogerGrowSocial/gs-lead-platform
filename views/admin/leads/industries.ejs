@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Branches</h1>
+  <p>Beheer beschikbare branches voor leads</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Branches', 
+    activeMenu: 'leads',
+    activeSubmenu: 'industries',
+    user: user,
+    body: pageContent
+}) %>
+

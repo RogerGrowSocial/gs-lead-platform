@@ -1,0 +1,18 @@
+<%- include('../layouts/dashboard', {
+  title: 'Betalingen',
+  activeMenu: 'payments',
+  pageClass: 'payments',
+  user: (typeof user !== 'undefined' ? user : null),
+  body: include('./partials/payments-body', {
+    payments: (typeof payments !== 'undefined' ? payments : []),
+    stats: (typeof stats !== 'undefined' ? stats : null),
+    user: (typeof user !== 'undefined' ? user : null),
+    hasPaymentMethod: (typeof hasPaymentMethod !== 'undefined' ? hasPaymentMethod : false),
+    paymentMethods: (typeof paymentMethods !== 'undefined' ? paymentMethods : []),
+    mollieProfileId: (typeof mollieProfileId !== 'undefined' ? mollieProfileId : '')
+  }),
+scripts: [
+  '/js/payments.js',
+  '/js/payment-status-checker.js'
+]
+}) %>

@@ -1,0 +1,211 @@
+/* Customers page specific styles */
+/* Most styles come from adminPayments.css and payments-table.css */
+
+.customers-container {
+  /* Same as payments-container */
+}
+
+/* Drag handle - Apple style (only visible on row hover) */
+.table-body-row:hover .customer-drag-handle {
+  opacity: 0.5 !important;
+}
+
+.customer-drag-handle {
+  color: #6b7280 !important; /* darker gray */
+}
+
+.customer-drag-handle:hover {
+  opacity: 0.8 !important;
+  color: #4b5563 !important; /* even darker on hover */
+}
+
+.customer-drag-handle:active {
+  cursor: grabbing !important;
+  opacity: 1 !important;
+  color: #374151 !important; /* darkest on active */
+}
+
+/* Dragging state */
+.table-body-row.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.table-body-row.drag-over {
+  position: relative;
+}
+
+.table-body-row.drag-over::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3b82f6;
+  z-index: 10;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* Prevent layout shift during drag */
+.table-body-row {
+  box-sizing: border-box;
+  position: relative;
+}
+
+.table-body-row.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  box-sizing: border-box;
+}
+
+/* Reduce row height for customer listing */
+.payments-table .table-cell {
+  padding: 10px 16px;
+}
+
+.payments-table .cell-column {
+  gap: 2px;
+}
+
+/* Subtle border between rows - override payments-table.css */
+.payments-table .table-body-row {
+  border-bottom: 0.5px solid #f3f4f6 !important;  /* gray-100 - subtle light gray */
+}
+
+/* Prevent layout shift during drag */
+.payments-table {
+  width: 100%;
+  table-layout: auto; /* Use auto layout for flexible columns */
+}
+
+/* Pagination Styles */
+.customers-pagination {
+  margin-top: 32px;
+  padding: 24px 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.customers-pagination select {
+  height: 38px;
+  padding: 0 36px 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white url('data:image/svg+xml;charset=utf-8,%3Csvg width=\'12\' height=\'8\' viewBox=\'0 0 12 8\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1L6 6L11 1\' stroke=\'%236b7280\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E') no-repeat right 10px center;
+  font-size: 14px;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 500;
+  min-width: 80px;
+  transition: all 0.2s;
+  appearance: none;
+}
+
+.customers-pagination select:hover {
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.customers-pagination select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.customers-pagination .pagination-btn:not(:disabled):hover {
+  background: #f9fafb !important;
+  border-color: #9ca3af !important;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.customers-pagination .pagination-number:not(.active):hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Set appropriate column widths for better alignment */
+.payments-table th:nth-child(1),
+.payments-table td:nth-child(1) {
+  width: 22%; /* Klant - needs more space for name + logo */
+  min-width: 200px;
+}
+
+.payments-table th:nth-child(2),
+.payments-table td:nth-child(2) {
+  width: 18%; /* Contact - email + phone */
+  min-width: 180px;
+}
+
+.payments-table th:nth-child(3),
+.payments-table td:nth-child(3) {
+  width: 18%; /* Domein */
+  min-width: 160px;
+}
+
+.payments-table th:nth-child(4),
+.payments-table td:nth-child(4) {
+  width: 12%; /* Status */
+  min-width: 110px;
+}
+
+.payments-table th:nth-child(5),
+.payments-table td:nth-child(5) {
+  width: 12%; /* Prioriteit */
+  min-width: 110px;
+}
+
+.payments-table th:nth-child(6),
+.payments-table td:nth-child(6) {
+  width: 15%; /* Laatste activiteit */
+  min-width: 150px;
+}
+
+.payments-table th:nth-child(7),
+.payments-table td:nth-child(7) {
+  width: 5%; /* Acties - drag handle + menu */
+  min-width: 90px;
+  text-align: center;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+}
+
+/* Lock table during drag to prevent scroll and layout shift */
+.table-container.dragging-active {
+  overflow: hidden !important;
+}
+
+.table-container.dragging-active .table-scroll {
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+/* Ensure headers stay aligned with body during drag */
+.payments-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.payments-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f9fafb;
+  z-index: 2;
+}
+
+/* Prevent any width changes during drag */
+.table-body-row.dragging,
+.table-body-row.drag-over {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+}
+
+/* Additional customer-specific styles if needed */
+

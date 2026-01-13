@@ -1,0 +1,88 @@
+{
+  "input": {
+    "businessName": "GrowSocial",
+    "service": "glaszetter",
+    "location": "Friesland",
+    "keywordList": [
+      "glaszetter Friesland",
+      "glaszetter in Friesland",
+      "glaszetter offerte",
+      "glaszetter prijs",
+      "glaszetter kosten",
+      "goedkope glaszetter Friesland",
+      "glaszetter Friesland ervaring",
+      "glaszetter Friesland recensies"
+    ],
+    "uspList": [
+      "Binnen 24u Reactie",
+      "Transparante Prijzen",
+      "Ervaren Professionals",
+      "Lokale Service"
+    ],
+    "offer": null,
+    "finalUrl": "https://growsocialmedia.nl/offerte/friesland",
+    "tone": "direct"
+  },
+  "expectedOutput": {
+    "headlines": [
+      "Glaszetter Friesland",
+      "Glaszetter Friesland Offerte",
+      "Glaszetter Friesland Prijs",
+      "Glaszetter Friesland Kosten",
+      "Glaszetter in Friesland",
+      "Goedkope Glaszetter Friesland",
+      "Gratis Offerte",
+      "Binnen 24u Reactie",
+      "Vraag Offerte Aan",
+      "Transparante Prijzen",
+      "Lokale Glaszetter Friesland",
+      "Ervaren Glaszetter",
+      "Contact Nu",
+      "Beste Prijzen",
+      "Snelle Service"
+    ],
+    "descriptions": [
+      "Spoedklus in Friesland? Snel hulp van glaszetter in Friesland. Vaak binnen 24 uur beschikbaar.",
+      "Duidelijke en transparante prijzen voor Glaszetter in Friesland. Vooraf inzicht in kosten, geen verborgen toeslagen.",
+      "Glaszetter in Friesland met 9+ beoordelingen. Betrouwbare service en vakmanschap.",
+      "Van advies tot uitvoering in Friesland. Glaszetter regelt alles voor je, inclusief garantie."
+    ],
+    "path1": "offerte",
+    "path2": "friesland",
+    "sitelinks": [
+      {
+        "text": "Gratis Offerte",
+        "description1": "Vraag nu je gratis offerte aan",
+        "description2": "Snel reactie van lokale vakman",
+        "url": "https://growsocialmedia.nl/offerte"
+      }
+    ],
+    "callouts": [
+      "Gratis Offerte",
+      "24/7 Beschikbaar",
+      "Ervaren Professionals",
+      "Lokale Service"
+    ],
+    "structuredSnippets": [
+      {
+        "header": "Diensten",
+        "values": [
+          "Glaszetterwerk",
+          "Onderhoud",
+          "Renovatie",
+          "Reparatie",
+          "Advies"
+        ]
+      }
+    ]
+  },
+  "notes": [
+    "All headlines must be <= 30 characters",
+    "All descriptions must be <= 90 characters",
+    "Exactly 15 headlines required",
+    "Exactly 4 descriptions required",
+    "No duplicates or near-duplicates",
+    "At least 6 headlines must include service + location",
+    "Quality gate must pass (score >= 80)"
+  ]
+}

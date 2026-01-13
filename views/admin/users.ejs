@@ -1,0 +1,751 @@
+<%
+  const formatCurrency = (amount) => {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount)
+  }
+  
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const formatDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  const formatLastLogin = (iso) => {
+    if (!iso) return 'Nog niet ingelogd'
+    const d = new Date(iso)
+    const now = new Date()
+    const diffMs = now - d
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Vandaag'
+    if (diffDays === 1) return 'Gisteren'
+    if (diffDays < 7) return diffDays + ' dagen geleden'
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7)
+      return weeks === 1 ? '1 week geleden' : weeks + ' weken geleden'
+    }
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  // Define users variable if it's not already defined
+  if (typeof users === "undefined") {
+    var users = []
+  }
+%>
+<%- include('../layouts/admin', {
+  title: 'Gebruikersbeheer',
+  activeMenu: 'users',
+  user: user,
+  body: `
+  <div class="opportunities-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>Gebruikersbeheer</h1>
+        <p class="text-muted">Beheer alle gebruikers van het platform</p>
+      </div>
+      <div class="header-actions">
+        <button id="addUserBtn" class="btn-primary">
+          <i class="fas fa-plus"></i> Nieuwe gebruiker
+        </button>
+      </div>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="kpi-cards-container">
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Totaal gebruikers</p>
+            <p class="kpi-value">${kpis?.totalUsers || 0}</p>
+            <p class="kpi-subtitle">Alle accounts</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-users"></i></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Actieve gebruikers</p>
+            <p class="kpi-value">${kpis?.activeUsers || 0}</p>
+            <p class="kpi-subtitle">Geactiveerde accounts</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Administrators</p>
+            <p class="kpi-value">${kpis?.adminCount || 0}</p>
+            <p class="kpi-subtitle">Admin accounts</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-user-shield"></i></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Met betaalmethode</p>
+            <p class="kpi-value">${kpis?.usersWithPayment || 0}</p>
+            <p class="kpi-subtitle">Geconfigureerde betalingen</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-credit-card"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Listing -->
+    <div class="users-listing-container">
+      <!-- Search and Filters Header -->
+      <div class="users-header-row">
+        <div class="users-search-wrapper">
+          <svg class="users-search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input type="text" class="users-search-input" placeholder="Zoek gebruikers..." id="searchUsers" />
+        </div>
+        <div class="users-dropdowns-container">
+          <select class="users-dropdown" id="statusFilter">
+            <option value="all">Alle statussen</option>
+            <option value="active">Actief</option>
+            <option value="inactive">Inactief</option>
+            <option value="pending">In afwachting</option>
+          </select>
+          <select class="users-dropdown" id="roleFilter">
+            <option value="all">Alle rollen</option>
+            <option value="admin">Admin</option>
+            <option value="user">Gebruiker</option>
+          </select>
+          <select class="users-dropdown" id="paymentFilter">
+            <option value="all">Alle</option>
+            <option value="has_payment">Met betaalmethode</option>
+            <option value="no_payment">Zonder betaalmethode</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Users List -->
+      <div class="users-list" id="usersList">
+        ${(() => {
+          const allUsers = users || [];
+          const validUsers = allUsers.filter(user => user && user.id);
+          // Remove duplicates by ID
+          const uniqueUsers = [];
+          const seenIds = new Set();
+          validUsers.forEach(user => {
+            if (!seenIds.has(user.id)) {
+              seenIds.add(user.id);
+              uniqueUsers.push(user);
+            }
+          });
+          return uniqueUsers.map(user => {
+          const hasPaymentMethod = user.has_payment_method === 1 || (user.payment_method && user.payment_method !== '');
+          const status = user.status || 'active';
+          const isAdmin = user.is_admin ? true : false;
+          const userId = user.id ? user.id.toString() : '';
+          // Get initials - use first letter of first_name, last_name, email, or company_name as fallback
+          let initials = '';
+          if (user.first_name && user.first_name.length > 0) {
+            initials = user.first_name.charAt(0).toUpperCase();
+            if (user.last_name && user.last_name.length > 0) {
+              initials += user.last_name.charAt(0).toUpperCase();
+            }
+          } else if (user.email && user.email.length > 0) {
+            initials = user.email.charAt(0).toUpperCase();
+          } else if (user.company_name && user.company_name.length > 0) {
+            initials = user.company_name.charAt(0).toUpperCase();
+          } else {
+            initials = 'U';
+          }
+          
+          return `
+          <a href="/admin/users/${userId}" class="user-item" data-user-id="${userId}">
+            <div class="user-content-wrapper">
+              <div class="user-card-avatar">${initials}</div>
+              <div class="user-content-section">
+                <div class="user-info-wrapper">
+                  <div class="user-email">${user.email || '-'}</div>
+                  <div class="user-last-login">Laatste login: ${formatLastLogin(user.last_login || user.last_sign_in_at)}</div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  ${isAdmin ? 
+                    '<span data-slot="badge" class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90 text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path></svg>Admin</span>' : 
+                    '<span data-slot="badge" class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Gebruiker</span>'
+                  }
+                  ${hasPaymentMethod ? 
+                    '<span class="text-xs text-gray-600">Betaalmethode ingesteld</span>' : 
+                    '<span class="text-xs text-gray-500">Geen betaalmethode</span>'
+                  }
+                  ${(() => {
+                    // Show AI score as plain text with icon (only if score exists)
+                    if (user.ai_risk_score !== null && user.ai_risk_score !== undefined) {
+                      return '<div class="flex items-center gap-1 text-xs text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 0.75rem; height: 0.75rem;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><span>Score: ' + user.ai_risk_score + '</span></div>';
+                    }
+                    return '';
+                  })()}
+                  ${(() => {
+                    // Show NEW badge only if truly new (< 7 days)
+                    if (user.is_new) {
+                      const createdDate = user.created_at ? new Date(user.created_at) : null;
+                      if (createdDate) {
+                        const daysSinceCreation = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+                        if (daysSinceCreation < 7) {
+                          return '<span data-slot="badge" class="inline-flex items-center justify-center rounded-md border px-2 py-0.5 font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground text-xs">Nieuw</span>';
+                        }
+                      }
+                    }
+                    return '';
+                  })()}
+                </div>
+              </div>
+              <div class="flex-shrink-0 flex items-start gap-3">
+                ${user.outstandingPayments && user.outstandingPayments.count > 0 ? 
+                  `<div class="text-right">
+                    <div class="text-sm font-medium text-gray-900">-${formatCurrency(user.outstandingPayments.total).replace('€', '€ ')}</div>
+                    <div class="text-xs text-gray-500">${user.outstandingPayments.count} openstaand</div>
+                  </div>` : 
+                  ''
+                }
+                <button data-slot="button" class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 rounded-md gap-1.5 has-[>svg]:px-2.5 h-8 w-8 p-0" onclick="event.stopPropagation(); showUserActionsMenu('${userId}', event)" title="Meer acties">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-vertical h-4 w-4">
+                    <circle cx="12" cy="12" r="1"></circle>
+                    <circle cx="12" cy="5" r="1"></circle>
+                    <circle cx="12" cy="19" r="1"></circle>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </a>
+          `
+          }).join('');
+        })()}
+        ${(!users || users.length === 0) ? `
+          <div class="user-item">
+            <div class="user-content" style="text-align: center; padding: 40px;">
+              <p style="color: #6b7280;">Geen gebruikers gevonden</p>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+      
+      <!-- Pagination -->
+      <div class="users-pagination">
+        <div class="pagination-left">
+          <label for="itemsPerPage">Items per pagina:</label>
+          <select id="itemsPerPage" class="users-dropdown" style="width: auto; min-width: 80px;">
+            <option value="10" ${(typeof itemsPerPage !== 'undefined' && itemsPerPage == 10) ? 'selected' : ''}>10</option>
+            <option value="25" ${(typeof itemsPerPage !== 'undefined' && itemsPerPage == 25) ? 'selected' : ''}>25</option>
+            <option value="50" ${(typeof itemsPerPage !== 'undefined' && itemsPerPage == 50) ? 'selected' : ''}>50</option>
+            <option value="100" ${(typeof itemsPerPage !== 'undefined' && itemsPerPage == 100) ? 'selected' : ''}>100</option>
+          </select>
+          <span class="pagination-info" style="margin-left: 16px; font-size: 14px; color: #6b7280;">
+            ${(() => {
+              const currentPage = (typeof page !== 'undefined' && page) ? page : 1;
+              const currentItemsPerPage = (typeof itemsPerPage !== 'undefined' && itemsPerPage) ? itemsPerPage : 10;
+              const currentTotalItems = (typeof totalItems !== 'undefined' && totalItems) ? totalItems : 0;
+              const startItem = currentTotalItems > 0 ? (currentPage - 1) * currentItemsPerPage + 1 : 0;
+              const endItem = Math.min(currentPage * currentItemsPerPage, currentTotalItems);
+              return currentTotalItems > 0 ? `Weergave ${startItem}-${endItem} van ${currentTotalItems} gebruikers` : 'Geen gebruikers';
+            })()}
+          </span>
+        </div>
+        <div class="pagination-right">
+          <button class="pagination-btn" id="prevBtn" ${(typeof page !== 'undefined' && page > 1) ? '' : 'disabled'}>
+          Vorige
+        </button>
+        <div class="pagination-numbers" id="paginationNumbers">
+            ${(() => {
+              const currentPage = (typeof page !== 'undefined' && page) ? page : 1;
+              const currentItemsPerPage = (typeof itemsPerPage !== 'undefined' && itemsPerPage) ? itemsPerPage : 10;
+              const currentTotalItems = (typeof totalItems !== 'undefined' && totalItems) ? totalItems : 0;
+              const totalPages = currentTotalItems > 0 ? Math.ceil(currentTotalItems / currentItemsPerPage) : 1;
+              const pages = [];
+              const maxPages = 5;
+              if (totalPages > 0) {
+                let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+                let endPage = Math.min(totalPages, startPage + maxPages - 1);
+                if (endPage - startPage < maxPages - 1) {
+                  startPage = Math.max(1, endPage - maxPages + 1);
+                }
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(`<button class="pagination-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`);
+                }
+              }
+              return pages.length > 0 ? pages.join('') : '<button class="pagination-number active" data-page="1">1</button>';
+            })()}
+        </div>
+        <button class="pagination-btn" id="nextBtn" ${hasMore ? '' : 'disabled'}>
+          Volgende
+        </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- User Edit Modal -->
+  <div class="modal" id="userEditModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 id="modalTitle" style="margin: 0; font-size: 20px; font-weight: 600;">Gebruiker bewerken</h2>
+        <button class="modal-close" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+      </div>
+      <form id="userForm">
+        <input type="hidden" id="userId" name="userId">
+        <div style="display: grid; gap: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Voornaam</label>
+            <input type="text" id="firstName" name="firstName" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Achternaam</label>
+            <input type="text" id="lastName" name="lastName" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Email</label>
+            <input type="email" id="email" name="email" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Bedrijfsnaam</label>
+            <input type="text" id="companyName" name="companyName" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Rol</label>
+            <select id="isAdmin" name="isAdmin" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              <option value="false">Gebruiker</option>
+              <option value="true">Administrator</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #374151;">Status</label>
+            <select id="status" name="status" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px;">
+              <option value="active">Actief</option>
+              <option value="inactive">Inactief</option>
+              <option value="pending">In afwachting</option>
+            </select>
+          </div>
+          <div style="padding: 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+              <input type="checkbox" id="canReadCompanyMailboxes" name="canReadCompanyMailboxes" style="width: 18px; height: 18px; cursor: pointer;">
+              <span style="font-weight: 500; color: #374151;">Kan bedrijfsmailboxen lezen</span>
+            </label>
+            <p style="margin: 8px 0 0 26px; font-size: 13px; color: #6b7280;">Als aangevinkt, kan deze gebruiker naast hun eigen mailbox ook alle bedrijfsmailboxen lezen. Managers/admins hebben altijd toegang tot alle mailboxen.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <button type="button" class="btn-outline" id="cancelBtn" style="padding: 10px 20px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 10px 20px; background: #ea5d0d; color: white; border: none; border-radius: 8px; cursor: pointer;">Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  `,
+  scripts: (scripts || []),
+  stylesheets: (stylesheets || []).concat(['/css/opportunities.css', '/css/admin/users.css', '/css/admin/payments-table.css'])
+}) %>
+
+<script>
+// Show user actions menu (similar to payments dropdown)
+function showUserActionsMenu(userId, event) {
+  event.stopPropagation();
+  
+  // Remove any existing dropdown
+  const existingDropdown = document.querySelector('.actions-dropdown');
+  if (existingDropdown) {
+    existingDropdown.remove();
+    return; // Exit early if we just closed a dropdown
+  }
+
+  // Find user data
+  const userCard = document.querySelector('[data-user-id="' + userId + '"]');
+  if (!userCard) {
+    console.error('User card not found:', userId);
+    return;
+  }
+
+  // Get user status from badges
+  const statusBadge = userCard.querySelector('.user-badge.status-green, .user-badge.status-gray, .user-badge.status-orange');
+  const status = statusBadge ? (statusBadge.textContent.trim() === 'Actief' ? 'active' : statusBadge.textContent.trim() === 'Inactief' ? 'inactive' : 'pending') : 'active';
+
+  // Create dropdown menu
+  const dropdown = document.createElement('div');
+  dropdown.className = 'actions-dropdown';
+  dropdown.style.cssText = `
+    position: fixed;
+    background: white;
+    border: 0.5px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    min-width: 200px;
+    padding: 4px 0;
+  `;
+
+  // Add menu items
+  const menuItems = [];
+  
+  if (status !== 'active') {
+    menuItems.push({
+      label: 'Activeren',
+      icon: 'M9 12l2 2 4-4 M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z',
+      action: () => {
+        updateUserStatus(userId, 'active');
+        dropdown.remove();
+      }
+    });
+  } else {
+    menuItems.push({
+      label: 'Deactiveren',
+      icon: 'M18 6L6 18M6 6l12 12',
+      action: () => {
+        updateUserStatus(userId, 'inactive');
+        dropdown.remove();
+      }
+    });
+  }
+
+  menuItems.push({
+    label: 'Bewerken',
+    icon: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+    action: () => {
+      openUserModal(userId);
+      dropdown.remove();
+    }
+  });
+
+  menuItems.push({
+    label: 'Rol wijzigen',
+    icon: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM12 14a7 7 0 0 0-7 7h14a7 7 0 0 0-7-7z',
+    action: () => {
+      changeUserRole(userId);
+      dropdown.remove();
+    }
+  });
+
+  menuItems.push({
+    label: 'Wachtwoord resetten',
+    icon: 'M15 7a2 2 0 0 1 2 2m4 0a6 6 0 0 1-7.743 5.743L11 17H9v2H7v2H4a1 1 0 0 1-1-1v-2.586a1 1 0 0 1 .293-.707l5.964-5.964A6 6 0 1 1 21 9z',
+    action: () => {
+      resetUserPassword(userId);
+      dropdown.remove();
+    }
+  });
+
+  menuItems.push({
+    label: 'Verwijderen',
+    icon: 'M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2',
+    action: () => {
+      deleteUser(userId);
+      dropdown.remove();
+    },
+    danger: true
+  });
+
+  // Create menu items
+  menuItems.forEach((item, index) => {
+    if (index > 0 && item.danger) {
+      // Add separator before danger item
+      const separator = document.createElement('div');
+      separator.style.cssText = 'border-top: 1px solid #e5e7eb; margin: 4px 0;';
+      dropdown.appendChild(separator);
+    }
+
+    const menuItem = document.createElement('div');
+    menuItem.className = 'actions-menu-item';
+    menuItem.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      color: ${item.danger ? '#dc2626' : '#374151'};
+      transition: background-color 0.15s;
+    `;
+    
+    menuItem.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+        <path d="${item.icon}"/>
+      </svg>
+      ${item.label}
+    `;
+
+    menuItem.addEventListener('mouseenter', () => {
+      menuItem.style.backgroundColor = '#f9fafb';
+    });
+
+    menuItem.addEventListener('mouseleave', () => {
+      menuItem.style.backgroundColor = 'transparent';
+    });
+
+    menuItem.addEventListener('click', () => {
+      item.action();
+    });
+
+    dropdown.appendChild(menuItem);
+  });
+
+  // Position dropdown
+  const button = event.target.closest('.actions-button');
+  const rect = button.getBoundingClientRect();
+  dropdown.style.left = `${rect.right - 200}px`;
+  dropdown.style.top = `${rect.bottom + 4}px`;
+
+  // Add to document
+  document.body.appendChild(dropdown);
+
+  // Close dropdown when clicking outside
+  const closeDropdown = (e) => {
+    if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+      dropdown.remove();
+      document.removeEventListener('click', closeDropdown);
+    }
+  };
+
+  setTimeout(() => {
+    document.addEventListener('click', closeDropdown);
+  }, 0);
+}
+
+// Modal close handlers
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.modal-close') || e.target.closest('#cancelBtn')) {
+    const modal = document.getElementById('userEditModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+  
+  const modal = document.getElementById('userEditModal');
+  if (e.target === modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+});
+
+// Close modal with ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('userEditModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+});
+
+// Activate/Deactivate user
+document.addEventListener('click', function(e) {
+  const activateBtn = e.target.closest('.activate-user');
+  const deactivateBtn = e.target.closest('.deactivate-user');
+  
+  if (activateBtn || deactivateBtn) {
+    e.preventDefault();
+    const userId = (activateBtn || deactivateBtn).dataset.id;
+    const newStatus = activateBtn ? 'active' : 'inactive';
+    updateUserStatus(userId, newStatus);
+  }
+});
+
+// Change role, reset password, delete user handlers
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.change-role')) {
+    e.preventDefault();
+    const userId = e.target.closest('.change-role').dataset.id;
+    changeUserRole(userId);
+  }
+  
+  if (e.target.closest('.reset-password')) {
+    e.preventDefault();
+    const userId = e.target.closest('.reset-password').dataset.id;
+    resetUserPassword(userId);
+  }
+  
+  if (e.target.closest('.delete-user')) {
+    e.preventDefault();
+    const userId = e.target.closest('.delete-user').dataset.id;
+    deleteUser(userId);
+  }
+});
+
+// Helper functions (these should be in the included JS files, but adding basic implementations)
+function openUserModal(userId) {
+  if (!userId) {
+    console.error('No user ID provided');
+    return;
+  }
+  
+  const modal = document.getElementById('userEditModal');
+  if (!modal) {
+    console.error('User edit modal not found');
+    if (window.showNotification) window.showNotification('Bewerkingsvenster niet gevonden', 'error');
+    return;
+  }
+  
+  // Show loading state
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  
+  fetch(`/admin/api/users/${userId}`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json'
+    }
+  })
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      const user = data.user || data;
+      if (!user) {
+        throw new Error('Geen gebruikersgegevens gevonden');
+      }
+      
+      const userIdField = document.getElementById('userId');
+      const firstNameField = document.getElementById('firstName');
+      const lastNameField = document.getElementById('lastName');
+      const emailField = document.getElementById('email');
+      const companyNameField = document.getElementById('companyName');
+      const isAdminField = document.getElementById('isAdmin');
+      const statusField = document.getElementById('status');
+      const canReadCompanyMailboxesField = document.getElementById('canReadCompanyMailboxes');
+      
+      if (userIdField) userIdField.value = user.id || userId;
+      if (firstNameField) firstNameField.value = user.first_name || '';
+      if (lastNameField) lastNameField.value = user.last_name || '';
+      if (emailField) emailField.value = user.email || '';
+      if (companyNameField) companyNameField.value = user.company_name || '';
+      if (isAdminField) isAdminField.value = user.is_admin ? 'true' : 'false';
+      if (statusField) statusField.value = user.status || 'active';
+      if (canReadCompanyMailboxesField) canReadCompanyMailboxesField.checked = user.can_read_company_mailboxes === true;
+    })
+    .catch(err => {
+      console.error('Error loading user:', err);
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+      if (window.showNotification) {
+        window.showNotification('Fout bij laden gebruiker: ' + (err.message || 'Onbekende fout'), 'error');
+      }
+    });
+}
+
+// Make function globally available
+window.openUserModal = openUserModal;
+
+function updateUserStatus(userId, newStatus) {
+  if (!confirm(`Weet je zeker dat je deze gebruiker wilt ${newStatus === 'active' ? 'activeren' : 'deactiveren'}?`)) return;
+  
+  fetch(`/admin/api/users/${userId}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      if (window.showNotification) window.showNotification(data.message, 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      if (window.showNotification) window.showNotification(data.error || 'Fout opgetreden', 'error');
+    }
+  })
+  .catch(err => {
+    console.error('Error updating status:', err);
+    if (window.showNotification) window.showNotification('Fout bij bijwerken status', 'error');
+  });
+}
+
+function changeUserRole(userId) {
+  fetch(`/admin/api/users/${userId}`)
+    .then(res => res.json())
+    .then(data => {
+      const user = data.user;
+      const newRole = user.is_admin ? 'Gebruiker' : 'Admin';
+      if (confirm(`Weet je zeker dat je de rol wilt wijzigen naar ${newRole}?`)) {
+        fetch(`/admin/api/users/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_admin: !user.is_admin })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            if (window.showNotification) window.showNotification(data.message, 'success');
+            setTimeout(() => location.reload(), 1500);
+          }
+        });
+      }
+    });
+}
+
+function resetUserPassword(userId) {
+  if (!confirm('Weet je zeker dat je het wachtwoord wilt resetten?')) return;
+  fetch(`/admin/api/users/${userId}/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      if (window.showNotification) window.showNotification('Wachtwoord reset link gegenereerd', 'success');
+    }
+  });
+}
+
+function deleteUser(userId) {
+  if (!confirm('WAARSCHUWING: Weet je zeker dat je deze gebruiker wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt!')) return;
+  if (!confirm('Laatste bevestiging: Weet je het echt zeker?')) return;
+  
+  fetch(`/admin/api/users/${userId}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        if (window.showNotification) window.showNotification(data.message, 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        if (window.showNotification) window.showNotification(data.error || 'Fout opgetreden', 'error');
+      }
+    });
+}
+
+// Form submit handler
+document.getElementById('userForm')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const userId = document.getElementById('userId').value;
+  const userData = {
+    id: userId,
+    first_name: document.getElementById('firstName').value,
+    last_name: document.getElementById('lastName').value,
+    email: document.getElementById('email').value,
+    company_name: document.getElementById('companyName').value,
+    is_admin: document.getElementById('isAdmin').value === 'true',
+    status: document.getElementById('status').value,
+    can_read_company_mailboxes: document.getElementById('canReadCompanyMailboxes').checked
+  };
+  
+  fetch(`/admin/api/users/${userId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      const modal = document.getElementById('userEditModal');
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto';
+      if (window.showNotification) window.showNotification('Gebruiker bijgewerkt', 'success');
+      setTimeout(() => location.reload(), 1500);
+    }
+  })
+  .catch(err => {
+    console.error('Error updating user:', err);
+    if (window.showNotification) window.showNotification('Fout bij bijwerken', 'error');
+  });
+});
+
+// Add user button
+document.getElementById('addUserBtn')?.addEventListener('click', function() {
+  // Implement add user functionality
+  console.log('Add new user');
+});
+</script>

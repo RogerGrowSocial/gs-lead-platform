@@ -1,0 +1,256 @@
+<%
+  var task = typeof task !== 'undefined' ? task : {}
+  
+  var formatCurrency = function(amount) {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount / 100)
+  }
+  
+  var formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  
+  var formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }
+    return d.toLocaleString('nl-NL', options)
+  }
+  
+  var formatDuration = function(minutes) {
+    if (!minutes || minutes === 0) return '0min'
+    var hrs = Math.floor(minutes / 60)
+    var mins = minutes % 60
+    if (hrs > 0) {
+      return hrs + 'u' + (mins > 0 ? ' ' + mins + 'min' : '')
+    }
+    return mins + 'min'
+  }
+  
+  var statusLabels = {
+    'open': 'Open',
+    'in_progress': 'In Uitvoering',
+    'in_review': 'In Review',
+    'done': 'Afgerond',
+    'rejected': 'Afgewezen'
+  }
+  
+  var statusColors = {
+    'open': '#3b82f6',
+    'in_progress': '#f59e0b',
+    'in_review': '#8b5cf6',
+    'done': '#10b981',
+    'rejected': '#ef4444'
+  }
+  
+  var priorityLabels = {
+    'low': 'Laag',
+    'medium': 'Normaal',
+    'high': 'Hoog',
+    'urgent': 'Urgent'
+  }
+  
+  var priorityColors = {
+    'low': '#6b7280',
+    'medium': '#3b82f6',
+    'high': '#f59e0b',
+    'urgent': '#ef4444'
+  }
+  
+  var taskStatus = task.status || 'open'
+  var taskPriority = task.priority || 'medium'
+  var statusColor = statusColors[taskStatus] || '#6b7280'
+  var priorityColor = priorityColors[taskPriority] || '#6b7280'
+  
+  var employeeName = task.employee ? (task.employee.first_name && task.employee.last_name ? task.employee.first_name + ' ' + task.employee.last_name : task.employee.email) : 'Niet toegewezen'
+  var customerName = task.customer ? (task.customer.company_name || task.customer.name || task.customer.email) : null
+%>
+<%- include('../layouts/admin', {
+  title: (task.title || 'Taak') + ' - Taken | GrowSocial Admin',
+  activeMenu: 'tasks',
+  user: user,
+  showBackButton: true,
+  backButtonUrl: '/admin/tasks',
+  backButtonText: 'Terug naar taken',
+  stylesheets: ['/css/admin/users.css', '/css/admin/customers.css'],
+  scripts: ['/js/admin/task.js'],
+  body: `
+  <div class="user-detail-page">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Task Info Card -->
+        <div class="user-card" style="margin-bottom: 1.5rem;">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+              <div style="flex: 1;">
+                <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; margin: 0 0 0.5rem 0;">
+                  ${task.title || 'Geen titel'}
+                </h1>
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.75rem;">
+                  <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; padding: 4px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
+                    ${statusLabels[taskStatus] || taskStatus}
+                  </span>
+                  <span class="status-badge" style="background-color: ${priorityColor}20; color: ${priorityColor}; padding: 4px 12px; border-radius: 6px; font-size: 0.875rem; font-weight: 500;">
+                    ${priorityLabels[taskPriority] || taskPriority}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            ${task.description ? `
+              <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <h3 style="font-size: 0.875rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem;">Beschrijving</h3>
+                <p style="color: #374151; white-space: pre-wrap; line-height: 1.6;">${task.description}</p>
+              </div>
+            ` : ''}
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+              ${task.employee ? `
+                <div>
+                  <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Toegewezen aan</p>
+                  <a href="/admin/employees/${task.employee.id}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
+                    ${employeeName}
+                  </a>
+                </div>
+              ` : ''}
+              ${customerName ? `
+                <div>
+                  <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Klant</p>
+                  <a href="/admin/customers/${task.customer.id}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
+                    ${customerName}
+                  </a>
+                </div>
+              ` : ''}
+              ${task.due_at ? `
+                <div>
+                  <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Deadline</p>
+                  <p style="color: #111827; font-weight: 500; margin: 0;">${formatDate(task.due_at)}</p>
+                </div>
+              ` : ''}
+              ${task.value_cents > 0 ? `
+                <div>
+                  <p style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0;">Waarde</p>
+                  <p style="color: #111827; font-weight: 500; margin: 0;">${formatCurrency(task.value_cents)}</p>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Entries Section -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+              <h3 class="user-card-title-small">Tijdregistraties</h3>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Totaal:</span>
+                <span style="font-size: 1.25rem; font-weight: 600; color: #111827;">
+                  ${task.totalHours || 0}u ${task.totalMins || 0}min
+                </span>
+              </div>
+            </div>
+            ${task.timeEntries && task.timeEntries.length > 0 ? `
+              <div class="user-activity-list">
+                ${task.timeEntries.map(function(entry) {
+                  var entryHours = Math.floor((entry.duration_minutes || 0) / 60)
+                  var entryMins = (entry.duration_minutes || 0) % 60
+                  var entryEmployeeName = entry.employee ? (entry.employee.first_name && entry.employee.last_name ? entry.employee.first_name + ' ' + entry.employee.last_name : entry.employee.email) : 'Onbekend'
+                  var statusColors = {
+                    'draft': '#6b7280',
+                    'submitted': '#3b82f6',
+                    'approved': '#10b981',
+                    'rejected': '#ef4444'
+                  }
+                  var statusColor = statusColors[entry.status] || '#6b7280'
+                  
+                  return `
+                    <div class="user-activity-item">
+                      <div class="user-activity-icon" style="background-color: ${statusColor}20;">
+                        <i class="fas fa-clock" style="color: ${statusColor};"></i>
+                      </div>
+                      <div class="user-activity-content" style="flex: 1;">
+                        <p class="user-activity-title">
+                          ${entryHours}u ${entryMins}min
+                          ${entry.note ? ' - ' + entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '') : ''}
+                        </p>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                          <span style="font-size: 11px; color: #6b7280;">
+                            <i class="fas fa-user" style="margin-right: 4px;"></i>
+                            ${entryEmployeeName}
+                          </span>
+                          <span style="font-size: 11px; color: #6b7280;">
+                            <i class="fas fa-calendar" style="margin-right: 4px;"></i>
+                            ${formatDate(entry.start_at)}
+                          </span>
+                          <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
+                            ${entry.status === 'draft' ? 'Concept' : entry.status === 'submitted' ? 'Ingediend' : entry.status === 'approved' ? 'Goedgekeurd' : entry.status === 'rejected' ? 'Afgewezen' : entry.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                }).join('')}
+              </div>
+            ` : `
+              <p class="user-empty-text">Geen tijdregistraties gevonden voor deze taak.</p>
+            `}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Quick Stats Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Taak Informatie</h3>
+            <div class="user-stats-list-new">
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Status</p>
+                <p class="user-stat-value-new" style="color: ${statusColor};">
+                  ${statusLabels[taskStatus] || taskStatus}
+                </p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Prioriteit</p>
+                <p class="user-stat-value-new" style="color: ${priorityColor};">
+                  ${priorityLabels[taskPriority] || taskPriority}
+                </p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Uren</p>
+                <p class="user-stat-value-new" style="color: #3b82f6;">
+                  ${task.totalHours || 0}u ${task.totalMins || 0}min
+                </p>
+              </div>
+              ${task.value_cents > 0 ? `
+                <div class="user-stat-item-new">
+                  <p class="user-stat-label-new">Waarde</p>
+                  <p class="user-stat-value-new">${formatCurrency(task.value_cents)}</p>
+                </div>
+              ` : ''}
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Aangemaakt</p>
+                <p class="user-stat-value-new" style="font-size: 0.875rem;">
+                  ${formatDate(task.created_at)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `
+}) %>
+

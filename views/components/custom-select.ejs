@@ -1,0 +1,21 @@
+<div class="custom-select" data-select-id="<%= id %>">
+  <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" data-select-trigger>
+    <span class="custom-select-value" data-select-value><%= defaultValue || placeholder || 'Selecteer...' %></span>
+    <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <div class="custom-select-dropdown" role="listbox" data-select-dropdown>
+    <div class="custom-select-items">
+      <% options.forEach(function(option) { %>
+        <div class="custom-select-item <%= option.value === defaultValue ? 'selected' : '' %>" role="option" data-value="<%= option.value %>" tabindex="0">
+          <span class="custom-select-item-text"><%= option.label %></span>
+          <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+  <input type="hidden" name="<%= name %>" value="<%= defaultValue || '' %>" data-select-input>
+</div>

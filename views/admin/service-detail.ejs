@@ -1,0 +1,745 @@
+<%
+  const formatCurrency = function(cents) {
+    if (cents === null || cents === undefined) return '—';
+    return new Intl.NumberFormat('nl-NL', {style:'currency',currency:'EUR',minimumFractionDigits:2}).format((cents || 0) / 100);
+  }
+  
+  const formatDate = function(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  
+  const formatDateTime = function(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    return d.toLocaleString('nl-NL', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  }
+  
+  const serviceName = service.name || 'Onbekende dienst';
+  const serviceId = service.id;
+  const isAdmin = typeof isUserAdmin !== 'undefined' ? isUserAdmin : false;
+  const isManager = typeof isUserManager !== 'undefined' ? isUserManager : false;
+  const canEdit = isAdmin || isManager;
+  
+  // Status badge class
+  const statusClass = service.status === 'active' ? 'is-active' : 
+                     service.status === 'inactive' ? 'is-paused' : 
+                     'is-blocked';
+  const statusText = service.status === 'active' ? 'Actief' : 
+                    service.status === 'inactive' ? 'Inactief' : 
+                    'Gearchiveerd';
+  
+  // Service type text
+  const typeText = {
+    'one_time': 'Eenmalig',
+    'recurring': 'Terugkerend',
+    'per_lead': 'Per lead',
+    'hourly': 'Per uur'
+  }[service.service_type] || service.service_type;
+  
+  // Pricing mode text
+  const pricingModeText = {
+    'fixed': 'Vast',
+    'tiers': 'Schalen',
+    'recurring': 'Terugkerend',
+    'usage': 'Gebruik',
+    'hybrid': 'Hybride'
+  }[service.pricing_mode] || service.pricing_mode;
+%>
+<%- include('../layouts/admin', {
+  title: serviceName + ' - Diensten | GrowSocial Admin',
+  activeMenu: 'services',
+  user: user,
+  isUserAdmin: isAdmin,
+  showBackButton: true,
+  backButtonUrl: '/admin/services',
+  backButtonText: 'Terug naar diensten',
+  stylesheets: ['/css/admin/users.css', '/css/admin/service-detail.css'],
+  scripts: ['/js/admin/service-detail.js', '/js/admin/service-detail-modals.js'],
+  body: `
+  <div class="user-detail-page service-detail-page" data-service-id="${serviceId}">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Service Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+              <div class="user-info-avatar-section" style="flex: 1;">
+                <span class="user-avatar-large-new" aria-hidden="true" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: white;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                </span>
+                <div class="user-info-name-section" style="flex: 1;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <h1 class="user-info-name-new" id="serviceNameDisplay" style="flex: 1; margin: 0;">${serviceName}</h1>
+                    ${canEdit ? `
+                    <button type="button" onclick="openEditServiceModal()" class="edit-employee-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color='#6b7280'" onmouseout="this.style.color='#9ca3af'">
+                      <i class="fas fa-pencil-alt" style="font-size: 18px;"></i>
+                    </button>
+                    ` : ''}
+                  </div>
+                  <div class="user-info-badges-container" id="badgesContainer">
+                    <span class="user-status-badge-new ${statusClass}" id="statusBadge">
+                      ${statusText}
+                    </span>
+                    <span class="user-role-badge-new" style="background: #eff6ff; color: #1e40af;">
+                      ${typeText}
+                    </span>
+                    ${service.pricing_mode ? `
+                    <span class="user-role-badge-new" style="background: #f3f4f6; color: #374151;">
+                      ${pricingModeText}
+                    </span>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+            ${service.description ? `
+              <div class="user-info-company-divider" style="margin: 1rem 0;"></div>
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <p style="font-size: 0.875rem; color: #374151; margin: 0; line-height: 1.6;">${service.description}</p>
+              </div>
+            ` : ''}
+            <div class="user-info-company-divider" style="margin: 1rem 0;"></div>
+            <div class="user-info-contact-section">
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-tag">
+                  <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.828 8.828a2 2 0 0 0 2.828 0l7.172-7.172a2 2 0 0 0 0-2.828z"></path>
+                  <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle>
+                </svg>
+                <span class="user-info-contact-text">${service.slug || '—'}</span>
+              </div>
+              <div class="user-info-contact-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                  <line x1="16" x2="16" y1="2" y2="6"></line>
+                  <line x1="8" x2="8" y1="2" y2="6"></line>
+                  <line x1="3" x2="21" y1="10" y2="10"></line>
+                </svg>
+                <span class="user-info-contact-text" id="serviceCreatedAt">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI Cards (same style as /admin/payments) -->
+        <div class="kpi-cards-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="margin: 0; font-size: 1.125rem; font-weight: 600; color: #111827;">Prestaties</h3>
+            <div class="period-selector" style="display: flex; align-items: center; gap: 0.5rem;">
+              <label style="font-size: 0.875rem; color: #6b7280; font-weight: 500;">Periode:</label>
+              <select id="periodSelect" onchange="changePeriod(this.value)" style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; background: white; border-radius: 6px; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; color: #374151; min-width: 140px;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';">
+                <option value="30d">30 dagen</option>
+                <option value="90d">90 dagen</option>
+                <option value="365d">365 dagen</option>
+              </select>
+            </div>
+          </div>
+          <div class="kpi-cards-grid">
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Omzet</p>
+                <p class="kpi-value" id="kpiRevenue">€0,00</p>
+                <p class="kpi-subtitle" id="kpiRevenueSubtitle">Laatste 30 dagen</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Brutowinst</p>
+                <p class="kpi-value" id="kpiProfit">—</p>
+                <p class="kpi-subtitle">Omzet - kosten</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" x2="12" y1="2" y2="22"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Marge %</p>
+                <p class="kpi-value" id="kpiMargin">—</p>
+                <p class="kpi-subtitle">Winstmarge</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Aantal verkopen</p>
+                <p class="kpi-value" id="kpiSalesCount">0</p>
+                <p class="kpi-subtitle">Totaal verkocht</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div class="service-tabs-header" style="display: flex; gap: 0.5rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 1.5rem; overflow-x: auto;">
+              <button class="service-tab-btn active" data-tab="overview" onclick="switchTab('overview')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid #2563eb; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #2563eb; transition: all 0.2s; white-space: nowrap;">Overzicht</button>
+              <button class="service-tab-btn" data-tab="pricing" onclick="switchTab('pricing')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Prijzen & Pakketten</button>
+              <button class="service-tab-btn" data-tab="analytics" onclick="switchTab('analytics')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Analytics</button>
+              ${canEdit ? `<button class="service-tab-btn" data-tab="settings" onclick="switchTab('settings')" style="padding: 0.75rem 1.5rem; border: none; background: none; border-bottom: 2px solid transparent; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap;">Instellingen</button>` : ''}
+            </div>
+
+            <!-- Overview Tab -->
+            <div class="service-tab-content active" id="tab-overview">
+              <!-- Summary Section -->
+              <div style="margin-bottom: 2rem;">
+                <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="fas fa-info-circle"></i> Samenvatting
+                </h3>
+                <div class="service-summary-grid" id="summaryGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                  <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Prijsmodel</p>
+                    <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="summaryPricingMode">—</p>
+                  </div>
+                  <div style="padding: 1rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Facturering</p>
+                    <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="summaryBillingModel">—</p>
+                  </div>
+                  <div style="padding: 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #0369a1; margin: 0 0 0.5rem 0; font-weight: 500;">Basisprijs</p>
+                    <p style="font-size: 1.25rem; font-weight: 700; color: #0369a1; margin: 0;" id="summaryBasePrice">—</p>
+                  </div>
+                  <div style="padding: 1rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 500;">Basis kost</p>
+                    <p style="font-size: 1.25rem; font-weight: 700; color: #991b1b; margin: 0;" id="summaryBaseCost">—</p>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Verkoopbaar</p>
+                    <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="summarySellable">—</p>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; font-weight: 500;">Goedkeuring vereist</p>
+                    <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="summaryRequiresApproval">—</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pricing Overview -->
+              <div style="margin-bottom: 2rem;">
+                <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="fas fa-tags"></i> Prijzen overzicht
+                </h3>
+                <div class="service-snapshot-grid" id="pricingSnapshot" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                  <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.875rem; color: #6b7280;">Actieve schalen:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #111827;" id="activeTiersCount">0</span>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.875rem; color: #6b7280;">Actieve add-ons:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #111827;" id="activeAddonsCount">0</span>
+                  </div>
+                  <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.875rem; color: #6b7280;">Actieve kortingsregels:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #111827;" id="activeRulesCount">0</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Pricing Tab -->
+            <div class="service-tab-content" id="tab-pricing" style="display: none;">
+              ${canEdit ? `
+                <div style="margin-bottom: 2rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 class="user-card-title-small" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-cog"></i> Prijsmodel
+                    </h3>
+                    <button class="btn-primary" onclick="openEditPricingModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-pencil-alt"></i> Bewerken
+                    </button>
+                  </div>
+                  <div id="pricingModeDisplay" style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <p style="color: #6b7280; margin: 0;">Prijsmodel laden...</p>
+                  </div>
+                </div>
+              ` : ''}
+
+              <div style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 class="user-card-title-small" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-layer-group"></i> Prijsschalen
+                  </h3>
+                  ${canEdit ? `
+                    <button class="btn-primary" onclick="openAddTierModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-plus"></i> Schaal toevoegen
+                    </button>
+                  ` : ''}
+                </div>
+                <div id="tiersList">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Schalen laden...</div>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 class="user-card-title-small" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-plus-circle"></i> Add-ons
+                  </h3>
+                  ${canEdit ? `
+                    <button class="btn-primary" onclick="openAddAddonModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-plus"></i> Add-on toevoegen
+                    </button>
+                  ` : ''}
+                </div>
+                <div id="addonsList">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Add-ons laden...</div>
+                </div>
+              </div>
+
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h3 class="user-card-title-small" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-percent"></i> Kortingsregels
+                  </h3>
+                  ${canEdit ? `
+                    <button class="btn-primary" onclick="openAddDiscountRuleModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px; background: #2563eb; color: white; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-plus"></i> Regel toevoegen
+                    </button>
+                  ` : ''}
+                </div>
+                <div id="discountRulesList">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Kortingsregels laden...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="service-tab-content" id="tab-analytics" style="display: none;">
+              <div>
+                <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="fas fa-chart-bar"></i> Analytics overzicht
+                </h3>
+                <div id="analyticsContent">
+                  <div style="text-align: center; padding: 2rem; color: #6b7280;">Analytics laden...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Settings Tab -->
+            ${canEdit ? `
+              <div class="service-tab-content" id="tab-settings" style="display: none;">
+                <div>
+                  <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-sliders-h"></i> Geavanceerde instellingen
+                  </h3>
+                  <div id="advancedSettings">
+                    <div style="text-align: center; padding: 2rem; color: #6b7280;">Instellingen laden...</div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Pricing Overview Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-euro-sign"></i> Prijsinformatie
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #0369a1; margin: 0 0 0.5rem 0; font-weight: 500;">Basisprijs</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #0369a1; margin: 0;" id="sidebarBasePrice">—</p>
+              </div>
+              <div style="padding: 1rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #991b1b; margin: 0 0 0.5rem 0; font-weight: 500;">Basis kost</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #991b1b; margin: 0;" id="sidebarBaseCost">—</p>
+              </div>
+              <div style="padding: 1rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 8px;">
+                <p style="font-size: 0.75rem; color: #166534; margin: 0 0 0.5rem 0; font-weight: 500;">Marge</p>
+                <p style="font-size: 1.5rem; font-weight: 700; color: #166534; margin: 0;" id="sidebarMargin">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Service Stats Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-chart-line"></i> Statistieken
+            </h3>
+            <div id="serviceStats" style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Totaal verkopen</p>
+                <p style="font-size: 1rem; font-weight: 600; color: #111827; margin: 0;" id="sidebarTotalSales">0</p>
+              </div>
+              <div style="padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.25rem 0;">Laatste verkoop</p>
+                <p style="font-size: 0.875rem; font-weight: 500; color: #111827; margin: 0;" id="sidebarLastSold">—</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-history"></i> Recente activiteit
+            </h3>
+            <div id="recentActivityList" class="activity-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="text-align: center; padding: 2rem; color: #6b7280;">Activiteit laden...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Edit Modal -->
+  <div id="serviceEditModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;" id="editModalTitle">Dienst bewerken</h2>
+        <button class="modal-close" onclick="closeEditServiceModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="editServiceForm">
+        <div class="modal-body" style="padding: 1.5rem;">
+          <input type="hidden" id="editServiceId" name="id" />
+          <div id="editServiceFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 1rem; font-size: 0.875rem;"></div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Naam *</label>
+            <input type="text" id="editServiceName" name="name" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';" />
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Slug *</label>
+            <input type="text" id="editServiceSlug" name="slug" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';" />
+            <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">URL-vriendelijke identifier</p>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Type *</label>
+            <select id="editServiceType" name="service_type" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';">
+              <option value="one_time">Eenmalig</option>
+              <option value="recurring">Terugkerend</option>
+              <option value="per_lead">Per lead</option>
+              <option value="hourly">Per uur</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Status *</label>
+            <select id="editServiceStatus" name="status" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';">
+              <option value="active">Actief</option>
+              <option value="inactive">Inactief</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Beschrijving</label>
+            <textarea id="editServiceDescription" name="description" rows="4" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; resize: vertical; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closeEditServiceModal()" class="btn-secondary" style="padding: 0.625rem 1.25rem; background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='white';">
+            Annuleren
+          </button>
+          <button type="submit" class="btn-primary" style="padding: 0.625rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#1d4ed8';" onmouseout="this.style.background='#2563eb';">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tier Modal -->
+  <div id="tierModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;" id="tierModalTitle">Nieuwe prijsschaal</h2>
+        <button class="modal-close" onclick="closeTierModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="tierForm">
+        <div class="modal-body" style="padding: 1.5rem;">
+          <input type="hidden" id="tierId" name="id" />
+          <div id="tierFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 1rem; font-size: 0.875rem;"></div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Naam *</label>
+            <input type="text" id="tierName" name="name" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Beschrijving</label>
+            <textarea id="tierDescription" name="description" rows="3" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; resize: vertical;"></textarea>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Facturering *</label>
+            <select id="tierBillingModel" name="billing_model" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem;">
+              <option value="one_time">Eenmalig</option>
+              <option value="monthly">Maandelijks</option>
+              <option value="yearly">Jaarlijks</option>
+              <option value="custom">Aangepast</option>
+            </select>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Prijs (€) *</label>
+              <input type="number" id="tierPrice" name="price_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Kost (€) *</label>
+              <input type="number" id="tierCost" name="cost_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Unit label</label>
+            <input type="text" id="tierUnitLabel" name="unit_label" placeholder="bijv. per maand" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closeTierModal()" class="btn-secondary" style="padding: 0.625rem 1.25rem; background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 0.625rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Addon Modal -->
+  <div id="addonModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;" id="addonModalTitle">Nieuwe add-on</h2>
+        <button class="modal-close" onclick="closeAddonModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="addonForm">
+        <div class="modal-body" style="padding: 1.5rem;">
+          <input type="hidden" id="addonId" name="id" />
+          <div id="addonFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 1rem; font-size: 0.875rem;"></div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Naam *</label>
+            <input type="text" id="addonName" name="name" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Beschrijving</label>
+            <textarea id="addonDescription" name="description" rows="3" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: inherit; resize: vertical;"></textarea>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Facturering *</label>
+            <select id="addonBillingModel" name="billing_model" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem;">
+              <option value="one_time">Eenmalig</option>
+              <option value="monthly">Maandelijks</option>
+              <option value="yearly">Jaarlijks</option>
+            </select>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Prijs (€) *</label>
+              <input type="number" id="addonPrice" name="price_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Kost (€) *</label>
+              <input type="number" id="addonCost" name="cost_cents" step="0.01" min="0" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Unit label</label>
+            <input type="text" id="addonUnitLabel" name="unit_label" placeholder="bijv. per item" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closeAddonModal()" class="btn-secondary" style="padding: 0.625rem 1.25rem; background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 0.625rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Discount Rule Modal -->
+  <div id="discountRuleModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 600px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;" id="discountRuleModalTitle">Nieuwe kortingsregel</h2>
+        <button class="modal-close" onclick="closeDiscountRuleModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="discountRuleForm">
+        <div class="modal-body" style="padding: 1.5rem;">
+          <input type="hidden" id="discountRuleId" name="id" />
+          <div id="discountRuleFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 1rem; font-size: 0.875rem;"></div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Naam *</label>
+            <input type="text" id="discountRuleName" name="name" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Type *</label>
+              <select id="discountRuleType" name="rule_type" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem;">
+                <option value="percentage">Percentage</option>
+                <option value="fixed_amount">Vast bedrag</option>
+                <option value="volume">Volume</option>
+                <option value="coupon">Coupon</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Van toepassing op *</label>
+              <select id="discountRuleAppliesTo" name="applies_to" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem;">
+                <option value="base">Basisprijs</option>
+                <option value="tier">Schaal</option>
+                <option value="addon">Add-on</option>
+                <option value="total">Totaal</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Waarde *</label>
+            <input type="number" id="discountRuleValue" name="value_numeric" step="0.01" min="0" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            <p style="margin-top: 0.25rem; font-size: 0.75rem; color: #6b7280;">Percentage (bijv. 10) of vast bedrag in euro's</p>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Min. hoeveelheid</label>
+              <input type="number" id="discountRuleMinQty" name="min_qty" step="1" min="0" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Max. hoeveelheid</label>
+              <input type="number" id="discountRuleMaxQty" name="max_qty" step="1" min="0" style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closeDiscountRuleModal()" class="btn-secondary" style="padding: 0.625rem 1.25rem; background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 0.625rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pricing Modal (Refactored: Packages as Single Source of Truth) -->
+  <div id="pricingModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; overflow-y: auto; padding: 20px; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 800px; background-color: #fff; border-radius: 8px; position: relative; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Prijzen bewerken</h2>
+        <button class="modal-close" onclick="closePricingModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6';" onmouseout="this.style.background='none';">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="pricingForm">
+        <div class="modal-body" style="padding: 1.5rem;">
+          <div id="pricingFormError" style="display: none; padding: 0.75rem; background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; margin-bottom: 1rem; font-size: 0.875rem;"></div>
+          
+          <!-- Section A: Facturering -->
+          <div style="margin-bottom: 2rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Facturering *</label>
+            <select id="billingCycleSelect" name="billing_cycle" required style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 0.875rem; transition: all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.outline='none';" onblur="this.style.borderColor='#d1d5db';">
+              <option value="one_time">Eenmalig</option>
+              <option value="monthly">Maandelijks (terugkerend)</option>
+              <option value="yearly">Jaarlijks (terugkerend)</option>
+            </select>
+            <p style="margin-top: 0.5rem; font-size: 0.75rem; color: #6b7280;">
+              Wanneer wordt de klant gefactureerd? Bijv. Website bouwen = eenmalig, SEO = maandelijks
+            </p>
+          </div>
+          
+          <!-- Section B: Pakketten -->
+          <div style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <label style="display: block; margin: 0; font-weight: 500; color: #374151; font-size: 0.875rem;">Pakketten *</label>
+              <button type="button" onclick="addPackageRow()" class="btn-secondary" style="padding: 0.5rem 1rem; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-plus"></i> Pakket toevoegen
+              </button>
+            </div>
+            <p style="margin-bottom: 1rem; font-size: 0.75rem; color: #6b7280;">
+              Elke dienst heeft minimaal 1 pakket. "Vaste prijs" = 1 pakket. Meerdere pakketten = verschillende opties (bijv. Basic/Pro/Enterprise).
+            </p>
+            <div id="packagesList" style="display: flex; flex-direction: column; gap: 1rem;">
+              <!-- Packages will be dynamically inserted here -->
+            </div>
+          </div>
+          
+          <!-- Section C: Preview (read-only) -->
+          <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <h3 style="margin: 0 0 0.75rem 0; font-size: 0.875rem; font-weight: 600; color: #374151;">Preview</h3>
+            <div id="pricingPreview" style="font-size: 0.875rem; color: #6b7280;">
+              <p style="margin: 0;">Pakketten worden hier getoond...</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="closePricingModal()" class="btn-secondary" style="padding: 0.625rem 1.25rem; background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">Annuleren</button>
+          <button type="submit" class="btn-primary" style="padding: 0.625rem 1.25rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer;">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  `,
+  serviceData: service,
+  canEdit: canEdit
+}) %>
+
+<script>
+  // Make canEdit available globally
+  window.canEdit = <%= canEdit ? 'true' : 'false' %>;
+</script>
+

@@ -1,0 +1,309 @@
+<!-- KPI Cards - EXACT zoals AI acties tab -->
+<div class="kpi-cards-container">
+  <div class="kpi-cards-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Actieve Campagnes</p>
+        <p class="kpi-value" id="kpi-active-campaigns">-</p>
+        <p class="kpi-subtitle">Google Ads campagnes die momenteel actief zijn.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Gekoppeld aan segmenten.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Totale Uitgaven (7d)</p>
+        <p class="kpi-value" id="kpi-total-spend">-</p>
+        <p class="kpi-subtitle">Totale Google Ads uitgaven.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Laatste 7 dagen.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
+        </svg>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Totale Clicks (7d)</p>
+        <p class="kpi-value" id="kpi-total-clicks">-</p>
+        <p class="kpi-subtitle">Totaal aantal clicks op advertenties.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Laatste 7 dagen.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Gemiddelde CPL</p>
+        <p class="kpi-value" id="kpi-avg-cpl">-</p>
+        <p class="kpi-subtitle">Gemiddelde Cost Per Lead.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Laatste 7 dagen.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Google Ads Account Management Section -->
+<div class="mb-6">
+  <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; background: white; border-radius: 8px 8px 0 0;">
+    <div>
+      <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Google Ads Accounts</h3>
+      <p style="margin-top: 4px; font-size: 14px; color: #6b7280;">Beheer je Google Ads accounts en verbind ze met het platform.</p>
+    </div>
+    <button 
+      id="add-google-ads-account-btn"
+      class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+    >
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+      Account Toevoegen
+    </button>
+  </div>
+  
+  <div class="table-container">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Account Naam</th>
+            <th>Customer ID</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Laatste Sync</th>
+            <th style="text-align: right;">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="google-ads-accounts-table-body">
+          <tr>
+            <td colspan="6" class="text-center py-8 text-gray-500">
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+              <p class="mt-2">Accounts laden...</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Campaigns Overview Section -->
+<div class="mb-6">
+  <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; background: white; border-radius: 8px 8px 0 0;">
+    <div>
+      <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">Google Ads Campagnes</h3>
+      <p style="margin-top: 4px; font-size: 14px; color: #6b7280;">Overzicht van alle Google Ads campagnes en hun koppeling met segmenten.</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button 
+        id="verify-connection-btn-top"
+        onclick="verifyGoogleAdsConnection()"
+        class="inline-flex items-center px-4 py-2 border border-blue-300 rounded-md shadow-sm text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        title="Verifieer Google Ads connectie en koppelingen"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Verifieer
+      </button>
+      <button 
+        id="sync-campaigns-btn"
+        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Sync Campagnes
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="content-filters-container">
+    <div class="content-filter-item">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Account</label>
+      <select id="filter-account" class="status-select">
+        <option value="">Alle accounts</option>
+      </select>
+    </div>
+    <div class="content-filter-item">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Segment</label>
+      <select id="filter-campaign-segment" class="status-select">
+        <option value="">Alle segmenten</option>
+      </select>
+    </div>
+    <div class="content-filter-item">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+      <select id="filter-campaign-status" class="status-select">
+        <option value="">Alle statussen</option>
+        <option value="ENABLED">Actief</option>
+        <option value="PAUSED">Gepauzeerd</option>
+        <option value="REMOVED">Verwijderd</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Campaigns Table -->
+  <div class="table-container">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Campagne Naam</th>
+            <th>Segment</th>
+            <th>Account</th>
+            <th>Dagelijks Budget</th>
+            <th>Status</th>
+            <th>Laatste Sync</th>
+            <th style="text-align: right;">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="campaigns-table-body">
+          <tr>
+            <td colspan="7" class="text-center py-8 text-gray-500">
+              <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+              <p class="mt-2">Campagnes laden...</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Google Ads Account -->
+<div id="add-account-modal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2>Google Ads Account Toevoegen</h2>
+      <button class="modal-close" onclick="closeAddAccountModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="add-account-form">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Account Naam *</label>
+          <input 
+            type="text" 
+            id="account-name" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Bijv. GrowSocial Main Account"
+            required
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Customer ID *</label>
+          <input 
+            type="text" 
+            id="account-customer-id" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="123-456-7890 (of 1234567890)"
+            required
+          />
+          <p class="mt-1 text-xs text-gray-500">Het Customer Account ID (niet de MCC ID)</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+          <select 
+            id="account-type" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="customer">Customer Account</option>
+            <option value="manager">Manager Account (MCC)</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <p class="text-sm text-blue-800 mb-2"><strong>Let op:</strong></p>
+            <p class="text-sm text-blue-700">Dit account moet al gekoppeld zijn aan je Google Ads API credentials. Zorg dat het account toegankelijk is via de OAuth token in je .env bestand.</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button 
+            type="submit"
+            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+          >
+            Account Toevoegen
+          </button>
+          <button 
+            type="button"
+            onclick="closeAddAccountModal()"
+            class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
+          >
+            Annuleren
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Campaign Budget -->
+<div id="edit-budget-modal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h2>Budget Aanpassen</h2>
+      <button class="modal-close" onclick="closeEditBudgetModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="edit-budget-form">
+        <input type="hidden" id="edit-budget-campaign-id" />
+        <input type="hidden" id="edit-budget-segment-id" />
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Campagne</label>
+          <p id="edit-budget-campaign-name" class="text-gray-700 font-medium"></p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Huidig Budget</label>
+          <p id="edit-budget-current" class="text-gray-700">€0.00/dag</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nieuw Dagelijks Budget (€) *</label>
+          <input 
+            type="number" 
+            id="edit-budget-amount" 
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            min="5"
+            max="1000"
+            step="0.01"
+            required
+          />
+          <p class="mt-1 text-xs text-gray-500">Minimaal €5.00, maximaal €1,000.00 per dag</p>
+        </div>
+        <div class="flex gap-3">
+          <button 
+            type="submit"
+            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+          >
+            Budget Bijwerken
+          </button>
+          <button 
+            type="button"
+            onclick="closeEditBudgetModal()"
+            class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition"
+          >
+            Annuleren
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+

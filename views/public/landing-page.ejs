@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= landingPage.seo_title || landingPage.title %></title>
+  <meta name="description" content="<%= landingPage.seo_description || landingPage.subtitle %>">
+  <!-- Google Ads / GA4 gtag + Consent Mode v2 -->
+  <%- include('public/partials/gtag-consent', { googleAdsTagId, ga4MeasurementId }) %>
+  <!-- Tailwind CSS CDN -->
+  <script>
+    tailwind.config = {
+      corePlugins: {
+        preflight: true,
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <% if (typeof isPreview !== 'undefined' && isPreview) { %>
+  <style>
+    .preview-banner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .preview-banner-text {
+      flex: 1;
+      text-align: center;
+    }
+    .preview-banner-back {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .preview-banner-back:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    body {
+      padding-top: 48px;
+    }
+  </style>
+  <% } %>
+</head>
+<body class="bg-gray-50">
+  <% if (typeof isPreview !== 'undefined' && isPreview) { %>
+  <div class="preview-banner">
+    <a href="javascript:history.back()" class="preview-banner-back">← Terug</a>
+    <div class="preview-banner-text">Concept Preview - Dit is een voorbeeld van hoe de landingspagina eruit zal zien</div>
+    <div style="width: 80px;"></div>
+  </div>
+  <% } %>
+  <!-- Hero Section -->
+  <% if (landingPage.content_json?.hero) { %>
+  <section class="bg-white py-16 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">
+        <%= landingPage.content_json.hero.headline %>
+      </h1>
+      <% if (landingPage.content_json.hero.subheadline) { %>
+      <p class="text-xl text-gray-600 mb-8">
+        <%= landingPage.content_json.hero.subheadline %>
+      </p>
+      <% } %>
+      <% if (landingPage.content_json.hero.cta_text) { %>
+      <a href="#contact-form" class="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+        <%= landingPage.content_json.hero.cta_text %>
+      </a>
+      <% } %>
+    </div>
+  </section>
+  <% } %>
+
+  <!-- Features Section -->
+  <% if (landingPage.content_json?.features && landingPage.content_json.features.length > 0) { %>
+  <section class="py-16 px-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <% landingPage.content_json.features.forEach(feature => { %>
+        <div class="bg-white p-6 rounded-lg shadow">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">
+            <%= feature.title %>
+          </h3>
+          <p class="text-gray-600">
+            <%= feature.description %>
+          </p>
+        </div>
+        <% }); %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <!-- Benefits Section -->
+  <% if (landingPage.content_json?.benefits && landingPage.content_json.benefits.length > 0) { %>
+  <section class="py-16 px-4 bg-white">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-gray-900 mb-8 text-center">Voordelen</h2>
+      <ul class="space-y-4">
+        <% landingPage.content_json.benefits.forEach(benefit => { %>
+        <li class="flex items-start">
+          <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <div>
+            <h3 class="font-semibold text-gray-900"><%= benefit.title %></h3>
+            <p class="text-gray-600"><%= benefit.description %></p>
+          </div>
+        </li>
+        <% }); %>
+      </ul>
+    </div>
+  </section>
+  <% } %>
+
+  <!-- Contact Form Section -->
+  <section id="contact-form" class="py-16 px-4 bg-gray-100">
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-white p-8 rounded-lg shadow">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+          <%= landingPage.content_json?.cta?.text || 'Vraag Gratis Offerte Aan' %>
+        </h2>
+        <% if (formSlug) { %>
+          <!-- New Form System -->
+          <iframe 
+            src="/form/<%= formSlug %>?landing_page_id=<%= landingPage.id %>" 
+            style="width: 100%; border: none; min-height: 600px;"
+            id="form-iframe"
+            title="Aanvraagformulier"
+          ></iframe>
+          <script>
+            // Resize iframe based on content
+            window.addEventListener('message', function(event) {
+              if (event.data && event.data.type === 'form-height') {
+                const iframe = document.getElementById('form-iframe');
+                if (iframe) {
+                  iframe.style.height = event.data.height + 'px';
+                }
+              }
+            });
+          </script>
+        <% } else { %>
+          <!-- Fallback: Simple form if no form template available -->
+          <form action="/api/leads/public" method="POST" id="lead-form" novalidate>
+          <input type="hidden" name="landing_page_id" value="<%= landingPage.id %>">
+          <!-- Google Ads click identifiers for conversion tracking -->
+          <input type="hidden" name="gclid" value="">
+          <input type="hidden" name="gbraid" value="">
+          <input type="hidden" name="wbraid" value="">
+          
+          <div class="mb-4">
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Naam *</label>
+            <input type="text" id="name" name="name" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Uw naam">
+            <p id="name-error" class="mt-1 text-sm text-red-600 hidden"></p>
+          </div>
+          
+          <div class="mb-4">
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
+            <input type="email" id="email" name="email" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="uw@email.nl">
+            <p id="email-error" class="mt-1 text-sm text-red-600 hidden"></p>
+          </div>
+          
+          <div class="mb-4">
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefoon</label>
+            <input type="tel" id="phone" name="phone"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="06 12345678">
+          </div>
+          
+          <div class="mb-6">
+            <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Bericht</label>
+            <textarea id="message" name="message" rows="4"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Vertel ons over uw project..."></textarea>
+          </div>
+          
+          <button type="submit" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+            <%= landingPage.content_json?.cta?.button_text || 'Verstuur Aanvraag' %>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Internal Links (Cluster Navigation) -->
+  <% 
+    const isMainPage = landingPage.page_type === 'main';
+    const hasSatellites = cluster && (cluster.cost || cluster.quote || cluster.spoed);
+    const hasMainPage = cluster && cluster.main && !isMainPage;
+  %>
+  <% if (hasSatellites || hasMainPage) { %>
+  <section class="py-8 px-4 bg-white border-t">
+    <div class="max-w-4xl mx-auto">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">
+        <%= isMainPage ? 'Meer informatie' : 'Terug naar overzicht' %>
+      </h3>
+      <div class="flex flex-wrap gap-4">
+        <% if (hasMainPage) { %>
+        <a href="<%= cluster.main.path %>" class="inline-flex items-center text-blue-600 hover:text-blue-800 hover:underline font-medium">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+          </svg>
+          Overzicht
+        </a>
+        <% } %>
+        <% if (isMainPage) { %>
+          <% if (cluster.cost) { %>
+          <a href="<%= cluster.cost.path %>" class="text-blue-600 hover:text-blue-800 hover:underline">
+            Kosten
+          </a>
+          <% } %>
+          <% if (cluster.quote) { %>
+          <a href="<%= cluster.quote.path %>" class="text-blue-600 hover:text-blue-800 hover:underline">
+            Offerte
+          </a>
+          <% } %>
+          <% if (cluster.spoed) { %>
+          <a href="<%= cluster.spoed.path %>" class="text-blue-600 hover:text-blue-800 hover:underline">
+            Spoed
+          </a>
+          <% } %>
+        <% } %>
+      </div>
+    </div>
+  </section>
+  <% } %>
+
+  <script>
+    // Read query parameter from URL
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name) || null;
+    }
+
+    // Capture Google Ads click identifiers from URL
+    const gclidFromUrl = getQueryParam('gclid');
+    const gbraidFromUrl = getQueryParam('gbraid');
+    const wbraidFromUrl = getQueryParam('wbraid');
+
+    // On DOM ready, populate hidden fields with identifiers
+    document.addEventListener('DOMContentLoaded', function () {
+      const mapping = {
+        gclid: gclidFromUrl,
+        gbraid: gbraidFromUrl,
+        wbraid: wbraidFromUrl
+      };
+      Object.keys(mapping).forEach(function (key) {
+        const input = document.querySelector('input[name="' + key + '"]');
+        if (input && mapping[key]) {
+          input.value = mapping[key];
+        }
+      });
+    });
+
+    // Custom validation
+    function validateForm(data) {
+      const errors = {};
+      
+      // Validate name
+      if (!data.name || data.name.trim().length < 2) {
+        errors.name = 'Naam is verplicht en moet minimaal 2 tekens bevatten';
+      }
+      
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!data.email || !emailRegex.test(data.email)) {
+        errors.email = 'Voer een geldig e-mailadres in';
+      }
+      
+      return errors;
+    }
+    
+    // Show error
+    function showError(fieldId, message) {
+      const field = document.getElementById(fieldId);
+      const errorElement = document.getElementById(fieldId + '-error');
+      
+      if (field && errorElement) {
+        field.classList.add('border-red-500');
+        errorElement.textContent = message;
+        errorElement.classList.remove('hidden');
+      }
+    }
+    
+    // Clear errors
+    function clearErrors() {
+      const errorElements = document.querySelectorAll('[id$="-error"]');
+      errorElements.forEach(el => {
+        el.classList.add('hidden');
+        const fieldId = el.id.replace('-error', '');
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.classList.remove('border-red-500');
+        }
+      });
+    }
+    
+    // Handle form submission
+    document.getElementById('lead-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Clear previous errors
+      clearErrors();
+      
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData);
+      
+      // Validate
+      const errors = validateForm(data);
+      if (Object.keys(errors).length > 0) {
+        // Show errors
+        Object.keys(errors).forEach(field => {
+          showError(field, errors[field]);
+        });
+        return;
+      }
+      
+      // Show loading state
+      const submitButton = e.target.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton.textContent;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Verzenden...';
+      
+      try {
+        const response = await fetch('/api/leads/public', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          // Show success message
+          alert(result.message || 'Bedankt! Uw aanvraag is verzonden. We nemen zo snel mogelijk contact met u op.');
+          e.target.reset();
+          clearErrors();
+
+          // Fire Google Ads conversion (only if consent for ads is granted)
+          try {
+            if (window.gtag && window.growsocialConsent && window.growsocialConsent.canSendAds && window.growsocialConsent.canSendAds()) {
+              <% if (googleAdsConversionId && googleAdsConversionLabel) { %>
+              gtag('event', 'conversion', {
+                send_to: 'AW-<%= googleAdsConversionId %>/<%= googleAdsConversionLabel %>',
+                value: 0,
+                currency: 'EUR'
+              });
+              <% } %>
+            }
+          } catch (convError) {
+            console.warn('Conversion tracking failed:', convError);
+          }
+        } else {
+          // Show error message
+          alert(result.error || 'Er is een fout opgetreden. Probeer het later opnieuw.');
+        }
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('Er is een fout opgetreden. Probeer het later opnieuw.');
+      } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
+    });
+  </script>
+</body>
+</html>
+

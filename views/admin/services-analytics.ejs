@@ -1,0 +1,144 @@
+<%- include('../layouts/admin', {
+  title: 'Diensten Analytics',
+  activeMenu: 'services',
+  activeSubmenu: 'analytics',
+  user: user,
+  stylesheets: ['/css/admin/tasks.css', '/css/components/custom-select.css'],
+  scripts: ['/js/admin/services-analytics.js', '/js/components/custom-select.js'],
+  body: `
+    <div class="services-analytics-container">
+      <div class="page-header">
+        <div>
+          <h1>Diensten Analytics</h1>
+          <p class="text-muted">Inzicht in omzet, winst en prestaties per dienst</p>
+        </div>
+      </div>
+      
+      <!-- Period Selector -->
+      <div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
+        <div class="custom-select" data-select-id="periodSelect" style="width: 200px;">
+          <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" data-select-trigger>
+            <span class="custom-select-value" data-select-value>Laatste 30 dagen</span>
+            <svg class="custom-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="custom-select-dropdown" role="listbox" data-select-dropdown>
+            <div class="custom-select-items">
+              <div class="custom-select-item selected" role="option" data-value="30d" tabindex="0">
+                <span class="custom-select-item-text">Laatste 30 dagen</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item" role="option" data-value="90d" tabindex="0">
+                <span class="custom-select-item-text">Laatste 90 dagen</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="custom-select-item" role="option" data-value="365d" tabindex="0">
+                <span class="custom-select-item-text">Laatste jaar</span>
+                <svg class="custom-select-checkmark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="period" value="30d" data-select-input>
+        </div>
+      </div>
+      
+      <!-- KPI Cards -->
+      <div class="kpi-cards-container">
+        <div class="kpi-cards-grid">
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totale omzet</p>
+              <p class="kpi-value" id="totalRevenue">€0,00</p>
+              <p class="kpi-subtitle" id="revenueSubtitle">Laatste 30 dagen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                <polyline points="16 7 22 7 22 13"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Brutowinst</p>
+              <p class="kpi-value" id="totalProfit">—</p>
+              <p class="kpi-subtitle">Omzet - kosten</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" x2="12" y1="2" y2="22"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Gewogen marge</p>
+              <p class="kpi-value" id="weightedMargin">—</p>
+              <p class="kpi-subtitle">Gemiddelde marge %</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+              </svg>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Top dienst</p>
+              <p class="kpi-value" id="topService" style="font-size: 1.1rem; margin-bottom: 0.25rem;">—</p>
+              <p class="kpi-subtitle" id="topServiceRevenue">—</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Breakdown Table -->
+      <div class="services-table-container" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 1.5rem;">
+        <h2 style="margin: 0 0 1.5rem 0; font-size: 1.25rem; font-weight: 600;">Breakdown per dienst</h2>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Dienst</th>
+                <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Omzet</th>
+                <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Brutowinst</th>
+                <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Marge%</th>
+                <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">#Sales</th>
+                <th style="text-align: right; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Gem. order value</th>
+                <th style="text-align: left; padding: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase;">Laatst verkocht</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownTableBody">
+              <tr>
+                <td colspan="7" style="padding: 3rem; text-align: center; color: #6b7280;">
+                  <div style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;">
+                    <i class="fas fa-chart-line"></i>
+                  </div>
+                  <p>Laden...</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}) %>
+

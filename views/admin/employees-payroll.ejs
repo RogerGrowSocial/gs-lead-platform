@@ -1,0 +1,356 @@
+<%- include('../layouts/admin', {
+  title: 'Payroll - Werknemers | GrowSocial Admin',
+  activeMenu: 'employees',
+  activeSubmenu: 'payroll',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  stylesheets: ['/css/admin/users.css', '/css/admin/payroll.css'],
+  scripts: ['/js/admin/payroll.js'],
+  body: `
+  <div class="page-header">
+    <div>
+      <h1>Payroll</h1>
+      <p class="text-muted">Beheer salarisschalen en uitbetalingen</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="payroll-tabs" style="margin-bottom: 2rem;">
+    <button class="payroll-tab-btn active" data-tab="scales" onclick="switchTab('scales')">
+      <i class="fas fa-layer-group"></i> Salarisschalen
+    </button>
+    <button class="payroll-tab-btn" data-tab="payouts" onclick="switchTab('payouts')">
+      <i class="fas fa-money-bill-wave"></i> Uitbetalingen
+    </button>
+  </div>
+
+  <!-- Scales Tab -->
+  <div id="scales-tab" class="payroll-tab-content active">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600;">Salarisschalen</h2>
+      <button class="btn-primary" onclick="openAddScaleModal()" style="padding: 0.625rem 1.25rem; font-size: 0.875rem;">
+        <i class="fas fa-plus"></i> Nieuwe schaal
+      </button>
+    </div>
+
+    <div id="scalesList" class="scales-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+      <div style="text-align: center; padding: 2rem; color: #6b7280;">
+        <i class="fas fa-spinner fa-spin"></i> Laden...
+      </div>
+    </div>
+  </div>
+
+  <!-- Payouts Tab -->
+  <div id="payouts-tab" class="payroll-tab-content" style="display: none;">
+    <!-- Filters -->
+    <div class="users-header-row" style="margin-bottom: 1.5rem;">
+      <form method="GET" action="/admin/payroll" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <input type="hidden" name="tab" value="payouts">
+        <select name="status" class="users-dropdown" onchange="this.form.submit()">
+          <option value="">Alle statussen</option>
+          <option value="draft" ${filters.status === 'draft' ? 'selected' : ''}>Concept</option>
+          <option value="approved" ${filters.status === 'approved' ? 'selected' : ''}>Goedgekeurd</option>
+          <option value="paid" ${filters.status === 'paid' ? 'selected' : ''}>Betaald</option>
+        </select>
+        <select name="employee_id" class="users-dropdown" onchange="this.form.submit()">
+          <option value="">Alle werknemers</option>
+          ${(employees || []).map(emp => `
+            <option value="${emp.id}" ${filters.employee_id === emp.id ? 'selected' : ''}>
+              ${(emp.first_name || '') + ' ' + (emp.last_name || '')} ${emp.email ? '(' + emp.email + ')' : ''}
+            </option>
+          `).join('')}
+        </select>
+      </form>
+    </div>
+
+    <!-- Payroll Batches List -->
+    <div class="users-list">
+      ${(batches || []).length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fas fa-money-bill-wave"></i></div>
+          <h3>Geen uitbetalingen gevonden</h3>
+          <p>Er zijn momenteel geen uitbetalingen die voldoen aan de geselecteerde filters.</p>
+        </div>
+      ` : (batches || []).map(batch => {
+        const statusLabels = {
+          draft: 'Concept',
+          approved: 'Goedgekeurd',
+          paid: 'Betaald'
+        };
+        const statusColors = {
+          draft: 'bg-gray-100 text-gray-800',
+          approved: 'bg-blue-100 text-blue-800',
+          paid: 'bg-green-100 text-green-800'
+        };
+        const totalAmount = (batch.total_amount_cents || 0) / 100;
+        const itemsCount = batch.items?.length || 0;
+        const createdByName = batch.created_by_profile ? 
+          ((batch.created_by_profile.first_name || '') + ' ' + (batch.created_by_profile.last_name || '')).trim() || batch.created_by_profile.email : 
+          'Onbekend';
+        return `
+          <div class="user-item" style="padding: 1.5rem;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <h3 style="margin: 0; font-size: 1.125rem; font-weight: 600;">
+                  ${new Date(batch.period_start).toLocaleDateString('nl-NL')} - ${new Date(batch.period_end).toLocaleDateString('nl-NL')}
+                </h3>
+                <span class="badge ${statusColors[batch.status] || 'bg-gray-100 text-gray-800'}" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">
+                  ${statusLabels[batch.status] || batch.status}
+                </span>
+                <span class="badge bg-green-100 text-green-800" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.875rem; font-weight: 600;">
+                  €${totalAmount.toFixed(2)}
+                </span>
+              </div>
+              <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                <span><i class="fas fa-user"></i> Aangemaakt door: ${createdByName}</span>
+                <span><i class="fas fa-list"></i> ${itemsCount} items</span>
+                ${batch.paid_at ? `<span><i class="fas fa-check-circle"></i> Betaald op: ${new Date(batch.paid_at).toLocaleDateString('nl-NL')}</span>` : ''}
+              </div>
+              ${batch.items && batch.items.length > 0 ? `
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                  <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Uitbetalingsitems:</h4>
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    ${batch.items.map(item => {
+                      const employeeName = item.employee ? 
+                        ((item.employee.first_name || '') + ' ' + (item.employee.last_name || '')).trim() || item.employee.email : 
+                        'Onbekend';
+                      const amount = (item.amount_cents || 0) / 100;
+                      return `
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #f9fafb; border-radius: 4px;">
+                          <span>${employeeName}</span>
+                          <span style="font-weight: 600;">€${amount.toFixed(2)}</span>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  </div>
+
+  <!-- Add/Edit Scale Modal -->
+  <div id="scaleModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;" id="scaleModalTitle">Nieuwe schaal</h2>
+        <button class="modal-close" onclick="closeScaleModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem;">
+        <form id="scaleForm" onsubmit="saveScale(event)">
+          <input type="hidden" id="scaleId" name="id">
+          
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+              Naam *
+            </label>
+            <input 
+              type="text" 
+              id="scaleName" 
+              name="name" 
+              required
+              placeholder="Bijv. Manager, Developer, etc."
+              style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+            />
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+              Uurtarief (€) *
+            </label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <span style="font-size: 1rem; color: #6b7280;">€</span>
+              <input 
+                type="number" 
+                id="scaleHourlyRate" 
+                name="hourly_rate_cents" 
+                step="0.01" 
+                min="0" 
+                required
+                placeholder="0.00"
+                style="flex: 1; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                oninput="updateRateDisplay()"
+              />
+              <span style="font-size: 0.875rem; color: #6b7280;">/ uur</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+              Functie/Rol(len) *
+            </label>
+            <div id="rolesCheckboxGroup" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; padding: 0.75rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="SEO" style="cursor: pointer;">
+                <span>SEO</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="Web" style="cursor: pointer;">
+                <span>Web</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="Sales" style="cursor: pointer;">
+                <span>Sales</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="Support" style="cursor: pointer;">
+                <span>Support</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="Manager" style="cursor: pointer;">
+                <span>Manager</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                <input type="checkbox" name="roles" value="Overig" style="cursor: pointer;">
+                <span>Overig</span>
+              </label>
+            </div>
+            <p style="font-size: 0.75rem; color: #6b7280; margin: 0.5rem 0 0 0;">Gebruik dit om schalen snel te kunnen toewijzen en filteren.</p>
+            <p id="rolesError" style="font-size: 0.75rem; color: #dc2626; margin: 0.5rem 0 0 0; display: none;">Selecteer minimaal één functie/rol</p>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+              Beschrijving
+            </label>
+            <textarea 
+              id="scaleDescription" 
+              name="description" 
+              rows="3"
+              placeholder="Optionele beschrijving van deze schaal"
+              style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; resize: vertical;"
+            ></textarea>
+          </div>
+
+          <!-- Geavanceerd Section -->
+          <div style="margin-bottom: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+              <i class="fas fa-cog" style="color: #6b7280;"></i>
+              <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: #111827;">Geavanceerd</h3>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                Type reiskosten *
+              </label>
+              <select 
+                id="travelType" 
+                name="travel_type" 
+                required
+                onchange="updateTravelFields()"
+                style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; background: white;"
+              >
+                <option value="">Selecteer type...</option>
+                <option value="per_km">Per km</option>
+                <option value="per_day">Per dag</option>
+                <option value="monthly">Vast per maand</option>
+              </select>
+              <p style="font-size: 0.75rem; color: #6b7280; margin: 0.5rem 0 0 0;">Wordt automatisch meegenomen in payrollberekeningen.</p>
+            </div>
+
+            <!-- Per km fields -->
+            <div id="travelPerKmFields" style="display: none; margin-bottom: 1.25rem;">
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                  Bedrag per km (€) *
+                </label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span style="font-size: 1rem; color: #6b7280;">€</span>
+                  <input 
+                    type="number" 
+                    id="travelAmountPerKm" 
+                    step="0.01" 
+                    min="0.01" 
+                    placeholder="0.00"
+                    style="flex: 1; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                  />
+                </div>
+              </div>
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                  Max km per dag (optioneel)
+                </label>
+                <input 
+                  type="number" 
+                  id="travelMaxKmPerDay" 
+                  min="1" 
+                  placeholder="Geen maximum"
+                  style="width: 100%; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                />
+              </div>
+              <div style="margin-bottom: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                  <input type="checkbox" id="travelRoundtrip" checked style="cursor: pointer;">
+                  <span>Retour (heen en terug)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Per dag fields -->
+            <div id="travelPerDayFields" style="display: none; margin-bottom: 1.25rem;">
+              <div>
+                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                  Bedrag per dag (€) *
+                </label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span style="font-size: 1rem; color: #6b7280;">€</span>
+                  <input 
+                    type="number" 
+                    id="travelAmountPerDay" 
+                    step="0.01" 
+                    min="0.01" 
+                    placeholder="0.00"
+                    style="flex: 1; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Monthly fields -->
+            <div id="travelMonthlyFields" style="display: none; margin-bottom: 1.25rem;">
+              <div>
+                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                  Bedrag per maand (€) *
+                </label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <span style="font-size: 1rem; color: #6b7280;">€</span>
+                  <input 
+                    type="number" 
+                    id="travelAmountMonthly" 
+                    step="0.01" 
+                    min="0.01" 
+                    placeholder="0.00"
+                    style="flex: 1; padding: 0.625rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+            <button 
+              type="button"
+              onclick="closeScaleModal()" 
+              style="padding: 0.625rem 1.25rem; background: white; border: 1px solid #d1d5db; border-radius: 6px; color: #374151; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+            >
+              Annuleren
+            </button>
+            <button 
+              type="submit"
+              id="saveScaleBtn"
+              style="padding: 0.625rem 1.25rem; background: #2563eb; border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer; font-size: 0.875rem;"
+            >
+              Opslaan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  `
+}) %>

@@ -1,0 +1,110 @@
+<%- include('../layouts/admin', {
+  title: 'Taken - Werknemers | GrowSocial Admin',
+  activeMenu: 'tasks',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  stylesheets: ['/css/admin/users.css'],
+  body: `
+  <div class="page-header">
+    <div>
+      <h1>Taken</h1>
+      <p class="text-muted">Overzicht van alle werknemer taken</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="users-header-row" style="margin-bottom: 1.5rem;">
+    <form method="GET" action="/admin/tasks" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+      <select name="status" class="users-dropdown" onchange="this.form.submit()">
+        <option value="">Alle statussen</option>
+        <option value="open" ${filters.status === 'open' ? 'selected' : ''}>Open</option>
+        <option value="in_progress" ${filters.status === 'in_progress' ? 'selected' : ''}>In uitvoering</option>
+        <option value="in_review" ${filters.status === 'in_review' ? 'selected' : ''}>In review</option>
+        <option value="done" ${filters.status === 'done' ? 'selected' : ''}>Afgerond</option>
+        <option value="rejected" ${filters.status === 'rejected' ? 'selected' : ''}>Afgewezen</option>
+      </select>
+      <select name="employee_id" class="users-dropdown" onchange="this.form.submit()">
+        <option value="">Alle werknemers</option>
+        ${(employees || []).map(emp => `
+          <option value="${emp.id}" ${filters.employee_id === emp.id ? 'selected' : ''}>
+            ${(emp.first_name || '') + ' ' + (emp.last_name || '')} ${emp.email ? '(' + emp.email + ')' : ''}
+          </option>
+        `).join('')}
+      </select>
+      <select name="priority" class="users-dropdown" onchange="this.form.submit()">
+        <option value="">Alle prioriteiten</option>
+        <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
+        <option value="medium" ${filters.priority === 'medium' ? 'selected' : ''}>Normaal</option>
+        <option value="high" ${filters.priority === 'high' ? 'selected' : ''}>Hoog</option>
+        <option value="urgent" ${filters.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+      </select>
+    </form>
+  </div>
+
+  <!-- Tasks List -->
+  <div class="users-list">
+    ${(tasks || []).length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-state-icon"><i class="fas fa-tasks"></i></div>
+        <h3>Geen taken gevonden</h3>
+        <p>Er zijn momenteel geen taken die voldoen aan de geselecteerde filters.</p>
+      </div>
+    ` : (tasks || []).map(task => {
+      const employeeName = task.employee ? 
+        ((task.employee.first_name || '') + ' ' + (task.employee.last_name || '')).trim() || task.employee.email : 
+        'Onbekend';
+      const customerName = task.customer ? 
+        (task.customer.company_name || ((task.customer.first_name || '') + ' ' + (task.customer.last_name || '')).trim()) : 
+        null;
+      const statusLabels = {
+        open: 'Open',
+        in_progress: 'In uitvoering',
+        in_review: 'In review',
+        done: 'Afgerond',
+        rejected: 'Afgewezen'
+      };
+      const priorityLabels = {
+        low: 'Laag',
+        medium: 'Normaal',
+        high: 'Hoog',
+        urgent: 'Urgent'
+      };
+      const statusColors = {
+        open: 'bg-blue-100 text-blue-800',
+        in_progress: 'bg-yellow-100 text-yellow-800',
+        in_review: 'bg-purple-100 text-purple-800',
+        done: 'bg-green-100 text-green-800',
+        rejected: 'bg-red-100 text-red-800'
+      };
+      return `
+        <div class="user-item" style="padding: 1rem;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+              <h3 style="margin: 0; font-size: 1rem; font-weight: 600;">${task.title || 'Geen titel'}</h3>
+              <span class="badge ${statusColors[task.status] || 'bg-gray-100 text-gray-800'}" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">
+                ${statusLabels[task.status] || task.status}
+              </span>
+              <span class="badge bg-gray-100 text-gray-800" style="padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem;">
+                ${priorityLabels[task.priority] || task.priority}
+              </span>
+            </div>
+            ${task.description ? `<p style="margin: 0.5rem 0; color: #6b7280; font-size: 0.875rem;">${task.description}</p>` : ''}
+            <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+              <span><i class="fas fa-user"></i> ${employeeName}</span>
+              ${customerName ? `<span><i class="fas fa-building"></i> ${customerName}</span>` : ''}
+              ${task.due_at ? `<span><i class="fas fa-calendar"></i> ${new Date(task.due_at).toLocaleDateString('nl-NL')}</span>` : ''}
+              ${task.value_cents > 0 ? `<span><i class="fas fa-euro-sign"></i> ${(task.value_cents / 100).toFixed(2)}</span>` : ''}
+            </div>
+          </div>
+          <div>
+            <a href="/admin/employees/${task.employee_id}" class="btn btn-sm btn-secondary">
+              <i class="fas fa-eye"></i> Bekijk werknemer
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('')}
+  </div>
+  `
+}) %>
+

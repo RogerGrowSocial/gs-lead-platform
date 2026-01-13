@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 - Toegang geweigerd | GrowSocial Lead Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <img src="/img/logo.png" alt="GrowSocial">
+          <span style="font-size: 1.5rem; font-weight: 700; color: #ea5d0d; margin-left: 0.5rem;">GrowSocial</span>
+        </div>
+        <h1 class="auth-title">403 - Toegang geweigerd</h1>
+        <p class="auth-subtitle"><%= message || 'Je hebt geen toegang tot deze pagina' %></p>
+      </div>
+      
+      <div class="auth-body">
+        <div class="auth-error">
+          <%= error || 'Je hebt geen toegang tot deze pagina' %>
+        </div>
+        
+        <div class="text-center mt-4">
+          <a href="/dashboard" class="btn btn-primary">Terug naar dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

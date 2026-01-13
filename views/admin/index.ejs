@@ -1,0 +1,1692 @@
+<link rel="stylesheet" href="/css/admin/adminPayments.css">
+<link rel="stylesheet" href="/css/admin/dashboard-charts.css">
+<link rel="stylesheet" href="/css/admin/monthly-growth.css">
+<link rel="stylesheet" href="/css/admin/revenue-chart.css">
+<%
+  // Bereken percentages voor KPI-kaarten
+  const userGrowth = stats && stats.previousTotalUsers > 0 
+    ? Math.round((stats.totalUsers - stats.previousTotalUsers) / stats.previousTotalUsers * 100) 
+    : 0;
+  
+  const leadGrowth = stats && stats.previousTotalLeads > 0 
+    ? Math.round((stats.totalLeads - stats.previousTotalLeads) / stats.previousTotalLeads * 100) 
+    : 0;
+  
+  const revenueGrowth = stats && stats.previousTotalRevenue > 0 
+    ? Math.round((stats.totalRevenue - stats.previousTotalRevenue) / stats.previousTotalRevenue * 100) 
+    : 0;
+  
+  const pendingGrowth = stats && stats.previousPendingLeads > 0 
+    ? Math.round((stats.pendingLeads - stats.previousPendingLeads) / stats.previousPendingLeads * 100) 
+    : 0;
+  
+  // Formateer valuta
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+  
+  // Formateer datum
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  
+  // Formateer tijd
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // KPI-periode opties: losse jaren (2020, 2021, ..., huidig jaar)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from(
+    { length: Math.max(0, currentYear - 2020 + 1) },
+    (_, i) => {
+      const y = 2020 + i;
+      return `<option value="year${y}">${y}</option>`;
+    }
+  ).join('');
+  
+  // Statistieken voor het admin dashboard
+  var dashboardStats = {
+    totalUsers: stats ? stats.totalUsers : 0,
+    totalLeads: stats ? stats.totalLeads : 0,
+    totalRevenue: stats ? stats.totalRevenue : 0,
+    pendingLeads: stats ? stats.pendingLeads : 0
+  };
+
+  // Gebruik de echte data of voorbeelddata als er geen echte data is
+  var displayRecentUsers = recentUsers && recentUsers.length > 0 ? recentUsers : [
+    {
+      id: 1,
+      company_name: "GrowSocial",
+      email: "info@growsocialmedia.nl",
+      created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      has_payment_method: 1
+    },
+    {
+      id: 2,
+      company_name: "Bouwbedrijf Jansen",
+      email: "info@bouwbedrijfjansen.nl",
+      created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000),
+      has_payment_method: 1
+    },
+    {
+      id: 3,
+      company_name: "Elektra Solutions",
+      email: "contact@elektrasolutions.nl",
+      created_at: new Date(Date.now() - 7 * 24 * 3600 * 1000),
+      has_payment_method: 0
+    },
+    {
+      id: 4,
+      company_name: "Groen & Tuinen",
+      email: "info@groenentuinen.nl",
+      created_at: new Date(Date.now() - 10 * 24 * 3600 * 1000),
+      has_payment_method: 1
+    },
+    {
+      id: 5,
+      company_name: "Loodgietersbedrijf De Vries",
+      email: "contact@loodgieterdevries.nl",
+      created_at: new Date(Date.now() - 14 * 24 * 3600 * 1000),
+      has_payment_method: 0
+    }
+  ];
+
+  // Gebruik de echte data of voorbeelddata als er geen echte data is
+  var displayRecentLeads = recentLeads && recentLeads.length > 0 ? recentLeads : [
+    {
+      id: 1,
+      name: "Jan Jansen",
+      created_at: new Date(Date.now() - 2 * 3600 * 1000),
+      status: "new",
+      assigned_to: "Bouwbedrijf Jansen"
+    },
+    {
+      id: 2,
+      name: "Petra de Vries",
+      created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      status: "new",
+      assigned_to: null
+    },
+    {
+      id: 3,
+      name: "Mohammed El Amrani",
+      created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      status: "assigned",
+      assigned_to: "Elektra Solutions"
+    },
+    {
+      id: 4,
+      name: "Sophie Bakker",
+      created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      status: "accepted",
+      assigned_to: "Loodgietersbedrijf De Vries"
+    },
+    {
+      id: 5,
+      name: "Thomas van den Berg",
+      created_at: new Date(Date.now() - 4 * 3600 * 1000),
+      status: "new",
+      assigned_to: null
+    }
+  ];
+  
+  // Genereer willekeurige meldingen als er geen echte zijn
+  const notifications = [
+    { type: 'warning', message: '3 nieuwe aanvragen wachten op toewijzing', time: '2 uur geleden' },
+    { type: 'success', message: 'Betaling van €250,00 ontvangen van Bouwbedrijf Jansen', time: '4 uur geleden' },
+    { type: 'danger', message: 'Gebruiker heeft betaalmethode verwijderd', time: '1 dag geleden' },
+    { type: 'info', message: 'Systeem update gepland voor morgen 02:00', time: '5 uur geleden' }
+  ];
+
+  // Maak de inhoud van het dashboard
+  var dashboardContent = `
+    <div class="dashboard-container">
+      <!-- Main Content -->
+      <div class="dashboard-content">
+        <!-- Page Header (same structure as Aanvragenbeheer) -->
+        <div class="page-header" style="border-bottom: 1px solid #e5e7eb; align-items: flex-start;">
+          <div style="flex: 1; min-width: 0;">
+            <h1 style="width: auto;">Dashboard</h1>
+            <p class="text-muted" style="margin-bottom: 0;">Welkom terug, ${user.first_name || user.company_name}!</p>
+          </div>
+          <div class="header-actions">
+            <select id="kpiPeriodSelect" class="date-range-select" style="margin-bottom: 16px;">
+              <option value="7d">Afgelopen 7 dagen</option>
+              <option value="30d">Afgelopen 30 dagen</option>
+              <option value="6m">Afgelopen 6 maanden</option>
+              <option value="12m">Afgelopen 12 maanden</option>
+              <option value="ytd">Jaar tot nu toe (YTD)</option>
+              ${yearOptions}
+              <option value="lifetime" selected>Lifetime</option>
+            </select>
+            <select id="kpiCompareSelect" class="date-range-select" style="margin-bottom: 16px; margin-left: 10px;">
+              <option value="none" selected>Vergelijk: uit</option>
+              <option value="previous_period">Vergelijk: vorige periode</option>
+              <option value="previous_year">Vergelijk: vorig jaar</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- KPI Cards -->
+        <div class="kpi-cards-container">
+          <div class="kpi-cards-grid" id="kpiCardsContainer">
+            <!-- Users Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Gebruikers</p>
+                <p class="kpi-value" id="kpi-total-users">${dashboardStats.totalUsers}</p>
+                <p class="kpi-subtitle" id="kpi-users-subtitle">Totaal geregistreerd</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Leads Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Aanvragen</p>
+                <p class="kpi-value" id="kpi-total-leads">${dashboardStats.totalLeads}</p>
+                <p class="kpi-subtitle" id="kpi-leads-subtitle">Totaal leads</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-target">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <circle cx="12" cy="12" r="6"></circle>
+                  <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Revenue Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Totale omzet</p>
+                <p class="kpi-value" id="kpi-total-revenue">${formatCurrency(dashboardStats.totalRevenue)}</p>
+                <p class="kpi-subtitle" id="kpi-revenue-subtitle">Alle betaalde facturen</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Pending Leads Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Wachtende aanvragen</p>
+                <p class="kpi-value" id="kpi-pending-leads">${dashboardStats.pendingLeads}</p>
+                <p class="kpi-subtitle" id="kpi-pending-subtitle">Nog te behandelen</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Leads Analytics Charts Section -->
+        <div class="charts-container" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem; margin-bottom: 16px;">
+            <!-- Lead Analytics Chart (2/3 width) -->
+            <div class="chart-col-2">
+                <div class="revenue-chart-card">
+                    <div class="revenue-chart-header">
+                        <h3 class="revenue-chart-title">Leads over tijd</h3>
+                    </div>
+                    <div class="revenue-chart-filters">
+                        <div class="period-buttons">
+                            <button class="period-btn active" data-period="dag">Dag</button>
+                            <button class="period-btn" data-period="week">Week</button>
+                            <button class="period-btn" data-period="maand">Maand</button>
+                            <button class="period-btn" data-period="jaar">Jaar</button>
+                        </div>
+                        <div class="year-select-wrapper">
+                            <select class="year-select" id="leadsYearSelect">
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                            </select>
+                            <svg class="year-select-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="revenue-chart-body">
+                        <canvas id="leadsAnalyticsChart" width="800" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Monthly Growth (1/3 width) -->
+            <div class="chart-col-1">
+                <div class="monthly-growth-card">
+                    <h3 class="monthly-growth-title">Maandelijkse groei</h3>
+                    
+                    <!-- SECTION 1: Current Month -->
+                    <div class="current-month-section">
+                        <p class="current-month-label" id="currentMonthLabel">September 2025</p>
+                        <div class="current-month-stats">
+                            <p class="current-revenue" id="currentLeads">0 leads</p>
+                            <p class="current-payments" id="currentConversions">0 conversies</p>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 2: Comparison -->
+                    <div class="comparison-section">
+                        <p class="comparison-label" id="comparisonLabel">vs Augustus 2025</p>
+                        
+                        <div class="growth-metrics">
+                            <!-- Leads Growth -->
+                            <div class="growth-metric-row">
+                                <span class="metric-label">Leads</span>
+                                <div class="metric-value" id="leadsGrowth">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="growth-trend growth-trend-up">
+                                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                                        <polyline points="16 7 22 7 22 13"></polyline>
+                                    </svg>
+                                    <span class="growth-percentage growth-percentage-positive">+15.2%</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Conversions Growth -->
+                            <div class="growth-metric-row">
+                                <span class="metric-label">Conversies</span>
+                                <div class="metric-value" id="conversionsGrowth">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="growth-trend growth-trend-up">
+                                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                                        <polyline points="16 7 22 7 22 13"></polyline>
+                                    </svg>
+                                    <span class="growth-percentage growth-percentage-positive">+8.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SECTION 3: Previous Month Details -->
+                        <div class="previous-month-details">
+                            <p class="previous-revenue" id="previousLeads">0 leads</p>
+                            <p class="previous-payments" id="previousConversions">0 conversies</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <div class="charts-section">
+          <div class="chart-card">
+            <div class="chart-header">
+              <h2>Aanvragen over tijd</h2>
+            </div>
+            <div class="chart-body">
+              <canvas id="leadsChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="chart-card">
+            <div class="chart-header">
+              <h2>Omzet over tijd</h2>
+            </div>
+            <div class="chart-body">
+              <canvas id="revenueChart"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Recent Activity Section -->
+        <div class="activity-section">
+          <!-- Recent Users -->
+          <div class="activity-card">
+            <div class="activity-header">
+              <h2>Recente Gebruikers</h2>
+              <a href="/admin/users" class="view-all">Alle bekijken</a>
+            </div>
+            <div class="activity-body">
+              <div class="activity-table">
+                <div class="activity-table-header">
+                  <div class="activity-col">Bedrijf</div>
+                  <div class="activity-col">Email</div>
+                  <div class="activity-col">Datum</div>
+                  <div class="activity-col">Betaalmethode</div>
+                </div>
+                <div id="recentUsersContainer">
+                  <!-- Loading state -->
+                  <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+                    <div class="activity-col" style="grid-column: 1 / -1;">Laden...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Recent Leads -->
+          <div class="activity-card">
+            <div class="activity-header">
+              <h2>Recente Aanvragen</h2>
+              <a href="/admin/leads" class="view-all">Alle bekijken</a>
+            </div>
+            <div class="activity-body">
+              <div class="activity-table">
+                <div class="activity-table-header">
+                  <div class="activity-col">Naam</div>
+                  <div class="activity-col">Datum</div>
+                  <div class="activity-col">Status</div>
+                  <div class="activity-col">Toegewezen aan</div>
+                </div>
+                <div id="recentLeadsContainer">
+                  <!-- Loading state -->
+                  <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+                    <div class="activity-col" style="grid-column: 1 / -1;">Laden...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bottom Section -->
+        <div class="bottom-section">
+          <!-- Notifications -->
+          <div class="notifications-card">
+            <div class="notifications-header">
+              <h2>Meldingen</h2>
+              <button class="btn-outline-sm">Alles markeren als gelezen</button>
+            </div>
+            <div class="notifications-body">
+              <div class="notification-list" id="notificationsContainer">
+                <!-- Loading state -->
+                <div class="notification-item" style="text-align: center; padding: 2rem;">
+                  <div class="notification-content">
+                    <p>Laden...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Quick Actions -->
+          <div class="quick-actions-card">
+            <div class="quick-actions-header">
+              <h2>Snelle Acties</h2>
+            </div>
+            <div class="quick-actions-body">
+              <div class="quick-actions-grid" id="quickActionsContainer">
+                <a href="/admin/users" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-users"></i>
+                  </div>
+                  <span>Gebruikers</span>
+                </a>
+                <a href="/admin/leads" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-bullseye"></i>
+                  </div>
+                  <span>Aanvragen</span>
+                </a>
+                <a href="/admin/payments" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-credit-card"></i>
+                  </div>
+                  <span>Betalingen</span>
+                </a>
+                <a href="/admin/customers" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-building"></i>
+                  </div>
+                  <span>Klanten</span>
+                </a>
+                <a href="/admin/services" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-concierge-bell"></i>
+                  </div>
+                  <span>Diensten</span>
+                </a>
+                <a href="/admin/employees" class="quick-action-item">
+                  <div class="quick-action-icon">
+                    <i class="fas fa-user-tie"></i>
+                  </div>
+                  <span>Werknemers</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+%>
+
+<%- include('../layouts/admin', { 
+    title: 'Admin Dashboard', 
+    activeMenu: 'dashboard',
+    user: user,
+    body: dashboardContent
+}) %>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Huidige datum weergeven
+    const now = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    // Date display removed
+    
+    // Grafiek data
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+    
+    // Veilige manier om data te injecteren
+    let leadsData = [12, 19, 15, 25, 22, 30, 35, 28, 20, 25, 18, 30]; // Standaard waarden
+    let revenueData = [1500, 2500, 2000, 3500, 3000, 4500, 5000, 4200, 3800, 4000, 3500, 5500]; // Standaard waarden
+    
+    // Als chartData bestaat, gebruik dan de echte data
+    if (typeof chartData !== 'undefined' && chartData) {
+      if (chartData.leadsPerMonth) {
+        leadsData = chartData.leadsPerMonth;
+      }
+      if (chartData.revenuePerMonth) {
+        revenueData = chartData.revenuePerMonth;
+      }
+    }
+    
+    // Chart instances (global for updates)
+    let leadsChartInstance = null;
+    let revenueChartInstance = null;
+    
+    // Function to format currency
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+    }
+    
+    // Function to load and update chart data
+    async function loadChartData(period, chartCard) {
+      const chartType = chartCard.querySelector('#leadsChart') ? 'leads' : 'revenue';
+      const canvas = chartCard.querySelector(chartType === 'leads' ? '#leadsChart' : '#revenueChart');
+      
+      if (!canvas) return;
+      
+      // Show loading state
+      canvas.style.opacity = '0.5';
+      
+      try {
+        const compareModeEl = document.getElementById('kpiCompareSelect');
+        const compareMode = compareModeEl ? (compareModeEl.value || 'none') : 'none';
+        const response = await fetch(`/admin/api/admin/dashboard-charts?period=${period}&compare=${compareMode}`, { cache: 'no-store' });
+        const data = await response.json();
+        
+        if (data.success) {
+          const chartData = chartType === 'leads' ? data.leads : data.revenue;
+          const compareData = chartData.compareData;
+          const compareLabel =
+            (data.compare === 'previous_year') ? 'Vorig jaar' :
+            (data.compare === 'previous_period') ? 'Vorige periode' :
+            null;
+
+          function formatPct(n) {
+            if (n === null || n === undefined || !isFinite(n)) return '0%';
+            const sign = n > 0 ? '+' : '';
+            return `${sign}${n.toFixed(1)}%`;
+          }
+
+          function pctChange(curr, base) {
+            const c = Number(curr) || 0;
+            const b = Number(base) || 0;
+            if (!b) return c ? 100 : 0;
+            return ((c - b) / b) * 100;
+          }
+          
+          if (chartType === 'leads') {
+            // Update or create leads chart
+            if (leadsChartInstance) {
+              leadsChartInstance.data.labels = chartData.labels;
+              leadsChartInstance.data.datasets[0].data = chartData.data;
+              if (compareData && compareLabel) {
+                if (leadsChartInstance.data.datasets.length < 2) {
+                  leadsChartInstance.data.datasets.push({
+                    label: compareLabel,
+                    data: compareData,
+                    backgroundColor: 'rgba(234, 88, 13, 0.25)',
+                    borderColor: 'rgba(234, 88, 13, 0.35)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barThickness: 'flex',
+                    maxBarThickness: 40,
+                  });
+                } else {
+                  leadsChartInstance.data.datasets[1].label = compareLabel;
+                  leadsChartInstance.data.datasets[1].data = compareData;
+                }
+              } else if (leadsChartInstance.data.datasets.length > 1) {
+                leadsChartInstance.data.datasets = [leadsChartInstance.data.datasets[0]];
+              }
+              leadsChartInstance.update('none');
+            } else {
+              const ctx = canvas.getContext('2d');
+              leadsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels: chartData.labels,
+                  datasets: [
+                  {
+                    label: 'Aantal Aanvragen',
+                    data: chartData.data,
+                    backgroundColor: 'rgba(234, 88, 13, 0.7)',
+                    borderColor: 'rgba(234, 88, 13, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barThickness: 'flex',
+                    maxBarThickness: 40,
+                  },
+                  ...(compareData && compareLabel ? [{
+                    label: compareLabel,
+                    data: compareData,
+                    backgroundColor: 'rgba(234, 88, 13, 0.25)',
+                    borderColor: 'rgba(234, 88, 13, 0.35)',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barThickness: 'flex',
+                    maxBarThickness: 40,
+                  }] : [])
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  animation: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                      },
+                      ticks: {
+                        stepSize: 1
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        afterBody: function(items) {
+                          // Only show % for the "current" dataset tooltip
+                          const item = items && items[0];
+                          if (!item) return '';
+                          if (item.datasetIndex !== 0) return '';
+                          const idx = item.dataIndex;
+                          const curr = item.parsed && item.parsed.y !== undefined ? item.parsed.y : (item.raw || 0);
+                          const prev = idx > 0 ? (item.chart.data.datasets[0].data[idx - 1] || 0) : 0;
+                          const lines = [`Δ vs vorige: ${formatPct(pctChange(curr, prev))}`];
+                          const ds1 = item.chart.data.datasets[1];
+                          if (ds1 && ds1.data && ds1.data[idx] !== undefined) {
+                            lines.push(`Δ vs vergelijking: ${formatPct(pctChange(curr, ds1.data[idx]))}`);
+                          }
+                          return lines;
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          } else {
+            // Update or create revenue chart
+            if (revenueChartInstance) {
+              revenueChartInstance.data.labels = chartData.labels;
+              revenueChartInstance.data.datasets[0].data = chartData.data;
+              if (compareData && compareLabel) {
+                if (revenueChartInstance.data.datasets.length < 2) {
+                  revenueChartInstance.data.datasets.push({
+                    label: compareLabel,
+                    data: compareData,
+                    backgroundColor: 'transparent',
+                    borderColor: 'rgba(16, 185, 129, 0.45)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    borderDash: [6, 4]
+                  });
+                } else {
+                  revenueChartInstance.data.datasets[1].label = compareLabel;
+                  revenueChartInstance.data.datasets[1].data = compareData;
+                }
+              } else if (revenueChartInstance.data.datasets.length > 1) {
+                revenueChartInstance.data.datasets = [revenueChartInstance.data.datasets[0]];
+              }
+              revenueChartInstance.update('none');
+            } else {
+              const ctx = canvas.getContext('2d');
+              revenueChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: chartData.labels,
+                  datasets: [
+                  {
+                    label: 'Omzet (€)',
+                    data: chartData.data,
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                  },
+                  ...(compareData && compareLabel ? [{
+                    label: compareLabel,
+                    data: compareData,
+                    backgroundColor: 'transparent',
+                    borderColor: 'rgba(16, 185, 129, 0.45)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    borderDash: [6, 4]
+                  }] : [])
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  animation: false,
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                      },
+                      ticks: {
+                        callback: function(value) {
+                          return formatCurrency(value);
+                        }
+                      }
+                    },
+                    x: {
+                      grid: {
+                        display: false
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          const value = context.parsed.y;
+                          return `Omzet: ${formatCurrency(value)}`;
+                        },
+                        afterBody: function(items) {
+                          const item = items && items[0];
+                          if (!item) return '';
+                          if (item.datasetIndex !== 0) return '';
+                          const idx = item.dataIndex;
+                          const curr = item.parsed && item.parsed.y !== undefined ? item.parsed.y : (item.raw || 0);
+                          const prev = idx > 0 ? (item.chart.data.datasets[0].data[idx - 1] || 0) : 0;
+                          const lines = [`Δ vs vorige: ${formatPct(pctChange(curr, prev))}`];
+                          const ds1 = item.chart.data.datasets[1];
+                          if (ds1 && ds1.data && ds1.data[idx] !== undefined) {
+                            lines.push(`Δ vs vergelijking: ${formatPct(pctChange(curr, ds1.data[idx]))}`);
+                          }
+                          return lines;
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading ${chartType} chart data:`, error);
+        if (window.showNotification) {
+          window.showNotification(`Fout bij laden ${chartType === 'leads' ? 'aanvragen' : 'omzet'} data`, 'error');
+        }
+      } finally {
+        canvas.style.opacity = '1';
+      }
+    }
+    
+    // Initialize charts with global period (rechtsboven)
+    const leadsCanvas = document.getElementById('leadsChart');
+    const revenueCanvas = document.getElementById('revenueChart');
+    const globalPeriodSelect = document.getElementById('kpiPeriodSelect');
+    const globalCompareSelect = document.getElementById('kpiCompareSelect');
+    const initialChartsPeriod = globalPeriodSelect ? (globalPeriodSelect.value || 'lifetime') : 'lifetime';
+    
+    if (leadsCanvas) {
+      const leadsChartCard = leadsCanvas.closest('.chart-card');
+      if (leadsChartCard) {
+        loadChartData(initialChartsPeriod, leadsChartCard);
+      }
+    }
+    
+    if (revenueCanvas) {
+      const revenueChartCard = revenueCanvas.closest('.chart-card');
+      if (revenueChartCard) {
+        loadChartData(initialChartsPeriod, revenueChartCard);
+      }
+    }
+    
+    // Notification dismiss
+    const dismissButtons = document.querySelectorAll('.notification-dismiss');
+    dismissButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const notification = this.closest('.notification-item');
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 300);
+      });
+    });
+    
+    // Global period changes should also refresh the month charts
+    if (globalPeriodSelect) {
+      globalPeriodSelect.addEventListener('change', function() {
+        const period = this.value || 'lifetime';
+        if (leadsCanvas) {
+          const leadsChartCard = leadsCanvas.closest('.chart-card');
+          if (leadsChartCard) loadChartData(period, leadsChartCard);
+        }
+        if (revenueCanvas) {
+          const revenueChartCard = revenueCanvas.closest('.chart-card');
+          if (revenueChartCard) loadChartData(period, revenueChartCard);
+        }
+      });
+    }
+
+    // Compare changes should also refresh charts
+    if (globalCompareSelect) {
+      globalCompareSelect.addEventListener('change', function() {
+        const period = globalPeriodSelect ? (globalPeriodSelect.value || 'lifetime') : 'lifetime';
+        if (leadsCanvas) {
+          const leadsChartCard = leadsCanvas.closest('.chart-card');
+          if (leadsChartCard) loadChartData(period, leadsChartCard);
+        }
+        if (revenueCanvas) {
+          const revenueChartCard = revenueCanvas.closest('.chart-card');
+          if (revenueChartCard) loadChartData(period, revenueChartCard);
+        }
+      });
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    
+    // Helper function to format time
+    function formatTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    // Helper function to get status badge HTML
+    function getStatusBadge(status, type) {
+      if (type === 'user') {
+        return status ? 
+          '<span class="status-badge accepted">Ingesteld</span>' : 
+          '<span class="status-badge rejected">Niet ingesteld</span>';
+      } else if (type === 'lead') {
+        switch(status) {
+          case 'new':
+            return '<span class="status-badge new">Nieuw</span>';
+          case 'assigned':
+            return '<span class="status-badge assigned">Toegewezen</span>';
+          case 'accepted':
+            return '<span class="status-badge accepted">Geaccepteerd</span>';
+          case 'rejected':
+            return '<span class="status-badge rejected">Afgewezen</span>';
+          default:
+            return '<span class="status-badge">Onbekend</span>';
+        }
+      }
+      return '';
+    }
+    
+    // Load and render recent users
+    async function loadRecentUsers() {
+      const container = document.getElementById('recentUsersContainer');
+      if (!container) return;
+      
+      try {
+        const response = await fetch('/admin/api/admin/dashboard-activity', { cache: 'no-store' });
+        const data = await response.json();
+        
+        if (data.success && data.users) {
+          if (data.users.length === 0) {
+            container.innerHTML = `
+              <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+                <div class="activity-col" style="grid-column: 1 / -1;">Geen recente gebruikers</div>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.users.map(user => `
+              <div class="activity-table-row">
+                <div class="activity-col">
+                  <div class="user-name">${escapeHtml(user.company_name || '-')}</div>
+                </div>
+                <div class="activity-col">
+                  <div class="user-email">${escapeHtml(user.email || '-')}</div>
+                </div>
+                <div class="activity-col">
+                  <div class="user-date">${formatDate(user.created_at)}</div>
+                </div>
+                <div class="activity-col">
+                  ${getStatusBadge(user.has_payment_method, 'user')}
+                </div>
+              </div>
+            `).join('');
+          }
+        } else {
+          throw new Error('Failed to load users');
+        }
+      } catch (error) {
+        console.error('Error loading recent users:', error);
+        container.innerHTML = `
+          <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+            <div class="activity-col" style="grid-column: 1 / -1;">Fout bij laden gebruikers</div>
+          </div>
+        `;
+      }
+    }
+    
+    // Load and render recent leads
+    async function loadRecentLeads() {
+      const container = document.getElementById('recentLeadsContainer');
+      if (!container) return;
+      
+      try {
+        const response = await fetch('/admin/api/admin/dashboard-activity', { cache: 'no-store' });
+        const data = await response.json();
+        
+        if (data.success && data.leads) {
+          if (data.leads.length === 0) {
+            container.innerHTML = `
+              <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+                <div class="activity-col" style="grid-column: 1 / -1;">Geen recente aanvragen</div>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.leads.map(lead => `
+              <div class="activity-table-row">
+                <div class="activity-col">
+                  <div class="lead-name">${escapeHtml(lead.name || '-')}</div>
+                </div>
+                <div class="activity-col">
+                  <div class="lead-date">${formatDate(lead.created_at)}</div>
+                  <div class="lead-time">${formatTime(lead.created_at)}</div>
+                </div>
+                <div class="activity-col">
+                  ${getStatusBadge(lead.status, 'lead')}
+                </div>
+                <div class="activity-col">
+                  ${escapeHtml(lead.assigned_to || '-')}
+                </div>
+              </div>
+            `).join('');
+          }
+        } else {
+          throw new Error('Failed to load leads');
+        }
+      } catch (error) {
+        console.error('Error loading recent leads:', error);
+        container.innerHTML = `
+          <div class="activity-table-row" style="text-align: center; padding: 2rem;">
+            <div class="activity-col" style="grid-column: 1 / -1;">Fout bij laden aanvragen</div>
+          </div>
+        `;
+      }
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Helper function to format relative time
+    function formatRelativeTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffMins < 1) return 'Net';
+      if (diffMins < 60) return `${diffMins} minuten geleden`;
+      if (diffHours < 24) return `${diffHours} uur geleden`;
+      if (diffDays === 1) return '1 dag geleden';
+      if (diffDays < 7) return `${diffDays} dagen geleden`;
+      return formatDate(dateString);
+    }
+    
+    // Helper function to get notification icon HTML
+    function getNotificationIcon(type) {
+      switch(type) {
+        case 'warning':
+          return '<i class="fas fa-exclamation-triangle"></i>';
+        case 'success':
+          return '<i class="fas fa-check-circle"></i>';
+        case 'danger':
+          return '<i class="fas fa-times-circle"></i>';
+        case 'info':
+        default:
+          return '<i class="fas fa-info-circle"></i>';
+      }
+    }
+    
+    // Load and render notifications
+    async function loadNotifications() {
+      const container = document.getElementById('notificationsContainer');
+      if (!container) return;
+      
+      try {
+        const response = await fetch('/admin/api/admin/dashboard-notifications', { cache: 'no-store' });
+        const data = await response.json();
+        
+        if (data.success && data.notifications) {
+          if (data.notifications.length === 0) {
+            container.innerHTML = `
+              <div class="notification-item" style="text-align: center; padding: 2rem;">
+                <div class="notification-content">
+                  <p>Geen meldingen</p>
+                </div>
+              </div>
+            `;
+          } else {
+            container.innerHTML = data.notifications.map(notification => `
+              <div class="notification-item ${notification.type}">
+                <div class="notification-icon">
+                  ${getNotificationIcon(notification.type)}
+                </div>
+                <div class="notification-content">
+                  <p>${escapeHtml(notification.message)}</p>
+                  <span class="notification-time">${formatRelativeTime(notification.created_at)}</span>
+                </div>
+                <button class="notification-dismiss">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            `).join('');
+            
+            // Re-attach dismiss handlers
+            const dismissButtons = container.querySelectorAll('.notification-dismiss');
+            dismissButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                const notification = this.closest('.notification-item');
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                  notification.style.display = 'none';
+                }, 300);
+              });
+            });
+          }
+        } else {
+          throw new Error('Failed to load notifications');
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        container.innerHTML = `
+          <div class="notification-item" style="text-align: center; padding: 2rem;">
+            <div class="notification-content">
+              <p>Fout bij laden meldingen</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    // Handle "Mark all as read" button
+    const markAllReadButton = document.querySelector('.notifications-header .btn-outline-sm');
+    if (markAllReadButton) {
+      markAllReadButton.addEventListener('click', function() {
+        const notifications = document.querySelectorAll('.notification-item');
+        notifications.forEach(notification => {
+          notification.style.opacity = '0';
+          setTimeout(() => {
+            notification.style.display = 'none';
+          }, 300);
+        });
+        
+        // Show empty state after all are dismissed
+        setTimeout(() => {
+          const container = document.getElementById('notificationsContainer');
+          if (container) {
+            container.innerHTML = `
+              <div class="notification-item" style="text-align: center; padding: 2rem;">
+                <div class="notification-content">
+                  <p>Geen meldingen</p>
+                </div>
+              </div>
+            `;
+          }
+        }, 400);
+      });
+    }
+    
+    // Load activity data on page load
+    loadRecentUsers();
+    loadRecentLeads();
+    loadNotifications();
+    
+    // Initialize Leads Analytics Chart
+    initializeLeadsAnalyticsChart();
+    
+    // Initialize Monthly Growth Card
+    loadLeadsMonthlyGrowthData();
+  });
+  
+  // Leads Analytics Chart
+  let leadsAnalyticsChartInstance = null;
+  let currentLeadsPeriod = 'dag';
+  let currentLeadsYear = '2025';
+  
+  async function initializeLeadsAnalyticsChart() {
+    const canvas = document.getElementById('leadsAnalyticsChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (leadsAnalyticsChartInstance) {
+      leadsAnalyticsChartInstance.destroy();
+    }
+    
+    const chartData = await getLeadsChartData(currentLeadsPeriod, currentLeadsYear);
+    
+    leadsAnalyticsChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartData.labels,
+        datasets: [{
+          label: 'Leads',
+          data: chartData.values,
+          borderColor: '#ea5d0d',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: '#ea5d0d',
+          pointBorderColor: '#ea5d0d',
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#ea5d0d',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: '#ffffff',
+            titleColor: '#111827',
+            bodyColor: '#6b7280',
+            borderColor: '#e5e7eb',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: '#e5e7eb',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#9ca3af',
+              font: { size: 12 }
+            }
+          },
+          y: {
+            grid: {
+              color: '#e5e7eb',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#9ca3af',
+              font: { size: 12 },
+              beginAtZero: true
+            }
+          }
+        }
+      }
+    });
+    
+    // Attach event listeners
+    const periodButtons = document.querySelectorAll('.revenue-chart-filters .period-btn');
+    periodButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        periodButtons.forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        currentLeadsPeriod = this.getAttribute('data-period');
+        initializeLeadsAnalyticsChart();
+      });
+    });
+    
+    const yearSelect = document.getElementById('leadsYearSelect');
+    if (yearSelect) {
+      yearSelect.addEventListener('change', function() {
+        currentLeadsYear = this.value;
+        initializeLeadsAnalyticsChart();
+      });
+    }
+  }
+  
+  async function getLeadsChartData(period, year) {
+    try {
+      // For now, return mock data - you can replace this with a real API call
+      const mockData = {
+        dag: { labels: ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'], values: [12, 19, 15, 25, 22, 30, 35] },
+        week: { labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'], values: [120, 190, 150, 250] },
+        maand: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'], values: [12, 19, 15, 25, 22, 30, 35, 28, 20, 25, 18, 30] },
+        jaar: { labels: ['2023', '2024', '2025'], values: [240, 320, 280] }
+      };
+      
+      return mockData[period] || mockData.maand;
+    } catch (error) {
+      console.error('Error fetching leads chart data:', error);
+      return { labels: [], values: [] };
+    }
+  }
+  
+  // Monthly Growth Card
+  async function loadLeadsMonthlyGrowthData() {
+    try {
+      // For now, use mock data - you can replace this with a real API call
+      const mockData = {
+        currentLeads: 156,
+        previousLeads: 135,
+        currentConversions: 42,
+        previousConversions: 38
+      };
+      
+      updateLeadsMonthlyGrowthCard(mockData);
+    } catch (error) {
+      console.error('Error loading monthly growth data:', error);
+    }
+  }
+  
+  function updateLeadsMonthlyGrowthCard(data) {
+    const now = new Date();
+    const currentMonth = capitalize(now.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }));
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonth = capitalize(prevDate.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }));
+    
+    const currentMonthLabel = document.getElementById('currentMonthLabel');
+    if (currentMonthLabel) currentMonthLabel.textContent = currentMonth;
+    
+    const comparisonLabel = document.getElementById('comparisonLabel');
+    if (comparisonLabel) comparisonLabel.textContent = 'vs ' + previousMonth;
+    
+    const currentLeads = document.getElementById('currentLeads');
+    if (currentLeads) currentLeads.textContent = data.currentLeads + ' leads';
+    
+    const currentConversions = document.getElementById('currentConversions');
+    if (currentConversions) currentConversions.textContent = data.currentConversions + ' conversies';
+    
+    const leadsGrowth = ((data.currentLeads - data.previousLeads) / data.previousLeads * 100).toFixed(1);
+    const conversionsGrowth = ((data.currentConversions - data.previousConversions) / data.previousConversions * 100).toFixed(1);
+    
+    const leadsGrowthEl = document.getElementById('leadsGrowth');
+    if (leadsGrowthEl) {
+      leadsGrowthEl.innerHTML = renderGrowthChange(leadsGrowth);
+    }
+    
+    const conversionsGrowthEl = document.getElementById('conversionsGrowth');
+    if (conversionsGrowthEl) {
+      conversionsGrowthEl.innerHTML = renderGrowthChange(conversionsGrowth);
+    }
+    
+    const previousLeads = document.getElementById('previousLeads');
+    if (previousLeads) previousLeads.textContent = data.previousLeads + ' leads';
+    
+    const previousConversions = document.getElementById('previousConversions');
+    if (previousConversions) previousConversions.textContent = data.previousConversions + ' conversies';
+  }
+  
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+  
+  function renderGrowthChange(change) {
+    const isPositive = parseFloat(change) >= 0;
+    const trendClass = isPositive ? 'growth-trend-up' : 'growth-trend-down';
+    const percentageClass = isPositive ? 'growth-percentage-positive' : 'growth-percentage-negative';
+    const trendPolyline = isPositive 
+      ? '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline>'
+      : '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline>';
+    const sign = isPositive ? '+' : '';
+    const percentage = sign + parseFloat(change).toFixed(1) + '%';
+    
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="growth-trend ${trendClass}">
+        ${trendPolyline}
+      </svg>
+      <span class="growth-percentage ${percentageClass}">${percentage}</span>
+    `;
+  }
+  
+  // KPI Data Loading with Live Updates and Smooth Animations
+  (function() {
+    const periodSelect = document.getElementById('kpiPeriodSelect');
+    let isLoading = false;
+    let updateInterval = null;
+    let simulationCheckInterval = null; // Store simulation check interval
+    let lastProcessedTimestamp = 0; // Track last processed simulation timestamp
+    let currentStats = {
+      totalUsers: 0,
+      totalLeads: 0,
+      totalRevenue: 0,
+      pendingLeads: 0
+    };
+    
+    function formatCurrency(amount) {
+      return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+    }
+    
+    // Smooth counter animation function (smoother ease-in-out)
+    function animateCounter(element, startValue, endValue, duration = 1100, formatter = null) {
+      if (!element) return;
+      
+      const startTime = performance.now();
+      const isDecimal = typeof endValue === 'number' && endValue % 1 !== 0;
+
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) {
+        if (formatter) element.textContent = formatter(endValue);
+        else if (isDecimal) element.textContent = endValue.toFixed(2);
+        else element.textContent = Math.round(endValue).toLocaleString('nl-NL');
+        return;
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const eased = easeInOutCubic(progress);
+        
+        const currentValue = startValue + (endValue - startValue) * eased;
+        
+        if (formatter) {
+          element.textContent = formatter(currentValue);
+        } else if (isDecimal) {
+          element.textContent = currentValue.toFixed(2);
+        } else {
+          element.textContent = Math.round(currentValue).toLocaleString('nl-NL');
+        }
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          // Ensure final value is exact
+          if (formatter) {
+            element.textContent = formatter(endValue);
+          } else if (isDecimal) {
+            element.textContent = endValue.toFixed(2);
+          } else {
+            element.textContent = Math.round(endValue).toLocaleString('nl-NL');
+          }
+        }
+      }
+      
+      requestAnimationFrame(update);
+    }
+    
+    // Update trend indicators
+    function updateTrend(elementId, change, isPositive) {
+      const trendEl = document.getElementById(elementId);
+      if (!trendEl) return;
+      
+      const valueEl = trendEl.querySelector('span') || trendEl.querySelector(`#${elementId}-value`);
+      if (!valueEl) return;
+      
+      if (change === 0 || change === null || change === undefined || isNaN(change)) {
+        trendEl.style.display = 'none';
+        return;
+      }
+      
+      trendEl.style.display = 'inline-flex';
+      trendEl.className = `kpi-trend ${isPositive ? 'positive' : 'negative'}`;
+      
+      const icon = trendEl.querySelector('i');
+      if (icon) {
+        icon.className = isPositive ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+      }
+      
+      valueEl.textContent = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
+    }
+    
+    async function loadKPIData(period, animate = true) {
+      // Check if simulation is active - if so, allow updates even if loading
+      const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+      if (isLoading && !simulationActive) return;
+      isLoading = true;
+      
+      // Show loading state
+      const kpiCards = document.querySelectorAll('.kpi-card');
+      kpiCards.forEach(card => {
+        card.classList.add('kpi-loading');
+      });
+      
+      try {
+        // Check if simulation is active
+        const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+        let data;
+        
+        if (simulationActive) {
+          // Use simulated data
+          const simData = localStorage.getItem('kpi_simulation_data');
+          if (simData) {
+            const simStats = JSON.parse(simData);
+            data = {
+              success: true,
+              period: period,
+              stats: {
+                ...simStats,
+                usersGrowth: 0,
+                leadsGrowth: 0,
+                revenueGrowth: 0,
+                pendingGrowth: 0
+              }
+            };
+            // (debug removed)
+          } else {
+            // Fallback to real data if simulation data not available
+            const response = await fetch(`/admin/api/admin/dashboard-kpis?period=${period}`);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            data = await response.json();
+          }
+        } else {
+          // Use real data
+          const response = await fetch(`/admin/api/admin/dashboard-kpis?period=${period}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          data = await response.json();
+        }
+        
+        // (debug removed)
+        
+        if (data.success && data.stats) {
+          const newStats = {
+            totalUsers: data.stats.totalUsers || 0,
+            totalLeads: data.stats.totalLeads || 0,
+            totalRevenue: data.stats.totalRevenue || 0,
+            pendingLeads: data.stats.pendingLeads || 0
+          };
+          
+          // Get elements
+          const usersEl = document.getElementById('kpi-total-users');
+          const leadsEl = document.getElementById('kpi-total-leads');
+          const revenueEl = document.getElementById('kpi-total-revenue');
+          const pendingEl = document.getElementById('kpi-pending-leads');
+          
+          // Animate counters
+          if (usersEl) {
+            if (animate && currentStats.totalUsers !== newStats.totalUsers) {
+              animateCounter(usersEl, currentStats.totalUsers, newStats.totalUsers, 800);
+            } else {
+              usersEl.textContent = newStats.totalUsers.toLocaleString('nl-NL');
+            }
+          }
+          
+          if (leadsEl) {
+            if (animate && currentStats.totalLeads !== newStats.totalLeads) {
+              animateCounter(leadsEl, currentStats.totalLeads, newStats.totalLeads, 800);
+            } else {
+              leadsEl.textContent = newStats.totalLeads.toLocaleString('nl-NL');
+            }
+          }
+          
+          if (revenueEl) {
+            // (debug removed)
+            if (animate && currentStats.totalRevenue !== newStats.totalRevenue) {
+              animateCounter(revenueEl, currentStats.totalRevenue, newStats.totalRevenue, 800, formatCurrency);
+            } else {
+              revenueEl.textContent = formatCurrency(newStats.totalRevenue);
+            }
+          } else {
+            console.error('Revenue element not found!');
+          }
+          
+          if (pendingEl) {
+            if (animate && currentStats.pendingLeads !== newStats.pendingLeads) {
+              animateCounter(pendingEl, currentStats.pendingLeads, newStats.pendingLeads, 800);
+            } else {
+              pendingEl.textContent = newStats.pendingLeads.toLocaleString('nl-NL');
+            }
+          }
+          
+          // Update trend indicators if available
+          if (data.stats.usersGrowth !== undefined) {
+            updateTrend('kpi-users-trend', data.stats.usersGrowth, data.stats.usersGrowth >= 0);
+          }
+          if (data.stats.leadsGrowth !== undefined) {
+            updateTrend('kpi-leads-trend', data.stats.leadsGrowth, data.stats.leadsGrowth >= 0);
+          }
+          if (data.stats.revenueGrowth !== undefined) {
+            updateTrend('kpi-revenue-trend', data.stats.revenueGrowth, data.stats.revenueGrowth >= 0);
+          }
+          if (data.stats.pendingGrowth !== undefined) {
+            updateTrend('kpi-pending-trend', data.stats.pendingGrowth, data.stats.pendingGrowth <= 0);
+          }
+          
+          // Update current stats
+          currentStats = newStats;
+        } else {
+          console.error('Error loading KPI data:', data.error);
+          if (window.showNotification) {
+            window.showNotification('Fout bij laden KPI data', 'error');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching KPI data:', error);
+        if (window.showNotification) {
+          window.showNotification('Fout bij laden KPI data', 'error');
+        }
+      } finally {
+        // Remove loading state
+        kpiCards.forEach(card => {
+          card.classList.remove('kpi-loading');
+        });
+        isLoading = false;
+      }
+    }
+    
+    // Start live updates (every 30 seconds, or faster if simulation is active)
+    function startLiveUpdates() {
+      // Clear existing intervals
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+      if (simulationCheckInterval) {
+        clearInterval(simulationCheckInterval);
+        simulationCheckInterval = null;
+      }
+      
+      // Track if this is the first check after page load
+      let isFirstCheck = true;
+      
+      // Check for simulation updates more frequently
+      const checkSimulation = () => {
+        const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+        if (simulationActive) {
+          const simData = localStorage.getItem('kpi_simulation_data');
+          const lastUpdate = parseInt(localStorage.getItem('kpi_simulation_timestamp') || '0');
+          
+          // Update if we have data and either:
+          // 1. Timestamp is newer than last processed, OR
+          // 2. This is the first check (always update on first check if simulation is active)
+          if (simData && (isFirstCheck || lastUpdate > lastProcessedTimestamp)) {
+            lastProcessedTimestamp = lastUpdate;
+            isFirstCheck = false;
+            const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
+            loadKPIData(period, true);
+          }
+        } else {
+          // Reset timestamp when simulation stops
+          if (lastProcessedTimestamp > 0) {
+            lastProcessedTimestamp = 0;
+            isFirstCheck = true;
+          }
+        }
+      };
+      
+      // If the global simulation runtime exists (admin layout), do NOT poll here.
+      // The global script updates the KPI DOM directly and throttles animations to avoid flipping.
+      if (!window.__kpiSimulationProducerActive) {
+        checkSimulation();
+        simulationCheckInterval = setInterval(checkSimulation, 2000);
+      }
+      
+      // Regular updates every 30 seconds (only if simulation is not active)
+      updateInterval = setInterval(() => {
+        const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+        if (!simulationActive) {
+          const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
+          loadKPIData(period, true);
+        }
+      }, 30000);
+    }
+    
+    // Stop live updates
+    function stopLiveUpdates() {
+      if (updateInterval) {
+        clearInterval(updateInterval);
+        updateInterval = null;
+      }
+      if (simulationCheckInterval) {
+        clearInterval(simulationCheckInterval);
+        simulationCheckInterval = null;
+      }
+    }
+    
+    // Load initial values from DOM
+    function loadInitialValues() {
+      // Set initial values to 0 so animation starts from 0
+      currentStats.totalUsers = 0;
+      currentStats.totalLeads = 0;
+      currentStats.totalRevenue = 0;
+      currentStats.pendingLeads = 0;
+    }
+    
+    // Load initial data on page load
+    if (periodSelect) {
+      // Check if simulation is active FIRST - if so, use simulation data immediately
+      const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+      const simData = localStorage.getItem('kpi_simulation_data');
+      
+      if (simulationActive && simData) {
+        try {
+          const simStats = JSON.parse(simData);
+          // Set current stats to simulation data (skip animation from 0)
+          currentStats = {
+            totalUsers: simStats.totalUsers || 0,
+            totalLeads: simStats.totalLeads || 0,
+            totalRevenue: simStats.totalRevenue || 0,
+            pendingLeads: simStats.pendingLeads || 0
+          };
+          // (debug removed)
+          
+          // Update UI immediately without animation
+          const usersEl = document.getElementById('kpi-total-users');
+          const leadsEl = document.getElementById('kpi-total-leads');
+          const revenueEl = document.getElementById('kpi-total-revenue');
+          const pendingEl = document.getElementById('kpi-pending-leads');
+          
+          if (usersEl) usersEl.textContent = currentStats.totalUsers.toLocaleString('nl-NL');
+          if (leadsEl) leadsEl.textContent = currentStats.totalLeads.toLocaleString('nl-NL');
+          if (revenueEl) revenueEl.textContent = formatCurrency(currentStats.totalRevenue);
+          if (pendingEl) pendingEl.textContent = currentStats.pendingLeads.toLocaleString('nl-NL');
+        } catch (error) {
+          console.error('Error parsing simulation data:', error);
+          // Fallback to normal load
+          loadInitialValues();
+        }
+      } else {
+        // No simulation, set initial values to 0 for animation
+        loadInitialValues();
+      }
+      
+      const initialPeriod = periodSelect.value || 'lifetime';
+      // Only animate if simulation is not active (to avoid animating from 0 when simulation data exists)
+      loadKPIData(initialPeriod, !simulationActive);
+      
+      // Start live updates
+      startLiveUpdates();
+      
+      // Listen for period changes
+      periodSelect.addEventListener('change', function() {
+        loadKPIData(this.value, true);
+      });
+    }
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', () => {
+      stopLiveUpdates();
+    });
+    
+    // Pause updates when page is hidden, resume when visible
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopLiveUpdates();
+      } else {
+        startLiveUpdates();
+        // Immediately refresh data when page becomes visible
+        const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
+        loadKPIData(period, true);
+      }
+    });
+  })();
+</script>
+</script>

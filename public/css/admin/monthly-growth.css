@@ -1,0 +1,173 @@
+/* ============================================
+   MONTHLY GROWTH CARD - CONTAINER
+   ============================================ */
+.monthly-growth-card {
+  background-color: #ffffff;           /* Pure white */
+  border: 1px solid #e5e7eb;          /* Light gray border */
+  border-radius: 8px;                  /* 8px rounded corners */
+  padding: 24px;                       /* 24px padding all sides */
+  width: 100%;                         /* Full width of parent */
+  box-sizing: border-box;              /* Include padding in width */
+  height: auto;                        /* Auto height based on content */
+  min-height: auto;                   /* No minimum height */
+}
+
+/* ============================================
+   TITLE
+   ============================================ */
+.monthly-growth-title {
+  font-size: 16px;                     /* 16px font size */
+  font-weight: 600;                    /* Semi-bold weight */
+  color: #111827;                      /* Almost black */
+  margin: 0 0 24px 0;                 /* 0 top, 0 left/right, 24px bottom */
+  line-height: 1.5;                    /* 24px line height */
+}
+
+/* ============================================
+   SECTION 1: CURRENT MONTH
+   ============================================ */
+.current-month-section {
+  margin-bottom: 24px;
+}
+
+.current-month-label {
+  font-size: 14px;                     /* 14px font size */
+  color: #6b7280;                      /* gray-500 */
+  margin-bottom: 8px;
+}
+
+.current-month-stats {
+  margin-top: 12px;
+}
+
+.current-revenue {
+  font-size: 24px;                     /* 24px font size */
+  font-weight: 700;                    /* Bold weight */
+  color: #111827;                      /* gray-900 */
+  line-height: 1.2;
+  margin: 0;
+}
+
+.current-payments {
+  font-size: 14px;                     /* 14px font size */
+  color: #4b5563;                      /* gray-600 */
+  margin-top: 4px;
+  margin: 0;
+}
+
+/* ============================================
+   SECTION 2: COMPARISON SECTION
+   ============================================ */
+.comparison-section {
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;      /* gray-200 border */
+}
+
+.comparison-label {
+  font-size: 14px;                     /* 14px font size */
+  color: #6b7280;                      /* gray-500 */
+  margin-bottom: 12px;
+}
+
+/* Growth Metrics Container */
+.growth-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.growth-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-label {
+  font-size: 14px;                     /* 14px font size */
+  color: #4b5563;                      /* gray-600 */
+}
+
+.metric-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================
+   TREND ICONS
+   ============================================ */
+.growth-trend {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.growth-trend-up {
+  color: #059669;                      /* green-600 */
+}
+
+.growth-trend-down {
+  color: #dc2626;                      /* red-600 */
+}
+
+/* ============================================
+   GROWTH PERCENTAGES
+   ============================================ */
+.growth-percentage {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.growth-percentage-positive {
+  color: #059669;                      /* green-600 */
+}
+
+.growth-percentage-negative {
+  color: #dc2626;                      /* red-600 */
+}
+
+/* ============================================
+   SECTION 3: PREVIOUS MONTH DETAILS
+   ============================================ */
+.previous-month-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;      /* gray-100 border - lighter */
+}
+
+.previous-revenue {
+  font-size: 12px;                     /* 12px font size */
+  color: #6b7280;                      /* gray-500 */
+  margin: 0;
+}
+
+.previous-payments {
+  font-size: 12px;                     /* 12px font size */
+  color: #6b7280;                      /* gray-500 */
+  margin-top: 2px;
+  margin: 0;
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+  .monthly-growth-card {
+    height: auto;                      /* Auto height on mobile */
+  }
+}
+
+/* ============================================
+   FIX: Remove extra white space
+   ============================================ */
+.chart-col-1 {
+  display: flex;
+  align-items: stretch;                /* Stretch to match chart height */
+}
+
+.monthly-growth-card {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;                 /* Stretch to match chart height */
+  height: 100%;                         /* Full height of parent */
+}

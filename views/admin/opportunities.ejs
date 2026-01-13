@@ -1,0 +1,283 @@
+<%
+  const formatCurrency = (amount) => {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount)
+  }
+  
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const formatRelativeTime = (iso) => {
+    if (!iso) return '-'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '-'
+    const now = new Date()
+    const diffMs = now - date
+    const diffMinutes = Math.round(diffMs / 60000)
+    if (diffMinutes <= 0) return 'zojuist'
+    if (diffMinutes < 60) return diffMinutes === 1 ? '1 minuut geleden' : `${diffMinutes} minuten geleden`
+    const diffHours = Math.round(diffMinutes / 60)
+    if (diffHours < 24) return diffHours === 1 ? '1 uur geleden' : `${diffHours} uur geleden`
+    const diffDays = Math.round(diffHours / 24)
+    if (diffDays < 7) return diffDays === 1 ? '1 dag geleden' : `${diffDays} dagen geleden`
+    const diffWeeks = Math.round(diffDays / 7)
+    if (diffWeeks < 5) return diffWeeks === 1 ? '1 week geleden' : `${diffWeeks} weken geleden`
+    const diffMonths = Math.round(diffDays / 30)
+    if (diffMonths < 12) return diffMonths === 1 ? '1 maand geleden' : `${diffMonths} maanden geleden`
+    const diffYears = Math.round(diffDays / 365)
+    return diffYears === 1 ? '1 jaar geleden' : `${diffYears} jaar geleden`
+  }
+
+  const renderOpportunityCard = (opp = {}) => {
+    const initialsSource = opp.company_name || opp.title || '?'
+    const initialsMatches = initialsSource ? initialsSource.match(/\b\w/g) : null
+    const initials = (initialsMatches && initialsMatches.length ? initialsMatches.slice(0, 2).join('') : initialsSource.substring(0, 2)).toUpperCase()
+
+    const companyName = opp.company_name || opp.title || 'Onbekend bedrijf'
+    const hasDistinctTitle = Boolean(opp.company_name && opp.title && opp.title !== opp.company_name)
+    const subtitleLine = hasDistinctTitle ? `<p class="opportunity-card-subtitle">${opp.title}</p>` : (!opp.company_name && opp.title ? `<p class="opportunity-card-subtitle">${opp.title}</p>` : '')
+
+    const descriptionText = opp.description ? opp.description.trim() : ''
+    const truncatedDescription = descriptionText.length > 160 ? `${descriptionText.substring(0, 160)}…` : descriptionText
+    const descriptionLine = truncatedDescription ? `<p class="opportunity-card-description">${truncatedDescription}</p>` : ''
+
+    const contactItems = []
+    if (opp.contact_name) {
+      contactItems.push(`
+        <div class="opportunity-card-contact-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>${opp.contact_name}</span>
+        </div>
+      `)
+    }
+    if (opp.email) {
+      contactItems.push(`
+        <div class="opportunity-card-contact-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+          </svg>
+          <span>${opp.email}</span>
+        </div>
+      `)
+    }
+    if (opp.phone) {
+      contactItems.push(`
+        <div class="opportunity-card-contact-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+          <span>${opp.phone}</span>
+        </div>
+      `)
+    }
+    const contactRow = contactItems.length ? `<div class="opportunity-card-contact">${contactItems.join('')}</div>` : ''
+
+    const valueDisplay = formatCurrency(opp.value || opp.value_eur || 0)
+    const relativeTime = formatRelativeTime(opp.updated_at || opp.created_at)
+
+    const statusBadge = `<span class="opportunity-badge ${getStatusClass(opp.status || 'open')}">${getStatusLabel(opp.status || 'open')}</span>`
+    const priorityBadge = `<span class="opportunity-badge ${getPriorityClass(opp.priority || 'low')}">${getPriorityLabel(opp.priority || 'low')}</span>`
+
+    const aiBlock = opp.ai_suggestion ? `
+      <div class="opportunity-card-ai">
+        <div class="opportunity-card-ai-body">
+          <div class="trust-score-ai-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width: 16px; height: 16px;">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+              <path d="M20 3v4"></path>
+              <path d="M22 5h-4"></path>
+              <path d="M4 17v2"></path>
+              <path d="M5 18H3"></path>
+            </svg>
+          </div>
+          <div class="opportunity-card-ai-content">
+            <div class="opportunity-card-ai-header">
+              <span class="opportunity-card-ai-name">${opp.ai_suggestion.rep_name}</span>
+              <span class="opportunity-badge opportunity-badge--match">${Math.round(Number(opp.ai_suggestion.match_percentage || opp.ai_suggestion.confidence || 0))}% match</span>
+            </div>
+            <p class="opportunity-card-ai-text">${opp.ai_suggestion.reason}</p>
+          </div>
+          <button class="ai-assign-btn opportunity-card-ai-button" data-assign data-opp-id="${opp.id}" data-rep-id="${opp.ai_suggestion.rep_id}">Toewijzen</button>
+        </div>
+      </div>
+    ` : ''
+
+    return `
+      <div class="opportunity-card-entry" data-opportunity-id="${opp.id}" onclick="viewOpportunity('${opp.id}')">
+        <div class="opportunity-card">
+          <div class="opportunity-card-main">
+            <div class="opportunity-card-avatar">${initials}</div>
+            <div class="opportunity-card-body">
+              <div class="opportunity-card-header">
+                <div class="opportunity-card-heading">
+                  <div class="opportunity-card-heading-row">
+                    <h3 class="opportunity-card-company">${companyName}</h3>
+                    ${statusBadge}
+                    ${priorityBadge}
+                  </div>
+                  ${subtitleLine}
+                  ${descriptionLine}
+                  ${contactRow}
+                </div>
+                <div class="opportunity-card-meta">
+                  <p class="opportunity-card-value">${valueDisplay}</p>
+                  <p class="opportunity-card-time">${relativeTime}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${aiBlock}
+        </div>
+      </div>
+    `
+  }
+
+  function getStatusClass(status) {
+    const map = { new: 'status-blue', qualified: 'status-green', proposal: 'status-purple', negotiation: 'status-orange', won: 'status-success', lost: 'status-gray', open: 'status-blue' }
+    return map[status] || 'status-gray'
+  }
+
+  function getStatusLabel(status) {
+    const map = { new: 'Nieuw', qualified: 'Gekwalificeerd', proposal: 'Offerte', negotiation: 'Onderhandeling', won: 'Gewonnen', lost: 'Verloren', open: 'Open' }
+    return map[status] || 'Open'
+  }
+
+  function getPriorityClass(priority) {
+    const map = { high: 'priority-red', medium: 'priority-yellow', low: 'priority-gray' }
+    return map[priority] || 'priority-gray'
+  }
+
+  function getPriorityLabel(priority) {
+    const map = { high: 'Hoog', medium: 'Gemiddeld', low: 'Laag' }
+    return map[priority] || 'Laag'
+  }
+%>
+<%- include('../layouts/admin', {
+  title: 'Kansen',
+  activeMenu: 'opportunities',
+  user: user,
+  body: `
+  <div class="opportunities-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1>Kansen</h1>
+        <p class="text-muted">Beheer en wijs kansen toe met AI-ondersteuning</p>
+      </div>
+      <div class="header-actions">
+        <button id="newOpportunityBtn" class="btn-primary">
+          <i class="fas fa-plus"></i> Nieuwe kans
+        </button>
+      </div>
+    </div>
+    <!-- KPI Cards -->
+    <div class="kpi-cards-container">
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Totale waarde</p>
+            <p class="kpi-value">${formatCurrency(kpis?.totalValue || 0)}</p>
+            <p class="kpi-subtitle">Alle kansen</p>
+      </div>
+          <div class="kpi-icon"><i class="fas fa-euro-sign"></i></div>
+            </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Open kansen</p>
+            <p class="kpi-value">${kpis?.openCount || 0}</p>
+            <p class="kpi-subtitle">Actief in pipeline</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
+                  </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Conversie</p>
+            <p class="kpi-value">${kpis?.conversionRate || 0}%</p>
+            <p class="kpi-subtitle">Gewonnen deals</p>
+                </div>
+          <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
+              </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">AI Suggesties</p>
+            <p class="kpi-value">${kpis?.aiSuggestions || 0}</p>
+            <p class="kpi-subtitle">Wachtend op actie</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-sparkles"></i></div>
+        </div>
+      </div>
+    </div>
+    <!-- Opportunities Listing -->
+    <div class="opportunities-listing-container">
+      <!-- Search and Filters Header -->
+      <div class="opportunities-header-row">
+        <div class="opportunities-search-wrapper">
+          <svg class="opportunities-search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input type="text" class="opportunities-search-input" placeholder="Zoek kansen..." id="opportunitiesSearchInput" />
+        </div>
+        <div class="opportunities-dropdowns-container">
+          <select class="opportunities-dropdown" id="statusSelect">
+            <option value="all">Alle statussen</option>
+            <option value="new">Nieuw</option>
+            <option value="qualified">Gekwalificeerd</option>
+            <option value="proposal">Offerte</option>
+            <option value="negotiation">Onderhandeling</option>
+            <option value="won">Gewonnen</option>
+            <option value="lost">Verloren</option>
+          </select>
+          <select class="opportunities-dropdown" id="prioritySelect">
+            <option value="all">Alle prioriteiten</option>
+            <option value="high">Hoog</option>
+            <option value="medium">Gemiddeld</option>
+            <option value="low">Laag</option>
+          </select>
+          <select class="opportunities-dropdown" id="assigneeSelect">
+            <option value="all">Alle sales reps</option>
+            ${(salesReps || []).map(rep => `<option value="${rep.id}">${rep.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <!-- Opportunities List -->
+      <div class="opportunities-list" id="opportunitiesList">
+        ${(opportunities || []).map(renderOpportunityCard).join('')}
+      </div>
+      <!-- Pagination -->
+      <div class="opportunities-pagination">
+        <button class="pagination-btn" id="prevBtn" onclick="changePage('prev')" ${pagination.page <= 1 ? 'disabled' : ''}>
+          Vorige
+        </button>
+        <div class="pagination-numbers" id="paginationNumbers">
+          ${(() => {
+            const totalPages = pagination.totalPages || 1
+            const active = pagination.page || 1
+            const pages = Array.from({length: Math.min(5, totalPages)}, (_,i)=>{
+              if (totalPages<=5) return i+1
+              if (active<=3) return i+1
+              if (active>=totalPages-2) return totalPages-4+i
+              return active-2+i
+            })
+            return pages.map(p=>`<button class="pagination-number ${p===active?'active':''}" onclick="changePage('goto')" data-page="${p}">${p}</button>`).join('')
+          })()}
+        </div>
+        <button class="pagination-btn" id="nextBtn" onclick="changePage('next')" ${pagination.page >= pagination.totalPages ? 'disabled' : ''}>
+          Volgende
+        </button>
+      </div>
+    </div>
+    <!-- Modals placeholder -->
+    <div id="opportunityModalRoot"></div>
+  </div>
+  `,
+  scripts: (scripts || []),
+  stylesheets: (stylesheets || [])
+}) %>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Afmelden | GrowSocial</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Poppins', sans-serif; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
+      padding: 20px;
+    }
+    .container { 
+      width: 100%;
+      max-width: 400px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      background: #fef2f2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #dc2626;
+      font-size: 28px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 32px;
+      font-weight: 400;
+      line-height: 1.5;
+    }
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn {
+      flex: 1;
+      height: 48px;
+      font-weight: 600;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: #dc2626;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #b91c1c;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+      transform: translateY(-1px);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-link {
+      background: transparent;
+      color: #6b7280;
+      text-decoration: none;
+      padding: 12px;
+    }
+    .btn-link:hover {
+      color: #1f2937;
+      background: transparent;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+  <% 
+    const err = (typeof error !== 'undefined' && error) ? error : null;
+  %>
+
+  <div class="container">
+    <div class="icon">
+      <i class="fas fa-sign-out-alt"></i>
+    </div>
+    
+    <h1>Weet je zeker dat je wilt afmelden?</h1>
+    <p class="subtitle">Je wordt uitgelogd en moet opnieuw inloggen om toegang te krijgen tot je account.</p>
+
+    <% if (err) { %>
+      <div class="error">
+        <i class="fas fa-exclamation-circle"></i> <%= err %>
+      </div>
+    <% } %>
+
+    <form action="/logout" method="POST" id="logoutForm">
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-check"></i>
+          Ja, afmelden
+        </button>
+        <a href="javascript:history.back()" class="btn btn-secondary btn-link">
+          <i class="fas fa-times"></i>
+          Annuleren
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('logoutForm');
+    
+    // Prevent accidental double submission
+    form.addEventListener('submit', function(e) {
+      const btn = form.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Afmelden...';
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,278 @@
+/* ============================================
+   CHART THEME STANDARDIZATION
+   Consistent styling for all charts across the platform
+   ============================================ */
+
+:root {
+  /* Chart Colors */
+  --chart-primary: #ea5d0d;
+  --chart-secondary: #10b981;
+  --chart-tertiary: #3b82f6;
+  --chart-quaternary: #f59e0b;
+  --chart-quinary: #ef4444;
+  --chart-senary: #8b5cf6;
+  
+  /* Chart Backgrounds */
+  --chart-bg-primary: #ffffff;
+  --chart-bg-secondary: #f9fafb;
+  --chart-grid-color: #e5e7eb;
+  --chart-text-color: #111827;
+  --chart-text-secondary: #6b7280;
+  
+  /* Chart Sizes */
+  --chart-height-sm: 200px;
+  --chart-height-md: 300px;
+  --chart-height-lg: 400px;
+}
+
+/* ============================================
+   CHART CONTAINER STYLES
+   ============================================ */
+.chart-container {
+  background: var(--chart-bg-primary);
+  border: 1px solid var(--chart-grid-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--chart-grid-color);
+}
+
+.chart-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--chart-text-color);
+  margin: 0;
+}
+
+.chart-subtitle {
+  font-size: var(--text-sm);
+  color: var(--chart-text-secondary);
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.chart-filters {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chart-body {
+  position: relative;
+}
+
+/* ============================================
+   CHART LEGEND STYLES
+   ============================================ */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--chart-grid-color);
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--chart-text-secondary);
+}
+
+.chart-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================
+   CHART LOADING STATES
+   ============================================ */
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--chart-height-md);
+  background: var(--chart-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.chart-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--chart-grid-color);
+  border-top: 3px solid var(--chart-primary);
+  border-radius: 50%;
+  animation: chart-spin 1s linear infinite;
+}
+
+@keyframes chart-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.chart-loading-text {
+  margin-left: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--chart-text-secondary);
+}
+
+/* ============================================
+   CHART ERROR STATES
+   ============================================ */
+.chart-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: var(--chart-height-md);
+  background: var(--chart-bg-secondary);
+  border-radius: var(--radius-md);
+  color: var(--chart-text-secondary);
+}
+
+.chart-error-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--space-2);
+  color: var(--chart-quinary);
+}
+
+.chart-error-text {
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* ============================================
+   CHART EMPTY STATES
+   ============================================ */
+.chart-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: var(--chart-height-md);
+  background: var(--chart-bg-secondary);
+  border-radius: var(--radius-md);
+  color: var(--chart-text-secondary);
+}
+
+.chart-empty-icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: var(--space-2);
+}
+
+.chart-empty-text {
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* ============================================
+   RESPONSIVE CHART STYLES
+   ============================================ */
+@media (max-width: 768px) {
+  .chart-container {
+    padding: var(--space-4);
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  
+  .chart-filters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .chart-legend {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+/* ============================================
+   CHART.JS CUSTOM STYLES
+   ============================================ */
+.chartjs-container {
+  position: relative;
+  height: var(--chart-height-md);
+}
+
+.chartjs-container canvas {
+  border-radius: var(--radius-md);
+}
+
+/* ============================================
+   RECHARTS CUSTOM STYLES
+   ============================================ */
+.recharts-wrapper {
+  border-radius: var(--radius-md);
+}
+
+.recharts-cartesian-axis-tick-value {
+  font-size: var(--text-xs);
+  fill: var(--chart-text-secondary);
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--chart-grid-color);
+  stroke-width: 1;
+}
+
+.recharts-legend-wrapper {
+  padding-top: var(--space-4);
+}
+
+.recharts-legend-item-text {
+  font-size: var(--text-sm);
+  color: var(--chart-text-secondary);
+}
+
+/* ============================================
+   CHART TOOLTIP STYLES
+   ============================================ */
+.chart-tooltip {
+  background: var(--chart-bg-primary);
+  border: 1px solid var(--chart-grid-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.chart-tooltip-label {
+  font-weight: var(--font-medium);
+  color: var(--chart-text-color);
+  margin-bottom: var(--space-1);
+}
+
+.chart-tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.chart-tooltip-color {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.chart-tooltip-value {
+  color: var(--chart-text-secondary);
+}

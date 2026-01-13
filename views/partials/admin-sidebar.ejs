@@ -1,0 +1,71 @@
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+  <!-- Brand Logo -->
+<a href="/admin" class="brand-link">
+  <span class="brand-text font-weight-light">GrowSocial <small>Admin</small></span>
+</a>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Sidebar user panel (optional) -->
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+      <div class="image">
+        <i class="fas fa-user-circle fa-2x text-light"></i>
+      </div>
+      <div class="info">
+        <a href="#" class="d-block"><%= user.first_name ? user.first_name + ' ' + user.last_name : user.company_name %></a>
+        <small class="text-light">Administrator</small>
+      </div>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <nav class="mt-2">
+      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+        <li class="nav-item">
+          <a href="/admin" class="nav-link <%= activePage === 'dashboard' ? 'active' : '' %>">
+            <i class="nav-icon fas fa-tachometer-alt"></i>
+            <p>Dashboard</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/admin/users" class="nav-link <%= activePage === 'users' ? 'active' : '' %>">
+            <i class="nav-icon fas fa-users"></i>
+            <p>Gebruikers</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/admin/leads" class="nav-link <%= activePage === 'leads' ? 'active' : '' %>">
+            <i class="nav-icon fas fa-bullseye"></i>
+            <p>Aanvragen</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/admin/payments" class="nav-link <%= activePage === 'payments' ? 'active' : '' %>">
+            <i class="nav-icon fas fa-credit-card"></i>
+            <p>Betalingen</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/admin/settings" class="nav-link <%= activePage === 'settings' ? 'active' : '' %>">
+            <i class="nav-icon fas fa-cog"></i>
+            <p>Instellingen</p>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/logout" class="nav-link">
+            <i class="nav-icon fas fa-sign-out-alt"></i>
+            <p>Uitloggen</p>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- /.sidebar-menu -->
+  </div>
+  <!-- /.sidebar -->
+  
+  <!-- Sidebar toggle button -->
+  <div class="sidebar-toggle-container">
+    <button id="sidebarToggle" class="sidebar-toggle">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+  </div>
+</aside>

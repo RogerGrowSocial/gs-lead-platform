@@ -1,0 +1,11 @@
+<%- include('../../layouts/admin', { 
+    title: title || 'Formulier Builder',
+    activeMenu: activeMenu || 'settings',
+    activeSubmenu: activeSubmenu || 'branches',
+    user: user,
+    showBackButton: showBackButton || false,
+    backButtonUrl: backButtonUrl || '/admin/settings',
+    backButtonText: backButtonText || 'Terug naar instellingen',
+    stylesheets: ['/css/admin/form-builder.css'],
+    bodyPartial: 'admin/industries/form-builder-content'
+}) %>

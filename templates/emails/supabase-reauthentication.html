@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herauthenticatie bevestigen - GrowSocial</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            line-height: 1.6;
+            color: #111827;
+            background-color: #f9fafb;
+            padding: 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Header */
+        .email-header {
+            background: linear-gradient(135deg, #ea5d0d 0%, #c24c0b 100%);
+            padding: 40px 32px;
+            text-align: center;
+            color: white;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+        
+        /* Main content */
+        .email-content {
+            padding: 0 32px 40px 32px;
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .welcome-message {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 32px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        /* Code Display */
+        .code-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .code-container {
+            background-color: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            display: inline-block;
+            min-width: 200px;
+        }
+        
+        .code-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .code-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+            letter-spacing: 8px;
+            font-family: "Courier New", monospace;
+            background-color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            border: 2px dashed #ea5d0d;
+        }
+        
+        /* CTA Button */
+        .cta-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #ea5d0d 0%, #c24c0b 100%);
+            color: white !important;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            -webkit-text-fill-color: white !important;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background: linear-gradient(135deg, #d14d00 0%, #b0450a 100%);
+        }
+        
+        /* Security Notice */
+        .security-notice {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .security-notice-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .security-notice-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+        }
+        
+        .security-notice-text {
+            font-size: 13px;
+            color: #92400e;
+            line-height: 1.4;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .info-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
+        .info-text {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .info-text:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Steps */
+        .steps-section {
+            margin-bottom: 32px;
+        }
+        
+        .steps-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .steps-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding: 16px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #ea5d0d;
+        }
+        
+        .step-number {
+            background-color: #ea5d0d;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+        
+        .step-description {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+        
+        /* Footer */
+        .email-footer {
+            background-color: #f9fafb;
+            padding: 32px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer-text {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-link {
+            color: #ea5d0d;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+        
+        .footer-copyright {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 16px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 0;
+            }
+            
+            .email-container {
+                border-radius: 0;
+            }
+            
+            .email-header,
+            .email-content,
+            .email-footer {
+                padding: 24px 20px;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .code-value {
+                font-size: 24px;
+                letter-spacing: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="email-header">
+            <div class="logo">GrowSocial</div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="email-content">
+            <h1 class="welcome-title">Bevestig je identiteit</h1>
+            <p class="welcome-message">
+                Voer de onderstaande code in om je identiteit te bevestigen en door te gaan met deze actie.
+            </p>
+            
+            <!-- Code Display -->
+            <div class="code-section">
+                <div class="code-container">
+                    <div class="code-label">Bevestigingscode</div>
+                    <div class="code-value">{{ .Token }}</div>
+                </div>
+            </div>
+            
+            <!-- Steps -->
+            <div class="steps-section">
+                <h2 class="steps-title">Zo gebruik je deze code:</h2>
+                <ul class="steps-list">
+                    <li class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Kopieer de code</div>
+                            <div class="step-description">Kopieer de code hierboven (of noteer deze)</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Ga terug naar het platform</div>
+                            <div class="step-description">Open het venster waar je om deze code werd gevraagd</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Voer de code in</div>
+                            <div class="step-description">Plak de code in het invoerveld en klik op bevestigen</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Security Notice -->
+            <div class="security-notice">
+                <div class="security-notice-title">
+                    <svg class="security-notice-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    Beveiligingsinformatie
+                </div>
+                <div class="security-notice-text">
+                    Deze code is 10 minuten geldig en kan slechts één keer worden gebruikt. 
+                    Als je dit verzoek niet hebt gedaan, negeer deze e-mail dan. Je account blijft veilig.
+                </div>
+            </div>
+            
+            <!-- Info Box -->
+            <div class="info-box">
+                <div class="info-title">Waarom deze bevestiging?</div>
+                <div class="info-text">
+                    We vragen je om je identiteit te bevestigen voordat je gevoelige acties uitvoert, zoals het wijzigen van je wachtwoord of het verwijderen van je account. Dit zorgt voor extra beveiliging.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="email-footer">
+            <p class="footer-text">
+                Heb je vragen? We helpen je graag verder!
+            </p>
+            <div class="footer-links">
+                <a href="mailto:support@growsocialmedia.nl" class="footer-link">Contact Support</a>
+                <a href="https://growsocial.nl" class="footer-link">Website</a>
+            </div>
+            <p class="footer-copyright">
+                <strong>GrowSocial B.V.</strong><br>
+                Monseigneur Bekkersplein 2, 5076 AV Haaren<br>
+                BTW: NL860638285B01 | KvK: 76478793<br>
+                Tel: 0132340434 | Email: info@growsocialmedia.nl<br><br>
+                © 2024 GrowSocial. Alle rechten voorbehouden.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

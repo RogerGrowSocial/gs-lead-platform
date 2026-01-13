@@ -1,0 +1,212 @@
+/* Slider Improvements CSS */
+/* Additional styling for the lead limit slider */
+
+/* Enhanced slider container */
+.modern-slider-container {
+  position: relative;
+  width: 100%;
+  margin: 20px 0;
+  padding: 0;
+}
+
+/* Slider track improvements */
+.modern-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  outline: none;
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+
+/* Progress bar styling */
+.modern-slider-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 8px;
+  background: linear-gradient(90deg, #ea580d, #f97316);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+/* Slider thumb styling for WebKit browsers */
+.modern-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ea580d;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(234, 88, 13, 0.3);
+  transition: all 0.2s ease;
+}
+
+.modern-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(234, 88, 13, 0.4);
+}
+
+.modern-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 6px 16px rgba(234, 88, 13, 0.5);
+}
+
+/* Slider thumb styling for Firefox */
+.modern-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ea580d;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(234, 88, 13, 0.3);
+  transition: all 0.2s ease;
+}
+
+.modern-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(234, 88, 13, 0.4);
+}
+
+.modern-slider::-moz-range-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 6px 16px rgba(234, 88, 13, 0.5);
+}
+
+/* Hide default track in Firefox */
+.modern-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+/* Slider labels styling */
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.slider-labels span {
+  position: relative;
+  padding: 5px 10px;
+  background: rgba(108, 117, 125, 0.1);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.slider-labels span:hover {
+  background: rgba(234, 88, 13, 0.1);
+  color: #ea580d;
+}
+
+/* Current value display */
+.current-value-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.current-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ea580d, #f97316);
+  color: white;
+  border-radius: 25px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(234, 88, 13, 0.3);
+  transition: all 0.3s ease;
+}
+
+.current-value:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(234, 88, 13, 0.4);
+}
+
+/* Save button improvements */
+#saveLeadLimit {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+#saveLeadLimit:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 13, 0.3);
+}
+
+#saveLeadLimit:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* Loading state for save button */
+#saveLeadLimit.loading {
+  position: relative;
+  color: transparent;
+}
+
+#saveLeadLimit.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .slider-labels {
+    font-size: 0.75rem;
+  }
+  
+  .slider-labels span {
+    padding: 3px 6px;
+  }
+  
+  .current-value {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .modern-slider::-webkit-slider-thumb,
+  .modern-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .slider-labels {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  
+  .current-value {
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
+  }
+}

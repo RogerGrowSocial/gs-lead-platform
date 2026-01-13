@@ -1,0 +1,8 @@
+<%- include('../layouts/admin', {
+  title: opportunity.title || 'Kans details',
+  activeMenu: 'opportunities',
+  user: user,
+  bodyPartial: 'admin/partials/opportunity-detail-body',
+  scripts: ['/js/admin/opportunity-detail.js'],
+  stylesheets: ['/css/opportunities.css', '/css/opportunity-detail.css']
+}) %>

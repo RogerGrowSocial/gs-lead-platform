@@ -1,0 +1,125 @@
+<div class="min-h-screen bg-white">
+  <!-- Header sectie -->
+  <div class="page-header border-b border-gray-200 bg-white">
+    <div class="page-header-content">
+      <div>
+        <h1>Leadstroom</h1>
+        <p class="text-muted">Overzicht van de aanvoer van leads, segmentcapaciteit en AI-gestuurde marketingacties.</p>
+      </div>
+      <!-- AI Recommendations Widget -->
+      <div id="ai-recommendations-widget" class="ai-recommendations-widget">
+        <div class="ai-widget-content">
+          <div class="ai-widget-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+              <path d="M20 3v4"></path>
+              <path d="M22 5h-4"></path>
+              <path d="M4 17v2"></path>
+              <path d="M5 18H3"></path>
+            </svg>
+          </div>
+          <div class="ai-widget-text">
+            <div class="ai-widget-label">AI Aanbevelingen</div>
+            <div class="ai-widget-count" id="ai-widget-count">-</div>
+          </div>
+          <div class="ai-widget-badge" id="ai-widget-badge" style="display: none;">
+            <span id="ai-widget-badge-text">Nieuw</span>
+          </div>
+        </div>
+        <div class="ai-widget-dropdown" id="ai-widget-dropdown" style="display: none;">
+          <div class="ai-widget-dropdown-header">
+            <span class="ai-widget-dropdown-title">AI Aanbevelingen</span>
+            <button class="ai-widget-dropdown-close" onclick="closeAiWidget()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="ai-widget-dropdown-content" id="ai-widget-recommendations-list">
+            <div class="ai-widget-loading">
+              <div class="ai-widget-spinner"></div>
+              <span>Laden...</span>
+            </div>
+          </div>
+          <div class="ai-widget-dropdown-footer">
+            <a href="/admin/leads/engine/ai-actions" onclick="closeAiWidget();" class="ai-widget-view-all">
+              Bekijk alle aanbevelingen →
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation - EXACT zoals /admin/leads -->
+  <div class="tabs-container">
+    <div class="tabs-header">
+      <button 
+        class="tab-button tab-button-active"
+        data-tab="overview"
+        role="tab"
+        aria-selected="true"
+      >
+        Overzicht
+      </button>
+      <button 
+        class="tab-button"
+        data-tab="segments"
+        role="tab"
+      >
+        Segmenten & capaciteit
+      </button>
+      <button 
+        class="tab-button"
+        data-tab="ai-actions"
+        role="tab"
+      >
+        AI-acties
+      </button>
+      <button 
+        class="tab-button"
+        data-tab="content"
+        role="tab"
+      >
+        Content
+      </button>
+      <button 
+        class="tab-button"
+        data-tab="campagnes"
+        role="tab"
+      >
+        Campagnes
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div id="overview-tab-content" class="tab-content tab-content-active">
+      <%- include('./partials/overview-tab') %>
+    </div>
+    <div id="segments-tab-content" class="tab-content">
+      <%- include('./partials/segments-tab') %>
+    </div>
+    <div id="ai-actions-tab-content" class="tab-content">
+      <%- include('./partials/ai-actions-tab') %>
+    </div>
+    <div id="content-tab-content" class="tab-content">
+      <%- include('./partials/content-backlog-tab') %>
+    </div>
+    <div id="campagnes-tab-content" class="tab-content">
+      <%- include('./partials/campagnes-tab') %>
+    </div>
+  </div>
+</div>
+
+<!-- Modal voor AI segment details -->
+<%- include('./partials/ai-segment-modal') %>
+
+<!-- Tailwind CSS is now loaded in the head via admin layout -->
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Mock Data -->
+<script src="/js/admin/lead-engine-data.js"></script>
+<!-- Main JS -->
+<script src="/js/admin/lead-engine.js"></script>
+

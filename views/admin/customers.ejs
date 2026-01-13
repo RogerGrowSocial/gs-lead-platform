@@ -1,0 +1,891 @@
+<%- include('../layouts/admin', {
+  content: `
+    <link rel="stylesheet" href="/css/admin/employees-drawer.css">
+    <style>
+      /* Branch Multiselect Styles */
+      .branch-multiselect {
+        position: relative;
+        width: 100%;
+      }
+
+      .branch-multiselect-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 10px;
+        border: 1px solid rgba(17, 24, 39, 0.14) !important;
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        transition: box-shadow 120ms ease, border-color 120ms ease;
+        text-align: left;
+      }
+
+      .branch-multiselect-trigger:hover {
+        border-color: rgba(17, 24, 39, 0.2);
+      }
+
+      .branch-multiselect-trigger.active,
+      .branch-multiselect-trigger:focus {
+        border-color: rgba(59,130,246,0.65) !important;
+        box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+        outline: none;
+      }
+
+      .branch-multiselect-value {
+        flex: 1;
+        color: #111827;
+      }
+
+      .branch-multiselect-icon {
+        width: 16px;
+        height: 16px;
+        color: #6b7280;
+        transition: transform 150ms ease;
+      }
+
+      .branch-multiselect-trigger.active .branch-multiselect-icon {
+        transform: rotate(180deg);
+      }
+
+      .branch-multiselect-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d1d5db !important;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        max-height: 300px;
+        overflow: hidden;
+        flex-direction: column;
+      }
+      
+      .branch-multiselect-dropdown[style*="block"] {
+        display: flex !important;
+      }
+
+      .branch-multiselect-search {
+        border-bottom: 1px solid rgba(17, 24, 39, 0.14) !important;
+      }
+
+      .branch-multiselect-add {
+        border-top: 1px solid rgba(17, 24, 39, 0.14) !important;
+      }
+
+      .branch-multiselect-list {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 4px;
+      }
+
+      .branch-multiselect-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        cursor: pointer;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        transition: background-color 120ms ease, border-color 120ms ease;
+      }
+
+      .branch-multiselect-item:hover {
+        background-color: #f9fafb;
+        border-color: rgba(17, 24, 39, 0.1);
+      }
+
+      .branch-multiselect-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #ea5d0d;
+      }
+
+      .branch-multiselect-item span {
+        flex: 1;
+        font-size: 14px;
+        color: #111827;
+      }
+
+      .branch-multiselect-add {
+        padding: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 8px;
+        background: #f9fafb;
+      }
+
+      /* Google Maps Autocomplete Dropdown Styling */
+      .pac-container {
+        z-index: 10000 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(17, 24, 39, 0.14) !important;
+        margin-top: 4px !important;
+      }
+
+      .pac-item {
+        padding: 10px 12px !important;
+        cursor: pointer !important;
+        border-bottom: 1px solid rgba(17, 24, 39, 0.08) !important;
+        font-size: 14px !important;
+      }
+
+      .pac-item:last-child {
+        border-bottom: none !important;
+      }
+
+      .pac-item:hover {
+        background-color: #f9fafb !important;
+      }
+
+      .pac-item-selected {
+        background-color: #f3f4f6 !important;
+      }
+
+      .pac-icon {
+        margin-right: 8px !important;
+      }
+
+      /* KVK Search Results */
+      .kvk-search-results {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 4px;
+      }
+
+      .kvk-search-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+        transition: background-color 120ms ease;
+      }
+
+      .kvk-search-item:last-child {
+        border-bottom: none;
+      }
+
+      .kvk-search-item:hover {
+        background-color: #f9fafb;
+      }
+
+      .kvk-search-item-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #111827;
+        margin-bottom: 4px;
+      }
+
+      .kvk-search-item-details {
+        font-size: 12px;
+        color: #6b7280;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .kvk-search-item-kvk {
+        font-weight: 500;
+        color: #3b82f6;
+      }
+
+      .kvk-search-loading {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 12px;
+        padding: 8px 12px;
+        background: #fff;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        border-radius: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        z-index: 1002;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .kvk-search-loading i {
+        color: #ea5d0d;
+      }
+
+      /* Clickable table rows */
+      .table-body-row[data-customer-id] {
+        transition: all 150ms ease;
+      }
+
+      .table-body-row[data-customer-id]:hover {
+        background-color: #fef3f2;
+        border-left: 3px solid #ea5d0d;
+      }
+
+      /* Customer logo in listing - optimized for performance */
+      .customer-logo-small {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        border-radius: 50%;
+        object-fit: contain;
+        margin-right: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        background: white;
+        /* Performance optimizations */
+        content-visibility: auto;
+        will-change: opacity;
+        transition: opacity 0.2s;
+      }
+
+      .customer-logo-small[loading="lazy"] {
+        opacity: 0;
+      }
+
+      .customer-logo-small:not([loading]) {
+        opacity: 1;
+      }
+
+      .customer-logo-small.loaded {
+        opacity: 1;
+      }
+
+      .customer-logo-placeholder {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        margin-right: 10px;
+        flex-shrink: 0;
+        border: 2px solid #e5e7eb;
+      }
+
+      .customer-name-cell {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+    <script src="/js/admin/customersDrawer.js" defer></script>
+    <!-- Right drawer (off-canvas) for creating a customer -->
+    <div id="customerDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>
+    <aside id="customerDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe klant" style="position:fixed;top:0;right:0;height:100vh;width:min(520px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">
+      <div class="gs-drawer__header">
+        <div>
+          <h3 class="gs-drawer__title">Nieuwe klant</h3>
+          <p class="gs-drawer__subtitle">Maak een klant aan en optioneel een account met e-mail.</p>
+        </div>
+        <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="gs-drawer__body">
+        <form id="customerCreateForm" autocomplete="off">
+          <div class="gs-form-grid">
+            <div class="gs-field gs-field--full" style="position: relative;">
+              <label class="gs-label" for="customer_company_name">Bedrijfsnaam *</label>
+              <div style="position: relative; width: 100%;">
+                <input class="gs-input" id="customer_company_name" name="company_name" type="text" placeholder="Bijv. Voorbeeld BV" required autocomplete="off" style="width: 100%;" />
+                <div id="kvkSearchResults" class="kvk-search-results" style="display: none;"></div>
+                <div id="kvkSearchLoading" class="kvk-search-loading" style="display: none;">
+                  <i class="fas fa-spinner fa-spin"></i> Zoeken...
+                </div>
+              </div>
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="customer_email">E-mailadres</label>
+              <input class="gs-input" id="customer_email" name="email" type="email" placeholder="bijv. jan@voorbeeld.nl" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_phone">Telefoon</label>
+              <input class="gs-input" id="customer_phone" name="phone" type="tel" placeholder="Bijv. 0612345678" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_domain">Domein</label>
+              <input class="gs-input" id="customer_domain" name="domain" type="text" placeholder="Bijv. voorbeeld.nl" />
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="customer_branch">Branche</label>
+              <div class="branch-multiselect" id="branchMultiselect">
+                <button type="button" class="branch-multiselect-trigger" id="branchMultiselectTrigger" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="branch-multiselect-value" id="branchMultiselectValue">Selecteer branches...</span>
+                  <svg class="branch-multiselect-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <div class="branch-multiselect-dropdown" id="branchMultiselectDropdown" role="listbox">
+                  <div class="branch-multiselect-search" style="padding: 8px; border-bottom: 1px solid #e5e7eb;">
+                    <input type="text" class="gs-input" id="branchSearchInput" placeholder="Zoek branches..." style="width: 100%; padding: 6px 8px; font-size: 13px;" />
+                  </div>
+                  <div class="branch-multiselect-list" id="branchMultiselectList" style="max-height: 200px; overflow-y: auto;">
+                    ${(typeof industries !== 'undefined' && industries) ? industries.map(function(industry) {
+                      return `
+                        <label class="branch-multiselect-item">
+                          <input type="checkbox" value="${industry.id}" data-branch-name="${industry.name}" class="branch-checkbox" />
+                          <span>${industry.name}</span>
+                        </label>
+                      `
+                    }).join('') : ''}
+                  </div>
+                  ${(typeof user !== 'undefined' && user && (user.is_admin || user.user_metadata?.is_admin)) ? `
+                  <div class="branch-multiselect-add" style="padding: 8px; border-top: 1px solid #e5e7eb; display: flex; gap: 8px;">
+                    <input type="text" class="gs-input" id="branchAddInput" placeholder="Nieuwe branche..." style="flex: 1; padding: 6px 8px; font-size: 13px;" />
+                    <button type="button" class="gs-btn gs-btn--primary" id="branchAddBtn" style="padding: 6px 12px; font-size: 13px;">Toevoegen</button>
+                  </div>
+                  ` : ''}
+                </div>
+                <input type="hidden" name="branch" id="branchHiddenInput" value="" />
+              </div>
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_status">Status</label>
+              <select class="gs-select" id="customer_status" name="status">
+                <option value="active">Actief</option>
+                <option value="inactive">Inactief</option>
+                <option value="lead">Lead</option>
+                <option value="prospect">Prospect</option>
+              </select>
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_priority">Prioriteit</label>
+              <select class="gs-select" id="customer_priority" name="priority">
+                <option value="normal">Normaal</option>
+                <option value="low">Laag</option>
+                <option value="high">Hoog</option>
+                <option value="vip">VIP</option>
+              </select>
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="customer_address">Adres</label>
+              <input class="gs-input" id="customer_address" name="address" type="text" placeholder="Bijv. Hoofdstraat 123" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_city">Plaats</label>
+              <input class="gs-input" id="customer_city" name="city" type="text" placeholder="Bijv. Amsterdam" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="customer_postal_code">Postcode</label>
+              <input class="gs-input" id="customer_postal_code" name="postal_code" type="text" placeholder="Bijv. 1234AB" />
+            </div>
+          </div>
+          <div class="gs-checkbox-row">
+            <input id="customer_create_account" type="checkbox" name="create_account" />
+            <label class="gs-label" for="customer_create_account" style="margin:0;">Automatisch account aanmaken (vereist e-mailadres)</label>
+          </div>
+          <div class="gs-checkbox-row">
+            <input id="customer_send_welcome_email" type="checkbox" name="send_welcome_email" />
+            <label class="gs-label" for="customer_send_welcome_email" style="margin:0;">Stuur welkomst e-mail met wachtwoord setup</label>
+          </div>
+          <div class="gs-hint">Als je een account aanmaakt, wordt automatisch een e-mail verstuurd om een wachtwoord in te stellen.</div>
+          <div id="customerCreateError" class="gs-error" style="display:none;"></div>
+        </form>
+      </div>
+      <div class="gs-drawer__footer">
+        <button type="button" class="gs-btn gs-btn--ghost" data-drawer-close>Annuleren</button>
+        <button type="button" class="gs-btn gs-btn--primary" id="customerCreateSubmit">Aanmaken</button>
+      </div>
+    </aside>
+    <div class="payments-container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <h1>Klanten</h1>
+          <p class="text-muted">CRM systeem - Beheer alle klanten, tickets en e-mails</p>
+        </div>
+        <button class="btn-primary" id="createCustomerBtn" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+          <i class="fas fa-plus"></i> Nieuwe Klant
+        </button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-cards-container">
+        <div class="kpi-cards-grid">
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totaal Klanten</p>
+              <p class="kpi-value">${kpis.total || 0}</p>
+              <p class="kpi-subtitle">Alle klanten</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Actieve Klanten</p>
+              <p class="kpi-value">${kpis.active || 0}</p>
+              <p class="kpi-subtitle">Momenteel actief</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Open Tickets</p>
+              <p class="kpi-value">
+                ${customers.reduce((sum, c) => sum + (parseInt(c.open_tickets) || 0), 0)}
+              </p>
+              <p class="kpi-subtitle">Totaal openstaand</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ticket">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                <path d="M13 5v2"></path>
+                <path d="M13 17v2"></path>
+                <path d="M13 11v2"></path>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totaal Facturen</p>
+              <p class="kpi-value">
+                ${customers.reduce((sum, c) => sum + (parseInt(c.total_invoices) || 0), 0)}
+              </p>
+              <p class="kpi-subtitle">Alle facturen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                <path d="M10 9H8"></path>
+                <path d="M16 13H8"></path>
+                <path d="M16 17H8"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-container">
+        <div class="search-wrapper">
+          <input 
+            type="text" 
+            placeholder="Zoek op naam, e-mail, domein of bedrijfsnaam..."
+            class="search-input"
+            id="searchInput"
+            value="${filters.search || ''}"
+          />
+        </div>
+        
+        <div class="status-filter-section">
+          <select class="status-select" id="statusSelect">
+            <option value="all" ${filters.status === 'all' ? 'selected' : ''}>Alle statussen</option>
+            <option value="active" ${filters.status === 'active' ? 'selected' : ''}>Actief</option>
+            <option value="inactive" ${filters.status === 'inactive' ? 'selected' : ''}>Inactief</option>
+            <option value="lead" ${filters.status === 'lead' ? 'selected' : ''}>Lead</option>
+            <option value="prospect" ${filters.status === 'prospect' ? 'selected' : ''}>Prospect</option>
+          </select>
+          
+          <select class="status-select" id="prioritySelect">
+            <option value="all" ${filters.priority === 'all' ? 'selected' : ''}>Alle prioriteiten</option>
+            <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
+            <option value="normal" ${filters.priority === 'normal' ? 'selected' : ''}>Normaal</option>
+            <option value="high" ${filters.priority === 'high' ? 'selected' : ''}>Hoog</option>
+            <option value="vip" ${filters.priority === 'vip' ? 'selected' : ''}>VIP</option>
+          </select>
+          
+          <div class="results-info" id="paginationInfo">
+            ${(() => {
+              const pag = typeof pagination !== 'undefined' ? pagination : { totalItems: customers.length, page: 1, limit: 15 };
+              const startItem = pag.totalItems > 0 ? (pag.page - 1) * pag.limit + 1 : 0;
+              const endItem = Math.min(pag.page * pag.limit, pag.totalItems);
+              return pag.totalItems > 0 ? `Toont ${startItem} tot ${endItem} van ${pag.totalItems} resultaten` : 'Geen klanten';
+            })()}
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="payments-table">
+            <thead>
+              <tr class="table-header-row">
+                <th class="table-header-cell">Klant</th>
+                <th class="table-header-cell">Contact</th>
+                <th class="table-header-cell">Domein</th>
+                <th class="table-header-cell">Status</th>
+                <th class="table-header-cell">Prioriteit</th>
+                <th class="table-header-cell">Laatste activiteit</th>
+                <th class="table-header-cell"></th>
+              </tr>
+            </thead>
+            <tbody id="customersTableBody">
+              ${
+                (customers || []).map(c => {
+                  const statusLabels = {
+                    'active': 'Actief',
+                    'inactive': 'Inactief',
+                    'lead': 'Lead',
+                    'prospect': 'Prospect'
+                  };
+                  
+                  const statusStyles = {
+                    'active': 'status-paid',
+                    'inactive': 'status-cancelled',
+                    'lead': 'status-pending',
+                    'prospect': 'status-pending'
+                  };
+                  
+                  const priorityLabels = {
+                    'low': 'Laag',
+                    'normal': 'Normaal',
+                    'high': 'Hoog',
+                    'vip': 'VIP'
+                  };
+                  
+                  const priorityColors = {
+                    'low': '#6b7280',
+                    'normal': '#3b82f6',
+                    'high': '#f59e0b',
+                    'vip': '#f59e0b'
+                  };
+                  
+                  const lastActivity = c.last_ticket_activity || c.last_email_activity || c.updated_at;
+                  const lastActivityDate = lastActivity ? new Date(lastActivity).toLocaleDateString('nl-NL', { 
+                    day: '2-digit', 
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'Geen activiteit';
+                  
+                  // Calculate initials same way as customer single page
+                  var initials = '';
+                  if (c.name && c.name.length > 0) {
+                    var nameParts = c.name.split(' ');
+                    if (nameParts.length > 0) {
+                      initials = nameParts[0].charAt(0).toUpperCase();
+                      if (nameParts.length > 1) {
+                        initials += nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+                      }
+                    }
+                  } else if (c.company_name && c.company_name.length > 0) {
+                    initials = c.company_name.charAt(0).toUpperCase();
+                  } else if (c.email && c.email.length > 0) {
+                    initials = c.email.charAt(0).toUpperCase();
+                  } else {
+                    initials = 'K';
+                  }
+                  
+                  return `
+                    <tr class="table-body-row" data-customer-id="${c.id}" style="cursor: pointer;">
+                      <td class="table-cell">
+                        <div class="customer-name-cell">
+                          ${c.logo_url ? `
+                            <img 
+                              src="${c.logo_url}" 
+                              alt="${c.name || c.company_name || 'Klant'}" 
+                              class="customer-logo-small" 
+                              loading="lazy"
+                              decoding="async"
+                              width="32"
+                              height="32"
+                              style="object-fit: contain; background: white;"
+                              onload="this.classList.add('loaded');"
+                              onerror="this.style.display='none'; const placeholder = this.nextElementSibling; if(placeholder) placeholder.style.display='flex';"
+                            />
+                            <div class="customer-logo-placeholder" style="display: none;">${initials}</div>
+                          ` : `
+                            <div class="customer-logo-placeholder">${initials}</div>
+                          `}
+                          <div class="cell-column">
+                            <span class="customer-name">${c.name || 'Onbekend'}</span>
+                            ${c.company_name ? `<span class="lead-title">${c.company_name}</span>` : ''}
+                          </div>
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <div class="cell-column">
+                          <span class="customer-name">${c.email || '-'}</span>
+                          ${c.phone ? `<span class="lead-title">${c.phone}</span>` : ''}
+                        </div>
+                      </td>
+                      <td class="table-cell">
+                        <span class="cell-text">${c.domain || '-'}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="status-badge ${statusStyles[c.status] || 'status-pending'}">${statusLabels[c.status] || c.status}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="status-badge" style="background-color: ${priorityColors[c.priority] || '#6b7280'}20; color: ${priorityColors[c.priority] || '#6b7280'};">
+                          ${priorityLabels[c.priority] || c.priority}
+                        </span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="cell-text">${lastActivityDate}</span>
+                      </td>
+                      <td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                          <!-- Drag handle (Apple-style grip) -->
+                          <div 
+                            class="customer-drag-handle" 
+                            data-customer-id="${c.id}"
+                            style="cursor: grab; padding: 4px; opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center;"
+                            title="Sleep om volgorde te wijzigen">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #9ca3af;">
+                              <circle cx="2" cy="2" r="1" fill="currentColor"/>
+                              <circle cx="6" cy="2" r="1" fill="currentColor"/>
+                              <circle cx="10" cy="2" r="1" fill="currentColor"/>
+                              <circle cx="2" cy="6" r="1" fill="currentColor"/>
+                              <circle cx="6" cy="6" r="1" fill="currentColor"/>
+                              <circle cx="10" cy="6" r="1" fill="currentColor"/>
+                              <circle cx="2" cy="10" r="1" fill="currentColor"/>
+                              <circle cx="6" cy="10" r="1" fill="currentColor"/>
+                              <circle cx="10" cy="10" r="1" fill="currentColor"/>
+                            </svg>
+                          </div>
+                        <button class="actions-button" onclick="showCustomerActions('${c.id}', event)" title="Meer acties">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="1"></circle>
+                            <circle cx="12" cy="5" r="1"></circle>
+                            <circle cx="12" cy="19" r="1"></circle>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')
+              }
+              ${
+                (!customers || customers.length === 0) ? `
+                  <tr class="table-body-row">
+                    <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+                      Geen klanten gevonden. Klik op "Nieuwe Klant" om er een toe te voegen.
+                    </td>
+                  </tr>
+                ` : ''
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      ${(() => {
+        const pag = typeof pagination !== 'undefined' ? pagination : { page: 1, limit: 15, totalItems: customers.length, totalPages: 1, hasNext: false, hasPrev: false };
+        const currentPage = pag.page || 1;
+        const totalPages = pag.totalPages || 1;
+        const limit = pag.limit || 15;
+        const totalItems = pag.totalItems || 0;
+        const hasNext = pag.hasNext || false;
+        const hasPrev = pag.hasPrev || false;
+        
+        // Build page numbers
+        const pages = [];
+        const maxPages = 5;
+        if (totalPages > 0) {
+          let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+          let endPage = Math.min(totalPages, startPage + maxPages - 1);
+          if (endPage - startPage < maxPages - 1) {
+            startPage = Math.max(1, endPage - maxPages + 1);
+          }
+          for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+          }
+        }
+        
+        // Build query string helper
+        const buildQueryString = (newPage, newLimit) => {
+          const params = new URLSearchParams();
+          if (typeof filters !== 'undefined') {
+            if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+            if (filters.priority && filters.priority !== 'all') params.set('priority', filters.priority);
+            if (filters.search) params.set('search', filters.search);
+          }
+          params.set('page', newPage);
+          if (newLimit !== 15) params.set('limit', newLimit);
+          return params.toString();
+        };
+        
+        return `
+          <!-- Pagination - Exact same as /admin/payments -->
+          <div class="pagination-container">
+            <!-- Items Per Page Selector - Bottom Left -->
+            <div class="items-per-page-wrapper">
+              <label for="itemsPerPageSelect" class="items-per-page-label">Toon:</label>
+              <select class="items-per-page-select" id="itemsPerPageSelect">
+                <option value="15" ${limit == 15 ? 'selected' : ''}>15</option>
+                <option value="25" ${limit == 25 ? 'selected' : ''}>25</option>
+                <option value="50" ${limit == 50 ? 'selected' : ''}>50</option>
+                <option value="100" ${limit == 100 ? 'selected' : ''}>100</option>
+              </select>
+              <span class="items-per-page-suffix">per pagina</span>
+            </div>
+            
+            <!-- Page Buttons - Right Aligned -->
+            <div class="pagination-buttons" id="paginationButtons">
+              <!-- Previous Button -->
+              <button class="pagination-nav" id="prevButton" ${hasPrev ? '' : 'disabled'}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+              </button>
+              
+              <!-- Page Numbers -->
+              ${pages.map(pageNum => `
+                <button class="pagination-page ${pageNum === currentPage ? 'pagination-page-active' : ''}" data-page="${pageNum}">
+                  ${pageNum}
+                </button>
+              `).join('')}
+              
+              <!-- Next Button -->
+              <button class="pagination-nav" id="nextButton" ${hasNext ? '' : 'disabled'}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <script>
+            // Image loading optimization - preload visible images
+            (function() {
+              // Use Intersection Observer for better lazy loading
+              if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                  entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                      const img = entry.target;
+                      if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                      }
+                      img.classList.add('loaded');
+                      observer.unobserve(img);
+                    }
+                  });
+                }, {
+                  rootMargin: '50px' // Start loading 50px before image enters viewport
+                });
+
+                // Observe all lazy-loaded images
+                document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+                  imageObserver.observe(img);
+                });
+              }
+            })();
+
+            (function() {
+              const buildQueryString = (newPage, newLimit) => {
+                const params = new URLSearchParams();
+                ${typeof filters !== 'undefined' ? `
+                  if ('${filters.status || 'all'}' !== 'all') params.set('status', '${filters.status || 'all'}');
+                  if ('${filters.priority || 'all'}' !== 'all') params.set('priority', '${filters.priority || 'all'}');
+                  if ('${filters.search || ''}') params.set('search', '${filters.search || ''}');
+                ` : ''}
+                params.set('page', newPage);
+                if (newLimit !== 15) params.set('limit', newLimit);
+                return params.toString();
+              };
+              
+              // Items per page change
+              document.getElementById('itemsPerPageSelect')?.addEventListener('change', function(e) {
+                const newLimit = parseInt(e.target.value);
+                const queryString = buildQueryString(1, newLimit);
+                window.location.href = '/admin/customers?' + queryString;
+              });
+              
+              // Previous button
+              document.getElementById('prevButton')?.addEventListener('click', function() {
+                if (!this.disabled) {
+                  const queryString = buildQueryString(${currentPage - 1}, ${limit});
+                  window.location.href = '/admin/customers?' + queryString;
+                }
+              });
+              
+              // Next button
+              document.getElementById('nextButton')?.addEventListener('click', function() {
+                if (!this.disabled) {
+                  const queryString = buildQueryString(${currentPage + 1}, ${limit});
+                  window.location.href = '/admin/customers?' + queryString;
+                }
+              });
+              
+              // Page number buttons
+              document.querySelectorAll('.pagination-page').forEach(btn => {
+                btn.addEventListener('click', function() {
+                  const page = parseInt(this.dataset.page);
+                  if (page) {
+                    const queryString = buildQueryString(page, ${limit});
+                    window.location.href = '/admin/customers?' + queryString;
+                  }
+                });
+              });
+            })();
+          </script>
+        `;
+      })()}
+    </div>
+
+    <!-- Actions Menu -->
+    <div id="customerActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 200px; padding: 8px 0;">
+      <button class="mail-action-item" data-action="view" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-eye" style="margin-right: 8px; width: 16px;"></i> Bekijken
+      </button>
+      <button class="mail-action-item" data-action="tickets" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-ticket-alt" style="margin-right: 8px; width: 16px;"></i> Tickets
+      </button>
+      <button class="mail-action-item" data-action="emails" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-envelope" style="margin-right: 8px; width: 16px;"></i> E-mails
+      </button>
+      <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+      <button class="mail-action-item" data-action="edit" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-edit" style="margin-right: 8px; width: 16px;"></i> Bewerken
+      </button>
+      <button class="mail-action-item" data-action="delete" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #dc2626;">
+        <i class="fas fa-trash" style="margin-right: 8px; width: 16px;"></i> Verwijderen
+      </button>
+    </div>
+  `,
+  scripts: (scripts || []),
+  stylesheets: stylesheets || []
+}) %>
+
+<% if (typeof googleMapsApiKey !== "undefined" && googleMapsApiKey && googleMapsApiKey !== "") { %>
+<script>
+  window.GOOGLE_MAPS_API_KEY = '<%= googleMapsApiKey %>';
+  window.GOOGLE_MAPS_LOADED = false;
+  
+  // Callback when Google Maps API is loaded
+  function initGoogleMapsForCustomers() {
+    window.GOOGLE_MAPS_LOADED = true;
+    console.log('[customers] Google Maps API loaded');
+  }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<%= googleMapsApiKey %>&libraries=places&language=nl&callback=initGoogleMapsForCustomers" async defer></script>
+<% } %>
+

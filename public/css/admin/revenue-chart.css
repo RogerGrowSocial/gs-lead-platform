@@ -1,0 +1,184 @@
+/* ============================================
+   REVENUE CHART CARD - CONTAINER
+   ============================================ */
+.revenue-chart-card {
+  background-color: #ffffff !important;           /* Pure white - exact same as monthly-growth-card */
+  border: 1px solid #e5e7eb !important;          /* Light gray border - exact same as monthly-growth-card */
+  border-radius: 8px !important;                  /* 8px rounded corners - exact same as monthly-growth-card */
+  padding: 24px !important;                       /* 24px padding all sides - exact same as monthly-growth-card */
+  width: 100%;                         /* Full width of parent */
+  height: 100%;                         /* Full height of parent */
+  box-sizing: border-box !important;              /* Include padding in width - exact same as monthly-growth-card */
+  box-shadow: none !important;                    /* No shadow - exact same as monthly-growth-card */
+  transition: all 0.2s ease;           /* Smooth transitions */
+  display: flex;                       /* Flexbox layout */
+  flex-direction: column;              /* Vertical layout */
+}
+
+/* ============================================
+   HEADER SECTION
+   ============================================ */
+.revenue-chart-header {
+  margin-bottom: 16px;                 /* 16px gap below header */
+}
+
+/* ============================================
+   TITLE
+   ============================================ */
+.revenue-chart-title {
+  font-size: 18px;                     /* 18px font size */
+  font-weight: 600;                    /* Semi-bold weight */
+  color: #111827;                      /* Almost black */
+  margin: 0;                           /* Remove default margin */
+  line-height: 1.5;                    /* 27px line height */
+}
+
+/* ============================================
+   FILTERS CONTAINER
+   ============================================ */
+.revenue-chart-filters {
+  display: flex;                       /* Flexbox layout */
+  align-items: center;                 /* Vertically center items */
+  justify-content: space-between;      /* Space between period buttons and year select */
+  margin-bottom: 24px;                 /* 24px gap below filters */
+}
+
+/* ============================================
+   PERIOD BUTTONS CONTAINER
+   ============================================ */
+.period-buttons {
+  display: flex;                       /* Flexbox layout */
+  gap: 8px;                           /* 8px gap between buttons */
+}
+
+/* ============================================
+   PERIOD BUTTON - DEFAULT STATE
+   ============================================ */
+.period-btn {
+  padding: 6px 12px;                  /* 6px vertical, 12px horizontal */
+  font-size: 14px;                    /* 14px font size */
+  font-weight: 400;                   /* Normal weight */
+  color: #6b7280;                     /* Medium gray text */
+  background-color: #f9fafb;          /* Light gray background */
+  border: none;                       /* No border */
+  border-radius: 6px;                 /* 6px rounded corners */
+  cursor: pointer;                    /* Pointer cursor */
+  transition: all 150ms ease;         /* Smooth transitions */
+  white-space: nowrap;                /* Don't wrap text */
+  line-height: 1.5;                   /* 21px line height */
+}
+
+/* ============================================
+   PERIOD BUTTON - HOVER STATE
+   ============================================ */
+.period-btn:hover {
+  background-color: #f3f4f6;          /* Slightly darker gray */
+}
+
+/* ============================================
+   PERIOD BUTTON - ACTIVE STATE
+   ============================================ */
+.period-btn.active {
+  background-color: #ea5d0d;          /* Brand orange */
+  color: #ffffff;                     /* White text */
+  font-weight: 500;                   /* Medium weight */
+}
+
+/* ============================================
+   YEAR SELECT WRAPPER
+   ============================================ */
+.year-select-wrapper {
+  position: relative;                 /* For absolute positioning of icon */
+  display: inline-block;              /* Inline block for sizing */
+}
+
+/* ============================================
+   YEAR SELECT - DROPDOWN
+   ============================================ */
+.year-select {
+  appearance: none;                   /* Remove default browser styling */
+  -webkit-appearance: none;           /* Remove Safari styling */
+  -moz-appearance: none;              /* Remove Firefox styling */
+  padding: 6px 32px 6px 12px;        /* 6px top/bottom, 32px right (for icon), 12px left */
+  font-size: 14px;                    /* 14px font size */
+  font-weight: 400;                   /* Normal weight */
+  color: #111827;                     /* Dark text */
+  background-color: #ffffff;          /* White background */
+  border: 1px solid #e5e7eb;         /* Light gray border */
+  border-radius: 6px;                 /* 6px rounded corners */
+  cursor: pointer;                    /* Pointer cursor */
+  transition: all 150ms ease;         /* Smooth transitions */
+  line-height: 1.5;                   /* 21px line height */
+  min-width: 100px;                   /* Minimum width */
+}
+
+/* ============================================
+   YEAR SELECT - HOVER STATE
+   ============================================ */
+.year-select:hover {
+  background-color: #f9fafb;          /* Light gray background */
+}
+
+/* ============================================
+   YEAR SELECT - FOCUS STATE
+   ============================================ */
+.year-select:focus {
+  outline: none;                      /* Remove default outline */
+  border-color: #111827;              /* Dark border */
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1);  /* Subtle shadow */
+}
+
+/* ============================================
+   YEAR SELECT ICON - CHEVRON
+   ============================================ */
+.year-select-icon {
+  position: absolute;                 /* Absolute positioning */
+  right: 12px;                        /* 12px from right edge */
+  top: 50%;                           /* Center vertically */
+  transform: translateY(-50%);        /* Adjust for exact center */
+  width: 16px;                        /* 16px width */
+  height: 16px;                       /* 16px height */
+  color: #6b7280;                     /* Medium gray */
+  pointer-events: none;               /* Don't block clicks */
+}
+
+/* ============================================
+   CHART BODY - CANVAS CONTAINER
+   ============================================ */
+.revenue-chart-body {
+  width: 100%;                        /* Full width */
+  height: 300px;                      /* Fixed height */
+  position: relative;                 /* For canvas positioning */
+}
+
+/* ============================================
+   CANVAS ELEMENT
+   ============================================ */
+#revenueChart {
+  width: 100% !important;             /* Force full width */
+  height: 100% !important;            /* Force full height */
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+  .revenue-chart-filters {
+    flex-direction: column;           /* Stack vertically */
+    align-items: flex-start;          /* Align to left */
+    gap: 16px;                        /* 16px gap between rows */
+  }
+  
+  .period-buttons {
+    width: 100%;                      /* Full width */
+    justify-content: flex-start;      /* Align to left */
+  }
+  
+  .year-select-wrapper {
+    width: 100%;                      /* Full width */
+  }
+  
+  .year-select {
+    width: 100%;                      /* Full width */
+  }
+}

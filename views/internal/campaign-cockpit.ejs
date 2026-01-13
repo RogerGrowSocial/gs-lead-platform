@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Campaign Cockpit</title>
+  <style>
+    body { 
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      background: #0b0b0d; 
+      color: #f5f5f5; 
+      margin: 0; 
+      padding: 24px; 
+    }
+    h1 { 
+      margin-bottom: 8px; 
+      color: #f5f5f5;
+    }
+    .meta { 
+      font-size: 13px; 
+      color: #9ca3af; 
+      margin-bottom: 16px; 
+    }
+    .meta a {
+      color: #60a5fa;
+      text-decoration: none;
+      margin: 0 4px;
+    }
+    .meta a:hover {
+      text-decoration: underline;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 13px; 
+      background: #111827;
+    }
+    th, td { 
+      padding: 8px 10px; 
+      border-bottom: 1px solid #1f2933; 
+      vertical-align: top; 
+      text-align: left;
+    }
+    th { 
+      background: #111827; 
+      position: sticky; 
+      top: 0; 
+      z-index: 1; 
+      font-weight: 600;
+      color: #d1d5db;
+    }
+    tr:hover { 
+      background: #1f2937; 
+    }
+    .tag { 
+      display: inline-flex; 
+      align-items: center; 
+      padding: 2px 6px; 
+      border-radius: 999px; 
+      font-size: 11px; 
+      font-weight: 500;
+    }
+    .tag-ok { 
+      background: #064e3b; 
+      color: #a7f3d0; 
+    }
+    .tag-warn { 
+      background: #78350f; 
+      color: #fed7aa; 
+    }
+    .tag-err { 
+      background: #7f1d1d; 
+      color: #fecaca; 
+    }
+    .sub { 
+      color: #9ca3af; 
+      font-size: 11px; 
+    }
+    .num { 
+      text-align: right; 
+      font-variant-numeric: tabular-nums; 
+    }
+    a { 
+      color: #60a5fa; 
+      text-decoration: none; 
+    }
+    a:hover { 
+      text-decoration: underline; 
+    }
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <h1>Campaign Cockpit</h1>
+  <div class="meta">
+    Customer ID: <%= meta.customerId || '-' %> ·
+    Laatste <%= meta.days %> dagen vanaf <%= meta.fromDate %> ·
+    <a href="?days=7<%= meta.customerId ? '&customerId=' + meta.customerId : '' %>">7d</a> ·
+    <a href="?days=30<%= meta.customerId ? '&customerId=' + meta.customerId : '' %>">30d</a>
+  </div>
+
+  <% if (!rows || rows.length === 0) { %>
+    <div class="empty-state">
+      <p>Geen campagnes gevonden met een gekoppelde Google Ads campaign ID.</p>
+    </div>
+  <% } else { %>
+  <table>
+    <thead>
+      <tr>
+        <th>Segment</th>
+        <th>Campagne</th>
+        <th>Budget / CPL</th>
+        <th>Performance (laatste <%= meta.days %>d)</th>
+        <th>Laatste log</th>
+        <th>Inspect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% rows.forEach(function(row) { 
+           const gId = row.googleAdsCampaignId;
+           const stats = row.stats || {};
+           const cost = stats.costEur || 0;
+           const leads = stats.leads || 0;
+           const cpl = stats.cpl;
+           const target = row.targetCplEur;
+           let tagClass = 'tag';
+           let tagText = 'Geen data';
+           
+           if (leads === 0 && stats.clicks > 0) {
+             tagClass += ' tag-warn';
+             tagText = 'Nog geen leads';
+           } else if (cpl && target) {
+             const ratio = cpl / target;
+             if (ratio < 0.8) { 
+               tagClass += ' tag-ok'; 
+               tagText = 'Onder target'; 
+             } else if (ratio > 1.2) { 
+               tagClass += ' tag-err'; 
+               tagText = 'Boven target'; 
+             } else { 
+               tagClass += ' tag-warn'; 
+               tagText = 'Rond target'; 
+             }
+           }
+      %>
+      <tr>
+        <td>
+          <div><strong><%= row.segmentName %></strong></div>
+          <div class="sub"><%= row.branch || '-' %> · <%= row.region || '-' %></div>
+        </td>
+        <td>
+          <div>
+            Campagne ID: 
+            <% if (meta.customerId && gId) { %>
+              <a href="https://ads.google.com/aw/campaigns?ocid=<%= meta.customerId %>&campaignId=<%= gId %>" target="_blank" rel="noopener">
+                <%= gId %>
+              </a>
+            <% } else { %>
+              <%= gId || '-' %>
+            <% } %>
+          </div>
+          <div class="sub">Leads in periode: <%= stats.leads || 0 %></div>
+        </td>
+        <td>
+          <div class="num">
+            Budget min/max:<br/>
+            <%= row.minDailyBudgetEur ? '€ ' + row.minDailyBudgetEur.toFixed(2) : '-' %> /
+            <%= row.maxDailyBudgetEur ? '€ ' + row.maxDailyBudgetEur.toFixed(2) : '-' %>
+          </div>
+          <div class="num">
+            Target CPL:<br/>
+            <%= row.targetCplEur ? '€ ' + row.targetCplEur.toFixed(2) : '-' %>
+          </div>
+          <div style="margin-top: 4px;">
+            <span class="<%= tagClass %>"><%= tagText %></span>
+          </div>
+        </td>
+        <td>
+          <div class="num">Impr: <%= stats.impressions || 0 %></div>
+          <div class="num">Clicks: <%= stats.clicks || 0 %></div>
+          <div class="num">Cost: € <%= cost.toFixed(2) %></div>
+          <div class="num">Leads: <%= stats.leads || 0 %></div>
+          <div class="num">CPC: <%= stats.cpc ? '€ ' + stats.cpc.toFixed(2) : '-' %></div>
+          <div class="num">CPL: <%= stats.cpl ? '€ ' + stats.cpl.toFixed(2) : '-' %></div>
+        </td>
+        <td>
+          <% if (row.lastLog) { %>
+            <div>
+              Status:
+              <% if (row.lastLog.status === 'SUCCESS') { %>
+                <span class="tag tag-ok">SUCCESS</span>
+              <% } else { %>
+                <span class="tag tag-err"><%= row.lastLog.status %></span>
+              <% } %>
+            </div>
+            <div class="sub">
+              <%= row.lastLog.error_code || '' %><br/>
+              <%= row.lastLog.created_at ? new Date(row.lastLog.created_at).toLocaleString('nl-NL') : '' %>
+            </div>
+          <% } else { %>
+            <span class="sub">Geen logs</span>
+          <% } %>
+        </td>
+        <td>
+          <% if (gId) { %>
+          <a href="/api/internal/google-ads/campaign/<%= gId %>/inspect?customerId=<%= meta.customerId %>">
+            Technisch
+          </a>
+          <% } %>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</body>
+</html>
+

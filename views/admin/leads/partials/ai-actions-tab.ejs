@@ -1,0 +1,118 @@
+<!-- AI KPI Cards - EXACT zoals /admin/payments -->
+<div class="kpi-cards-container">
+  <div class="kpi-cards-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Actieve AI-campagnes</p>
+        <p class="kpi-value" id="kpi-ai-campaigns">-</p>
+        <p class="kpi-subtitle">Campagnes waar AI het budget en targeting aanstuurt.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Google Ads, per segment.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Openstaande aanbevelingen</p>
+        <p class="kpi-value" id="kpi-pending-recommendations">-</p>
+        <p class="kpi-subtitle">Voorstellen voor landingspagina's, advertenties en content.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Wachten op review.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-content">
+        <p class="kpi-title">Impact laatste 30 dagen</p>
+        <p class="kpi-value" id="kpi-ai-impact">-</p>
+        <p class="kpi-subtitle">Extra leads uit AI-gestuurde acties.</p>
+        <p class="kpi-subtitle" style="margin-top: 4px;">Vs vorige 30 dagen.</p>
+      </div>
+      <div class="kpi-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI Aanbevelingen Tabel - EXACT zoals /admin/leads -->
+<div class="table-container">
+  <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0;">AI-aanbevelingen per segment</h3>
+      <p style="margin-top: 4px; font-size: 14px; color: #6b7280;">Automatisch gegenereerde aanbevelingen op basis van lead gaps en segment capaciteit.</p>
+    </div>
+    <button 
+      id="generate-recommendations-btn"
+      class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+      title="Genereer nieuwe AI aanbevelingen"
+    >
+      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+      </svg>
+      Genereer Aanbevelingen
+    </button>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable-header" data-sort="segment">
+            <span>Segment</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th class="sortable-header" data-sort="type">
+            <span>Type</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th class="sortable-header" data-sort="recommendation">
+            <span>Aanbeveling</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th class="sortable-header" data-sort="impact">
+            <span>Verwachte impact</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th class="sortable-header" data-sort="status">
+            <span>Status</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th class="sortable-header" data-sort="updated">
+            <span>Laatste update</span>
+            <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 13l5 5 5-5 M7 6l5-5 5 5"/>
+            </svg>
+          </th>
+          <th style="text-align: right;">Actie</th>
+        </tr>
+      </thead>
+      <tbody id="ai-recommendations-table-body">
+        <!-- Dynamisch gevuld -->
+      </tbody>
+      <tbody id="ai-recommendations-table-skeleton" style="display: none;">
+        <!-- Skeleton loader rows -->
+      </tbody>
+    </table>
+  </div>
+</div>
+

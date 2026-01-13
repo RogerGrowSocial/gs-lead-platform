@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Werknemers | GrowSocial Admin</title>
+  <link rel="stylesheet" href="/css/werknemers.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="werknemers-page">
+    <div class="werknemers-header">
+      <div>
+        <h1 class="werknemers-title">Werknemers</h1>
+        <p class="werknemers-subtitle">Beheer je team en volg prestaties</p>
+      </div>
+      <div class="werknemers-header-actions">
+        <select class="werknemers-date-select" id="dateRange">
+          <option value="today">Vandaag</option>
+          <option value="7d">Laatste 7 dagen</option>
+          <option value="30d" selected>Laatste 30 dagen</option>
+          <option value="ytd">Year to date</option>
+          <option value="custom">Aangepast</option>
+        </select>
+        <button class="werknemers-add-btn" onclick="openNewEmployeeModal()">
+          <i class="fas fa-plus"></i>
+          Nieuwe werknemer
+        </button>
+      </div>
+    </div>
+
+    <div class="werknemers-kpi-grid">
+      <div class="werknemers-kpi-card">
+        <div class="werknemers-kpi-content">
+          <div class="werknemers-kpi-left">
+            <p class="werknemers-kpi-label">Totaal Werknemers</p>
+            <p class="werknemers-kpi-value"><%= (employees||[]).length %></p>
+            <div class="werknemers-kpi-change"><i class="fas fa-arrow-trend-up"></i><span class="werknemers-kpi-change-value">+6.4%</span><span class="werknemers-kpi-change-label">vs vorige periode</span></div>
+          </div>
+          <div class="werknemers-kpi-icon"><i class="fas fa-users"></i></div>
+        </div>
+      </div>
+      <div class="werknemers-kpi-card">
+        <div class="werknemers-kpi-content">
+          <div class="werknemers-kpi-left">
+            <p class="werknemers-kpi-label">Actieve Werknemers</p>
+            <p class="werknemers-kpi-value"><%= (employees||[]).filter(e=>e.status==='active').length %></p>
+            <div class="werknemers-kpi-change"><i class="fas fa-arrow-trend-up"></i><span class="werknemers-kpi-change-value">+2.3%</span><span class="werknemers-kpi-change-label">vs vorige periode</span></div>
+          </div>
+          <div class="werknemers-kpi-icon"><i class="fas fa-user-check"></i></div>
+        </div>
+      </div>
+      <div class="werknemers-kpi-card">
+        <div class="werknemers-kpi-content">
+          <div class="werknemers-kpi-left">
+            <p class="werknemers-kpi-label">Top Performers</p>
+            <p class="werknemers-kpi-value"><%= (employees||[]).filter(e=>e.performance>=90).length %></p>
+            <div class="werknemers-kpi-change"><i class="fas fa-arrow-trend-up"></i><span class="werknemers-kpi-change-value">+14.3%</span><span class="werknemers-kpi-change-label">vs vorige periode</span></div>
+          </div>
+          <div class="werknemers-kpi-icon"><i class="fas fa-award"></i></div>
+        </div>
+      </div>
+      <div class="werknemers-kpi-card">
+        <div class="werknemers-kpi-content">
+          <div class="werknemers-kpi-left">
+            <p class="werknemers-kpi-label">Afdelingen</p>
+            <p class="werknemers-kpi-value"><%= [...new Set((employees||[]).map(e=>e.department))].length %></p>
+            <div class="werknemers-kpi-change"><span class="werknemers-kpi-change-value">Geen wijziging</span><span class="werknemers-kpi-change-label">vs vorige periode</span></div>
+          </div>
+          <div class="werknemers-kpi-icon"><i class="fas fa-building"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="werknemers-list-card">
+      <div class="werknemers-search-header">
+        <div class="werknemers-search-wrapper">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Zoek op naam, rol of afdeling..." class="werknemers-search-input" id="searchInput" oninput="filterEmployees()">
+        </div>
+        <select class="werknemers-filter-select" id="departmentFilter" onchange="filterEmployees()">
+          <option value="all">Alle afdelingen</option>
+          <option value="sales">Sales</option>
+          <option value="marketing">Marketing</option>
+          <option value="product">Product</option>
+          <option value="engineering">Engineering</option>
+          <option value="support">Support</option>
+        </select>
+      </div>
+      <div class="werknemers-list" id="employeesList">
+        <% (employees||[]).forEach(function(emp){ %>
+          <div class="werknemer-item" data-name="<%= emp.name.toLowerCase() %>" data-role="<%= emp.role.toLowerCase() %>" data-department="<%= emp.department.toLowerCase() %>" onclick="window.location.href='/admin/werknemers/<%= emp.id %>'">
+            <div class="werknemer-item-inner">
+              <div class="werknemer-avatar"><%= emp.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() %></div>
+              <div class="werknemer-content">
+                <div class="werknemer-content-wrapper">
+                  <div class="werknemer-info">
+                    <div class="werknemer-name-row">
+                      <h3 class="werknemer-name"><%= emp.name %></h3>
+                      <% if(emp.status==='active'){ %><span class="werknemer-badge werknemer-badge-active">Actief</span><% } %>
+                      <% if(emp.performance>=90){ %><span class="werknemer-badge werknemer-badge-excellent">Excellent</span><% } %>
+                    </div>
+                    <p class="werknemer-role"><i class="fas fa-briefcase"></i><%= emp.role %><span class="werknemer-separator">•</span><i class="fas fa-building werknemer-department-icon"></i><span class="werknemer-department"><%= emp.department %></span></p>
+                    <div class="werknemer-meta">
+                      <div class="werknemer-meta-item"><i class="fas fa-envelope"></i><span><%= emp.email %></span></div>
+                      <div class="werknemer-meta-item"><i class="fas fa-phone"></i><span><%= emp.phone %></span></div>
+                      <div class="werknemer-meta-item"><i class="fas fa-map-marker-alt"></i><span><%= emp.location %></span></div>
+                      <div class="werknemer-meta-item"><i class="fas fa-calendar"></i><span>Sinds <%= new Date(emp.startDate).toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'}) %></span></div>
+                    </div>
+                  </div>
+                  <div class="werknemer-stats">
+                    <div class="werknemer-performance"><div class="werknemer-performance-score"><i class="fas fa-star"></i><span class="werknemer-performance-value"><%= emp.performance %></span><span class="werknemer-performance-max">/ 100</span></div><p class="werknemer-performance-label">Performance Score</p></div>
+                    <% if(emp.dealsWon>0){ %>
+                      <div class="werknemer-sales-stats">
+                        <div class="werknemer-stat"><p class="werknemer-stat-label">Deals</p><p class="werknemer-stat-value"><%= emp.dealsWon %></p></div>
+                        <div class="werknemer-stat-divider"></div>
+                        <div class="werknemer-stat"><p class="werknemer-stat-label">Omzet</p><p class="werknemer-stat-value"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(emp.revenue) %></p></div>
+                        <div class="werknemer-stat-divider"></div>
+                        <div class="werknemer-stat"><p class="werknemer-stat-label">Gem. Waarde</p><p class="werknemer-stat-value"><%= new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:0}).format(emp.revenue/emp.dealsWon) %></p></div>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+  <script src="/js/werknemers.js"></script>
+</body>
+</html>
+
+

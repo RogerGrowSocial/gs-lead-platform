@@ -1,0 +1,228 @@
+/* ============================================
+   CUSTOM SELECT - CONTAINER
+   ============================================ */
+.custom-select {
+  position: relative;                  /* For absolute positioning of dropdown */
+  display: inline-block;               /* Inline block for sizing */
+  width: 180px;                        /* Default width: 180px */
+}
+
+/* ============================================
+   TRIGGER BUTTON - DEFAULT STATE
+   ============================================ */
+.custom-select-trigger {
+  display: flex;                       /* Flexbox layout */
+  align-items: center;                 /* Vertically center content */
+  justify-content: space-between;      /* Space between text and icon */
+  width: 100%;                         /* Full width of container */
+  height: 36px;                        /* Fixed height: 36px */
+  padding: 8px 12px;                  /* 8px vertical, 12px horizontal */
+  background-color: #ffffff;           /* Pure white background */
+  border: 1px solid #e5e7eb;          /* Light gray border */
+  border-radius: 6px;                  /* 6px rounded corners */
+  font-size: 14px;                     /* 14px font size */
+  font-weight: 400;                    /* Normal weight */
+  color: #111827;                      /* Dark text */
+  text-align: left;                    /* Left-align text */
+  cursor: pointer;                     /* Pointer cursor */
+  transition: all 150ms ease;          /* Smooth transitions */
+  outline: none;                       /* Remove default outline */
+  box-sizing: border-box;              /* Include padding/border in width */
+}
+
+/* ============================================
+   TRIGGER BUTTON - HOVER STATE
+   ============================================ */
+.custom-select-trigger:hover {
+  background-color: #f9fafb;           /* Light gray background */
+}
+
+/* ============================================
+   TRIGGER BUTTON - FOCUS STATE
+   ============================================ */
+.custom-select-trigger:focus {
+  border-color: #111827;               /* Dark border */
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1);  /* Subtle shadow ring */
+}
+
+/* ============================================
+   TRIGGER BUTTON - OPEN STATE
+   ============================================ */
+.custom-select.open .custom-select-trigger {
+  border-color: #111827;               /* Dark border when open */
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1);  /* Shadow ring when open */
+}
+
+/* ============================================
+   SELECTED VALUE TEXT
+   ============================================ */
+.custom-select-value {
+  flex: 1;                             /* Take remaining space */
+  overflow: hidden;                    /* Hide overflow */
+  text-overflow: ellipsis;             /* Show ... for long text */
+  white-space: nowrap;                 /* Don't wrap text */
+  color: #111827;                      /* Dark text */
+}
+
+/* ============================================
+   CHEVRON ICON
+   ============================================ */
+.custom-select-icon {
+  flex-shrink: 0;                      /* Don't shrink */
+  width: 16px;                         /* 16px width */
+  height: 16px;                        /* 16px height */
+  margin-left: 8px;                    /* 8px gap from text */
+  color: #6b7280;                      /* Medium gray */
+  transition: transform 150ms ease;    /* Smooth rotation */
+}
+
+/* Rotate icon when dropdown is open */
+.custom-select.open .custom-select-icon {
+  transform: rotate(180deg);           /* Rotate 180 degrees */
+}
+
+/* ============================================
+   DROPDOWN CONTAINER - HIDDEN BY DEFAULT
+   ============================================ */
+.custom-select-dropdown {
+  position: absolute;                  /* Absolute positioning */
+  top: calc(100% + 4px);              /* 4px below trigger */
+  left: 0;                             /* Align to left edge */
+  right: 0;                            /* Align to right edge */
+  background-color: #ffffff;           /* White background */
+  border: 1px solid #e5e7eb;          /* Light gray border */
+  border-radius: 6px;                  /* 6px rounded corners */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+              0 4px 6px -2px rgba(0, 0, 0, 0.05);  /* Large shadow */
+  z-index: 1000;                       /* High z-index */
+  overflow: hidden;                    /* Hide overflow */
+  
+  /* Hidden by default */
+  opacity: 0;                          /* Invisible */
+  visibility: hidden;                  /* Not visible */
+  transform: translateY(-8px) scale(0.95);  /* Slightly up and smaller */
+  transition: all 150ms ease;          /* Smooth transitions */
+}
+
+/* ============================================
+   DROPDOWN CONTAINER - OPEN STATE
+   ============================================ */
+.custom-select.open .custom-select-dropdown {
+  opacity: 1;                          /* Fully visible */
+  visibility: visible;                 /* Visible */
+  transform: translateY(0) scale(1);   /* Normal position and size */
+}
+
+/* ============================================
+   DROPDOWN ITEMS CONTAINER
+   ============================================ */
+.custom-select-items {
+  padding: 4px;                        /* 4px padding all sides */
+  max-height: 300px;                   /* Maximum height before scroll */
+  overflow-y: auto;                    /* Vertical scroll if needed */
+}
+
+/* ============================================
+   DROPDOWN ITEM - DEFAULT STATE
+   ============================================ */
+.custom-select-item {
+  position: relative;                  /* For absolute positioning of checkmark */
+  display: flex;                       /* Flexbox layout */
+  align-items: center;                 /* Vertically center */
+  justify-content: space-between;      /* Space between text and checkmark */
+  padding: 6px 8px;                   /* 6px vertical, 8px horizontal */
+  padding-right: 32px;                 /* Extra right padding for checkmark */
+  font-size: 14px;                     /* 14px font size */
+  font-weight: 400;                    /* Normal weight */
+  color: #111827;                      /* Dark text */
+  border-radius: 2px;                  /* 2px rounded corners */
+  cursor: pointer;                     /* Pointer cursor */
+  transition: all 150ms ease;          /* Smooth transitions */
+  outline: none;                       /* Remove default outline */
+}
+
+/* ============================================
+   DROPDOWN ITEM - HOVER STATE
+   ============================================ */
+.custom-select-item:hover {
+  background-color: #f9fafb;           /* Light gray background */
+}
+
+/* ============================================
+   DROPDOWN ITEM - FOCUS STATE (Keyboard)
+   ============================================ */
+.custom-select-item:focus {
+  background-color: #f3f4f6;           /* Slightly darker gray */
+}
+
+/* ============================================
+   DROPDOWN ITEM - SELECTED STATE
+   ============================================ */
+.custom-select-item.selected {
+  background-color: #f3f4f6;           /* Slightly darker gray */
+  font-weight: 500;                    /* Medium weight */
+}
+
+/* ============================================
+   ITEM TEXT
+   ============================================ */
+.custom-select-item-text {
+  flex: 1;                             /* Take remaining space */
+  overflow: hidden;                    /* Hide overflow */
+  text-overflow: ellipsis;             /* Show ... for long text */
+  white-space: nowrap;                 /* Don't wrap text */
+}
+
+/* ============================================
+   CHECKMARK ICON - HIDDEN BY DEFAULT
+   ============================================ */
+.custom-select-checkmark {
+  position: absolute;                  /* Absolute positioning */
+  right: 8px;                          /* 8px from right edge */
+  top: 50%;                            /* Center vertically */
+  transform: translateY(-50%);         /* Adjust for exact center */
+  width: 16px;                         /* 16px width */
+  height: 16px;                        /* 16px height */
+  color: #111827;                      /* Dark color */
+  opacity: 0;                          /* Hidden by default */
+  visibility: hidden;                  /* Not visible by default */
+  transition: all 150ms ease;          /* Smooth transitions */
+}
+
+/* ============================================
+   CHECKMARK ICON - VISIBLE WHEN SELECTED
+   ============================================ */
+.custom-select-item.selected .custom-select-checkmark {
+  opacity: 1;                          /* Fully visible */
+  visibility: visible;                 /* Visible */
+}
+
+/* ============================================
+   SCROLLBAR STYLING (Webkit browsers)
+   ============================================ */
+.custom-select-items::-webkit-scrollbar {
+  width: 8px;                          /* 8px width */
+}
+
+.custom-select-items::-webkit-scrollbar-track {
+  background: #f9fafb;                 /* Light gray track */
+  border-radius: 4px;                  /* Rounded track */
+}
+
+.custom-select-items::-webkit-scrollbar-thumb {
+  background: #d1d5db;                 /* Medium gray thumb */
+  border-radius: 4px;                  /* Rounded thumb */
+}
+
+.custom-select-items::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;                 /* Darker gray on hover */
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+  .custom-select {
+    width: 100%;                       /* Full width on mobile */
+  }
+}

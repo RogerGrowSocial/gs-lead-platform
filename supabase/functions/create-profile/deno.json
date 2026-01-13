@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env index.ts",
+    "deploy": "supabase functions deploy create-profile"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "types": ["https://deno.land/x/deno@v1.37.1/mod.d.ts"]
+  },
+  "importMap": {
+    "imports": {
+      "std/": "https://deno.land/std@0.177.0/",
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.7.1",
+      "deno": "https://deno.land/x/deno@v1.37.1/mod.ts"
+    }
+  }
+} 

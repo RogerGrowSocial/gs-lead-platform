@@ -1,0 +1,178 @@
+<%
+  // Variables are already passed from the route, just use them directly
+  const customerData = typeof customer !== 'undefined' ? customer : {};
+  const defaultDatesData = typeof defaultDates !== 'undefined' ? defaultDates : {};
+  const canEditInvoiceData = typeof canEditInvoice !== 'undefined' ? canEditInvoice : false;
+  
+  const customerName = customerData.name || customerData.company_name || 'Onbekend';
+  const customerId = customerData.id;
+%>
+<%- include('../layouts/admin', {
+  title: `Nieuwe Factuur - ${customerName}`,
+  activeMenu: 'customers',
+  user: user,
+  isUserAdmin: typeof isUserAdmin !== 'undefined' ? isUserAdmin : false,
+  showBackButton: true,
+  backButtonUrl: `/admin/customers/${customerId}`,
+  backButtonText: 'Terug naar klant',
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : [],
+  scripts: typeof scripts !== 'undefined' ? scripts : [],
+  body: `
+  <div class="user-detail-page" data-customer-id="${customerId}">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Header Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div class="user-header-section">
+              <div class="user-header-left">
+                <h1 class="user-name">Nieuwe Factuur</h1>
+                <div class="user-meta">
+                  <span class="user-meta-item">
+                    <i class="fas fa-user"></i>
+                    ${customerName}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Invoice Form Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <form id="addInvoiceForm">
+              <div id="addInvoiceFormError" class="gs-error" style="display: none; margin-bottom: 1.5rem;"></div>
+              
+              <div class="gs-form-grid">
+                <div class="gs-field gs-field--full">
+                  <label class="gs-label">Factuurnummer *</label>
+                  <input type="text" id="invoiceNumber" name="invoice_number" class="gs-form-input" required placeholder="Bijv. GS-0828" />
+                </div>
+                
+                <div class="gs-field">
+                  <label class="gs-label">Factuurdatum *</label>
+                  <input type="date" id="invoiceDate" name="invoice_date" class="gs-form-input" required value="${defaultDatesData.invoice_date || ''}" />
+                </div>
+                
+                <div class="gs-field">
+                  <label class="gs-label">Vervaldatum</label>
+                  <input type="date" id="dueDate" name="due_date" class="gs-form-input" value="${defaultDatesData.due_date || ''}" />
+                </div>
+                
+                <div class="gs-field gs-field--full">
+                  <label class="gs-label">Ordernummer</label>
+                  <input type="text" id="orderNumber" name="order_number" class="gs-form-input" placeholder="Optioneel" />
+                </div>
+              </div>
+              
+              <!-- Invoice Items Section -->
+              <div class="gs-form-group" style="margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <label class="gs-form-label" style="margin: 0;">Factuurregels *</label>
+                  <button type="button" onclick="addInvoiceItemRow()" class="gs-btn gs-btn--ghost" style="padding: 8px 12px; font-size: 13px;">
+                    <i class="fas fa-plus"></i> Regel toevoegen
+                  </button>
+                </div>
+                <div id="invoiceItemsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                  <!-- Invoice items will be dynamically inserted here -->
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">Subtotaal (excl. BTW):</span>
+                      <span id="invoiceSubtotalAmount" style="font-weight: 500; color: #374151; font-size: 0.875rem;">€0,00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">BTW (21%):</span>
+                      <span id="invoiceVatAmount" style="font-weight: 500; color: #374151; font-size: 0.875rem;">€0,00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid #e5e7eb; margin-top: 0.25rem;">
+                      <span style="font-weight: 600; color: #374151; font-size: 0.875rem;">Totaal (incl. BTW):</span>
+                      <span id="invoiceTotalAmount" style="font-weight: 700; color: #111827; font-size: 1.125rem;">€0,00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="gs-form-grid" style="margin-top: 2rem;">
+                <div class="gs-field">
+                  <label class="gs-label">Bedrag (€) *</label>
+                  <input type="number" id="invoiceAmount" name="amount" class="gs-form-input" step="0.01" min="0" required placeholder="0.00" readonly style="background: #f9fafb; color: #6b7280;" />
+                  <p class="gs-hint">Wordt automatisch berekend op basis van factuurregels</p>
+                </div>
+                <div class="gs-field">
+                  <label class="gs-label">Openstaand bedrag (€)</label>
+                  <input type="number" id="outstandingAmount" name="outstanding_amount" class="gs-form-input" step="0.01" min="0" placeholder="0.00" />
+                  <p class="gs-hint">Laat leeg om gelijk te stellen aan totaal bedrag</p>
+                </div>
+              </div>
+              
+              <div class="gs-form-group" style="margin-top: 1.5rem;">
+                <label class="gs-form-label">Status *</label>
+                <select id="invoiceStatus" name="status" class="gs-form-input" required>
+                  <option value="pending">In afwachting</option>
+                  <option value="paid">Betaald</option>
+                  <option value="overdue">Achterstallig</option>
+                  <option value="draft">Concept</option>
+                  <option value="cancelled">Geannuleerd</option>
+                </select>
+              </div>
+              
+              <div class="gs-form-group" style="margin-top: 1.5rem;">
+                <label class="gs-form-label">Notities</label>
+                <textarea id="invoiceNotes" name="notes" class="gs-form-input" rows="3" placeholder="Optionele notities bij deze factuur..."></textarea>
+              </div>
+              
+              <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <a href="/admin/customers/${customerId}" class="gs-btn gs-btn--ghost">Annuleren</a>
+                <button type="submit" class="gs-btn gs-btn--primary">
+                  <i class="fas fa-save"></i> Opslaan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Column (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Customer Info Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Klant</h3>
+            <div style="margin-top: 1rem;">
+              <div style="margin-bottom: 1rem;">
+                <a href="/admin/customers/${customerId}" style="text-decoration: none; color: #2563eb; font-weight: 600; font-size: 1rem;">
+                  ${customerName}
+                </a>
+              </div>
+              ${customerData.email ? `
+              <div style="margin-bottom: 0.5rem; color: #6b7280; font-size: 0.875rem;">
+                <i class="fas fa-envelope" style="margin-right: 0.5rem;"></i>
+                ${customerData.email}
+              </div>
+              ` : ''}
+              ${customerData.phone ? `
+              <div style="margin-bottom: 0.5rem; color: #6b7280; font-size: 0.875rem;">
+                <i class="fas fa-phone" style="margin-right: 0.5rem;"></i>
+                ${customerData.phone}
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    window.customerId = '${customerId}';
+    window.customerData = ${JSON.stringify(customerData)};
+    window.canEditInvoice = ${canEditInvoiceData};
+  </script>
+  `
+}) %>
+

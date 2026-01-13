@@ -1,0 +1,14 @@
+/* Tickets page specific styles */
+/* Most styles come from adminPayments.css and payments-table.css */
+
+.tickets-container {
+  /* Same as payments-container */
+}
+
+/* Additional ticket-specific styles if needed */
+.ticket-number {
+  font-weight: 600;
+  color: #111827;
+  font-family: 'Courier New', monospace;
+}
+

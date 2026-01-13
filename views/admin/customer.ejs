@@ -1,0 +1,1313 @@
+<%
+  // Get customer data from customerData (passed from route)
+  var customer = typeof customerData !== 'undefined' ? customerData : {}
+  
+  var formatCurrency = function(amount) {
+    if (!amount) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount)
+  }
+  
+  var formatDate = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  var formatDateTime = function(iso) {
+    if (!iso) return '-'
+    var d = new Date(iso)
+    var options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }
+    return d.toLocaleString('nl-NL', options)
+  }
+
+  var formatRelativeTime = function(iso) {
+    if (!iso) return 'Nog nooit'
+    var d = new Date(iso)
+    var now = new Date()
+    var diffMs = now - d
+    var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    if (diffDays === 0) return 'Vandaag'
+    if (diffDays === 1) return 'Gisteren'
+    if (diffDays < 7) return diffDays + ' dagen geleden'
+    if (diffDays < 30) {
+      var weeks = Math.floor(diffDays / 7)
+      return weeks === 1 ? '1 week geleden' : weeks + ' weken geleden'
+    }
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  var status = customer.status || 'active'
+  var priority = customer.priority || 'normal'
+  
+  // Get initials for avatar
+  var initials = ''
+  if (customer.name && customer.name.length > 0) {
+    var nameParts = customer.name.split(' ')
+    if (nameParts.length > 0) {
+      initials = nameParts[0].charAt(0).toUpperCase()
+      if (nameParts.length > 1) {
+        initials += nameParts[nameParts.length - 1].charAt(0).toUpperCase()
+      }
+    }
+  } else if (customer.company_name && customer.company_name.length > 0) {
+    initials = customer.company_name.charAt(0).toUpperCase()
+  } else if (customer.email && customer.email.length > 0) {
+    initials = customer.email.charAt(0).toUpperCase()
+  } else {
+    initials = 'K'
+  }
+
+  // Get customer name for display
+  var customerName = customer.name || customer.company_name || 'Klant'
+  
+  // Status labels and colors
+  var statusLabels = {
+    'active': 'Actief',
+    'inactive': 'Inactief',
+    'lead': 'Lead',
+    'prospect': 'Prospect'
+  }
+  
+  var statusStyles = {
+    'active': 'status-paid',
+    'inactive': 'status-cancelled',
+    'lead': 'status-pending',
+    'prospect': 'status-pending'
+  }
+  
+  var priorityLabels = {
+    'low': 'Laag',
+    'normal': 'Normaal',
+    'high': 'Hoog',
+    'vip': 'VIP'
+  }
+  
+  var priorityColors = {
+    'low': '#6b7280',
+    'normal': '#3b82f6',
+    'high': '#f59e0b',
+    'vip': '#f59e0b'
+  }
+
+  // Contact info
+  var hasEmail = !!(customer.email && customer.email.trim())
+  var hasPhone = !!(customer.phone && customer.phone.trim())
+  var hasLocation = !!(customer.city || customer.postal_code || customer.address)
+  var location = ''
+  if (customer.address) location += customer.address
+  if (customer.postal_code) location += (location ? ', ' : '') + customer.postal_code
+  if (customer.city) location += (location ? ' ' : '') + customer.city
+
+  // Stats
+  var stats = customer.stats || { total_tickets: 0, open_tickets: 0, total_emails: 0, unread_emails: 0 }
+  var tickets = customer.tickets || []
+  var emails = customer.emails || []
+  var customerEmails = customer.customerEmails || []
+  var activities = customer.activities || []
+  var userAccount = customer.userAccount || null
+  var tasks = customer.tasks || []
+  var timeEntries = customer.timeEntries || []
+  var timeTotalsByEmployee = customer.timeTotalsByEmployee || {}
+
+  // Prepare include options
+  var pageTitle = customerName + ' - Klanten | GrowSocial Admin'
+%>
+<%- include('../layouts/admin', {
+  title: pageTitle,
+  activeMenu: 'customers',
+  user: user,
+  showBackButton: true,
+  backButtonUrl: '/admin/customers',
+  backButtonText: 'Terug naar klanten',
+  body: `
+  <div class="user-detail-page">
+    <!-- Main Content Grid -->
+    <div class="user-detail-grid-new">
+      <!-- Left Column (2/3 width) -->
+      <div class="user-detail-main-new">
+        <!-- Customer Info Card -->
+        <div class="user-card user-info-card-new">
+          <div class="user-card-content">
+            <div class="user-info-avatar-section">
+              <div id="customerAvatarTrigger" style="cursor: pointer; position: relative; display: inline-block;">
+                <span class="user-avatar-large-new" id="customerAvatar" aria-hidden="true" style="${customer.logo_url ? 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);' : ''}">
+                  ${customer.logo_url ? `
+                    <img 
+                      src="${customer.logo_url}" 
+                      alt="${customerName}" 
+                      loading="eager"
+                      decoding="async"
+                      width="120"
+                      height="120"
+                      style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: white;" 
+                      onerror="this.style.display='none'; this.parentElement.querySelector('div').style.display='flex';"
+                    />
+                  ` : `
+                    <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);color:#6b7280;border-radius:50%;border:2px solid #e5e7eb;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </div>
+                  `}
+                </span>
+              </div>
+              <input type="file" id="customerLogoUpload" accept="image/*" style="display: none;" />
+              <div class="user-info-name-section" style="flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <h1 class="user-info-name-new" id="customerNameDisplay" style="flex: 1; margin: 0;">${customerName}</h1>
+                  ${typeof canEditCustomer !== 'undefined' && canEditCustomer ? `
+                  <button type="button" id="editCustomerBtn" class="edit-customer-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color='#6b7280'" onmouseout="this.style.color='#9ca3af'">
+                    <i class="fas fa-pencil-alt" style="font-size: 18px;"></i>
+                  </button>
+                  ` : ''}
+                </div>
+                <div class="user-info-badges-container" id="badgesContainer">
+                  <span class="status-badge" id="statusBadge" data-field="status" data-edit-type="select" data-options='${JSON.stringify(Object.keys(statusLabels))}' style="background-color: ${status === 'active' ? '#10b98120' : '#6b728020'}; color: ${status === 'active' ? '#10b981' : '#6b7280'}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${statusLabels[status] || status}
+                  </span>
+                  <span class="status-badge" id="priorityBadge" data-field="priority" data-edit-type="select" data-options='${JSON.stringify(Object.keys(priorityLabels))}' style="background-color: ${priority === 'high' ? '#ef444420' : priority === 'urgent' ? '#dc262620' : priority === 'low' ? '#6b728020' : '#3b82f620'}; color: ${priority === 'high' ? '#ef4444' : priority === 'urgent' ? '#dc2626' : priority === 'low' ? '#6b7280' : '#3b82f6'}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${priorityLabels[priority] || priority}
+                  </span>
+                  ${userAccount ? `
+                    <span class="user-role-badge-new is-user">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                      Heeft account
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+            ${customer.company_name ? `
+              <div class="user-info-company-section">
+                <div class="user-info-company-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2">
+                    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                    <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                    <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M10 6h4"></path>
+                    <path d="M10 10h4"></path>
+                    <path d="M10 14h4"></path>
+                    <path d="M10 18h4"></path>
+                  </svg>
+                </div>
+                <span class="user-info-company-name">${customer.company_name}</span>
+              </div>
+              <div class="user-info-company-divider"></div>
+            ` : ''}
+            <div class="user-info-contact-section">
+              ${hasEmail ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
+                    <rect width="20" height="16" x="2" y="4" rx="2"></rect>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                  </svg>
+                  <a href="mailto:${customer.email}" class="user-info-contact-text" data-field="email" data-edit-type="text" style="text-decoration: none; color: inherit;">${customer.email}</a>
+                </div>
+              ` : ''}
+              ${hasPhone ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  <a href="tel:${customer.phone}" class="user-info-contact-text" data-field="phone" data-edit-type="text" style="text-decoration: none; color: inherit;">${customer.phone}</a>
+                </div>
+              ` : ''}
+              ${hasLocation ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin">
+                    <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="address" data-edit-type="text" style="text-decoration: none; color: inherit;">${location}</a>
+                </div>
+              ` : ''}
+              ${customer.domain ? `
+                <div class="user-info-contact-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                  <a href="${customer.website && customer.website.startsWith('http') ? customer.website : customer.domain.startsWith('http') ? customer.domain : 'https://' + (customer.website || customer.domain)}" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="domain" data-edit-type="text" style="text-decoration: none; color: inherit;">${customer.domain}</a>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">Statistieken</h3>
+            <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;">
+              <!-- Tickets -->
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Tickets</p>
+                <p class="user-stat-value-new">${stats.total_tickets || 0}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Open Tickets</p>
+                <p class="user-stat-value-new" style="color: #ef4444;">${stats.open_tickets || 0}</p>
+              </div>
+              ${stats.high_priority_tickets > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Hoge Prioriteit</p>
+                <p class="user-stat-value-new" style="color: #f59e0b;">${stats.high_priority_tickets}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Emails -->
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal E-mails</p>
+                <p class="user-stat-value-new">${stats.total_emails || 0}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Ongelezen</p>
+                <p class="user-stat-value-new" style="color: #3b82f6;">${stats.unread_emails || 0}</p>
+              </div>
+              
+              <!-- Tasks -->
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Taken</p>
+                <p class="user-stat-value-new">${stats.total_tasks || 0}</p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Open Taken</p>
+                <p class="user-stat-value-new" style="color: #f59e0b;">${stats.open_tasks || 0}</p>
+              </div>
+              ${stats.in_progress_tasks > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">In Uitvoering</p>
+                <p class="user-stat-value-new" style="color: #8b5cf6;">${stats.in_progress_tasks}</p>
+              </div>
+              ` : ''}
+              ${stats.done_tasks > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Afgerond</p>
+                <p class="user-stat-value-new" style="color: #10b981;">${stats.done_tasks}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Time Tracking -->
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Uren</p>
+                <p class="user-stat-value-new" style="color: #3b82f6;">
+                  ${stats.total_hours || 0}u ${stats.total_minutes || 0}min
+                </p>
+              </div>
+              ${stats.total_time_entries > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Tijdregistraties</p>
+                <p class="user-stat-value-new">${stats.total_time_entries}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Employees -->
+              ${stats.responsible_employees > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Werknemers</p>
+                <p class="user-stat-value-new" style="color: #ea5d0d;">${stats.responsible_employees}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Task Value -->
+              ${stats.task_value_total > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Waarde Taken</p>
+                <p class="user-stat-value-new" style="color: #10b981;">${formatCurrency(stats.task_value_total)}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Revenue -->
+              ${stats.total_revenue > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Omzet</p>
+                <p class="user-stat-value-new" style="color: #10b981;">${formatCurrency(stats.total_revenue)}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Paid Revenue -->
+              ${stats.total_paid > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Betaald</p>
+                <p class="user-stat-value-new" style="color: #10b981;">${formatCurrency(stats.total_paid)}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Outstanding -->
+              ${stats.total_outstanding > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Openstaand</p>
+                <p class="user-stat-value-new" style="color: #f59e0b;">${formatCurrency(stats.total_outstanding)}</p>
+              </div>
+              ` : ''}
+              
+              <!-- Total Invoices -->
+              ${stats.total_invoices > 0 ? `
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Totaal Facturen</p>
+                <p class="user-stat-value-new">${stats.total_invoices}</p>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- CRM Computed Fields -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small">CRM (computed)</h3>
+            <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Company display</p>
+                <p class="user-stat-value-new" id="computedCompanyDisplayName"><%= customer.company_display_name || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Normalized domain</p>
+                <p class="user-stat-value-new" id="computedNormalizedDomain"><%= customer.normalized_domain || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Normalized website</p>
+                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl"><%= customer.normalized_website_url || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Normalized phone</p>
+                <p class="user-stat-value-new" id="computedNormalizedPhone"><%= customer.normalized_phone || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Dedupe key (primary)</p>
+                <p class="user-stat-value-new" id="computedDedupeKeyPrimary"><%= customer.dedupe_key_primary || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Dedupe key (secondary)</p>
+                <p class="user-stat-value-new" id="computedDedupeKeySecondary"><%= customer.dedupe_key_secondary || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Days since last interaction</p>
+                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction"><%= (customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Overdue next activity</p>
+                <p class="user-stat-value-new" id="computedHasOverdueNextActivity"><%= customer.has_overdue_next_activity ? 'Ja' : 'Nee' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Activity bucket</p>
+                <p class="user-stat-value-new" id="computedActivityBucket"><%= customer.activity_bucket || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Contact pressure</p>
+                <p class="user-stat-value-new" id="computedContactPressure"><%= (customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Is contactable</p>
+                <p class="user-stat-value-new" id="computedIsContactable"><%= customer.is_contactable ? 'Ja' : 'Nee' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Data quality</p>
+                <p class="user-stat-value-new" id="computedDataQualityScore"><%= (customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Full address</p>
+                <p class="user-stat-value-new" id="computedFullAddress"><%= customer.full_address || '-' %></p>
+              </div>
+              <div class="user-stat-item-new">
+                <p class="user-stat-label-new">Duplicate candidate</p>
+                <p class="user-stat-value-new" id="computedIsDuplicateCandidate"><%= customer.is_duplicate_candidate ? 'Ja' : 'Nee' %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <div class="user-card-header-with-action">
+              <h3 class="user-card-title-small" style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-sparkles" style="color:#ea5d0d;"></i>
+                AI Samenvatting
+              </h3>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span id="customerAiSummaryMeta" style="font-size:12px;color:#6b7280;">
+                  <% if (customer.aiSummary && customer.aiSummary.updated_at) { %>
+                    Laatst bijgewerkt: <%= formatDateTime(customer.aiSummary.updated_at) %>
+                  <% } else { %>
+                    Nog geen samenvatting
+                  <% } %>
+                </span>
+                <button type="button" id="refreshCustomerAiSummaryBtn" class="btn-primary" style="padding: 8px 14px; font-size: 14px; display:flex; align-items:center; gap:8px;">
+                  <i class="fas fa-sparkles"></i>
+                  <span>Genereer</span>
+                </button>
+              </div>
+            </div>
+            <div id="customerAiSummaryBox" style="margin-top: 12px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
+              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6;">
+                <% if (customer.aiSummary && customer.aiSummary.summary) { %>
+                  <%= customer.aiSummary.summary %>
+                <% } else { %>
+                  Klik op "Genereer" om een AI samenvatting te maken.
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Section -->
+        <div class="user-tabs-container">
+          <div class="user-tabs-header">
+            <button class="user-tab-btn user-tab-active" data-tab="tickets">Tickets</button>
+            <button class="user-tab-btn" data-tab="emails">E-mails</button>
+            <button class="user-tab-btn" data-tab="tasks">Taken & Tijd</button>
+            <button class="user-tab-btn" data-tab="invoices">Facturen</button>
+            <button class="user-tab-btn" data-tab="activity">Activiteit</button>
+          </div>
+          
+          <!-- Tickets Tab -->
+          <div class="user-tab-content" id="tab-tickets">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Tickets</h3>
+                  <a href="/admin/tickets?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-plus"></i> Nieuw Ticket
+                  </a>
+                </div>
+                ${tickets.length > 0 ? `
+                  <div class="user-activity-list">
+                    ${tickets.map(function(ticket) {
+                      var ticketStatus = ticket.status || 'open'
+                      var ticketPriority = ticket.priority || 'normal'
+                      var statusColor = ticketStatus === 'open' ? '#ef4444' : ticketStatus === 'closed' ? '#10b981' : '#6b7280'
+                      var priorityColor = priorityColors[ticketPriority] || '#6b7280'
+                      
+                      return `
+                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/tickets/${ticket.id}'">
+                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
+                            <i class="fas fa-ticket-alt" style="color: ${statusColor};"></i>
+                          </div>
+                          <div class="user-activity-content" style="flex: 1;">
+                            <p class="user-activity-title">${ticket.subject || 'Geen onderwerp'}</p>
+                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
+                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
+                                ${ticketStatus === 'open' ? 'Open' : ticketStatus === 'closed' ? 'Gesloten' : ticketStatus}
+                              </span>
+                              <span class="status-badge" style="background-color: ${priorityColor}20; color: ${priorityColor}; font-size: 11px; padding: 2px 8px;">
+                                ${priorityLabels[ticketPriority] || ticketPriority}
+                              </span>
+                              <p class="user-activity-date">${formatDateTime(ticket.created_at)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      `
+                    }).join('')}
+                  </div>
+                  <a href="/admin/tickets?customer_id=${customer.id}" class="user-activity-view-all">
+                    Bekijk alle tickets >
+                  </a>
+                ` : `
+                  <div style="text-align: center; padding: 3rem 1rem;">
+                    <p class="user-empty-text" style="margin-bottom: 1.5rem;">Geen tickets gevonden.</p>
+                    <a href="/admin/tickets?customer_id=${customer.id}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; font-size: 14px; text-decoration: none; border-radius: 8px;">
+                      <i class="fas fa-plus"></i> Eerste ticket aanmaken
+                    </a>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Emails Tab -->
+          <div class="user-tab-content" id="tab-emails" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">E-mails</h3>
+                  <a href="/admin/mail?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-envelope"></i> Bekijk alle e-mails
+                  </a>
+                </div>
+                ${emails.length > 0 ? `
+                  <div class="user-activity-list">
+                    ${emails.map(function(email) {
+                      var isUnread = !email.read_at
+                      return `
+                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/mail/${email.id}'">
+                          <div class="user-activity-icon" style="background-color: ${isUnread ? '#3b82f620' : '#6b728020'};">
+                            <i class="fas fa-envelope" style="color: ${isUnread ? '#3b82f6' : '#6b7280'};"></i>
+                          </div>
+                          <div class="user-activity-content" style="flex: 1;">
+                            <p class="user-activity-title" style="font-weight: ${isUnread ? '600' : '400'};">
+                              ${email.subject || 'Geen onderwerp'}
+                              ${isUnread ? '<span style="color: #3b82f6; margin-left: 8px; font-size: 10px;">(Ongelezen)</span>' : ''}
+                            </p>
+                            <p class="user-activity-date">${formatDateTime(email.created_at)}</p>
+                          </div>
+                        </div>
+                      `
+                    }).join('')}
+                  </div>
+                  <a href="/admin/mail?customer_id=${customer.id}" class="user-activity-view-all">
+                    Bekijk alle e-mails >
+                  </a>
+                ` : `
+                  <div style="text-align: center; padding: 3rem 1rem;">
+                    <p class="user-empty-text">Geen e-mails gevonden.</p>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tasks & Time Tab -->
+          <div class="user-tab-content" id="tab-tasks" style="display: none;">
+            <!-- Tasks Section -->
+            <div class="user-card" style="margin-bottom: 1.5rem;">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Taken</h3>
+                  <a href="/admin/tasks?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-plus"></i> Nieuwe Taak
+                  </a>
+                </div>
+                ${tasks.length > 0 ? `
+                  <div class="user-activity-list">
+                    ${tasks.map(function(task) {
+                      var taskStatus = task.status || 'open'
+                      var taskPriority = task.priority || 'medium'
+                      var statusColors = {
+                        'open': '#3b82f6',
+                        'in_progress': '#f59e0b',
+                        'in_review': '#8b5cf6',
+                        'done': '#10b981',
+                        'rejected': '#ef4444'
+                      }
+                      var statusLabels = {
+                        'open': 'Open',
+                        'in_progress': 'In Uitvoering',
+                        'in_review': 'In Review',
+                        'done': 'Afgerond',
+                        'rejected': 'Afgewezen'
+                      }
+                      var statusColor = statusColors[taskStatus] || '#6b7280'
+                      var priorityColor = priorityColors[taskPriority] || '#6b7280'
+                      var employeeName = task.employee ? (task.employee.first_name && task.employee.last_name ? task.employee.first_name + ' ' + task.employee.last_name : task.employee.email) : 'Niet toegewezen'
+                      
+                      return `
+                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/tasks/${task.id}'">
+                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
+                            <i class="fas fa-tasks" style="color: ${statusColor};"></i>
+                          </div>
+                          <div class="user-activity-content" style="flex: 1;">
+                            <p class="user-activity-title">${task.title || 'Geen titel'}</p>
+                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
+                                ${statusLabels[taskStatus] || taskStatus}
+                              </span>
+                              <span class="status-badge" style="background-color: ${priorityColor}20; color: ${priorityColor}; font-size: 11px; padding: 2px 8px;">
+                                ${priorityLabels[taskPriority] || taskPriority}
+                              </span>
+                              ${task.employee ? `
+                                <span style="font-size: 11px; color: #6b7280;">
+                                  <i class="fas fa-user" style="margin-right: 4px;"></i>
+                                  <a href="/admin/employees/${task.employee.id}" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">${employeeName}</a>
+                                </span>
+                              ` : ''}
+                              ${task.due_at ? `
+                                <span style="font-size: 11px; color: #6b7280;">
+                                  <i class="fas fa-calendar" style="margin-right: 4px;"></i>
+                                  ${formatDate(task.due_at)}
+                                </span>
+                              ` : ''}
+                              ${task.value_cents > 0 ? `
+                                <span style="font-size: 11px; color: #6b7280;">
+                                  <i class="fas fa-euro-sign" style="margin-right: 4px;"></i>
+                                  ${formatCurrency(task.value_cents)}
+                                </span>
+                              ` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      `
+                    }).join('')}
+                  </div>
+                  <a href="/admin/tasks?customer_id=${customer.id}" class="user-activity-view-all">
+                    Bekijk alle taken >
+                  </a>
+                ` : `
+                  <div style="text-align: center; padding: 3rem 1rem;">
+                    <p class="user-empty-text" style="margin-bottom: 1.5rem;">Geen taken gevonden.</p>
+                    <a href="/admin/tasks?customer_id=${customer.id}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; font-size: 14px; text-decoration: none; border-radius: 8px;">
+                      <i class="fas fa-plus"></i> Eerste taak aanmaken
+                    </a>
+                  </div>
+                `}
+              </div>
+            </div>
+
+            <!-- Time Entries Section -->
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Tijdregistraties</h3>
+                ${Object.keys(timeTotalsByEmployee).length > 0 ? `
+                  <div style="margin-bottom: 1.5rem;">
+                    <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">Totaal uren per werknemer</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      ${Object.values(timeTotalsByEmployee).map(function(total) {
+                        var hours = Math.floor(total.total_minutes / 60)
+                        var minutes = total.total_minutes % 60
+                        var employeeName = total.employee.first_name && total.employee.last_name 
+                          ? total.employee.first_name + ' ' + total.employee.last_name 
+                          : total.employee.email
+                        return `
+                          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <i class="fas fa-user" style="color: #6b7280;"></i>
+                              <a href="/admin/employees/${total.employee.id}" style="color: #111827; text-decoration: none; font-weight: 500;">
+                                ${employeeName}
+                              </a>
+                              <span style="font-size: 12px; color: #6b7280;">(${total.entries_count} registraties)</span>
+                            </div>
+                            <span style="font-weight: 600; color: #111827;">${hours}u ${minutes}min</span>
+                          </div>
+                        `
+                      }).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+                ${timeEntries.length > 0 ? `
+                  <div class="user-activity-list">
+                    ${timeEntries.slice(0, 10).map(function(entry) {
+                      var hours = Math.floor((entry.duration_minutes || 0) / 60)
+                      var minutes = (entry.duration_minutes || 0) % 60
+                      var employeeName = entry.employee ? (entry.employee.first_name && entry.employee.last_name ? entry.employee.first_name + ' ' + entry.employee.last_name : entry.employee.email) : 'Onbekend'
+                      var statusColors = {
+                        'draft': '#6b7280',
+                        'submitted': '#3b82f6',
+                        'approved': '#10b981',
+                        'rejected': '#ef4444'
+                      }
+                      var statusColor = statusColors[entry.status] || '#6b7280'
+                      
+                      return `
+                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/time-entries?employee_id=${entry.employee?.id || ''}'">
+                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
+                            <i class="fas fa-clock" style="color: ${statusColor};"></i>
+                          </div>
+                          <div class="user-activity-content" style="flex: 1;">
+                            <p class="user-activity-title">
+                              ${entry.task ? entry.task.title : entry.project_name || 'Geen project'}
+                              ${entry.note ? '<span style="color: #6b7280; font-weight: normal;"> - ' + entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '') + '</span>' : ''}
+                            </p>
+                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
+                              <span style="font-size: 11px; color: #6b7280;">
+                                <i class="fas fa-user" style="margin-right: 4px;"></i>
+                                <a href="/admin/employees/${entry.employee?.id || ''}" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">${employeeName}</a>
+                              </span>
+                              <span style="font-size: 11px; color: #6b7280;">
+                                <i class="fas fa-clock" style="margin-right: 4px;"></i>
+                                ${hours}u ${minutes}min
+                              </span>
+                              <span style="font-size: 11px; color: #6b7280;">
+                                <i class="fas fa-calendar" style="margin-right: 4px;"></i>
+                                ${formatDate(entry.start_at)}
+                              </span>
+                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
+                                ${entry.status === 'draft' ? 'Concept' : entry.status === 'submitted' ? 'Ingediend' : entry.status === 'approved' ? 'Goedgekeurd' : entry.status === 'rejected' ? 'Afgewezen' : entry.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      `
+                    }).join('')}
+                  </div>
+                  ${timeEntries.length > 10 ? `
+                    <a href="/admin/time-entries?customer_id=${customer.id}" class="user-activity-view-all">
+                      Bekijk alle tijdregistraties >
+                    </a>
+                  ` : ''}
+                ` : `
+                  <div style="text-align: center; padding: 3rem 1rem;">
+                    <p class="user-empty-text">Geen tijdregistraties gevonden.</p>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Invoices Tab -->
+          <div class="user-tab-content" id="tab-invoices" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Facturen</h3>
+                  <div style="display: flex; gap: 8px;">
+                    <label for="invoiceImportFile" class="btn-primary" style="padding: 8px 16px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: none;">
+                      <i class="fas fa-upload"></i> Importeer CSV
+                    </label>
+                    <input type="file" id="invoiceImportFile" accept=".csv" style="display: none;" />
+                    <a href="/admin/customers/${customer.id}/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-plus"></i> Nieuwe Factuur
+                    </a>
+                  </div>
+                </div>
+                <div id="invoicesTableContainer">
+                  <!-- Invoices table will be rendered here by JavaScript -->
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Activity Tab -->
+          <div class="user-tab-content" id="tab-activity" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Recente Activiteit</h3>
+                <div class="user-activity-list">
+                  ${activities.length > 0 ? activities.map(function(activity) {
+                    var icon = 'fa-clock'
+                    if (activity.category === 'authentication') icon = 'fa-sign-in-alt'
+                    else if (activity.category === 'billing') icon = 'fa-credit-card'
+                    else if (activity.category === 'customer_management') icon = 'fa-user'
+                    else if (activity.type === 'error') icon = 'fa-exclamation-triangle'
+                    else if (activity.type === 'success') icon = 'fa-check-circle'
+                    
+                    return `
+                      <div class="user-activity-item">
+                        <div class="user-activity-icon">
+                          <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="user-activity-content">
+                          <p class="user-activity-title">${activity.title || activity.message || 'Activiteit'}</p>
+                          <p class="user-activity-date">${formatDateTime(activity.created_at)}</p>
+                        </div>
+                      </div>
+                    `
+                  }).join('') : `
+                    <div style="text-align: center; padding: 3rem 1rem;">
+                      <p class="user-empty-text">Geen activiteit gevonden.</p>
+                    </div>
+                  `}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar (1/3 width) -->
+      <div class="user-detail-sidebar-new">
+        <!-- Quick Stats Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Overzicht</h3>
+            <div class="user-stats-list-new" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <!-- Status & Priority -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Status</span>
+                <span class="status-badge" style="background-color: ${stats.status === 'active' ? '#10b98120' : '#6b728020'}; color: ${stats.status === 'active' ? '#10b981' : '#6b7280'}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                  ${stats.status === 'active' ? 'Actief' : stats.status === 'inactive' ? 'Inactief' : stats.status}
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Prioriteit</span>
+                <span class="status-badge" style="background-color: ${stats.priority === 'high' ? '#ef444420' : stats.priority === 'urgent' ? '#dc262620' : '#6b728020'}; color: ${stats.priority === 'high' ? '#ef4444' : stats.priority === 'urgent' ? '#dc2626' : '#6b7280'}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                  ${stats.priority === 'high' ? 'Hoog' : stats.priority === 'urgent' ? 'Urgent' : stats.priority === 'low' ? 'Laag' : 'Normaal'}
+                </span>
+              </div>
+              
+              <!-- Key Metrics -->
+              ${stats.open_tickets > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Open Tickets</span>
+                <span style="font-weight: 600; color: #ef4444;">${stats.open_tickets}</span>
+              </div>
+              ` : ''}
+              ${stats.open_tasks > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Open Taken</span>
+                <span style="font-weight: 600; color: #f59e0b;">${stats.open_tasks}</span>
+              </div>
+              ` : ''}
+              ${stats.unread_emails > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Ongelezen E-mails</span>
+                <span style="font-weight: 600; color: #3b82f6;">${stats.unread_emails}</span>
+              </div>
+              ` : ''}
+              ${stats.responsible_employees > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Verantwoordelijke Werknemers</span>
+                <span style="font-weight: 600; color: #ea5d0d;">${stats.responsible_employees}</span>
+              </div>
+              ` : ''}
+              ${stats.total_time_minutes > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Totaal Uren</span>
+                <span style="font-weight: 600; color: #3b82f6;">${stats.total_hours || 0}u ${stats.total_minutes || 0}min</span>
+              </div>
+              ` : ''}
+              ${stats.task_value_total > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                <span style="font-size: 0.875rem; color: #6b7280;">Waarde Taken</span>
+                <span style="font-weight: 600; color: #10b981;">${formatCurrency(stats.task_value_total)}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Info Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Klant Informatie</h3>
+            
+            <div class="user-info-list">
+              ${customer.status === 'inactive' ? `
+                <!-- Inactive customer: show date range -->
+                <div class="user-info-item">
+                  <p class="user-info-label">Klant van</p>
+                  <p class="user-info-value" data-field="inactive_from" data-edit-type="date" data-restricted="true">${customer.inactive_from ? formatDate(customer.inactive_from) : formatDate(customer.created_at)}</p>
+                </div>
+                <div class="user-info-item">
+                  <p class="user-info-label">Klant tot</p>
+                  <p class="user-info-value" data-field="inactive_to" data-edit-type="date" data-restricted="true">${customer.inactive_to ? formatDate(customer.inactive_to) : 'Heden'}</p>
+                </div>
+                <div class="user-info-item">
+                  <p class="user-info-label">Reden inactiviteit</p>
+                  <p class="user-info-value" data-field="inactive_reason" data-edit-type="select" data-restricted="true" data-options='${JSON.stringify(['temporary_pause', 'too_expensive', 'insufficient_results', 'not_matching_customer', 'no_capacity', 'switch', 'conflict', 'non_payment', 'other'])}'>${customer.inactive_reason ? (customer.inactive_reason === 'temporary_pause' ? 'Tijdelijke pauze' : customer.inactive_reason === 'too_expensive' ? 'Te duur / budget' : customer.inactive_reason === 'insufficient_results' ? 'Onvoldoende resultaat' : customer.inactive_reason === 'not_matching_customer' ? 'Niet passende klant' : customer.inactive_reason === 'no_capacity' ? 'Geen capaciteit bij klant' : customer.inactive_reason === 'switch' ? 'Overstap' : customer.inactive_reason === 'conflict' ? 'Conflict' : customer.inactive_reason === 'non_payment' ? 'Wanbetaling' : customer.inactive_reason === 'other' ? 'Anders (toelichten)' : customer.inactive_reason) : '-'}</p>
+                </div>
+                ${customer.inactive_reason === 'other' ? `
+                <div class="user-info-item" id="inactive-reason-other-item">
+                  <p class="user-info-label">Toelichting</p>
+                  <p class="user-info-value" data-field="inactive_reason_other" data-edit-type="text" data-restricted="true">${customer.inactive_reason_other || ''}</p>
+                </div>
+                ` : ''}
+              ` : `
+                <!-- Active customer: show single date -->
+                <div class="user-info-item">
+                  <p class="user-info-label">Klant sinds</p>
+                  <p class="user-info-value" data-field="created_at" data-edit-type="date" data-restricted="true">${formatDateTime(customer.created_at)}</p>
+                </div>
+              `}
+              
+              <div class="user-info-item">
+                <p class="user-info-label">Laatste update</p>
+                <p class="user-info-value">
+                  ${customer.updated_at ? formatDateTime(customer.updated_at) : 'Nog niet bijgewerkt'}
+                </p>
+              </div>
+              
+              <div class="user-info-item">
+                <p class="user-info-label">Laatste activiteit</p>
+                <p class="user-info-value">
+                  ${customer.last_ticket_activity || customer.last_email_activity ? formatRelativeTime(customer.last_ticket_activity || customer.last_email_activity) : 'Geen activiteit'}
+                </p>
+              </div>
+              
+              <div class="user-info-item">
+                <p class="user-info-label">Klant ID</p>
+                <p class="user-info-value user-info-mono">${customer.id ? customer.id.substring(0, 8) : '-'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Account Card (if exists) -->
+        ${userAccount ? `
+          <div class="user-card" style="margin-bottom: 1rem;">
+            <div class="user-card-content">
+              <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Gekoppeld Account</h3>
+              <div class="user-info-list">
+                <div class="user-info-item">
+                  <p class="user-info-label">Account ID</p>
+                  <p class="user-info-value user-info-mono">${userAccount.id ? userAccount.id.substring(0, 8) : '-'}</p>
+                </div>
+                <div class="user-info-item">
+                  <p class="user-info-label">Status</p>
+                  <p class="user-info-value">${userAccount.status || 'active'}</p>
+                </div>
+                <div class="user-info-item">
+                  <p class="user-info-label">Laatste login</p>
+                  <p class="user-info-value">${userAccount.last_login ? formatRelativeTime(userAccount.last_login) : 'Nog niet ingelogd'}</p>
+                </div>
+              </div>
+              <a href="/admin/users/${userAccount.id}" class="btn-primary" style="display: block; text-align: center; margin-top: 16px; padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                Bekijk account >
+              </a>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Email Addresses Card -->
+        ${customerEmails.length > 0 ? `
+          <div class="user-card" style="margin-bottom: 1rem;">
+            <div class="user-card-content">
+              <h3 class="user-card-title-small" style="margin-bottom: 1rem;">E-mailadressen</h3>
+              <div class="user-info-list">
+                ${customerEmails.map(function(email) {
+                  return `
+                    <div class="user-info-item">
+                      <p class="user-info-label">
+                        ${email.email}
+                        ${email.is_primary ? '<span style="color: #10b981; font-size: 11px; margin-left: 8px;">(Primair)</span>' : ''}
+                      </p>
+                    </div>
+                  `
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Team Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <div class="user-card-header-with-action">
+              <h3 class="user-card-title-small">Team</h3>
+              <button type="button" class="btn-primary" id="addEmployeeBtn" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; border-radius: 8px;">
+                <i class="fas fa-plus"></i> Werknemer toevoegen
+              </button>
+            </div>
+            <div id="responsibleEmployeesList">
+              ${(typeof customerData.responsibleEmployees !== 'undefined' && customerData.responsibleEmployees && customerData.responsibleEmployees.length > 0) ? `
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 1rem;">
+                  ${customerData.responsibleEmployees.map(function(assignment) {
+                    var employee = assignment.employee || {}
+                    var firstName = employee.first_name || ''
+                    var lastName = employee.last_name || ''
+                    var employeeName = firstName && lastName 
+                      ? firstName + ' ' + lastName 
+                      : firstName || employee.email || 'Onbekend'
+                    var profilePicture = employee.profile_picture || null
+                    var roleName = employee.role_name || 'Werknemer'
+                    
+                    // Get initials for avatar fallback
+                    var initials = ''
+                    if (firstName) {
+                      initials = firstName.charAt(0).toUpperCase()
+                      if (lastName) {
+                        initials += lastName.charAt(0).toUpperCase()
+                      }
+                    } else if (employee.email) {
+                      initials = employee.email.charAt(0).toUpperCase()
+                    } else {
+                      initials = '?'
+                    }
+                    
+                    return `
+                      <div class="team-member-card" data-assignment-id="${assignment.id}" data-employee-id="${employee.id}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='/admin/employees/${employee.id}'">
+                        <div style="position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid #e5e7eb; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                          ${profilePicture ? `
+                            <img src="${profilePicture}" alt="${employeeName}" style="width: 100%; height: 100%; object-fit: cover;" />
+                          ` : `
+                            <span style="font-size: 28px; font-weight: 600; color: #6b7280;">${initials}</span>
+                          `}
+                        </div>
+                        <div style="text-align: center;">
+                          <p style="margin: 0; font-size: 0.875rem; font-weight: 500; color: #111827; line-height: 1.4;">${firstName || employeeName}</p>
+                          <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.4;">${roleName}</p>
+                        </div>
+                        ${typeof canEditCustomer !== 'undefined' && canEditCustomer ? `
+                        <button type="button" class="remove-employee-btn" data-employee-id="${employee.id}" style="position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; background: #ef4444; color: white; border: 2px solid white; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onmouseover="this.style.background='#dc2626'; this.style.transform='scale(1.1)'" onmouseout="this.style.background='#ef4444'; this.style.transform='scale(1)'" onclick="event.stopPropagation();">
+                          <i class="fas fa-times"></i>
+                        </button>
+                        ` : ''}
+                      </div>
+                    `
+                  }).join('')}
+                </div>
+              ` : `
+                <div style="text-align: center; padding: 2rem 1rem;">
+                  <p class="user-empty-text" style="margin-bottom: 1rem;">Geen werknemers toegewezen.</p>
+                  <button type="button" class="btn-primary" id="addEmployeeBtnEmpty" style="padding: 10px 20px; font-size: 14px; border: none; cursor: pointer; border-radius: 8px;">
+                    <i class="fas fa-plus"></i> Eerste werknemer toevoegen
+                  </button>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <!-- Contract Card -->
+        <div class="user-card">
+          <div class="user-card-content">
+            <h3 class="user-card-title-small" style="margin-bottom: 0.75rem;">
+              <i class="fas fa-file-contract"></i> Overeenkomst
+            </h3>
+            <div id="contractDisplay">
+              ${customer.contract_document_url ? `
+                <div style="position: relative; padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  ${typeof canEditCustomer !== 'undefined' && canEditCustomer ? `
+                  <button onclick="showContractMenu(event)" class="contract-menu-btn" style="position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; color: #6b7280; cursor: pointer; padding: 0.5rem; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#374151';" onmouseout="this.style.background='none'; this.style.color='#6b7280';">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="5" r="1"></circle>
+                      <circle cx="12" cy="12" r="1"></circle>
+                      <circle cx="12" cy="19" r="1"></circle>
+                    </svg>
+                  </button>
+                  ` : ''}
+                  <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <p id="contractFileName" style="margin: 0; font-size: 0.8125rem; color: #374151; font-weight: 500; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${customer.contract_document_name || (customer.contract_document_url.split('/').pop() || 'contract')}">${customer.contract_document_name ? (customer.contract_document_name.length > 25 ? customer.contract_document_name.substring(0, 22) + '...' : customer.contract_document_name) : (customer.contract_document_url.split('/').pop() || 'contract')}</p>
+                  </div>
+                </div>
+              ` : `
+                ${typeof canEditCustomer !== 'undefined' && canEditCustomer ? `
+                <label for="contractUpload" style="display: block; cursor: pointer;">
+                  <div id="contractUploadArea" class="contract-drop-zone" style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb';">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #9ca3af; transition: all 0.2s;">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p style="margin: 0; font-size: 0.8125rem; color: #6b7280; font-weight: 500; transition: all 0.2s;">Upload bestand</p>
+                  </div>
+                </label>
+                <input type="file" id="contractUpload" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleContractUpload(event)">
+                ` : `
+                <div style="padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                  <p style="margin: 0; font-size: 0.8125rem; color: #6b7280;">Nog geen overeenkomst</p>
+                </div>
+                `}
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Logo Modal -->
+  <div id="customerLogoModal" class="modal" style="display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);">
+    <div class="modal-content modal-sm" style="max-width: 520px; width: 90%; padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Bedrijfslogo</h3>
+        <button class="modal-close" aria-label="Sluiten" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; line-height: 1; transition: color 0.2s;" onmouseover="this.style.color='#374151';" onmouseout="this.style.color='#6b7280';">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+          <div style="position: relative; display: inline-block;">
+            <div id="customerLogoPreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: ${customer.logo_url ? 'default' : 'pointer'}; transition: all 0.2s;" ${!customer.logo_url ? 'onclick="document.getElementById(\'customerLogoUpload\').click();"' : ''} onmouseover="${!customer.logo_url ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : ''}" onmouseout="${!customer.logo_url ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : ''}">
+              <img 
+                id="customerLogoPreview" 
+                src="${customer.logo_url || ''}" 
+                alt="${customer.name || customer.company_name || 'Klant'}" 
+                loading="lazy"
+                decoding="async"
+                width="180"
+                height="180"
+                style="max-width: 100%; max-height: 100%; object-fit: contain; display: ${customer.logo_url ? 'block' : 'none'};"
+              >
+              ${!customer.logo_url ? `
+                <div id="logoPlaceholderContent" style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;transition: all 0.2s;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;transition: all 0.2s;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span style="font-size:13px;font-weight:500;">Upload logo</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
+            <button type="button" class="btn-outline" id="closeCustomerLogoModal" style="padding: 10px 20px; font-size: 14px; font-weight: 500; border-radius: 8px; background: white; border: 1px solid #e5e7eb; color: #374151; transition: all 0.2s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db';" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb';">
+              Annuleren
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoice Drawer Styles -->
+  <link rel="stylesheet" href="/css/admin/employees-drawer.css">
+  
+  <!-- Add Invoice Drawer (slide-in from right) -->
+  <div id="invoiceDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>
+  <aside id="invoiceDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe Factuur" style="position:fixed;top:0;right:0;height:100vh;width:min(600px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">
+    <div class="gs-drawer__header">
+      <div>
+        <h3 class="gs-drawer__title">Nieuwe Factuur Toevoegen</h3>
+        <p class="gs-drawer__subtitle">Voeg een nieuwe factuur toe met meerdere regels en BTW.</p>
+      </div>
+      <button type="button" class="gs-drawer__close" onclick="closeAddInvoiceModal()" aria-label="Sluiten">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="addInvoiceForm">
+      <div class="gs-drawer__body" style="overflow-y: auto;">
+          <div id="addInvoiceFormError" class="gs-error" style="display: none;"></div>
+          
+          <div class="gs-form-group">
+            <label class="gs-form-label">Factuurnummer *</label>
+            <input type="text" id="invoiceNumber" name="invoice_number" class="gs-form-input" required placeholder="Bijv. GS-0828" />
+          </div>
+          
+          <div class="gs-form-grid">
+            <div class="gs-field">
+              <label class="gs-label">Factuurdatum *</label>
+              <input type="date" id="invoiceDate" name="invoice_date" class="gs-form-input" required />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label">Vervaldatum</label>
+              <input type="date" id="dueDate" name="due_date" class="gs-form-input" />
+            </div>
+          </div>
+          
+          <div class="gs-form-group">
+            <label class="gs-form-label">Ordernummer</label>
+            <input type="text" id="orderNumber" name="order_number" class="gs-form-input" placeholder="Optioneel" />
+          </div>
+          
+          <!-- Invoice Items Section -->
+          <div class="gs-form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <label class="gs-form-label" style="margin: 0;">Factuurregels *</label>
+              <button type="button" onclick="addInvoiceItemRow()" class="gs-btn gs-btn--ghost" style="padding: 8px 12px; font-size: 13px;">
+                <i class="fas fa-plus"></i> Regel toevoegen
+              </button>
+            </div>
+            <div id="invoiceItemsList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <!-- Invoice items will be dynamically inserted here -->
+            </div>
+            <div style="margin-top: 1rem; padding: 1rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">Subtotaal (excl. BTW):</span>
+                  <span id="invoiceSubtotalAmount" style="font-weight: 500; color: #374151; font-size: 0.875rem;">€0,00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 500; color: #6b7280; font-size: 0.875rem;">BTW (21%):</span>
+                  <span id="invoiceVatAmount" style="font-weight: 500; color: #374151; font-size: 0.875rem;">€0,00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.5rem; border-top: 1px solid #e5e7eb; margin-top: 0.25rem;">
+                  <span style="font-weight: 600; color: #374151; font-size: 0.875rem;">Totaal (incl. BTW):</span>
+                  <span id="invoiceTotalAmount" style="font-weight: 700; color: #111827; font-size: 1.125rem;">€0,00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="gs-form-grid">
+            <div class="gs-field">
+              <label class="gs-label">Bedrag (€) *</label>
+              <input type="number" id="invoiceAmount" name="amount" class="gs-form-input" step="0.01" min="0" required placeholder="0.00" readonly style="background: #f9fafb; color: #6b7280;" />
+              <p class="gs-hint">Wordt automatisch berekend op basis van factuurregels</p>
+            </div>
+            <div class="gs-field">
+              <label class="gs-label">Openstaand bedrag (€)</label>
+              <input type="number" id="outstandingAmount" name="outstanding_amount" class="gs-form-input" step="0.01" min="0" placeholder="0.00" />
+              <p class="gs-hint">Laat leeg om gelijk te stellen aan totaal bedrag</p>
+            </div>
+          </div>
+          
+          <div class="gs-form-group">
+            <label class="gs-form-label">Status *</label>
+            <select id="invoiceStatus" name="status" class="gs-form-input" required>
+              <option value="pending">In afwachting</option>
+              <option value="paid">Betaald</option>
+              <option value="overdue">Achterstallig</option>
+              <option value="draft">Concept</option>
+              <option value="cancelled">Geannuleerd</option>
+            </select>
+          </div>
+          
+          <div class="gs-form-group">
+            <label class="gs-form-label">Notities</label>
+            <textarea id="invoiceNotes" name="notes" class="gs-form-input" rows="3" placeholder="Optionele notities bij deze factuur..."></textarea>
+          </div>
+      </div>
+      <div class="gs-drawer__footer">
+        <button type="button" onclick="closeAddInvoiceModal()" class="gs-btn gs-btn--ghost">Annuleren</button>
+        <button type="submit" class="gs-btn gs-btn--primary">
+          <i class="fas fa-save"></i> Opslaan
+        </button>
+      </div>
+    </form>
+  </aside>
+
+  <!-- Add Employee Modal -->
+  <div id="addEmployeeModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin: 0;">Werknemer toevoegen</h2>
+        <button type="button" id="closeAddEmployeeModal" style="background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; font-size: 1.5rem; line-height: 1;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="addEmployeeForm">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 8px;">
+            Werknemer *
+          </label>
+          <select id="employeeSelect" name="employee_id" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9375rem; background: white;">
+            <option value="">Selecteer een werknemer...</option>
+            ${(typeof customerData.allEmployees !== 'undefined' && customerData.allEmployees) ? customerData.allEmployees.map(function(emp) {
+              var empName = (emp.first_name && emp.last_name) ? emp.first_name + ' ' + emp.last_name : emp.email || 'Onbekend'
+              var isAssigned = (typeof customerData.responsibleEmployees !== 'undefined' && customerData.responsibleEmployees) 
+                ? customerData.responsibleEmployees.some(a => a.employee_id === emp.id)
+                : false
+              return isAssigned ? '' : `<option value="${emp.id}">${empName}${emp.email ? ' (' + emp.email + ')' : ''}</option>`
+            }).join('') : ''}
+          </select>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 8px;">
+            Type toewijzing
+          </label>
+          <select id="employeeRole" name="role" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9375rem; background: white;">
+            <option value="responsible">Primair - Hoofdverantwoordelijke voor deze klant</option>
+            <option value="backup">Secundair - Vervanger bij afwezigheid</option>
+            <option value="observer">Informatief - Alleen op de hoogte, geen actie vereist</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" id="cancelAddEmployee" style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9375rem; font-weight: 500;">
+            Annuleren
+          </button>
+          <button type="submit" style="padding: 10px 20px; background: #ea5d0d; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9375rem; font-weight: 500;">
+            Toevoegen
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Make employees data available to JavaScript
+    window.customerEmployeesData = {
+      customerId: '${customer.id}',
+      responsibleEmployees: ${JSON.stringify(customerData.responsibleEmployees || [])},
+      allEmployees: ${JSON.stringify(customerData.allEmployees || [])}
+    };
+    
+    // Make labels available for edit mode
+    window.statusLabels = ${JSON.stringify(statusLabels)};
+    window.priorityLabels = ${JSON.stringify(priorityLabels)};
+    window.currentStatus = '${status}';
+    window.currentPriority = '${priority}';
+    window.canEditCustomer = ${typeof canEditCustomer !== 'undefined' ? canEditCustomer : false};
+    window.customerData = ${JSON.stringify(customer)};
+    window.customerInvoicesData = {
+      customerId: '${customer.id}',
+      invoices: ${JSON.stringify(typeof customerData.invoices !== 'undefined' ? customerData.invoices : [])}
+    };
+  </script>
+  `,
+  scripts: ['/js/admin/customer.js'],
+  stylesheets: ['/css/admin/users.css', '/css/admin/customers.css', '/css/admin/payments-table.css']
+}) %>
+

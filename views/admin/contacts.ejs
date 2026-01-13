@@ -1,0 +1,1138 @@
+<%- include('../layouts/admin', {
+  content: `
+    <link rel="stylesheet" href="/css/admin/employees-drawer.css">
+    <style>
+      /* Branch Multiselect Styles */
+      .branch-multiselect {
+        position: relative;
+        width: 100%;
+      }
+
+      .branch-multiselect-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 10px;
+        border: 1px solid rgba(17, 24, 39, 0.14) !important;
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        transition: box-shadow 120ms ease, border-color 120ms ease;
+        text-align: left;
+      }
+
+      .branch-multiselect-trigger:hover {
+        border-color: rgba(17, 24, 39, 0.2) !important;
+      }
+
+      .branch-multiselect-trigger.active,
+      .branch-multiselect-trigger:focus {
+        border-color: rgba(59,130,246,0.65) !important;
+        box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+        outline: none;
+      }
+
+      .branch-multiselect-value {
+        flex: 1;
+        color: #111827;
+      }
+
+      .branch-multiselect-icon {
+        width: 16px;
+        height: 16px;
+        color: #6b7280;
+        transition: transform 150ms ease;
+      }
+
+      .branch-multiselect-trigger.active .branch-multiselect-icon {
+        transform: rotate(180deg);
+      }
+
+      .branch-multiselect-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #d1d5db !important;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        max-height: 300px;
+        overflow: hidden;
+        flex-direction: column;
+      }
+      
+      .branch-multiselect-dropdown[style*="block"] {
+        display: flex !important;
+      }
+
+      .branch-multiselect-search {
+        border-bottom: 1px solid rgba(17, 24, 39, 0.14) !important;
+      }
+
+      .branch-multiselect-add {
+        border-top: 1px solid rgba(17, 24, 39, 0.14) !important;
+      }
+
+      .branch-multiselect-list {
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 4px;
+      }
+
+      .branch-multiselect-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        cursor: pointer;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        transition: background-color 120ms ease, border-color 120ms ease;
+      }
+
+      .branch-multiselect-item:hover {
+        background-color: #f9fafb;
+        border-color: rgba(17, 24, 39, 0.1);
+      }
+
+      .branch-multiselect-item input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #ea5d0d;
+      }
+
+      .branch-multiselect-item span {
+        flex: 1;
+        font-size: 14px;
+        color: #111827;
+      }
+
+      .branch-multiselect-add {
+        padding: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 8px;
+        background: #f9fafb;
+      }
+
+      /* KVK Search Results */
+      .kvk-search-results {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1001;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 4px;
+      }
+
+      .kvk-search-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+        transition: background-color 120ms ease;
+      }
+
+      .kvk-search-item:last-child {
+        border-bottom: none;
+      }
+
+      .kvk-search-item:hover {
+        background-color: #f9fafb;
+      }
+
+      .kvk-search-item-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #111827;
+        margin-bottom: 4px;
+      }
+
+      .kvk-search-item-details {
+        font-size: 12px;
+        color: #6b7280;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .kvk-search-item-kvk {
+        font-weight: 500;
+        color: #3b82f6;
+      }
+
+      .kvk-search-loading {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 12px;
+        padding: 8px 12px;
+        background: #fff;
+        border: 1px solid rgba(17, 24, 39, 0.14);
+        border-radius: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        z-index: 1002;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .kvk-search-loading i {
+        color: #ea5d0d;
+      }
+
+      /* Clickable table rows */
+      .table-body-row[data-contact-id] {
+        transition: all 150ms ease;
+      }
+
+      .table-body-row[data-contact-id]:hover {
+        background-color: #fef3f2;
+        border-left: 3px solid #ea5d0d;
+      }
+
+      /* Customer logo in listing - optimized for performance */
+      .customer-logo-small {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        border-radius: 50%;
+        object-fit: contain;
+        margin-right: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        background: white;
+        /* Performance optimizations */
+        content-visibility: auto;
+        will-change: opacity;
+        transition: opacity 0.2s;
+      }
+
+      .customer-logo-small[loading="lazy"] {
+        opacity: 0;
+      }
+
+      .customer-logo-small:not([loading]) {
+        opacity: 1;
+      }
+
+      .customer-logo-small.loaded {
+        opacity: 1;
+      }
+
+      .customer-logo-placeholder {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        margin-right: 10px;
+        flex-shrink: 0;
+        border: 2px solid #e5e7eb;
+      }
+
+      .customer-name-cell {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+    <script src="/js/admin/contactsDrawer.js" defer></script>
+    <!-- Right drawer (off-canvas) for creating a contact -->
+    <div id="contactDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>
+    <aside id="contactDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe contactpersoon" style="position:fixed;top:0;right:0;height:100vh;width:min(520px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">
+      <div class="gs-drawer__header">
+        <div>
+          <h3 class="gs-drawer__title">Nieuwe contactpersoon</h3>
+          <p class="gs-drawer__subtitle">Maak een contactpersoon aan die eventueel bij een bedrijf werkt.</p>
+        </div>
+        <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="gs-drawer__body">
+        <form id="contactCreateForm" autocomplete="off">
+          <div class="gs-form-grid">
+            <div class="gs-field">
+              <label class="gs-label" for="contact_first_name">Voornaam</label>
+              <input class="gs-input" id="contact_first_name" name="first_name" type="text" placeholder="Bijv. Jan" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="contact_last_name">Achternaam *</label>
+              <input class="gs-input" id="contact_last_name" name="last_name" type="text" placeholder="Bijv. Jansen" required />
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="contact_email">E-mailadres</label>
+              <input class="gs-input" id="contact_email" name="email" type="email" placeholder="bijv. jan@voorbeeld.nl" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="contact_phone">Telefoon</label>
+              <input class="gs-input" id="contact_phone" name="phone" type="tel" placeholder="Bijv. 0612345678" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="contact_job_title">Functie</label>
+              <input class="gs-input" id="contact_job_title" name="job_title" type="text" placeholder="Bijv. Manager" />
+            </div>
+            <div class="gs-field gs-field--full" style="position: relative;">
+              <label class="gs-label" for="contact_customer_id">Bedrijf (optioneel)</label>
+              <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                  <select class="gs-select" id="contact_customer_id" name="customer_id" style="width: 100%;">
+                    <option value="">Geen bedrijf</option>
+                    ${(function() {
+                      var html = '';
+                      if (typeof customers !== 'undefined' && customers && customers.length > 0) {
+                        for (var i = 0; i < customers.length; i++) {
+                          var c = customers[i];
+                          var displayName = c.company_name || c.name || 'Onbekend';
+                          html += '<option value="' + c.id + '">' + displayName + '</option>';
+                        }
+                      }
+                      return html;
+                    })()}
+                  </select>
+                  <div id="newCompanyInputContainer" style="display: none;">
+                    <input type="text" class="gs-input" id="newCompanyNameInput" placeholder="Voer bedrijfsnaam in..." style="width: 100%;" />
+                    <div style="display: flex; gap: 8px; margin-top: 4px;">
+                      <button type="button" id="saveNewCompanyBtn" class="gs-btn gs-btn--primary" style="flex: 1; padding: 8px 16px; font-size: 14px;">
+                        Opslaan
+                      </button>
+                      <button type="button" id="cancelNewCompanyBtn" class="gs-btn gs-btn--ghost" style="flex: 1; padding: 8px 16px; font-size: 14px;">
+                        Annuleren
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" id="addNewCompanyBtn" class="gs-btn gs-btn--ghost" style="white-space: nowrap; padding: 10px 16px; height: 42px; display: flex; align-items: center; justify-content: center;" title="Nieuw bedrijf toevoegen">
+                  <i class="fas fa-plus"></i> Nieuw
+                </button>
+              </div>
+              <input type="hidden" id="contact_company_name" name="company_name" />
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="contact_status">Status</label>
+              <select class="gs-select" id="contact_status" name="status">
+                <option value="active">Actief</option>
+                <option value="inactive">Inactief</option>
+                <option value="lead">Lead</option>
+                <option value="prospect">Prospect</option>
+              </select>
+            </div>
+            <div class="gs-field">
+              <label class="gs-label" for="contact_priority">Prioriteit</label>
+              <select class="gs-select" id="contact_priority" name="priority">
+                <option value="normal">Normaal</option>
+                <option value="low">Laag</option>
+                <option value="high">Hoog</option>
+                <option value="vip">VIP</option>
+              </select>
+            </div>
+            <div class="gs-field gs-field--full">
+              <label class="gs-label" for="contact_notes">Notities</label>
+              <textarea class="gs-input" id="contact_notes" name="notes" rows="3" placeholder="Optionele notities over deze contactpersoon..."></textarea>
+            </div>
+          </div>
+          <div id="contactCreateError" class="gs-error" style="display:none;"></div>
+        </form>
+      </div>
+      <div class="gs-drawer__footer">
+        <button type="button" class="gs-btn gs-btn--ghost" data-drawer-close>Annuleren</button>
+        <button type="button" class="gs-btn gs-btn--primary" id="contactCreateSubmit">Aanmaken</button>
+      </div>
+    </aside>
+    <div class="payments-container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <h1>Contactpersonen</h1>
+          <p class="text-muted">CRM systeem - Beheer alle contactpersonen en zet ze om naar kansen</p>
+        </div>
+        <button class="btn-primary" id="createContactBtn" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+          <i class="fas fa-plus"></i> Nieuwe Contactpersoon
+        </button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-cards-container">
+        <div class="kpi-cards-grid">
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Totaal Contactpersonen</p>
+              <p class="kpi-value">${kpis.total || 0}</p>
+              <p class="kpi-subtitle">Alle contactpersonen</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Actieve Contactpersonen</p>
+              <p class="kpi-value">${kpis.active || 0}</p>
+              <p class="kpi-subtitle">Momenteel actief</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Leads</p>
+              <p class="kpi-value">
+                ${(() => {
+                  var leadCount = 0;
+                  if (typeof contacts !== 'undefined' && contacts) {
+                    for (var i = 0; i < contacts.length; i++) {
+                      if (contacts[i].status === 'lead') {
+                        leadCount++;
+                      }
+                    }
+                  }
+                  return leadCount;
+                })()}
+              </p>
+              <p class="kpi-subtitle">Contactpersonen als lead</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-target">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+            </div>
+          </div>
+          
+          <div class="kpi-card">
+            <div class="kpi-content">
+              <p class="kpi-title">Omgezet naar Kans</p>
+              <p class="kpi-value">
+                ${(() => {
+                  var convertedCount = 0;
+                  if (typeof contacts !== 'undefined' && contacts) {
+                    for (var i = 0; i < contacts.length; i++) {
+                      if (contacts[i].converted_to_opportunity_id) {
+                        convertedCount++;
+                      }
+                    }
+                  }
+                  return convertedCount;
+                })()}
+              </p>
+              <p class="kpi-subtitle">Contactpersonen omgezet</p>
+            </div>
+            <div class="kpi-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right-circle">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 16 16 12 12 8"></polyline>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-container">
+        <div class="search-wrapper">
+          <input 
+            type="text" 
+            placeholder="Zoek op naam, e-mail, bedrijfsnaam of functie..."
+            class="search-input"
+            id="searchInput"
+            value="${filters.search || ''}"
+          />
+        </div>
+        
+        <div class="status-filter-section">
+          <select class="status-select" id="statusSelect">
+            <option value="all" ${filters.status === 'all' ? 'selected' : ''}>Alle statussen</option>
+            <option value="active" ${filters.status === 'active' ? 'selected' : ''}>Actief</option>
+            <option value="inactive" ${filters.status === 'inactive' ? 'selected' : ''}>Inactief</option>
+            <option value="lead" ${filters.status === 'lead' ? 'selected' : ''}>Lead</option>
+            <option value="prospect" ${filters.status === 'prospect' ? 'selected' : ''}>Prospect</option>
+          </select>
+          
+          <select class="status-select" id="prioritySelect">
+            <option value="all" ${filters.priority === 'all' ? 'selected' : ''}>Alle prioriteiten</option>
+            <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
+            <option value="normal" ${filters.priority === 'normal' ? 'selected' : ''}>Normaal</option>
+            <option value="high" ${filters.priority === 'high' ? 'selected' : ''}>Hoog</option>
+            <option value="vip" ${filters.priority === 'vip' ? 'selected' : ''}>VIP</option>
+          </select>
+          
+          <div class="results-info" id="paginationInfo">
+            ${(() => {
+              var pag = typeof pagination !== 'undefined' ? pagination : { totalItems: (typeof contacts !== 'undefined' && contacts ? contacts.length : 0), page: 1, limit: 15 };
+              var startItem = pag.totalItems > 0 ? (pag.page - 1) * pag.limit + 1 : 0;
+              var endItem = Math.min(pag.page * pag.limit, pag.totalItems);
+              return pag.totalItems > 0 ? 'Toont ' + startItem + ' tot ' + endItem + ' van ' + pag.totalItems + ' resultaten' : 'Geen contactpersonen';
+            })()}
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="payments-table">
+            <thead>
+              <tr class="table-header-row">
+                <th class="table-header-cell">Contactpersoon</th>
+                <th class="table-header-cell">Bedrijf</th>
+                <th class="table-header-cell">Contact</th>
+                <th class="table-header-cell">Status</th>
+                <th class="table-header-cell">Prioriteit</th>
+                <th class="table-header-cell">Laatste activiteit</th>
+                <th class="table-header-cell"></th>
+              </tr>
+            </thead>
+            <tbody id="contactsTableBody">
+              ${
+                (contacts || []).map(function(c) {
+                  var statusLabels = {
+                    'active': 'Actief',
+                    'inactive': 'Inactief',
+                    'lead': 'Lead',
+                    'prospect': 'Prospect'
+                  };
+                  
+                  var statusStyles = {
+                    'active': 'status-paid',
+                    'inactive': 'status-cancelled',
+                    'lead': 'status-pending',
+                    'prospect': 'status-pending'
+                  };
+                  
+                  var priorityLabels = {
+                    'low': 'Laag',
+                    'normal': 'Normaal',
+                    'high': 'Hoog',
+                    'vip': 'VIP'
+                  };
+                  
+                  var priorityColors = {
+                    'low': '#6b7280',
+                    'normal': '#3b82f6',
+                    'high': '#f59e0b',
+                    'vip': '#f59e0b'
+                  };
+                  
+                  var lastActivity = c.last_ticket_activity || c.last_email_activity || c.updated_at;
+                  var lastActivityDate = lastActivity ? new Date(lastActivity).toLocaleDateString('nl-NL', { 
+                    day: '2-digit', 
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'Geen activiteit';
+                  
+                  // Calculate initials for contact person
+                  var initials = '';
+                  if (c.first_name && c.last_name) {
+                    initials = (c.first_name.charAt(0) + c.last_name.charAt(0)).toUpperCase();
+                  } else if (c.name && c.name.length > 0) {
+                    var nameParts = c.name.split(' ');
+                    if (nameParts.length > 0) {
+                      initials = nameParts[0].charAt(0).toUpperCase();
+                      if (nameParts.length > 1) {
+                        initials += nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+                      }
+                    }
+                  } else if (c.email && c.email.length > 0) {
+                    initials = c.email.charAt(0).toUpperCase();
+                  } else {
+                    initials = 'C';
+                  }
+                  
+                  var contactName = c.name || (c.first_name && c.last_name ? (c.first_name + ' ' + c.last_name) : 'Onbekend');
+                  var jobTitle = c.job_title ? (' - ' + c.job_title) : '';
+                  
+                  var statusClass = statusStyles[c.status] || 'status-pending';
+                  var statusLabel = statusLabels[c.status] || c.status;
+                  var priorityColor = priorityColors[c.priority] || '#6b7280';
+                  var priorityLabel = priorityLabels[c.priority] || c.priority;
+                  var jobTitleHtml = c.job_title ? '<span class="lead-title">' + c.job_title + '</span>' : '';
+                  var phoneHtml = c.phone ? '<span class="lead-title">' + c.phone + '</span>' : '';
+                  
+                  return '<tr class="table-body-row" data-contact-id="' + c.id + '" style="cursor: pointer;">' +
+                    '<td class="table-cell">' +
+                      '<div class="customer-name-cell">' +
+                        '<div class="customer-logo-placeholder">' + initials + '</div>' +
+                        '<div class="cell-column">' +
+                          '<span class="customer-name">' + contactName + '</span>' +
+                          jobTitleHtml +
+                        '</div>' +
+                      '</div>' +
+                    '</td>' +
+                    '<td class="table-cell">' +
+                      '<span class="cell-text">' + (c.company_name || '-') + '</span>' +
+                    '</td>' +
+                    '<td class="table-cell">' +
+                      '<div class="cell-column">' +
+                        '<span class="customer-name">' + (c.email || '-') + '</span>' +
+                        phoneHtml +
+                      '</div>' +
+                    '</td>' +
+                    '<td class="table-cell">' +
+                      '<span class="status-badge ' + statusClass + '">' + statusLabel + '</span>' +
+                    '</td>' +
+                    '<td class="table-cell">' +
+                      '<span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + ';">' +
+                        priorityLabel +
+                      '</span>' +
+                    '</td>' +
+                    '<td class="table-cell">' +
+                      '<span class="cell-text">' + lastActivityDate + '</span>' +
+                    '</td>' +
+                    '<td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">' +
+                      '<div style="display: flex; align-items: center; gap: 12px;">' +
+                        '<div class="customer-drag-handle" data-contact-id="' + c.id + '" style="cursor: grab; padding: 4px; opacity: 0; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center;" title="Sleep om volgorde te wijzigen">' +
+                          '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: #9ca3af;">' +
+                            '<circle cx="2" cy="2" r="1" fill="currentColor"/>' +
+                            '<circle cx="6" cy="2" r="1" fill="currentColor"/>' +
+                            '<circle cx="10" cy="2" r="1" fill="currentColor"/>' +
+                            '<circle cx="2" cy="6" r="1" fill="currentColor"/>' +
+                            '<circle cx="6" cy="6" r="1" fill="currentColor"/>' +
+                            '<circle cx="10" cy="6" r="1" fill="currentColor"/>' +
+                            '<circle cx="2" cy="10" r="1" fill="currentColor"/>' +
+                            '<circle cx="6" cy="10" r="1" fill="currentColor"/>' +
+                            '<circle cx="10" cy="10" r="1" fill="currentColor"/>' +
+                          '</svg>' +
+                        '</div>' +
+                        '<button class="actions-button" onclick="showContactActions(\'' + c.id + '\', event)" title="Meer acties">' +
+                          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                            '<circle cx="12" cy="12" r="1"></circle>' +
+                            '<circle cx="12" cy="5" r="1"></circle>' +
+                            '<circle cx="12" cy="19" r="1"></circle>' +
+                          '</svg>' +
+                        '</button>' +
+                      '</div>' +
+                    '</td>' +
+                  '</tr>';
+                }).join('')
+              }
+              ${
+                (!contacts || contacts.length === 0) ? `
+                  <tr class="table-body-row">
+                    <td colspan="7" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+                      Geen contactpersonen gevonden. Klik op "Nieuwe Contactpersoon" om er een toe te voegen.
+                    </td>
+                  </tr>
+                ` : ''
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Pagination -->
+      ${(() => {
+        var pag = typeof pagination !== 'undefined' ? pagination : { page: 1, limit: 15, totalItems: (typeof contacts !== 'undefined' && contacts ? contacts.length : 0), totalPages: 1, hasNext: false, hasPrev: false };
+        var currentPage = pag.page || 1;
+        var totalPages = pag.totalPages || 1;
+        var limit = pag.limit || 15;
+        var totalItems = pag.totalItems || 0;
+        var hasNext = pag.hasNext || false;
+        var hasPrev = pag.hasPrev || false;
+        
+        // Build page numbers
+        var pages = [];
+        var maxPages = 5;
+        if (totalPages > 0) {
+          var startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+          var endPage = Math.min(totalPages, startPage + maxPages - 1);
+          if (endPage - startPage < maxPages - 1) {
+            startPage = Math.max(1, endPage - maxPages + 1);
+          }
+          for (var i = startPage; i <= endPage; i++) {
+            pages.push(i);
+          }
+        }
+        
+        // Build query string helper
+        var buildQueryString = function(newPage, newLimit) {
+          var params = new URLSearchParams();
+          if (typeof filters !== 'undefined') {
+            if (filters.status && filters.status !== 'all') params.set('status', filters.status);
+            if (filters.priority && filters.priority !== 'all') params.set('priority', filters.priority);
+            if (filters.search) params.set('search', filters.search);
+          }
+          params.set('page', newPage);
+          if (newLimit !== 15) params.set('limit', newLimit);
+          return params.toString();
+        };
+        
+        return `
+          <!-- Pagination - Exact same as /admin/payments -->
+          <div class="pagination-container">
+            <!-- Items Per Page Selector - Bottom Left -->
+            <div class="items-per-page-wrapper">
+              <label for="itemsPerPageSelect" class="items-per-page-label">Toon:</label>
+              <select class="items-per-page-select" id="itemsPerPageSelect">
+                <option value="15" ${limit == 15 ? 'selected' : ''}>15</option>
+                <option value="25" ${limit == 25 ? 'selected' : ''}>25</option>
+                <option value="50" ${limit == 50 ? 'selected' : ''}>50</option>
+                <option value="100" ${limit == 100 ? 'selected' : ''}>100</option>
+              </select>
+              <span class="items-per-page-suffix">per pagina</span>
+            </div>
+            
+            <!-- Page Buttons - Right Aligned -->
+            <div class="pagination-buttons" id="paginationButtons">
+              <!-- Previous Button -->
+              <button class="pagination-nav" id="prevButton" ${hasPrev ? '' : 'disabled'}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
+              </button>
+              
+              <!-- Page Numbers -->
+              ${pages.map(function(pageNum) {
+                return '<button class="pagination-page ' + (pageNum === currentPage ? 'pagination-page-active' : '') + '" data-page="' + pageNum + '">' + pageNum + '</button>';
+              }).join('')}
+              
+              <!-- Next Button -->
+              <button class="pagination-nav" id="nextButton" ${hasNext ? '' : 'disabled'}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <script>
+            // Image loading optimization - preload visible images
+            (function() {
+              // Use Intersection Observer for better lazy loading
+              if ('IntersectionObserver' in window) {
+                var imageObserver = new IntersectionObserver(function(entries, observer) {
+                  entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                      var img = entry.target;
+                      if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                      }
+                      img.classList.add('loaded');
+                      observer.unobserve(img);
+                    }
+                  });
+                }, {
+                  rootMargin: '50px' // Start loading 50px before image enters viewport
+                });
+
+                // Observe all lazy-loaded images
+                document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
+                  imageObserver.observe(img);
+                });
+              }
+            })();
+
+            (function() {
+              var buildQueryString = function(newPage, newLimit) {
+                var params = new URLSearchParams();
+                ${typeof filters !== 'undefined' ? `
+                  if ('${filters.status || 'all'}' !== 'all') params.set('status', '${filters.status || 'all'}');
+                  if ('${filters.priority || 'all'}' !== 'all') params.set('priority', '${filters.priority || 'all'}');
+                  if ('${filters.search || ''}') params.set('search', '${filters.search || ''}');
+                ` : ''}
+                params.set('page', newPage);
+                if (newLimit !== 15) params.set('limit', newLimit);
+                return params.toString();
+              };
+              
+              // Items per page change
+              var itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+              if (itemsPerPageSelect) {
+                itemsPerPageSelect.addEventListener('change', function(e) {
+                  var newLimit = parseInt(e.target.value);
+                  var queryString = buildQueryString(1, newLimit);
+                  window.location.href = '/admin/contacts?' + queryString;
+                });
+              }
+              
+              // Previous button
+              var prevButton = document.getElementById('prevButton');
+              if (prevButton) {
+                prevButton.addEventListener('click', function() {
+                  if (!this.disabled) {
+                    var queryString = buildQueryString(${currentPage - 1}, ${limit});
+                    window.location.href = '/admin/contacts?' + queryString;
+                  }
+                });
+              }
+              
+              // Next button
+              var nextButton = document.getElementById('nextButton');
+              if (nextButton) {
+                nextButton.addEventListener('click', function() {
+                  if (!this.disabled) {
+                    var queryString = buildQueryString(${currentPage + 1}, ${limit});
+                    window.location.href = '/admin/contacts?' + queryString;
+                  }
+                });
+              }
+              
+              // Page number buttons
+              document.querySelectorAll('.pagination-page').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                  var page = parseInt(this.dataset.page);
+                  if (page) {
+                    var queryString = buildQueryString(page, ${limit});
+                    window.location.href = '/admin/contacts?' + queryString;
+                  }
+                });
+              });
+              
+              // Row click handlers
+              document.querySelectorAll('[data-contact-id]').forEach(function(row) {
+                row.addEventListener('click', function(e) {
+                  if (e.target.closest('button, .customer-drag-handle')) return;
+                  var contactId = this.dataset.contactId;
+                  if (contactId) {
+                    window.location.href = '/admin/contacts/' + contactId;
+                  }
+                });
+              });
+            })();
+          </script>
+        `;
+      })()}
+    </div>
+
+    <!-- Actions Menu -->
+    <div id="contactActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 200px; padding: 8px 0;">
+      <button class="mail-action-item" data-action="view" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-eye" style="margin-right: 8px; width: 16px;"></i> Bekijken
+      </button>
+      <button class="mail-action-item" data-action="convert" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-arrow-right" style="margin-right: 8px; width: 16px;"></i> Omzetten naar Kans
+      </button>
+      <div style="border-top: 1px solid #e5e7eb; margin: 4px 0;"></div>
+      <button class="mail-action-item" data-action="edit" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">
+        <i class="fas fa-edit" style="margin-right: 8px; width: 16px;"></i> Bewerken
+      </button>
+      <button class="mail-action-item" data-action="delete" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #dc2626;">
+        <i class="fas fa-trash" style="margin-right: 8px; width: 16px;"></i> Verwijderen
+      </button>
+    </div>
+    
+    <script>
+      // Contact actions menu
+      function showContactActions(contactId, event) {
+        event.stopPropagation();
+        var menu = document.getElementById('contactActionsMenu');
+        var rect = event.target.closest('button').getBoundingClientRect();
+        menu.style.display = 'block';
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.style.left = (rect.left - 150) + 'px';
+        
+        // Close on outside click
+        var closeMenu = function(e) {
+          if (!menu.contains(e.target) && !event.target.contains(e.target)) {
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeMenu);
+          }
+        };
+        setTimeout(function() { document.addEventListener('click', closeMenu); }, 100);
+        
+        // Handle actions
+        menu.querySelectorAll('.mail-action-item').forEach(function(btn) {
+          btn.onclick = function(e) {
+            e.stopPropagation();
+            var action = btn.dataset.action;
+            if (action === 'view') {
+              window.location.href = '/admin/contacts/' + contactId;
+            } else if (action === 'convert') {
+              convertContactToOpportunity(contactId);
+            } else if (action === 'edit') {
+              // TODO: Implement edit
+              alert('Bewerken wordt binnenkort toegevoegd');
+            } else if (action === 'delete') {
+              if (confirm('Weet je zeker dat je deze contactpersoon wilt verwijderen?')) {
+                // TODO: Implement delete
+                alert('Verwijderen wordt binnenkort toegevoegd');
+              }
+            }
+            menu.style.display = 'none';
+          };
+        });
+      }
+      
+      // Convert contact to opportunity
+      function convertContactToOpportunity(contactId) {
+        fetch('/admin/api/contacts/' + contactId + '/convert-to-opportunity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          if (data.success) {
+            alert('Contactpersoon succesvol omgezet naar kans!');
+            window.location.href = '/admin/opportunities/' + data.opportunity_id;
+          } else {
+            alert('Fout: ' + (data.error || 'Kon contactpersoon niet omzetten'));
+          }
+        })
+        .catch(function(err) {
+          alert('Fout bij omzetten: ' + err.message);
+        });
+      }
+      
+      // Create contact button
+      var createContactBtn = document.getElementById('createContactBtn');
+      if (createContactBtn) {
+        createContactBtn.addEventListener('click', function() {
+          var drawer = document.getElementById('contactDrawer');
+          var overlay = document.getElementById('contactDrawerOverlay');
+          if (drawer && overlay) {
+            drawer.setAttribute('aria-hidden', 'false');
+            drawer.style.transform = 'translateX(0)';
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+          }
+        });
+      }
+      
+      // Close drawer handlers
+      document.querySelectorAll('[data-drawer-close]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var drawer = document.getElementById('contactDrawer');
+          var overlay = document.getElementById('contactDrawerOverlay');
+          if (drawer && overlay) {
+            drawer.setAttribute('aria-hidden', 'true');
+            drawer.style.transform = 'translateX(110%)';
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+          }
+        });
+      });
+      
+      // Update company_name when customer is selected
+      var contactCustomerSelect = document.getElementById('contact_customer_id');
+      var contactCompanyNameInput = document.getElementById('contact_company_name');
+      if (contactCustomerSelect && contactCompanyNameInput) {
+        contactCustomerSelect.addEventListener('change', function() {
+          var selectedOption = this.options[this.selectedIndex];
+          if (selectedOption.value) {
+            // Set company_name from selected customer
+            contactCompanyNameInput.value = selectedOption.text;
+          } else {
+            // Clear company_name if no customer selected
+            contactCompanyNameInput.value = '';
+          }
+        });
+      }
+      
+      // Add new company button handler
+      var addNewCompanyBtn = document.getElementById('addNewCompanyBtn');
+      var newCompanyInputContainer = document.getElementById('newCompanyInputContainer');
+      var newCompanyNameInput = document.getElementById('newCompanyNameInput');
+      var saveNewCompanyBtn = document.getElementById('saveNewCompanyBtn');
+      var cancelNewCompanyBtn = document.getElementById('cancelNewCompanyBtn');
+      
+      if (addNewCompanyBtn && newCompanyInputContainer && newCompanyNameInput) {
+        // Show new company input when "Nieuw" is clicked
+        addNewCompanyBtn.addEventListener('click', function() {
+          newCompanyInputContainer.style.display = 'block';
+          newCompanyNameInput.focus();
+          addNewCompanyBtn.style.display = 'none';
+        });
+        
+        // Cancel button
+        if (cancelNewCompanyBtn) {
+          cancelNewCompanyBtn.addEventListener('click', function() {
+            newCompanyInputContainer.style.display = 'none';
+            newCompanyNameInput.value = '';
+            addNewCompanyBtn.style.display = 'flex';
+          });
+        }
+        
+        // Save new company
+        if (saveNewCompanyBtn) {
+          saveNewCompanyBtn.addEventListener('click', function() {
+            var companyName = newCompanyNameInput.value.trim();
+            if (!companyName) {
+              alert('Voer een bedrijfsnaam in');
+              return;
+            }
+            
+            // Disable button while saving
+            saveNewCompanyBtn.disabled = true;
+            saveNewCompanyBtn.textContent = 'Bezig...';
+            
+            // Create new customer via API
+            fetch('/admin/api/customers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                company_name: companyName,
+                name: companyName,
+                status: 'active'
+              })
+            })
+            .then(function(response) {
+              // Check if response is OK
+              if (!response.ok) {
+                return response.text().then(function(text) {
+                  // Try to parse as JSON first
+                  try {
+                    var jsonError = JSON.parse(text);
+                    throw new Error(jsonError.error || 'Server error: ' + response.status);
+                  } catch (e) {
+                    // If not JSON, it's probably an HTML error page
+                    throw new Error('Server error (status ' + response.status + '). Check server logs for details.');
+                  }
+                });
+              }
+              
+              // Check if response is JSON
+              var contentType = response.headers.get('content-type');
+              if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(function(text) {
+                  throw new Error('Server returned non-JSON response. Status: ' + response.status);
+                });
+              }
+              return response.json();
+            })
+            .then(function(result) {
+              if (result.success && result.customer) {
+                // Add new option to select
+                var option = document.createElement('option');
+                option.value = result.customer.id;
+                option.text = result.customer.company_name || result.customer.name;
+                option.selected = true;
+                contactCustomerSelect.appendChild(option);
+                
+                // Update company_name
+                contactCompanyNameInput.value = result.customer.company_name || result.customer.name;
+                
+                // Hide input container and show button again
+                newCompanyInputContainer.style.display = 'none';
+                newCompanyNameInput.value = '';
+                addNewCompanyBtn.style.display = 'flex';
+                
+                // Trigger change event
+                contactCustomerSelect.dispatchEvent(new Event('change'));
+              } else {
+                alert('Fout bij aanmaken bedrijf: ' + (result.error || 'Onbekende fout'));
+                saveNewCompanyBtn.disabled = false;
+                saveNewCompanyBtn.textContent = 'Opslaan';
+              }
+            })
+            .catch(function(err) {
+              console.error('Error creating company:', err);
+              alert('Fout bij aanmaken bedrijf: ' + (err.message || 'Onbekende fout'));
+              saveNewCompanyBtn.disabled = false;
+              saveNewCompanyBtn.textContent = 'Opslaan';
+            });
+          });
+          
+          // Also save on Enter key
+          newCompanyNameInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+              saveNewCompanyBtn.click();
+            }
+          });
+        }
+      }
+      
+      // Create contact form submit
+      var contactCreateSubmit = document.getElementById('contactCreateSubmit');
+      if (contactCreateSubmit) {
+        contactCreateSubmit.addEventListener('click', function() {
+          var form = document.getElementById('contactCreateForm');
+          var formData = new FormData(form);
+          var data = {};
+          for (var pair of formData.entries()) {
+            data[pair[0]] = pair[1];
+          }
+          
+          // Build name from first_name + last_name
+          if (data.first_name || data.last_name) {
+            data.name = (data.first_name || '') + ' ' + (data.last_name || '');
+            data.name = data.name.trim();
+          }
+          
+          // If customer_id is selected, use it and get company_name from selected option
+          if (data.customer_id) {
+            var selectedOption = contactCustomerSelect.options[contactCustomerSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+              data.company_name = selectedOption.text;
+            }
+          }
+          
+          fetch('/admin/api/contacts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          })
+          .then(function(response) {
+            return response.json();
+          })
+          .then(function(result) {
+            if (result.success) {
+              window.location.reload();
+            } else {
+              var errorDiv = document.getElementById('contactCreateError');
+              if (errorDiv) {
+                errorDiv.textContent = result.error || 'Fout bij aanmaken';
+                errorDiv.style.display = 'block';
+              }
+            }
+          })
+          .catch(function(err) {
+            var errorDiv = document.getElementById('contactCreateError');
+            if (errorDiv) {
+              errorDiv.textContent = 'Fout bij aanmaken: ' + err.message;
+              errorDiv.style.display = 'block';
+            }
+          });
+        });
+      }
+    </script>
+  `,
+  scripts: (scripts || []),
+  stylesheets: stylesheets || []
+}) %>
+
+<% if (typeof googleMapsApiKey !== "undefined" && googleMapsApiKey && googleMapsApiKey !== "") { %>
+<script>
+  window.GOOGLE_MAPS_API_KEY = '<%= googleMapsApiKey %>';
+  window.GOOGLE_MAPS_LOADED = false;
+  
+  // Callback when Google Maps API is loaded
+  function initGoogleMapsForContacts() {
+    window.GOOGLE_MAPS_LOADED = true;
+    console.log('[contacts] Google Maps API loaded');
+  }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<%= googleMapsApiKey %>&libraries=places&language=nl&callback=initGoogleMapsForContacts" async defer></script>
+<% } %>
+

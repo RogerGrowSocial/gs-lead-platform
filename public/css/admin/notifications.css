@@ -1,0 +1,245 @@
+/* Notification Container */
+.notification-container {
+  position: fixed;
+  top: 60px;          /* Verhoogd van 40px naar 60px */
+  right: 20px;        /* Afstand van rechterkant */
+  z-index: 9999;      /* Hoge z-index om boven andere elementen te blijven */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 600px;
+  min-width: 300px;
+  pointer-events: none;     /* Laat muisevents door naar onderliggende elementen */
+}
+
+/* De notificaties zelf moeten wel pointer events ontvangen */
+.notification {
+  position: relative;
+  background: #333333;
+  border-radius: 8px;
+  padding: 12px 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: auto;
+  border-left: 4px solid;
+  animation: slideIn 0.3s ease-out;
+  max-width: 600px;
+  min-width: 300px;
+  width: auto;
+  color: #ffffff;
+}
+
+/* Specifieke plaatsing voor admin pagina's met header */
+body.admin-layout .notification-container {
+  top: 110px; /* Verhoogd van 90px naar 110px */
+}
+
+/* Specifieke plaatsing voor pagina's met sidebar */
+body.with-sidebar .notification-container {
+  right: 20px; /* Standaard rechts */
+}
+
+/* Als de sidebar rechts staat, pas dan de positie aan */
+body.with-right-sidebar .notification-container {
+  right: 270px; /* Pas dit aan op basis van je sidebar breedte */
+}
+
+.notification.closing {
+  animation: slideOutRight 0.3s ease forwards, fadeOut 0.3s ease forwards;
+}
+
+/* Notification Content */
+.notification-content {
+  flex: 1;
+  min-width: 0;
+  margin-right: 24px;
+}
+
+.notification-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.notification-message {
+  font-size: 13px;
+  color: #ffffff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Notification Types */
+.notification.success {
+  border-color: #4CAF50;
+  background: #2e7d32;
+}
+
+.notification.error {
+  border-color: #f44336;
+  background: #c62828;
+}
+
+.notification.warning {
+  border-color: #ff9800;
+  background: #ef6c00;
+}
+
+.notification.info {
+  border-color: #2196F3;
+  background: #1565c0;
+}
+
+/* Ensure notifications are always visible */
+.notification {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Close Button */
+.notification-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.notification-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Progress Bar */
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  width: 100%;
+  border-radius: 0 0 8px 8px;
+}
+
+.notification-progress-bar {
+  height: 100%;
+  background: currentColor;
+  border-radius: 0 0 8px 8px;
+  transition: width 0.1s linear;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.notification.hiding {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+/* Hover effect */
+.notification:hover {
+  transform: translateX(-5px);
+  transition: transform 0.2s ease;
+}
+
+/* Attention animation for important notifications */
+.notification.error {
+  animation: slideIn 0.3s ease-out, attention 0.5s ease-out 0.3s;
+}
+
+@keyframes attention {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+/* Stacking effect */
+.notification-container .notification:nth-child(2) {
+  transform: translateX(-10px);
+}
+
+.notification-container .notification:nth-child(3) {
+  transform: translateX(-20px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notification-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  /* Op mobiel, altijd aan de rechterkant ongeacht sidebar */
+  body.with-right-sidebar .notification-container {
+    right: 10px;
+  }
+  
+  .notification {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+/* Dark mode ondersteuning */
+@media (prefers-color-scheme: dark) {
+  .notification {
+    background-color: #2d3748;
+    color: #ffffff;
+  }
+  
+  .notification-close {
+    color: #ffffff;
+  }
+  
+  .notification-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+/* Als je een expliciete dark mode class gebruikt */
+body.dark-mode .notification {
+  background-color: #2d3748;
+  color: #ffffff;
+}
+
+body.dark-mode .notification-close {
+  color: #ffffff;
+}
+
+body.dark-mode .notification-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}

@@ -1,0 +1,4421 @@
+<link rel="stylesheet" href="/css/admin/adminSettings.css">
+<%
+  // Definieer standaardwaarden voor variabelen
+  let admins = [];
+  let apiKeys = [];
+  let logs = [];
+  let resetRequests = [];
+  
+  // Als de variabelen al bestaan (doorgegeven vanuit de controller), gebruik die waarden
+  if (typeof locals.admins !== 'undefined') admins = locals.admins;
+  if (typeof locals.apiKeys !== 'undefined') apiKeys = locals.apiKeys;
+  if (typeof locals.logs !== 'undefined') logs = locals.logs;
+  if (typeof locals.resetRequests !== 'undefined') resetRequests = locals.resetRequests;
+
+  // Formateer datum
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  
+  // Formateer tijd
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  // Voorbeeld beheerders data
+  var displayAdmins = admins && admins.length > 0 ? admins : [
+    {
+      id: 1,
+      name: "Jan Jansen",
+      email: "jan@growsocialmedia.nl",
+      role: "Super Admin",
+      last_login: new Date(Date.now() - 2 * 3600 * 1000),
+      created_at: new Date(Date.now() - 90 * 24 * 3600 * 1000),
+      status: "active",
+      two_factor_enabled: true
+    },
+    {
+      id: 2,
+      name: "Sophie de Vries",
+      email: "sophie@growsocialmedia.nl",
+      role: "Admin",
+      last_login: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      created_at: new Date(Date.now() - 60 * 24 * 3600 * 1000),
+      status: "active",
+      two_factor_enabled: true
+    },
+    {
+      id: 3,
+      name: "Mohammed El Amrani",
+      email: "mohammed@growsocialmedia.nl",
+      role: "Editor",
+      last_login: new Date(Date.now() - 3 * 24 * 3600 * 1000),
+      created_at: new Date(Date.now() - 45 * 24 * 3600 * 1000),
+      status: "active",
+      two_factor_enabled: false
+    }
+  ];
+  
+  // Voorbeeld API keys data
+  var displayApiKeys = apiKeys && apiKeys.length > 0 ? apiKeys : [
+    {
+      id: 1,
+      name: "Website API",
+      key: "ws_" + Math.random().toString(36).substring(2, 15),
+      created_at: new Date(Date.now() - 90 * 24 * 3600 * 1000),
+      last_used: new Date(Date.now() - 1 * 24 * 3600 * 1000),
+      status: "active"
+    },
+    {
+      id: 2,
+      name: "Mobile App API",
+      key: "mb_" + Math.random().toString(36).substring(2, 15),
+      created_at: new Date(Date.now() - 60 * 24 * 3600 * 1000),
+      last_used: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+      status: "active"
+    },
+    {
+      id: 3,
+      name: "Test Environment",
+      key: "test_" + Math.random().toString(36).substring(2, 15),
+      created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000),
+      last_used: new Date(Date.now() - 15 * 24 * 3600 * 1000),
+      status: "inactive"
+    }
+  ];
+  
+  // Use real logs if available, otherwise show empty state
+  var displayLogs = logs && logs.length > 0 ? logs : [];
+  
+  console.log('📊 Admin Settings - Logs loaded:', displayLogs.length);
+  console.log('📊 Sample log:', displayLogs[0]);
+  
+  // Translation functions
+  function getSourceTranslation(source) {
+    const translations = {
+      'System': 'Systeem',
+      'System Test': 'Systeem Test',
+      'Billing System': 'Betalingssysteem',
+      'Auth System': 'Authenticatiesysteem',
+      'Admin Panel': 'Admin Panel',
+      'Payment System': 'Betalingssysteem',
+      'Cron System': 'Cron Systeem',
+      'API Server': 'API Server',
+      'SQL Editor': 'SQL Editor',
+      'Pause System': 'Pauze Systeem'
+    };
+    return translations[source] || source;
+  }
+  
+  function getCategoryTranslation(category) {
+    const translations = {
+      'system': 'Systeem',
+      'billing': 'Betalen',
+      'authentication': 'Authenticatie',
+      'admin': 'Beheer',
+      'payment': 'Betaling',
+      'cron': 'Cron',
+      'api': 'API',
+      'database': 'Database',
+      'security': 'Beveiliging',
+      'user_management': 'Gebruikersbeheer',
+      'pause': 'Pauze Systeem'
+    };
+    return translations[category] || category;
+  }
+  
+  // Voorbeeld password reset aanvragen
+  var displayResetRequests = resetRequests && resetRequests.length > 0 ? resetRequests : [
+    {
+      id: 1,
+      user_email: "klant@bedrijf.nl",
+      requested_at: new Date(Date.now() - 30 * 60 * 1000),
+      status: "pending",
+      expires_at: new Date(Date.now() + 24 * 3600 * 1000)
+    },
+    {
+      id: 2,
+      user_email: "info@anderebedrijf.nl",
+      requested_at: new Date(Date.now() - 2 * 3600 * 1000),
+      status: "completed",
+      expires_at: new Date(Date.now() - 22 * 3600 * 1000)
+    },
+    {
+      id: 3,
+      user_email: "contact@nogeenanderebedrijf.nl",
+      requested_at: new Date(Date.now() - 25 * 3600 * 1000),
+      status: "expired",
+      expires_at: new Date(Date.now() - 1 * 3600 * 1000)
+    }
+  ];
+
+  // Maak de inhoud van de instellingen pagina
+  var saveButtonHtml = '';
+  if (typeof isManagerOrAdmin !== 'undefined' && isManagerOrAdmin) {
+    saveButtonHtml = '<button class="btn-primary" id="saveSettingsBtn"><i class="fas fa-save"></i> Wijzigingen opslaan</button>';
+  } else {
+    saveButtonHtml = '<div style="padding: 10px 20px; background: #f3f4f6; border-radius: 6px; color: #6b7280; font-size: 14px;"><i class="fas fa-lock"></i> Alleen managers en admins kunnen instellingen aanpassen</div>';
+  }
+  
+  // Build warning message and disabled attribute for form fields
+  var managerWarningHtml = '';
+  var disabledAttr = '';
+  if (typeof isManagerOrAdmin === 'undefined' || !isManagerOrAdmin) {
+    managerWarningHtml = '<div style="padding: 12px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; margin-bottom: 20px; color: #92400e;"><i class="fas fa-info-circle"></i> Je hebt geen rechten om deze instellingen aan te passen. Alleen managers en admins kunnen bedrijfsinformatie wijzigen.</div>';
+    disabledAttr = ' disabled';
+  }
+  
+  var settingsContent = `
+    <div class="settings-container">
+      <!-- Header Section -->
+      <div class="page-header">
+        <div>
+          <h1>Instellingen</h1>
+          <p class="text-muted">Beheer alle instellingen van het platform</p>
+        </div>
+        <div class="header-actions">
+          ${saveButtonHtml}
+        </div>
+      </div>
+      
+      <!-- Settings Tabs -->
+      <div class="settings-tabs">
+        <div class="settings-tabs-header">
+          <button class="settings-tab-btn active" data-tab="general">
+            <i class="fas fa-cog"></i> Algemeen
+          </button>
+          <button class="settings-tab-btn" data-tab="api">
+            <i class="fas fa-key"></i> API & Integraties
+          </button>
+          <button class="settings-tab-btn" data-tab="notifications">
+            <i class="fas fa-bell"></i> Notificaties
+          </button>
+          <button class="settings-tab-btn" data-tab="admins">
+            <i class="fas fa-users-cog"></i> Beheerders
+          </button>
+          <button class="settings-tab-btn" data-tab="company">
+            <i class="fas fa-building"></i> Bedrijfsinstellingen
+          </button>
+          <button class="settings-tab-btn" data-tab="billing">
+            <i class="fas fa-chart-line"></i> Billing & Quota
+          </button>
+          <button class="settings-tab-btn" data-tab="branches">
+            <i class="fas fa-industry"></i> Branches
+          </button>
+          <button class="settings-tab-btn" data-tab="security">
+            <i class="fas fa-shield-alt"></i> Beveiliging
+          </button>
+          <button class="settings-tab-btn" data-tab="logs">
+            <i class="fas fa-list"></i> Systeemlogs
+          </button>
+        </div>
+        
+        <div class="settings-tabs-content">
+          <!-- General Settings Tab -->
+          <div class="settings-tab-pane active" id="general-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Algemene instellingen</h2>
+                <p>Basisinstellingen voor het platform</p>
+              </div>
+              <div class="settings-card-body">
+                <form id="generalSettingsForm">
+                  <div class="settings-section">
+                    <h3>Bedrijfsinformatie</h3>
+                    ${managerWarningHtml}
+                    <div class="form-group">
+                      <label for="companyName">Bedrijfsnaam</label>
+                      <input type="text" id="companyName" name="companyName" class="form-control" value="GrowSocial"${disabledAttr}>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companyEmail">E-mailadres</label>
+                        <input type="email" id="companyEmail" name="companyEmail" class="form-control" value="info@growsocialmedia.nl"${disabledAttr}>
+                      </div>
+                      <div class="form-group">
+                        <label for="companyPhone">Telefoonnummer</label>
+                        <input type="tel" id="companyPhone" name="companyPhone" class="form-control" value="020-1234567"${disabledAttr}>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="companyStreet">Straat</label>
+                      <input type="text" id="companyStreet" name="companyStreet" class="form-control" placeholder="Voorbeeldstraat"${disabledAttr}>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companyHouseNumber">Huisnummer</label>
+                        <input type="text" id="companyHouseNumber" name="companyHouseNumber" class="form-control" placeholder="123"${disabledAttr}>
+                      </div>
+                      <div class="form-group">
+                        <label for="companyPostalCode">Postcode</label>
+                        <input type="text" id="companyPostalCode" name="companyPostalCode" class="form-control" placeholder="1234 AB"${disabledAttr}>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companyCity">Stad</label>
+                        <input type="text" id="companyCity" name="companyCity" class="form-control" placeholder="Amsterdam"${disabledAttr}>
+                      </div>
+                      <div class="form-group">
+                        <label for="companyCountry">Land</label>
+                        <input type="text" id="companyCountry" name="companyCountry" class="form-control" placeholder="Nederland" value="Nederland"${disabledAttr}>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Website instellingen</h3>
+                    <div class="form-group">
+                      <label for="siteTitle">Website titel</label>
+                      <input type="text" id="siteTitle" name="siteTitle" class="form-control" value="GrowSocial - Social Media Marketing">
+                    </div>
+                    <div class="form-group">
+                      <label for="siteDescription">Website beschrijving</label>
+                      <textarea id="siteDescription" name="siteDescription" class="form-control" rows="3">GrowSocial helpt bedrijven groeien met effectieve social media marketing strategieën.</textarea>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="maintenanceMode">Onderhoudsmodus</label>
+                        <div class="toggle-switch-wrapper">
+                          <label class="toggle-switch">
+                            <input type="checkbox" id="maintenanceMode" name="maintenanceMode">
+                            <span class="toggle-slider"></span>
+                          </label>
+                          <span class="toggle-label">Uit</span>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="enableRegistration">Registratie toestaan</label>
+                        <div class="toggle-switch-wrapper">
+                          <label class="toggle-switch">
+                            <input type="checkbox" id="enableRegistration" name="enableRegistration" checked>
+                            <span class="toggle-slider"></span>
+                          </label>
+                          <span class="toggle-label">Aan</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Regionale instellingen</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="defaultLanguage">Standaardtaal</label>
+                        <select id="defaultLanguage" name="defaultLanguage" class="form-control">
+                          <option value="nl" selected>Nederlands</option>
+                          <option value="en">Engels</option>
+                          <option value="de">Duits</option>
+                          <option value="fr">Frans</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="defaultTimezone">Tijdzone</label>
+                        <select id="defaultTimezone" name="defaultTimezone" class="form-control">
+                          <option value="Europe/Amsterdam" selected>Europe/Amsterdam</option>
+                          <option value="Europe/London">Europe/London</option>
+                          <option value="Europe/Berlin">Europe/Berlin</option>
+                          <option value="Europe/Paris">Europe/Paris</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="dateFormat">Datumformaat</label>
+                        <select id="dateFormat" name="dateFormat" class="form-control">
+                          <option value="DD-MM-YYYY" selected>DD-MM-YYYY</option>
+                          <option value="MM-DD-YYYY">MM-DD-YYYY</option>
+                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="defaultCurrency">Standaardvaluta</label>
+                        <select id="defaultCurrency" name="defaultCurrency" class="form-control">
+                          <option value="EUR" selected>Euro (€)</option>
+                          <option value="USD">US Dollar ($)</option>
+                          <option value="GBP">Britse Pond (£)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- API & Integrations Tab -->
+          <div class="settings-tab-pane" id="api-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>API-sleutels</h2>
+                <p>Beheer API-sleutels voor externe integraties</p>
+              </div>
+              <div class="settings-card-body">
+                <div class="api-actions">
+                  <button class="btn-primary" id="createApiKeyBtn">
+                    <i class="fas fa-plus"></i> Nieuwe API-sleutel
+                  </button>
+                </div>
+                
+                <div class="api-keys-table">
+                  <div class="api-keys-table-head">
+                    <div class="api-keys-row">
+                      <div class="api-keys-cell">Naam</div>
+                      <div class="api-keys-cell">Sleutel</div>
+                      <div class="api-keys-cell">Aangemaakt op</div>
+                      <div class="api-keys-cell">Laatst gebruikt</div>
+                      <div class="api-keys-cell">Status</div>
+                      <div class="api-keys-cell actions-cell">Acties</div>
+                    </div>
+                  </div>
+                  
+                  <div class="api-keys-table-body">
+                    ${displayApiKeys.map(function(apiKey) {
+                      return `
+                        <div class="api-keys-row" data-id="${apiKey.id}">
+                          <div class="api-keys-cell">
+                            <div class="api-key-name">${apiKey.name}</div>
+                          </div>
+                          <div class="api-keys-cell">
+                            <div class="api-key-value">
+                              <div class="api-key-secret">••••••••••••${apiKey.key.substring(apiKey.key.length - 4)}</div>
+                              <button class="btn-icon-sm show-key" data-key="${apiKey.key}" title="Toon sleutel">
+                                <i class="fas fa-eye"></i>
+                              </button>
+                              <button class="btn-icon-sm copy-key" data-key="${apiKey.key}" title="Kopieer sleutel">
+                                <i class="fas fa-copy"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div class="api-keys-cell">
+                            <div class="date-info">
+                              <div>${formatDate(apiKey.created_at)}</div>
+                              <div class="time-info">${formatTime(apiKey.created_at)}</div>
+                            </div>
+                          </div>
+                          <div class="api-keys-cell">
+                            <div class="date-info">
+                              <div>${formatDate(apiKey.last_used)}</div>
+                              <div class="time-info">${formatTime(apiKey.last_used)}</div>
+                            </div>
+                          </div>
+                          <div class="api-keys-cell">
+                            <span class="status-badge ${apiKey.status}">
+                              ${apiKey.status === 'active' ? 'Actief' : 'Inactief'}
+                            </span>
+                          </div>
+                          <div class="api-keys-cell actions-cell">
+                            <div class="action-buttons">
+                              <button class="btn-icon edit-api-key" data-id="${apiKey.id}" title="Bewerken">
+                                <i class="fas fa-edit"></i>
+                              </button>
+                              <button class="btn-icon ${apiKey.status === 'active' ? 'deactivate-api-key' : 'activate-api-key'}" data-id="${apiKey.id}" title="${apiKey.status === 'active' ? 'Deactiveren' : 'Activeren'}">
+                                <i class="fas ${apiKey.status === 'active' ? 'fa-ban' : 'fa-check'}"></i>
+                              </button>
+                              <button class="btn-icon delete-api-key" data-id="${apiKey.id}" title="Verwijderen">
+                                <i class="fas fa-trash-alt"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Integraties</h2>
+                <p>Configureer externe diensten en integraties</p>
+              </div>
+              <div class="settings-card-body">
+                <div class="integrations-list">
+                  <div class="integration-item">
+                    <div class="integration-logo">
+                      <i class="fab fa-google"></i>
+                    </div>
+                    <div class="integration-info">
+                      <h3>Google Analytics</h3>
+                      <p>Integreer Google Analytics om websiteverkeer te monitoren</p>
+                    </div>
+                    <div class="integration-status">
+                      <span class="status-badge active">Verbonden</span>
+                    </div>
+                    <div class="integration-actions">
+                      <button class="btn-outline-sm">Configureren</button>
+                      <button class="btn-outline-sm text-danger">Ontkoppelen</button>
+                    </div>
+                  </div>
+                  
+                  <div class="integration-item">
+                    <div class="integration-logo">
+                      <i class="fab fa-mailchimp"></i>
+                    </div>
+                    <div class="integration-info">
+                      <h3>Mailchimp</h3>
+                      <p>Verbind met Mailchimp voor e-mailmarketing</p>
+                    </div>
+                    <div class="integration-status">
+                      <span class="status-badge inactive">Niet verbonden</span>
+                    </div>
+                    <div class="integration-actions">
+                      <button class="btn-primary-sm">Verbinden</button>
+                    </div>
+                  </div>
+                  
+                  <div class="integration-item">
+                    <div class="integration-logo">
+                      <i class="fab fa-stripe"></i>
+                    </div>
+                    <div class="integration-info">
+                      <h3>Stripe</h3>
+                      <p>Integreer Stripe voor betalingsverwerking</p>
+                    </div>
+                    <div class="integration-status">
+                      <span class="status-badge active">Verbonden</span>
+                    </div>
+                    <div class="integration-actions">
+                      <button class="btn-outline-sm">Configureren</button>
+                      <button class="btn-outline-sm text-danger">Ontkoppelen</button>
+                    </div>
+                  </div>
+                  
+                  <div class="integration-item">
+                    <div class="integration-logo">
+                      <i class="fab fa-slack"></i>
+                    </div>
+                    <div class="integration-info">
+                      <h3>Slack</h3>
+                      <p>Ontvang meldingen in je Slack-kanalen</p>
+                    </div>
+                    <div class="integration-status">
+                      <span class="status-badge inactive">Niet verbonden</span>
+                    </div>
+                    <div class="integration-actions">
+                      <button class="btn-primary-sm">Verbinden</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Notifications Tab -->
+          <div class="settings-tab-pane" id="notifications-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>E-mailnotificaties</h2>
+                <p>Configureer e-mailmeldingen voor verschillende gebeurtenissen</p>
+              </div>
+              <div class="settings-card-body">
+                <form id="emailNotificationsForm">
+                  <div class="settings-section">
+                    <h3>E-mailprovider</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="emailProvider">Provider</label>
+                        <select id="emailProvider" name="emailProvider" class="form-control">
+                          <option value="smtp" selected>SMTP</option>
+                          <option value="mailgun">Mailgun</option>
+                          <option value="sendgrid">SendGrid</option>
+                          <option value="ses">Amazon SES</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="emailFromName">Afzendernaam</label>
+                        <input type="text" id="emailFromName" name="emailFromName" class="form-control" value="GrowSocial">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="emailFromAddress">Afzenderadres</label>
+                        <input type="email" id="emailFromAddress" name="emailFromAddress" class="form-control" value="noreply@growsocialmedia.nl">
+                      </div>
+                      <div class="form-group">
+                        <label for="emailReplyToAddress">Reply-to adres</label>
+                        <input type="email" id="emailReplyToAddress" name="emailReplyToAddress" class="form-control" value="info@growsocialmedia.nl">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>SMTP instellingen</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="smtpHost">SMTP host</label>
+                        <input type="text" id="smtpHost" name="smtpHost" class="form-control" value="smtp.example.com">
+                      </div>
+                      <div class="form-group">
+                        <label for="smtpPort">SMTP poort</label>
+                        <input type="number" id="smtpPort" name="smtpPort" class="form-control" value="587">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="smtpUsername">SMTP gebruikersnaam</label>
+                        <input type="text" id="smtpUsername" name="smtpUsername" class="form-control" value="smtp_user">
+                      </div>
+                      <div class="form-group">
+                        <label for="smtpPassword">SMTP wachtwoord</label>
+                        <input type="password" id="smtpPassword" name="smtpPassword" class="form-control" value="••••••••••••">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="smtpEncryption">Encryptie</label>
+                        <select id="smtpEncryption" name="smtpEncryption" class="form-control">
+                          <option value="tls" selected>TLS</option>
+                          <option value="ssl">SSL</option>
+                          <option value="none">Geen</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <button type="button" class="btn-outline" id="testEmailBtn">
+                          <i class="fas fa-paper-plane"></i> Test e-mail versturen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Notificatie-instellingen</h3>
+                    <div class="notification-settings">
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Notificatiegeluiden</h4>
+                          <p>Speel geluiden af bij het tonen van notificaties</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" id="notificationSoundEnabled" name="notificationSoundEnabled" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Nieuwe aanvraag</h4>
+                          <p>Stuur een e-mail wanneer een nieuwe aanvraag wordt ingediend</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="notifyNewRequest" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Nieuwe betaling</h4>
+                          <p>Stuur een e-mail wanneer een nieuwe betaling is ontvangen</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="notifyNewPayment" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Nieuwe gebruiker</h4>
+                          <p>Stuur een e-mail wanneer een nieuwe gebruiker zich registreert</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="notifyNewUser" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Wachtwoord reset</h4>
+                          <p>Stuur een e-mail wanneer een gebruiker een wachtwoord reset aanvraagt</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="notifyPasswordReset" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Systeemfouten</h4>
+                          <p>Stuur een e-mail bij kritieke systeemfouten</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="notifySystemErrors" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>SMS-notificaties</h2>
+                <p>Configureer SMS-meldingen voor belangrijke gebeurtenissen</p>
+              </div>
+              <div class="settings-card-body">
+                <form id="smsNotificationsForm">
+                  <div class="settings-section">
+                    <h3>SMS-provider</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="smsProvider">Provider</label>
+                        <select id="smsProvider" name="smsProvider" class="form-control">
+                          <option value="twilio" selected>Twilio</option>
+                          <option value="messagebird">MessageBird</option>
+                          <option value="cm">CM.com</option>
+                          <option value="nexmo">Nexmo</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label for="smsFromName">Afzendernaam</label>
+                        <input type="text" id="smsFromName" name="smsFromName" class="form-control" value="GrowSocial">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Twilio instellingen</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="twilioAccountSid">Account SID</label>
+                        <input type="text" id="twilioAccountSid" name="twilioAccountSid" class="form-control" value="YOUR_TWILIO_ACCOUNT_SID">
+                      </div>
+                      <div class="form-group">
+                        <label for="twilioAuthToken">Auth Token</label>
+                        <input type="password" id="twilioAuthToken" name="twilioAuthToken" class="form-control" value="••••••••••••••••••••••••••••••">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="twilioPhoneNumber">Telefoonnummer</label>
+                        <input type="text" id="twilioPhoneNumber" name="twilioPhoneNumber" class="form-control" value="+31612345678">
+                      </div>
+                      <div class="form-group">
+                        <button type="button" class="btn-outline" id="testSmsBtn">
+                          <i class="fas fa-sms"></i> Test SMS versturen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>SMS-notificatie-instellingen</h3>
+                    <div class="notification-settings">
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Betalingsherinneringen</h4>
+                          <p>Stuur een SMS-herinnering voor openstaande betalingen</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="smsPaymentReminders" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Afspraakherinneringen</h4>
+                          <p>Stuur een SMS-herinnering voor geplande afspraken</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="smsAppointmentReminders" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Beveiligingswaarschuwingen</h4>
+                          <p>Stuur een SMS bij verdachte inlogpogingen</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="smsSecurityAlerts" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="notification-setting">
+                        <div class="notification-info">
+                          <h4>Tweefactorauthenticatie</h4>
+                          <p>Stuur een SMS met verificatiecode voor 2FA</p>
+                        </div>
+                        <div class="notification-toggle">
+                          <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch">
+                              <input type="checkbox" name="smsTwoFactorAuth" checked>
+                              <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Aan</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Admins Tab -->
+          <div class="settings-tab-pane" id="admins-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Beheerders</h2>
+                <p>Beheer gebruikers met beheerdersrechten</p>
+              </div>
+              <div class="settings-card-body">
+                <div class="admin-actions">
+                  <button class="btn-primary" id="addAdminBtn">
+                    <i class="fas fa-user-plus"></i> Beheerder toevoegen
+                  </button>
+                </div>
+                
+                <div class="admins-table">
+                  <div class="admins-table-head">
+                    <div class="admins-row">
+                      <div class="admins-cell">Naam</div>
+                      <div class="admins-cell">E-mail</div>
+                      <div class="admins-cell">Rol</div>
+                      <div class="admins-cell">Laatste login</div>
+                      <div class="admins-cell">2FA</div>
+                      <div class="admins-cell">Status</div>
+                      <div class="admins-cell actions-cell">Acties</div>
+                    </div>
+                  </div>
+                  
+                  <div class="admins-table-body">
+                    ${displayAdmins.map(function(admin) {
+                      return `
+                        <div class="admins-row" data-id="${admin.id}">
+                          <div class="admins-cell">
+                            <div class="admin-name">${admin.name}</div>
+                          </div>
+                          <div class="admins-cell">
+                            <div class="admin-email">${admin.email}</div>
+                          </div>
+                          <div class="admins-cell">
+                            <div class="admin-role">${admin.role}</div>
+                          </div>
+                          <div class="admins-cell">
+                            <div class="date-info">
+                              <div>${formatDate(admin.last_login)}</div>
+                              <div class="time-info">${formatTime(admin.last_login)}</div>
+                            </div>
+                          </div>
+                          <div class="admins-cell">
+                            <span class="status-badge ${admin.two_factor_enabled ? 'active' : 'inactive'}">
+                              ${admin.two_factor_enabled ? 'Ingeschakeld' : 'Uitgeschakeld'}
+                            </span>
+                          </div>
+                          <div class="admins-cell">
+                            <span class="status-badge ${admin.status}">
+                              ${admin.status === 'active' ? 'Actief' : 'Inactief'}
+                            </span>
+                          </div>
+                          <div class="admins-cell actions-cell">
+                            <div class="action-buttons">
+                              <button class="btn-icon edit-admin" data-id="${admin.id}" title="Bewerken">
+                                <i class="fas fa-edit"></i>
+                              </button>
+                              <button class="btn-icon ${admin.status === 'active' ? 'deactivate-admin' : 'activate-admin'}" data-id="${admin.id}" title="${admin.status === 'active' ? 'Deactiveren' : 'Activeren'}">
+                                <i class="fas ${admin.status === 'active' ? 'fa-ban' : 'fa-check'}"></i>
+                              </button>
+                              <button class="btn-icon delete-admin" data-id="${admin.id}" title="Verwijderen">
+                                <i class="fas fa-trash-alt"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Rollen en rechten</h2>
+                <p>Beheer rollen en bijbehorende rechten</p>
+              </div>
+              <div class="settings-card-body">
+                <div class="role-actions">
+                  <button class="btn-primary" id="addRoleBtn">
+                    <i class="fas fa-plus"></i> Nieuwe rol
+                  </button>
+                </div>
+                
+                <div class="roles-list">
+                  <div class="role-item">
+                    <div class="role-header">
+                      <div class="role-name">Super Admin</div>
+                      <div class="role-actions">
+                        <button class="btn-icon-sm edit-role" title="Bewerken">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="role-description">
+                      Volledige toegang tot alle functies en instellingen
+                    </div>
+                    <div class="role-permissions">
+                      <span class="permission-badge">Alles</span>
+                    </div>
+                  </div>
+                  
+                  <div class="role-item">
+                    <div class="role-header">
+                      <div class="role-name">Admin</div>
+                      <div class="role-actions">
+                        <button class="btn-icon-sm edit-role" title="Bewerken">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon-sm delete-role" title="Verwijderen">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="role-description">
+                      Toegang tot de meeste functies, behalve systeeminstellingen
+                    </div>
+                    <div class="role-permissions">
+                      <span class="permission-badge">Aanvragen beheren</span>
+                      <span class="permission-badge">Betalingen beheren</span>
+                      <span class="permission-badge">Gebruikers beheren</span>
+                      <span class="permission-badge">Inhoud beheren</span>
+                    </div>
+                  </div>
+                  
+                  <div class="role-item">
+                    <div class="role-header">
+                      <div class="role-name">Editor</div>
+                      <div class="role-actions">
+                        <button class="btn-icon-sm edit-role" title="Bewerken">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon-sm delete-role" title="Verwijderen">
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="role-description">
+                      Kan inhoud bewerken en aanvragen bekijken
+                    </div>
+                    <div class="role-permissions">
+                      <span class="permission-badge">Aanvragen bekijken</span>
+                      <span class="permission-badge">Inhoud beheren</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Company Settings Tab -->
+          <div class="settings-tab-pane" id="company-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Bedrijfsinstellingen</h2>
+                <p>Bedrijfsgegevens voor facturen en communicatie</p>
+              </div>
+              <div class="settings-card-body">
+                <form id="companySettingsForm">
+                  <div class="settings-section">
+                    <h3>Basis informatie</h3>
+                    <div class="form-group">
+                      <label for="companySettingsName">Bedrijfsnaam <span class="text-danger">*</span></label>
+                      <input type="text" id="companySettingsName" name="companyName" class="form-control" required>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companySettingsEmail">E-mailadres <span class="text-danger">*</span></label>
+                        <input type="email" id="companySettingsEmail" name="email" class="form-control" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="companySettingsPhone">Telefoonnummer</label>
+                        <input type="tel" id="companySettingsPhone" name="phone" class="form-control">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="companySettingsWebsite">Website</label>
+                      <input type="text" id="companySettingsWebsite" name="website" class="form-control" placeholder="growsocialmedia.nl">
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Adresgegevens</h3>
+                    <div class="form-group">
+                      <label for="companySettingsAddress">Adres</label>
+                      <input type="text" id="companySettingsAddress" name="address" class="form-control">
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companySettingsPostalCode">Postcode</label>
+                        <input type="text" id="companySettingsPostalCode" name="postalCode" class="form-control">
+                      </div>
+                      <div class="form-group">
+                        <label for="companySettingsCity">Plaats</label>
+                        <input type="text" id="companySettingsCity" name="city" class="form-control">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="companySettingsCountry">Land</label>
+                      <input type="text" id="companySettingsCountry" name="country" class="form-control" value="Netherlands">
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Juridische gegevens</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="companySettingsKvK">KvK-nummer</label>
+                        <input type="text" id="companySettingsKvK" name="kvkNumber" class="form-control">
+                      </div>
+                      <div class="form-group">
+                        <label for="companySettingsVAT">BTW-nummer</label>
+                        <input type="text" id="companySettingsVAT" name="vatNumber" class="form-control">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label for="companySettingsIBAN">IBAN</label>
+                      <input type="text" id="companySettingsIBAN" name="iban" class="form-control">
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Logo</h3>
+                    <div class="form-group">
+                      <label for="companySettingsLogo">Logo URL</label>
+                      <input type="url" id="companySettingsLogo" name="logoUrl" class="form-control" placeholder="https://example.com/logo.png">
+                      <small class="form-text text-muted">URL naar het bedrijfslogo (voor facturen)</small>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                      <i class="fas fa-save"></i> Bedrijfsinstellingen opslaan
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Billing Tab -->
+          <div class="settings-tab-pane" id="billing-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Billing & Quota Management</h2>
+                <p>Beheer billing instellingen en quota voor alle gebruikers</p>
+              </div>
+              <div class="settings-card-body">
+                <!-- Automatic Billing Settings -->
+                <div class="billing-settings-section">
+                  <h3>Automatische Incasso Instellingen</h3>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="billingDate">Incasso Datum:</label>
+                      <input type="date" id="billingDate" class="form-control billing-input" value="2025-01-31" disabled>
+                    </div>
+                    <div class="form-group">
+                      <label for="billingTime">Incasso Tijd:</label>
+                      <input type="time" id="billingTime" class="form-control billing-input" value="09:00" disabled>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="billingTimezone">Tijdzone:</label>
+                    <select id="billingTimezone" class="form-control billing-input" disabled>
+                      <option value="Europe/Amsterdam" selected>Europe/Amsterdam (CET/CEST)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+                  <div class="billing-actions">
+                    <button id="editBillingSettingsBtn" class="btn-modern btn-modern-primary">
+                      <i class="fas fa-edit"></i> Bewerken
+                    </button>
+                    <button id="saveBillingSettingsBtn" class="btn-modern btn-modern-success hidden">
+                      <i class="fas fa-save"></i> Opslaan
+                    </button>
+                    <button id="cancelBillingSettingsBtn" class="btn-modern btn-modern-outline hidden">
+                      <i class="fas fa-times"></i> Annuleren
+                    </button>
+                  </div>
+                </div>
+                
+                <hr class="section-divider">
+                
+                <!-- User Selection -->
+                <div class="billing-section">
+                  <h3>Selecteer Gebruiker</h3>
+                  <div class="form-row form-row-aligned">
+                    <div class="form-group form-group-flex">
+                      <label for="billingUserSelect">Gebruiker:</label>
+                      <select id="billingUserSelect" class="form-control form-control-aligned">
+                        <option value="">Selecteer een gebruiker...</option>
+                      </select>
+                    </div>
+                    <div class="form-group form-group-flex">
+                      <label>&nbsp;</label>
+                      <button id="loadBillingUserBtn" class="btn-modern btn-modern-subtle btn-modern-compact" disabled>
+                        <i class="fas fa-user"></i> Laad Billing Data
+                      </button>
+                    </div>
+                    <div class="form-group form-group-flex">
+                      <label>&nbsp;</label>
+                      <button class="btn-modern btn-modern-outline btn-modern-compact" id="runBillingTestsBtn">
+                        <i class="fas fa-play"></i> Systeemtests runnen
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div id="billingTestResults" class="billing-test-results hidden">
+                    <pre id="billingTestOutput" class="billing-test-output"></pre>
+                  </div>
+                </div>
+
+
+                <!-- Billing Components -->
+                <div id="billingComponents" class="billing-grid hidden">
+                  <!-- Monthly Usage Card -->
+                  <div class="settings-card">
+                    <div class="settings-card-header">
+                      <h3>Deze maand</h3>
+                      <span id="billingPeriodMonth" class="card-subtitle">2024-01</span>
+                    </div>
+                    <div class="settings-card-body">
+                      <div class="billing-stats">
+                        <div class="billing-stat-item">
+                          <span class="billing-stat-label">Gebruikte leads</span>
+                          <span id="billingApprovedCount" class="billing-stat-value">0</span>
+                        </div>
+                        <div class="billing-stat-item">
+                          <span class="billing-stat-label">Quota</span>
+                          <span id="billingMonthlyQuota" class="billing-stat-value">0</span>
+                        </div>
+                      </div>
+
+                      <!-- Progress Circle -->
+                      <div class="billing-progress-container">
+                        <div class="billing-progress-circle">
+                          <svg class="billing-progress-svg" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" class="billing-progress-bg"></circle>
+                            <circle id="billingProgressCircle" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" class="billing-progress-fill"></circle>
+                          </svg>
+                          <div class="billing-progress-text">
+                            <span id="billingUsagePercentage">0%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="billing-amount-stats">
+                        <div class="billing-stat-item">
+                          <span class="billing-stat-label">Uitgegeven bedrag</span>
+                          <span id="billingApprovedAmount" class="billing-stat-value">€0.00</span>
+                        </div>
+                        <div id="billingBalanceSection" class="billing-stat-item hidden">
+                          <span class="billing-stat-label">Huidig saldo</span>
+                          <span id="billingBalance" class="billing-stat-value">€0.00</span>
+                        </div>
+                      </div>
+
+                      <div class="billing-reset-info">
+                        <p class="billing-reset-text">Reset op 1e dag volgende maand</p>
+                        <p id="billingPaymentMethodInfo" class="billing-payment-method">SEPA: afrekening einde maand</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Lead Quota Slider -->
+                  <div class="settings-card">
+                    <div class="settings-card-header">
+                      <h3>Lead Quota</h3>
+                      <span id="billingLowBalanceWarning" class="warning-badge hidden">Saldo te laag — eerst opwaarderen</span>
+                    </div>
+                    <div class="settings-card-body">
+                      <!-- Current Usage -->
+                      <div class="billing-usage-overview">
+                        <div class="billing-usage-item">
+                          <span class="billing-usage-label">Huidige quota</span>
+                          <span id="billingCurrentQuota" class="billing-usage-value">0 leads/maand</span>
+                        </div>
+                        <div class="billing-usage-item">
+                          <span class="billing-usage-label">Gebruikt deze maand</span>
+                          <span id="billingCurrentUsage" class="billing-usage-value">0 leads</span>
+                        </div>
+                      </div>
+
+                      <!-- Progress Bar -->
+                      <div class="billing-progress-bar-container">
+                        <div class="billing-progress-bar">
+                          <div id="billingProgressBar" class="billing-progress-fill" style="width: 0%"></div>
+                        </div>
+                      </div>
+
+                      <!-- Status Messages -->
+                      <div class="billing-status-messages">
+                        <p id="billingQuotaReached" class="billing-status-message billing-status-error hidden">Limiet bereikt</p>
+                        <p id="billingNearLimit" class="billing-status-message billing-status-warning hidden">Bijna limiet bereikt (≥80%)</p>
+                      </div>
+
+                      <!-- Quota Slider -->
+                      <div class="billing-quota-slider-container">
+                        <label class="billing-slider-label">
+                          Leads per maand: <span id="billingSliderValue">0</span>
+                        </label>
+                        <input type="range" id="billingQuotaSlider" min="0" max="1000" value="0" class="billing-quota-slider" />
+                        <div class="billing-slider-labels">
+                          <span>0</span>
+                          <span>1000</span>
+                        </div>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div class="billing-action-buttons">
+                        <button id="billingSaveBtn" class="btn-primary btn-full" disabled>
+                          <i class="fas fa-save"></i> Opslaan
+                        </button>
+                        <button id="billingTopUpBtn" class="btn-success hidden">
+                          <i class="fas fa-plus"></i> Saldo opwaarderen
+                        </button>
+                      </div>
+
+                      <!-- Error Display -->
+                      <div id="billingErrorDisplay" class="billing-error-display hidden">
+                        <p class="billing-error-title">Error:</p>
+                        <p id="billingErrorMessage" class="billing-error-message"></p>
+                      </div>
+
+                      <!-- Payment Method Info -->
+                      <div class="billing-payment-info">
+                        <p><strong>SEPA:</strong> Afrekening einde maand · <strong>Creditcard:</strong> Prepaid via saldo</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+          </div>
+          
+          <!-- Branches Tab -->
+          <div class="settings-tab-pane" id="branches-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Branches Beheer</h2>
+                <p>Beheer alle branches (industries) en hun prijzen per lead</p>
+              </div>
+              
+              <div class="settings-card-content">
+                <div class="billing-section">
+                  
+                  <!-- Industries List -->
+                  <div class="industries-container">
+                    <div class="industries-header">
+                      <button id="addIndustryBtn" class="btn-modern btn-modern-outline">
+                        <i class="fas fa-plus"></i> Branche Toevoegen
+                      </button>
+                    </div>
+                    
+                    <div class="industries-table-container">
+                      <table id="industriesTable" class="data-table">
+                        <thead>
+                          <tr>
+                            <th>Branche</th>
+                            <th>Prijs per Lead</th>
+                            <th>Beschrijving</th>
+                            <th>Acties</th>
+                          </tr>
+                        </thead>
+                        <tbody id="industriesTableBody">
+                          <!-- Industries will be loaded here -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Security Tab -->
+          <div class="settings-tab-pane" id="security-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Beveiligingsinstellingen</h2>
+                <p>Configureer beveiligingsopties voor het platform</p>
+              </div>
+              <div class="settings-card-body">
+                <form id="securitySettingsForm">
+                  <div class="settings-section">
+                    <h3>Wachtwoordbeleid</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="minPasswordLength">Minimale wachtwoordlengte</label>
+                        <input type="number" id="minPasswordLength" name="minPasswordLength" class="form-control" value="8" min="6" max="32">
+                      </div>
+                      <div class="form-group">
+                        <label for="passwordExpiration">Wachtwoord verloopt na</label>
+                        <div class="input-group">
+                          <input type="number" id="passwordExpiration" name="passwordExpiration" class="form-control" value="90" min="0">
+                          <div class="input-group-append">dagen</div>
+                        </div>
+                        <div class="form-hint">0 = nooit verlopen</div>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>Wachtwoordvereisten</label>
+                      <div class="checkbox-group">
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="requireUppercase" name="requireUppercase" checked>
+                          <label for="requireUppercase">Hoofdletters vereist</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="requireLowercase" name="requireLowercase" checked>
+                          <label for="requireLowercase">Kleine letters vereist</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="requireNumbers" name="requireNumbers" checked>
+                          <label for="requireNumbers">Cijfers vereist</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="requireSpecialChars" name="requireSpecialChars" checked>
+                          <label for="requireSpecialChars">Speciale tekens vereist</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Tweefactorauthenticatie (2FA)</h3>
+                    <div class="form-group">
+                      <label for="twoFactorPolicy">2FA-beleid</label>
+                      <select id="twoFactorPolicy" name="twoFactorPolicy" class="form-control">
+                        <option value="optional">Optioneel voor alle gebruikers</option>
+                        <option value="required_admins" selected>Verplicht voor beheerders, optioneel voor anderen</option>
+                        <option value="required_all">Verplicht voor alle gebruikers</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>2FA-methoden</label>
+                      <div class="checkbox-group">
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="twoFactorSms" name="twoFactorSms" checked>
+                          <label for="twoFactorSms">SMS</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="twoFactorEmail" name="twoFactorEmail" checked>
+                          <label for="twoFactorEmail">E-mail</label>
+                        </div>
+                        <div class="checkbox-wrapper">
+                          <input type="checkbox" id="twoFactorApp" name="twoFactorApp" checked>
+                          <label for="twoFactorApp">Authenticator-app</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Wachtwoord reset aanvragen</h3>
+                    <div class="reset-requests-table">
+                      <div class="reset-requests-table-head">
+                        <div class="reset-requests-row">
+                          <div class="reset-requests-cell">E-mail</div>
+                          <div class="reset-requests-cell">Aangevraagd op</div>
+                          <div class="reset-requests-cell">Verloopt op</div>
+                          <div class="reset-requests-cell">Status</div>
+                          <div class="reset-requests-cell actions-cell">Acties</div>
+                        </div>
+                      </div>
+                      
+                      <div class="reset-requests-table-body">
+                        ${displayResetRequests.map(function(request) {
+                          return `
+                            <div class="reset-requests-row" data-id="${request.id}">
+                              <div class="reset-requests-cell">
+                                <div class="reset-request-email">${request.user_email}</div>
+                              </div>
+                              <div class="reset-requests-cell">
+                                <div class="date-info">
+                                  <div>${formatDate(request.requested_at)}</div>
+                                  <div class="time-info">${formatTime(request.requested_at)}</div>
+                                </div>
+                              </div>
+                              <div class="reset-requests-cell">
+                                <div class="date-info">
+                                  <div>${formatDate(request.expires_at)}</div>
+                                  <div class="time-info">${formatTime(request.expires_at)}</div>
+                                </div>
+                              </div>
+                              <div class="reset-requests-cell">
+                                <span class="status-badge ${request.status}">
+                                  ${request.status === 'pending' ? 'In afwachting' : 
+                                    request.status === 'completed' ? 'Voltooid' : 'Verlopen'}
+                                </span>
+                              </div>
+                              <div class="reset-requests-cell actions-cell">
+                                <div class="action-buttons">
+                                  ${request.status === 'pending' ? `
+                                    <button class="btn-icon approve-reset" data-id="${request.id}" title="Goedkeuren">
+                                      <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn-icon reject-reset" data-id="${request.id}" title="Afwijzen">
+                                      <i class="fas fa-times"></i>
+                                    </button>
+                                  ` : `
+                                    <button class="btn-icon delete-reset" data-id="${request.id}" title="Verwijderen">
+                                      <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                  `}
+                                </div>
+                              </div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="settings-section">
+                    <h3>Sessie-instellingen</h3>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="sessionTimeout">Sessie timeout</label>
+                        <div class="input-group">
+                          <input type="number" id="sessionTimeout" name="sessionTimeout" class="form-control" value="30" min="5">
+                          <div class="input-group-append">minuten</div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="maxLoginAttempts">Max. inlogpogingen</label>
+                        <input type="number" id="maxLoginAttempts" name="maxLoginAttempts" class="form-control" value="5" min="1" max="10">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label for="lockoutDuration">Blokkeerperiode na mislukte pogingen</label>
+                        <div class="input-group">
+                          <input type="number" id="lockoutDuration" name="lockoutDuration" class="form-control" value="15" min="1">
+                          <div class="input-group-append">minuten</div>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="rememberMeDuration">Onthoud mij duur</label>
+                        <div class="input-group">
+                          <input type="number" id="rememberMeDuration" name="rememberMeDuration" class="form-control" value="14" min="1">
+                          <div class="input-group-append">dagen</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Logs Tab -->
+          <div class="settings-tab-pane" id="logs-tab">
+            <div class="settings-card">
+              <div class="settings-card-header">
+                <h2>Systeemlogs</h2>
+                <p>Bekijk en beheer systeemlogs voor debugging</p>
+              </div>
+              <div class="settings-card-body">
+                <div class="logs-filter">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="logTypeFilter">Type</label>
+                      <select id="logTypeFilter" class="form-control">
+                        <option value="all">Alle types</option>
+                        <option value="error">Fouten</option>
+                        <option value="warning">Waarschuwingen</option>
+                        <option value="info">Informatie</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="logSourceFilter">Bron</label>
+                      <select id="logSourceFilter" class="form-control">
+                        <option value="all">Alle bronnen</option>
+                        <option value="System">Systeem</option>
+                        <option value="API Server">API Server</option>
+                        <option value="Web Server">Web Server</option>
+                        <option value="Backup System">Backup Systeem</option>
+                        <option value="Payment System">Betalingssysteem</option>
+                        <option value="Auth System">Authenticatiesysteem</option>
+                        <option value="Billing System">Betalingssysteem</option>
+                        <option value="Cron System">Cron Systeem</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="logDateFilter">Periode</label>
+                      <select id="logDateFilter" class="form-control">
+                        <option value="all">Alle tijd</option>
+                        <option value="today">Vandaag</option>
+                        <option value="yesterday">Gisteren</option>
+                        <option value="this_week">Deze week</option>
+                        <option value="this_month">Deze maand</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>&nbsp;</label>
+                      <button class="btn-outline" id="clearLogsBtn">
+                        <i class="fas fa-trash-alt"></i> Logs wissen
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="logs-table">
+                  <div class="logs-table-head">
+                    <div class="logs-row">
+                      <div class="logs-cell">Type</div>
+                      <div class="logs-cell">Bericht</div>
+                      <div class="logs-cell">Uitgevoerd door</div>
+                      <div class="logs-cell">Bron</div>
+                      <div class="logs-cell">Tijdstip</div>
+                      <div class="logs-cell">Prioriteit</div>
+                    </div>
+                  </div>
+                  
+                  <div class="logs-table-body">
+                    ${displayLogs.length > 0 ? displayLogs.map(function(log) {
+                      return `
+                        <div class="logs-row" data-id="${log.id}" data-type="${log.log_type}" data-source="${log.source}">
+                          <div class="logs-cell">
+                            <span class="log-type-badge ${log.log_type}">
+                              ${log.log_type === 'error' ? 'Fout' : 
+                                log.log_type === 'warning' ? 'Waarschuwing' : 
+                                log.log_type === 'success' ? 'Succes' :
+                                log.log_type === 'critical' ? 'Kritiek' : 'Informatie'}
+                            </span>
+                          </div>
+                          <div class="logs-cell">
+                            <div class="log-message">
+                              <div class="log-title">${log.title}</div>
+                              <div class="log-description">${log.message}</div>
+                              ${log.details ? `<div class="log-details">${log.details}</div>` : ''}
+                            </div>
+                          </div>
+                          <div class="logs-cell">
+                            <div class="log-performed-by">
+                              <div class="performed-by-name">${log.metadata?.performed_by || 'Systeem'}</div>
+                              ${log.metadata?.is_admin_action ? '<div class="admin-badge">Admin</div>' : ''}
+                              ${log.metadata?.performed_by_email ? `<div class="performed-by-email">${log.metadata.performed_by_email}</div>` : ''}
+                            </div>
+                          </div>
+                          <div class="logs-cell">
+                            <div class="log-source">${getSourceTranslation(log.source)}</div>
+                          </div>
+                          <div class="logs-cell">
+                            <div class="date-info">
+                              <div>${formatDate(log.created_at)}</div>
+                              <div class="time-info">${formatTime(log.created_at)}</div>
+                            </div>
+                          </div>
+                          <div class="logs-cell">
+                            <div class="log-severity">
+                              <span class="severity-badge ${log.severity}">${log.severity}</span>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                    }).join('') : `
+                      <div class="logs-empty-state">
+                        <div class="empty-state-icon">
+                          <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="empty-state-content">
+                          <h3>Geen systeemlogs gevonden</h3>
+                          <p>Er zijn nog geen systeemlogs beschikbaar. Logs worden automatisch aangemaakt wanneer er activiteiten plaatsvinden.</p>
+                        </div>
+                      </div>
+                    `}
+                  </div>
+                </div>
+                
+                <div class="logs-pagination">
+                  <button class="btn-outline-sm" disabled>
+                    <i class="fas fa-chevron-left"></i> Vorige
+                  </button>
+                  <span class="pagination-info">Pagina 1 van 1</span>
+                  <button class="btn-outline-sm" disabled>
+                    Volgende <i class="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add Admin Modal -->
+    <div class="modal" id="addAdminModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Beheerder toevoegen</h2>
+          <button class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="addAdminForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="adminName">Naam</label>
+                <input type="text" id="adminName" name="adminName" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="adminEmail">E-mailadres</label>
+                <input type="email" id="adminEmail" name="adminEmail" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="adminRole">Rol</label>
+                <select id="adminRole" name="adminRole" class="form-control" required>
+                  <option value="">-- Selecteer een rol --</option>
+                  <option value="Super Admin">Super Admin</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Editor">Editor</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="adminPassword">Wachtwoord</label>
+                <input type="password" id="adminPassword" name="adminPassword" class="form-control" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="adminConfirmPassword">Bevestig wachtwoord</label>
+                <input type="password" id="adminConfirmPassword" name="adminConfirmPassword" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="adminRequire2FA">Tweefactorauthenticatie</label>
+                <div class="toggle-switch-wrapper">
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="adminRequire2FA" name="adminRequire2FA" checked>
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">Vereist</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-outline" id="cancelAddAdminBtn">Annuleren</button>
+              <button type="submit" class="btn-primary" id="confirmAddAdminBtn">Toevoegen</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Create API Key Modal -->
+    <div class="modal" id="createApiKeyModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Nieuwe API-sleutel</h2>
+          <button class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="createApiKeyForm">
+            <div class="form-group">
+              <label for="apiKeyName">Naam</label>
+              <input type="text" id="apiKeyName" name="apiKeyName" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="apiKeyExpiration">Verloopt na</label>
+              <select id="apiKeyExpiration" name="apiKeyExpiration" class="form-control">
+                <option value="never">Nooit</option>
+                <option value="30days">30 dagen</option>
+                <option value="90days">90 dagen</option>
+                <option value="1year">1 jaar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Toegangsrechten</label>
+              <div class="checkbox-group">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="apiReadAccess" name="apiReadAccess" checked>
+                  <label for="apiReadAccess">Lezen</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="apiWriteAccess" name="apiWriteAccess">
+                  <label for="apiWriteAccess">Schrijven</label>
+                </div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="apiDeleteAccess" name="apiDeleteAccess">
+                  <label for="apiDeleteAccess">Verwijderen</label>
+                </div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-outline" id="cancelCreateApiKeyBtn">Annuleren</button>
+              <button type="submit" class="btn-primary" id="confirmCreateApiKeyBtn">Aanmaken</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Confirm Save Settings Modal -->
+    <div class="modal" id="confirmSaveSettingsModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Bevestig wijzigingen</h2>
+          <button class="modal-close" id="cancelSaveSettingsBtn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px;">
+            <div style="font-size: 32px; color: #f59e0b;">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #111827;">
+                Weet je zeker dat je deze bedrijfsinformatie wilt aanpassen?
+              </p>
+              <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+                Deze wijzigingen worden direct toegepast op alle facturen in het systeem. 
+                Alle nieuwe en bestaande facturen zullen de aangepaste bedrijfsgegevens tonen, 
+                inclusief bedrijfsnaam, adres, e-mailadres en telefoonnummer.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions" style="padding: 20px 24px; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; justify-content: flex-end;">
+          <button type="button" class="btn-outline" id="cancelSaveSettingsModalBtn">Annuleren</button>
+          <button type="button" class="btn-primary" id="confirmSaveSettingsBtn">
+            <i class="fas fa-save"></i> Ja, opslaan
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- View Log Modal -->
+    <div class="modal" id="viewLogModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Logdetails</h2>
+          <button class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="log-details">
+            <div class="log-detail-item">
+              <div class="log-detail-label">Type</div>
+              <div class="log-detail-value" id="logDetailType">
+                <span class="log-type-badge error">Fout</span>
+              </div>
+            </div>
+            <div class="log-detail-item">
+              <div class="log-detail-label">Bericht</div>
+              <div class="log-detail-value" id="logDetailMessage">Database connection failed</div>
+            </div>
+            <div class="log-detail-item">
+              <div class="log-detail-label">Bron</div>
+              <div class="log-detail-value" id="logDetailSource">API Server</div>
+            </div>
+            <div class="log-detail-item">
+              <div class="log-detail-label">Tijdstip</div>
+              <div class="log-detail-value" id="logDetailTimestamp">01-07-2023 14:30</div>
+            </div>
+            <div class="log-detail-item">
+              <div class="log-detail-label">Details</div>
+              <div class="log-detail-value log-detail-code" id="logDetailDetails">Connection timeout after 30 seconds</div>
+            </div>
+            <div class="log-detail-item">
+              <div class="log-detail-label">Stack trace</div>
+              <pre class="log-detail-code" id="logDetailStack">Error: Connection timeout
+  at Database.connect (/app/database.js:45:12)
+  at APIServer.initialize (/app/server.js:23:8)
+  at Server.start (/app/index.js:10:4)</pre>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-outline" id="closeLogDetailBtn">Sluiten</button>
+            <button type="button" class="btn-primary" id="downloadLogBtn">
+              <i class="fas fa-download"></i> Downloaden
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+%>
+
+<%- include('../layouts/admin', { 
+    title: 'Instellingen', 
+    activeMenu: 'settings',
+    user: user,
+    body: settingsContent
+}) %>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+  // Make isManagerOrAdmin available to JavaScript
+  window.isManagerOrAdmin = <% if (typeof isManagerOrAdmin !== 'undefined' && isManagerOrAdmin) { %>true<% } else { %>false<% } %>;
+  // Initialize Supabase client for billing
+  const supabaseUrl = '<%= process.env.SUPABASE_URL %>';
+  const supabaseAnonKey = '<%= process.env.SUPABASE_ANON_KEY %>';
+  const supabaseServiceKey = '<%= process.env.SUPABASE_SERVICE_ROLE_KEY %>';
+  
+  console.log('Supabase Environment Variables:');
+  console.log('SUPABASE_URL:', supabaseUrl);
+  console.log('SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing');
+  console.log('SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? 'Present' : 'Missing');
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables');
+    console.error('SUPABASE_URL:', supabaseUrl);
+    console.error('SUPABASE_ANON_KEY:', supabaseAnonKey);
+  }
+  
+  // Use service role key for admin operations (bypasses RLS)
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  console.log('Supabase client created:', supabase);
+  
+  // Notification system
+  function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        <span class="notification-message">${message}</span>
+        <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.remove();
+      }
+    }, 5000);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Settings Tabs
+    const tabButtons = document.querySelectorAll('.settings-tab-btn');
+    const tabPanes = document.querySelectorAll('.settings-tab-pane');
+    
+    tabButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Remove active class from all buttons and panes
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabPanes.forEach(pane => pane.classList.remove('active'));
+        
+        // Add active class to clicked button
+        this.classList.add('active');
+        
+        // Show corresponding tab pane
+        const tabId = this.getAttribute('data-tab');
+        document.getElementById(tabId + '-tab').classList.add('active');
+      });
+    });
+    
+    // Toggle switches
+    const toggleSwitches = document.querySelectorAll('.toggle-switch input[type="checkbox"]');
+    
+    toggleSwitches.forEach(toggle => {
+      const toggleLabel = toggle.closest('.toggle-switch-wrapper').querySelector('.toggle-label');
+      
+      // Set initial state
+      toggleLabel.textContent = toggle.checked ? 'Aan' : 'Uit';
+      
+      toggle.addEventListener('change', function() {
+        toggleLabel.textContent = this.checked ? 'Aan' : 'Uit';
+      });
+    });
+    
+    // API Key actions
+    const createApiKeyBtn = document.getElementById('createApiKeyBtn');
+    const createApiKeyModal = document.getElementById('createApiKeyModal');
+    const cancelCreateApiKeyBtn = document.getElementById('cancelCreateApiKeyBtn');
+    const confirmCreateApiKeyBtn = document.getElementById('confirmCreateApiKeyBtn');
+    
+    createApiKeyBtn.addEventListener('click', function() {
+      createApiKeyModal.classList.add('show');
+    });
+    
+    cancelCreateApiKeyBtn.addEventListener('click', function() {
+      createApiKeyModal.classList.remove('show');
+    });
+    
+    document.getElementById('createApiKeyForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // In a real application, you would send an AJAX request to create the API key
+      alert('API-sleutel aangemaakt!');
+      createApiKeyModal.classList.remove('show');
+    });
+    
+    // Show/Copy API Key
+    const showKeyBtns = document.querySelectorAll('.show-key');
+    const copyKeyBtns = document.querySelectorAll('.copy-key');
+    
+    showKeyBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const keyValue = this.getAttribute('data-key');
+        const keySecret = this.closest('.api-key-value').querySelector('.api-key-secret');
+        
+        if (keySecret.textContent.includes('•')) {
+          keySecret.textContent = keyValue;
+          this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+          
+          // Auto-hide after 30 seconds
+          setTimeout(() => {
+            keySecret.textContent = '••••••••••••' + keyValue.substring(keyValue.length - 4);
+            this.innerHTML = '<i class="fas fa-eye"></i>';
+          }, 30000);
+        } else {
+          keySecret.textContent = '••••••••••••' + keyValue.substring(keyValue.length - 4);
+          this.innerHTML = '<i class="fas fa-eye"></i>';
+        }
+      });
+    });
+    
+    copyKeyBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const keyValue = this.getAttribute('data-key');
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(keyValue).then(() => {
+          // Show success message
+          const originalHTML = this.innerHTML;
+          this.innerHTML = '<i class="fas fa-check"></i>';
+          
+          setTimeout(() => {
+            this.innerHTML = originalHTML;
+          }, 2000);
+        });
+      });
+    });
+    
+    // Admin actions
+    const addAdminBtn = document.getElementById('addAdminBtn');
+    const addAdminModal = document.getElementById('addAdminModal');
+    const cancelAddAdminBtn = document.getElementById('cancelAddAdminBtn');
+    
+    addAdminBtn.addEventListener('click', function() {
+      addAdminModal.classList.add('show');
+    });
+    
+    cancelAddAdminBtn.addEventListener('click', function() {
+      addAdminModal.classList.remove('show');
+    });
+    
+    document.getElementById('addAdminForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      // In a real application, you would validate the form and send an AJAX request
+      const password = document.getElementById('adminPassword').value;
+      const confirmPassword = document.getElementById('adminConfirmPassword').value;
+      
+      if (password !== confirmPassword) {
+        alert('Wachtwoorden komen niet overeen!');
+        return;
+      }
+      
+      alert('Beheerder toegevoegd!');
+      addAdminModal.classList.remove('show');
+      
+      // Reset form
+      this.reset();
+    });
+    
+    // Log actions
+    const viewLogBtns = document.querySelectorAll('.view-log');
+    const viewLogModal = document.getElementById('viewLogModal');
+    const closeLogDetailBtn = document.getElementById('closeLogDetailBtn');
+    
+    viewLogBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const logId = this.getAttribute('data-id');
+        
+        // In a real application, you would fetch log details from the server
+        // For now, we'll use the sample data
+        const log = displayLogs.find(l => l.id == logId);
+        
+        if (log) {
+          // Update modal content
+          const logTypeElement = document.getElementById('logDetailType');
+          logTypeElement.innerHTML = `<span class="log-type-badge ${log.type}">${
+            log.type === 'error' ? 'Fout' : 
+            log.type === 'warning' ? 'Waarschuwing' : 'Info'
+          }</span>`;
+          
+          document.getElementById('logDetailMessage').textContent = log.message;
+          document.getElementById('logDetailSource').textContent = log.source;
+          document.getElementById('logDetailTimestamp').textContent = `${formatDate(log.timestamp)} ${formatTime(log.timestamp)}`;
+          document.getElementById('logDetailDetails').textContent = log.details;
+          
+          // Show modal
+          viewLogModal.classList.add('show');
+        }
+      });
+    });
+    
+    closeLogDetailBtn.addEventListener('click', function() {
+      viewLogModal.classList.remove('show');
+    });
+    
+    // Log filtering
+    const logTypeFilter = document.getElementById('logTypeFilter');
+    const logSourceFilter = document.getElementById('logSourceFilter');
+    const logDateFilter = document.getElementById('logDateFilter');
+    
+    function applyLogFilters() {
+      const typeValue = logTypeFilter.value;
+      const sourceValue = logSourceFilter.value;
+      const dateValue = logDateFilter.value;
+      
+      const logRows = document.querySelectorAll('.logs-table-body .logs-row');
+      
+      logRows.forEach(row => {
+        let showRow = true;
+        
+        // Type filter
+        if (typeValue !== 'all') {
+          const rowType = row.getAttribute('data-type');
+          if (typeValue !== rowType) {
+            showRow = false;
+          }
+        }
+        
+        // Source filter
+        if (sourceValue !== 'all' && showRow) {
+          const rowSource = row.getAttribute('data-source');
+          if (sourceValue !== rowSource) {
+            showRow = false;
+          }
+        }
+        
+        // Date filter
+        // In a real application, you would implement date filtering here
+        
+        row.style.display = showRow ? '' : 'none';
+      });
+    }
+    
+    logTypeFilter.addEventListener('change', applyLogFilters);
+    logSourceFilter.addEventListener('change', applyLogFilters);
+    logDateFilter.addEventListener('change', applyLogFilters);
+    
+    // Clear logs button
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    
+    clearLogsBtn.addEventListener('click', function() {
+      if (confirm('Weet je zeker dat je alle logs wilt wissen?')) {
+        // In a real application, you would send an AJAX request to clear logs
+        const logRows = document.querySelectorAll('.logs-table-body .logs-row');
+        logRows.forEach(row => row.remove());
+        
+        alert('Logs gewist!');
+      }
+    });
+    
+    // General Settings Form Handler
+    const generalSettingsForm = document.getElementById('generalSettingsForm');
+    if (generalSettingsForm) {
+      // Helper function to parse address string into street and house number
+      function parseAddress(addressString) {
+        if (!addressString || !addressString.trim()) {
+          return { street: '', houseNumber: '' };
+        }
+        
+        // Try to match patterns like "Straatnaam 123" or "Straatnaam 123A"
+        const addressPattern = /^(.+?)\s+(\d+[A-Za-z]?)$/;
+        const match = addressString.trim().match(addressPattern);
+        
+        if (match) {
+          return {
+            street: match[1].trim(),
+            houseNumber: match[2].trim()
+          };
+        }
+        
+        // If no match, treat entire string as street
+        return {
+          street: addressString.trim(),
+          houseNumber: ''
+        };
+      }
+      
+      // Load company settings into General Settings form
+      function loadGeneralSettings() {
+        fetch('/admin/api/company-settings')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.data) {
+              const settings = data.data;
+              document.getElementById('companyName').value = settings.company_name || '';
+              document.getElementById('companyEmail').value = settings.email || '';
+              document.getElementById('companyPhone').value = settings.phone || '';
+              
+              // Parse address into street and house number
+              const { street, houseNumber } = parseAddress(settings.address || '');
+              document.getElementById('companyStreet').value = street;
+              document.getElementById('companyHouseNumber').value = houseNumber;
+              document.getElementById('companyPostalCode').value = settings.postal_code || '';
+              document.getElementById('companyCity').value = settings.city || '';
+              document.getElementById('companyCountry').value = settings.country || 'Nederland';
+            }
+          })
+          .catch(err => {
+            console.error('Error loading company settings:', err);
+            showNotification('Fout bij laden bedrijfsinstellingen', 'error');
+          });
+      }
+      
+      // Load settings when general tab is shown or on page load
+      const generalTabBtn = document.querySelector('[data-tab="general"]');
+      if (generalTabBtn) {
+        generalTabBtn.addEventListener('click', function() {
+          setTimeout(loadGeneralSettings, 100);
+        });
+      }
+      
+      // Load on page load if general tab is active
+      if (document.getElementById('general-tab')?.classList.contains('active')) {
+        setTimeout(loadGeneralSettings, 100);
+      }
+      
+      // Handle form submission
+      generalSettingsForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await saveGeneralSettings();
+      });
+      
+      // Function to save general settings
+      async function saveGeneralSettings() {
+        const companyName = document.getElementById('companyName').value.trim();
+        const companyEmail = document.getElementById('companyEmail').value.trim();
+        const companyPhone = document.getElementById('companyPhone').value.trim();
+        const companyStreet = document.getElementById('companyStreet').value.trim();
+        const companyHouseNumber = document.getElementById('companyHouseNumber').value.trim();
+        const companyPostalCode = document.getElementById('companyPostalCode').value.trim();
+        const companyCity = document.getElementById('companyCity').value.trim();
+        const companyCountry = document.getElementById('companyCountry').value.trim();
+        
+        // Combine street and house number into address
+        const address = [companyStreet, companyHouseNumber].filter(Boolean).join(' ').trim();
+        
+        // Validate required fields
+        if (!companyName || !companyEmail) {
+          showNotification('Bedrijfsnaam en e-mailadres zijn verplicht', 'error');
+          return;
+        }
+        
+        const formData = {
+          companyName: companyName,
+          email: companyEmail,
+          phone: companyPhone || null,
+          address: address || null,
+          postalCode: companyPostalCode || null,
+          city: companyCity || null,
+          country: companyCountry || 'Netherlands'
+        };
+        
+        try {
+          const response = await fetch('/admin/api/company-settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            showNotification('Bedrijfsinformatie succesvol opgeslagen', 'success');
+          } else {
+            showNotification(result.error || 'Fout bij opslaan bedrijfsinformatie', 'error');
+          }
+        } catch (error) {
+          console.error('Error saving general settings:', error);
+          showNotification('Fout bij opslaan bedrijfsinformatie', 'error');
+        }
+      }
+      
+      // Make saveGeneralSettings available globally for saveSettingsBtn
+      window.saveGeneralSettings = saveGeneralSettings;
+    }
+    
+    // Company Settings Form Handler
+    const companySettingsForm = document.getElementById('companySettingsForm');
+    if (companySettingsForm) {
+      // Load company settings on tab show
+      function loadCompanySettings() {
+        fetch('/admin/api/company-settings')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.data) {
+              const settings = data.data;
+              document.getElementById('companySettingsName').value = settings.company_name || '';
+              document.getElementById('companySettingsEmail').value = settings.email || '';
+              document.getElementById('companySettingsPhone').value = settings.phone || '';
+              document.getElementById('companySettingsWebsite').value = settings.website || '';
+              document.getElementById('companySettingsAddress').value = settings.address || '';
+              document.getElementById('companySettingsPostalCode').value = settings.postal_code || '';
+              document.getElementById('companySettingsCity').value = settings.city || '';
+              document.getElementById('companySettingsCountry').value = settings.country || 'Netherlands';
+              document.getElementById('companySettingsKvK').value = settings.kvk_number || '';
+              document.getElementById('companySettingsVAT').value = settings.vat_number || '';
+              document.getElementById('companySettingsIBAN').value = settings.iban || '';
+              document.getElementById('companySettingsLogo').value = settings.logo_url || '';
+            }
+          })
+          .catch(err => {
+            console.error('Error loading company settings:', err);
+            showNotification('Fout bij laden bedrijfsinstellingen', 'error');
+          });
+      }
+      
+      // Load settings when company tab is shown
+      const companyTabBtn = document.querySelector('[data-tab="company"]');
+      if (companyTabBtn) {
+        companyTabBtn.addEventListener('click', function() {
+          setTimeout(loadCompanySettings, 100); // Small delay to ensure tab is visible
+        });
+      }
+      
+      // Handle form submission
+      companySettingsForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+          companyName: document.getElementById('companySettingsName').value,
+          email: document.getElementById('companySettingsEmail').value,
+          phone: document.getElementById('companySettingsPhone').value,
+          website: document.getElementById('companySettingsWebsite').value,
+          address: document.getElementById('companySettingsAddress').value,
+          postalCode: document.getElementById('companySettingsPostalCode').value,
+          city: document.getElementById('companySettingsCity').value,
+          country: document.getElementById('companySettingsCountry').value,
+          kvkNumber: document.getElementById('companySettingsKvK').value,
+          vatNumber: document.getElementById('companySettingsVAT').value,
+          iban: document.getElementById('companySettingsIBAN').value,
+          logoUrl: document.getElementById('companySettingsLogo').value
+        };
+        
+        try {
+          const response = await fetch('/admin/api/company-settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            showNotification(result.message || 'Bedrijfsinstellingen succesvol opgeslagen', 'success');
+          } else {
+            showNotification(result.error || 'Fout bij opslaan bedrijfsinstellingen', 'error');
+          }
+        } catch (error) {
+          console.error('Error saving company settings:', error);
+          showNotification('Fout bij opslaan bedrijfsinstellingen', 'error');
+        }
+      });
+    }
+    
+    // Confirm Save Settings Modal
+    const confirmSaveSettingsModal = document.getElementById('confirmSaveSettingsModal');
+    const cancelSaveSettingsBtn = document.getElementById('cancelSaveSettingsBtn');
+    const cancelSaveSettingsModalBtn = document.getElementById('cancelSaveSettingsModalBtn');
+    const confirmSaveSettingsBtn = document.getElementById('confirmSaveSettingsBtn');
+    
+    // Function to actually save settings
+    async function executeSaveSettings() {
+      // Determine which tab is active and save the corresponding form
+      const activeTab = document.querySelector('.settings-tab-pane.active');
+      
+      if (activeTab) {
+        const tabId = activeTab.id;
+        
+        if (tabId === 'general-tab') {
+          // Save General Settings
+          const generalForm = document.getElementById('generalSettingsForm');
+          if (generalForm && window.saveGeneralSettings) {
+            await window.saveGeneralSettings();
+          } else {
+            showNotification('Geen formulier gevonden om op te slaan', 'error');
+          }
+        } else if (tabId === 'company-tab') {
+          // Save Company Settings
+          const companyForm = document.getElementById('companySettingsForm');
+          if (companyForm) {
+            companyForm.dispatchEvent(new Event('submit'));
+          } else {
+            showNotification('Geen formulier gevonden om op te slaan', 'error');
+          }
+        } else {
+          // For other tabs, show a generic message
+          showNotification('Opslaan voor dit tabblad is nog niet geïmplementeerd', 'info');
+        }
+      } else {
+        showNotification('Geen actief tabblad gevonden', 'error');
+      }
+    }
+    
+    // Close modal handlers
+    function closeConfirmSaveModal() {
+      confirmSaveSettingsModal.classList.remove('show');
+    }
+    
+    if (cancelSaveSettingsBtn) {
+      cancelSaveSettingsBtn.addEventListener('click', closeConfirmSaveModal);
+    }
+    
+    if (cancelSaveSettingsModalBtn) {
+      cancelSaveSettingsModalBtn.addEventListener('click', closeConfirmSaveModal);
+    }
+    
+    // Confirm save handler
+    if (confirmSaveSettingsBtn) {
+      confirmSaveSettingsBtn.addEventListener('click', async function() {
+        closeConfirmSaveModal();
+        await executeSaveSettings();
+      });
+    }
+    
+    // Save settings button - show confirmation modal first
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    
+    if (saveSettingsBtn) {
+      saveSettingsBtn.addEventListener('click', function() {
+        // Check permissions
+        if (!window.isManagerOrAdmin) {
+          showNotification('Je hebt geen rechten om instellingen aan te passen. Alleen managers en admins kunnen bedrijfsinformatie wijzigen.', 'error');
+          return;
+        }
+        
+        // Check if we're on a tab that affects invoices (general or company)
+        const activeTab = document.querySelector('.settings-tab-pane.active');
+        
+        if (activeTab) {
+          const tabId = activeTab.id;
+          
+          // Show confirmation modal for tabs that affect invoices
+          if (tabId === 'general-tab' || tabId === 'company-tab') {
+            if (confirmSaveSettingsModal) {
+              confirmSaveSettingsModal.classList.add('show');
+            } else {
+              showNotification('Bevestigingsmodal niet gevonden', 'error');
+            }
+          } else {
+            // For other tabs, save directly without confirmation
+            executeSaveSettings();
+          }
+        } else {
+          showNotification('Geen actief tabblad gevonden', 'error');
+        }
+      });
+    }
+    
+    // Test email button
+    const testEmailBtn = document.getElementById('testEmailBtn');
+    
+    testEmailBtn.addEventListener('click', function() {
+      // In a real application, you would send a test email
+      alert('Test e-mail verzonden!');
+    });
+    
+    // Test SMS button
+    const testSmsBtn = document.getElementById('testSmsBtn');
+    
+    testSmsBtn.addEventListener('click', function() {
+      // In a real application, you would send a test SMS
+      alert('Test SMS verzonden!');
+    });
+    
+    // Password reset actions
+    const approveResetBtns = document.querySelectorAll('.approve-reset');
+    const rejectResetBtns = document.querySelectorAll('.reject-reset');
+    
+    approveResetBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const requestId = this.getAttribute('data-id');
+        
+        if (confirm('Weet je zeker dat je deze wachtwoord reset wilt goedkeuren?')) {
+          // In a real application, you would send an AJAX request
+          const row = document.querySelector(`.reset-requests-row[data-id="${requestId}"]`);
+          
+          if (row) {
+            const statusBadge = row.querySelector('.status-badge');
+            statusBadge.className = 'status-badge completed';
+            statusBadge.textContent = 'Voltooid';
+            
+            // Update action buttons
+            const actionButtons = row.querySelector('.action-buttons');
+            actionButtons.innerHTML = `
+              <button class="btn-icon delete-reset" data-id="${requestId}" title="Verwijderen">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            `;
+            
+            // Attach event listener to new button
+            const deleteBtn = actionButtons.querySelector('.delete-reset');
+            deleteBtn.addEventListener('click', function() {
+              if (confirm('Weet je zeker dat je deze wachtwoord reset aanvraag wilt verwijderen?')) {
+                row.remove();
+              }
+            });
+          }
+        }
+      });
+    });
+    
+    rejectResetBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const requestId = this.getAttribute('data-id');
+        
+        if (confirm('Weet je zeker dat je deze wachtwoord reset wilt afwijzen?')) {
+          // In a real application, you would send an AJAX request
+          const row = document.querySelector(`.reset-requests-row[data-id="${requestId}"]`);
+          
+          if (row) {
+            row.remove();
+          }
+        }
+      });
+    });
+    
+    // Close modals when clicking outside
+    const modals = document.querySelectorAll('.modal');
+    const modalCloseBtns = document.querySelectorAll('.modal-close');
+    
+    modalCloseBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        modal.classList.remove('show');
+      });
+    });
+    
+    window.addEventListener('click', function(e) {
+      modals.forEach(modal => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    });
+    
+    // Helper functions
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+    
+    function formatTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Initialize billing functionality
+    initializeBilling();
+    
+    // Initialize industries functionality
+    initializeIndustries();
+  });
+  
+  // Billing functionality
+  let currentBillingSnapshot = null;
+  let hasUnsavedBillingChanges = false;
+  let selectedBillingUserId = null;
+  
+  // Get DOM elements for billing (called when needed)
+  function getBillingElements() {
+    return {
+      billingUserSelect: document.getElementById('billingUserSelect'),
+      loadBillingUserBtn: document.getElementById('loadBillingUserBtn'),
+      billingComponents: document.getElementById('billingComponents'),
+      runBillingTestsBtn: document.getElementById('runBillingTestsBtn'),
+      billingTestResults: document.getElementById('billingTestResults'),
+      billingTestOutput: document.getElementById('billingTestOutput'),
+      billingQuotaSlider: document.getElementById('billingQuotaSlider'),
+      billingSliderValue: document.getElementById('billingSliderValue'),
+      billingSaveBtn: document.getElementById('billingSaveBtn'),
+      billingTopUpBtn: document.getElementById('billingTopUpBtn')
+    };
+  }
+  
+  // Load users for billing selection
+  async function loadBillingUsers() {
+    console.log('Loading billing users...');
+    console.log('Using service role key:', supabaseServiceKey ? 'Yes' : 'No');
+    
+    try {
+      // Get users from profiles table with service role (bypasses RLS)
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, company_name, email')
+        .order('company_name');
+      
+      console.log('Profiles query result:', { users, error });
+      
+      if (error) {
+        console.error('Error loading profiles:', error);
+        showBillingError('Fout bij laden profielen: ' + error.message);
+        return;
+      }
+      
+      const elements = getBillingElements();
+      if (!elements.billingUserSelect) {
+        console.error('Billing user select element not found');
+        return;
+      }
+      
+      console.log('Found users:', users);
+      console.log('Populating dropdown with', users.length, 'users');
+      
+      elements.billingUserSelect.innerHTML = '<option value="">Selecteer een gebruiker...</option>';
+      users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.company_name} (${user.first_name} ${user.last_name})`;
+        elements.billingUserSelect.appendChild(option);
+      });
+      
+      console.log('Dropdown populated successfully');
+      
+    } catch (error) {
+      console.error('Exception in loadBillingUsers:', error);
+      showBillingError('Fout bij laden gebruikers: ' + error.message);
+    }
+  }
+  
+  // Load billing data for selected user
+  async function loadBillingData(userId) {
+    console.log('Loading billing data for user:', userId);
+    
+    try {
+      // Try direct Supabase call first
+      const { data: snapshot, error: snapshotError } = await supabase
+        .rpc('get_billing_snapshot', { p_user: userId });
+
+      if (snapshotError) {
+        console.error('Supabase RPC error:', snapshotError);
+        throw snapshotError;
+      }
+
+      if (snapshot) {
+        console.log('Billing data loaded successfully:', snapshot);
+        
+        currentBillingSnapshot = snapshot;
+        selectedBillingUserId = userId;
+        updateBillingUI(snapshot);
+        
+        const elements = getBillingElements();
+        if (elements.billingComponents) {
+          elements.billingComponents.classList.remove('hidden');
+        }
+      } else {
+        throw new Error('No billing data received');
+      }
+      
+    } catch (error) {
+      console.error('Error loading billing data:', error);
+      showBillingError('Fout bij laden billing data: ' + error.message);
+    }
+  }
+  
+  // Manual billing data collection as fallback
+  async function getBillingDataManually(userId) {
+    try {
+      console.log('Getting manual billing data for user:', userId);
+      
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error('Profile error:', profileError);
+        return null;
+      }
+      
+      // Get subscription data
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (subError) {
+        console.error('Subscription error:', subError);
+      }
+      
+      // Get leads count for current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      const { data: leads, error: leadsError } = await supabase
+        .from('leads')
+        .select('id, price')
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+        .gte('created_at', startOfMonth.toISOString())
+        .lte('created_at', endOfMonth.toISOString());
+      
+      if (leadsError) {
+        console.error('Leads error:', leadsError);
+      }
+      
+      // Calculate totals
+      const approvedCount = leads ? leads.length : 0;
+      const approvedAmount = leads ? leads.reduce((sum, lead) => sum + (lead.price || 0), 0) : 0;
+      const monthlyQuota = subscription ? subscription.leads_per_month : 0;
+      
+      const manualData = {
+        period_month: now.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' }),
+        approved_count: approvedCount,
+        monthly_quota: monthlyQuota,
+        approved_amount: approvedAmount,
+        balance: subscription ? subscription.balance : 0,
+        payment_method: subscription ? subscription.payment_method : 'unknown'
+      };
+      
+      console.log('Manual billing data created:', manualData);
+      return manualData;
+      
+    } catch (error) {
+      console.error('Error in manual billing data collection:', error);
+      return null;
+    }
+  }
+  
+  // Update UI with billing data
+  function updateBillingUI(snapshot) {
+    console.log('Updating UI with snapshot:', snapshot);
+    const elements = getBillingElements();
+    
+    // Update usage card with null checks
+    document.getElementById('billingPeriodMonth').textContent = snapshot.period_month || 'N/A';
+    document.getElementById('billingApprovedCount').textContent = snapshot.approved_count || 0;
+    document.getElementById('billingMonthlyQuota').textContent = snapshot.monthly_quota || 0;
+    document.getElementById('billingApprovedAmount').textContent = '€' + (snapshot.approved_amount || 0).toFixed(2);
+    
+    // Update progress circle with null checks
+    const approvedCount = snapshot.approved_count || 0;
+    const monthlyQuota = snapshot.monthly_quota || 0;
+    const usagePercentage = monthlyQuota > 0 ? (approvedCount / monthlyQuota) * 100 : 0;
+    const circumference = 2 * Math.PI * 40;
+    const offset = circumference - (usagePercentage / 100) * circumference;
+    
+    document.getElementById('billingProgressCircle').style.strokeDashoffset = offset;
+    document.getElementById('billingUsagePercentage').textContent = Math.round(usagePercentage) + '%';
+    
+    // Update progress bar
+    document.getElementById('billingProgressBar').style.width = Math.min(usagePercentage, 100) + '%';
+    
+    // Update slider
+    if (elements.billingQuotaSlider && elements.billingSliderValue) {
+      elements.billingQuotaSlider.value = monthlyQuota;
+      elements.billingSliderValue.textContent = monthlyQuota;
+    }
+    
+    // Update quota display
+    document.getElementById('billingCurrentQuota').textContent = monthlyQuota + ' leads/maand';
+    document.getElementById('billingCurrentUsage').textContent = approvedCount + ' leads';
+    
+    // Show balance for card payments with null checks
+    const paymentMethod = snapshot.payment_method || '';
+    const balance = snapshot.balance || 0;
+    const isCardPayment = paymentMethod && ['card', 'credit', 'creditcard'].includes(paymentMethod.toLowerCase());
+    
+    if (isCardPayment) {
+      document.getElementById('billingBalanceSection').classList.remove('hidden');
+      document.getElementById('billingBalance').textContent = '€' + balance.toFixed(2);
+      document.getElementById('billingPaymentMethodInfo').textContent = 'Creditcard: prepaid via saldo';
+      
+      if (balance <= 0) {
+        document.getElementById('billingLowBalanceWarning').classList.remove('hidden');
+        if (elements.billingTopUpBtn) {
+          elements.billingTopUpBtn.classList.remove('hidden');
+        }
+      }
+    }
+    
+    // Show warnings
+    if (approvedCount >= monthlyQuota) {
+      document.getElementById('billingQuotaReached').classList.remove('hidden');
+    } else if (usagePercentage >= 80) {
+      document.getElementById('billingNearLimit').classList.remove('hidden');
+    }
+    
+    // Update progress bar color
+    const progressBar = document.getElementById('billingProgressBar');
+    if (approvedCount >= monthlyQuota) {
+      progressBar.style.backgroundColor = 'var(--danger)';
+    } else if (usagePercentage >= 80) {
+      progressBar.style.backgroundColor = 'var(--warning)';
+    } else {
+      progressBar.style.backgroundColor = 'var(--success)';
+    }
+    
+    // Update industry breakdown
+    updateIndustryBreakdown(snapshot.industry_breakdown || []);
+  }
+  
+  // Update industry breakdown display
+  function updateIndustryBreakdown(industryData) {
+    const container = document.getElementById('industryBreakdownContent');
+    if (!container) return;
+    
+    if (!industryData || industryData.length === 0) {
+      container.innerHTML = '<p class="no-data-message">Geen branche data beschikbaar voor deze maand</p>';
+      return;
+    }
+    
+    // Group and aggregate industry data
+    const industryTotals = {};
+    industryData.forEach(item => {
+      if (item && item.industry_id) {
+        const key = item.industry_id;
+        if (!industryTotals[key]) {
+          industryTotals[key] = {
+            industry_name: item.industry_name,
+            count: 0,
+            amount: 0
+          };
+        }
+        industryTotals[key].count += item.count || 0;
+        industryTotals[key].amount += item.amount || 0;
+      }
+    });
+    
+    const totalCount = Object.values(industryTotals).reduce((sum, item) => sum + item.count, 0);
+    const totalAmount = Object.values(industryTotals).reduce((sum, item) => sum + item.amount, 0);
+    
+    let html = '<div class="industry-breakdown-list">';
+    
+    // Sort by count descending
+    const sortedIndustries = Object.values(industryTotals).sort((a, b) => b.count - a.count);
+    
+    sortedIndustries.forEach(industry => {
+      const percentage = totalCount > 0 ? ((industry.count / totalCount) * 100) : 0;
+      
+      html += `
+        <div class="industry-breakdown-item">
+          <div class="industry-info">
+            <div class="industry-name">${industry.industry_name}</div>
+            <div class="industry-stats">
+              <span class="industry-count">${industry.count} leads</span>
+              <span class="industry-amount">€${industry.amount.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="industry-progress">
+            <div class="progress-bar-small">
+              <div class="progress-fill" style="width: ${percentage}%"></div>
+            </div>
+            <span class="industry-percentage">${percentage.toFixed(1)}%</span>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `
+      <div class="industry-breakdown-total">
+        <div class="total-info">
+          <strong>Totaal: ${totalCount} leads - €${totalAmount.toFixed(2)}</strong>
+        </div>
+      </div>
+    </div>`;
+    
+    container.innerHTML = html;
+  }
+  
+  // Run billing API tests
+  async function runBillingTests() {
+    const results = [];
+    const elements = getBillingElements();
+    
+    try {
+      if (elements.runBillingTestsBtn) {
+        elements.runBillingTestsBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        elements.runBillingTestsBtn.disabled = true;
+      }
+      
+      // Test 1: Database functions
+      results.push('🧪 Testing database functions...');
+      
+      const { data: snapshotTest, error: snapshotError } = await supabase
+        .rpc('get_billing_snapshot', { p_user: '00000000-0000-0000-0000-000000000000' });
+      
+      if (snapshotError) {
+        results.push(`❌ get_billing_snapshot function: ${snapshotError.message}`);
+      } else {
+        results.push('✅ get_billing_snapshot function works');
+      }
+      
+      const { data: allocateTest, error: allocateError } = await supabase
+        .rpc('can_allocate_lead', { p_user: '00000000-0000-0000-0000-000000000000', p_price: 5.0 });
+      
+      if (allocateError) {
+        results.push(`❌ can_allocate_lead function: ${allocateError.message}`);
+      } else {
+        results.push('✅ can_allocate_lead function works');
+      }
+      
+      // Test 2: Tables
+      results.push('\n🧪 Testing database tables...');
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+      
+      if (profilesError) {
+        results.push(`❌ Profiles table: ${profilesError.message}`);
+      } else {
+        results.push('✅ Profiles table accessible');
+      }
+      
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .limit(1);
+      
+      if (subscriptionsError) {
+        results.push(`❌ Subscriptions table: ${subscriptionsError.message}`);
+      } else {
+        results.push('✅ Subscriptions table accessible');
+      }
+      
+      const { data: leads, error: leadsError } = await supabase
+        .from('leads')
+        .select('id')
+        .limit(1);
+      
+      if (leadsError) {
+        results.push(`❌ Leads table: ${leadsError.message}`);
+      } else {
+        results.push('✅ Leads table accessible');
+      }
+      
+      // Test 3: View
+      results.push('\n🧪 Testing views...');
+      
+      const { data: viewTest, error: viewError } = await supabase
+        .from('v_monthly_lead_usage')
+        .select('*')
+        .limit(1);
+      
+      if (viewError) {
+        results.push(`❌ v_monthly_lead_usage view: ${viewError.message}`);
+      } else {
+        results.push('✅ v_monthly_lead_usage view accessible');
+      }
+      
+    } catch (error) {
+      results.push(`❌ Test error: ${error.message}`);
+    }
+    
+    if (elements.billingTestOutput) {
+      elements.billingTestOutput.textContent = results.join('\n');
+    }
+    if (elements.billingTestResults) {
+      elements.billingTestResults.classList.remove('hidden');
+    }
+    
+    if (elements.runBillingTestsBtn) {
+      elements.runBillingTestsBtn.innerHTML = '<i class="fas fa-play"></i> Run System Tests';
+      elements.runBillingTestsBtn.disabled = false;
+    }
+  }
+  
+  // Show billing error
+  function showBillingError(message) {
+    const errorDisplay = document.getElementById('billingErrorDisplay');
+    const errorMessage = document.getElementById('billingErrorMessage');
+    if (errorDisplay && errorMessage) {
+      errorMessage.textContent = message;
+      errorDisplay.classList.remove('hidden');
+    }
+  }
+  
+  // Setup billing event listeners
+  function setupBillingEventListeners() {
+    const elements = getBillingElements();
+    
+    // User selection
+    if (elements.billingUserSelect && elements.loadBillingUserBtn) {
+      elements.billingUserSelect.addEventListener('change', (e) => {
+        elements.loadBillingUserBtn.disabled = !e.target.value;
+      });
+    }
+    
+    // Load user button
+    if (elements.loadBillingUserBtn && elements.billingUserSelect) {
+      elements.loadBillingUserBtn.addEventListener('click', async () => {
+        if (elements.billingUserSelect.value) {
+          await loadBillingData(elements.billingUserSelect.value);
+        }
+      });
+    }
+    
+    // Quota slider
+    if (elements.billingQuotaSlider && elements.billingSliderValue && elements.billingSaveBtn) {
+      elements.billingQuotaSlider.addEventListener('input', (e) => {
+        const newQuota = parseInt(e.target.value);
+        elements.billingSliderValue.textContent = newQuota;
+        hasUnsavedBillingChanges = newQuota !== currentBillingSnapshot?.monthly_quota;
+        
+        if (hasUnsavedBillingChanges) {
+          elements.billingSaveBtn.disabled = false;
+        } else {
+          elements.billingSaveBtn.disabled = true;
+        }
+      });
+    }
+    
+    // Save button
+    if (elements.billingSaveBtn && elements.billingQuotaSlider) {
+      elements.billingSaveBtn.addEventListener('click', async () => {
+        if (!hasUnsavedBillingChanges || !selectedBillingUserId) return;
+        
+        try {
+          elements.billingSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opslaan...';
+          elements.billingSaveBtn.disabled = true;
+          
+          const { error } = await supabase
+            .from('subscriptions')
+            .upsert({
+              user_id: selectedBillingUserId,
+              leads_per_month: parseInt(elements.billingQuotaSlider.value),
+              status: 'active'
+            });
+          
+          if (error) throw error;
+          
+          // Reload data
+          await loadBillingData(selectedBillingUserId);
+          hasUnsavedBillingChanges = false;
+          
+        } catch (error) {
+          showBillingError('Fout bij opslaan: ' + error.message);
+        } finally {
+          elements.billingSaveBtn.innerHTML = '<i class="fas fa-save"></i> Opslaan';
+          elements.billingSaveBtn.disabled = !hasUnsavedBillingChanges;
+        }
+      });
+    }
+    
+    // Top up button
+    if (elements.billingTopUpBtn) {
+      elements.billingTopUpBtn.addEventListener('click', () => {
+        // Switch to payments tab or redirect to payments page
+        const paymentsTab = document.querySelector('[data-tab="payments"]');
+        if (paymentsTab) {
+          paymentsTab.click();
+        } else {
+          window.location.href = '/admin/payments';
+        }
+      });
+    }
+    
+    // Run tests button
+    if (elements.runBillingTestsBtn) {
+      elements.runBillingTestsBtn.addEventListener('click', runBillingTests);
+    }
+  }
+  
+  // Load billing settings from database
+  async function loadBillingSettings() {
+    try {
+      const { data, error } = await supabase
+        .from('billing_settings')
+        .select('*')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+        console.error('Error loading billing settings:', error);
+        return;
+      }
+      
+      if (data) {
+        // Set the form values
+        const billingDate = document.getElementById('billingDate');
+        const billingTime = document.getElementById('billingTime');
+        const billingTimezone = document.getElementById('billingTimezone');
+        
+        if (billingDate && data.billing_date) {
+          billingDate.value = data.billing_date;
+        }
+        if (billingTime && data.billing_time) {
+          billingTime.value = data.billing_time;
+        }
+        if (billingTimezone && data.timezone) {
+          billingTimezone.value = data.timezone;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading billing settings:', error);
+    }
+  }
+  
+  // Save billing settings to database
+  async function saveBillingSettings() {
+    try {
+      const billingDate = document.getElementById('billingDate').value;
+      const billingTime = document.getElementById('billingTime').value;
+      const billingTimezone = document.getElementById('billingTimezone').value;
+      
+      if (!billingDate || !billingTime || !billingTimezone) {
+        showNotification('Vul alle velden in', 'error');
+        return;
+      }
+      
+      const saveBtn = document.getElementById('saveBillingSettingsBtn');
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opslaan...';
+      saveBtn.disabled = true;
+      
+      // Use the API endpoint instead of direct Supabase
+      const response = await fetch('/admin/api/billing-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          billing_date: billingDate,
+          billing_time: billingTime,
+          timezone: billingTimezone,
+          is_active: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save billing settings');
+      }
+      
+      showNotification('Billing instellingen opgeslagen!', 'success');
+      
+    } catch (error) {
+      console.error('Error saving billing settings:', error);
+      showNotification('Fout bij opslaan: ' + error.message, 'error');
+    } finally {
+      const saveBtn = document.getElementById('saveBillingSettingsBtn');
+      saveBtn.innerHTML = '<i class="fas fa-save"></i> Instellingen Opslaan';
+      saveBtn.disabled = false;
+    }
+  }
+
+  // Billing settings edit functionality
+  let originalBillingSettings = {};
+  
+  function enableBillingEdit() {
+    const inputs = document.querySelectorAll('.billing-input');
+    inputs.forEach(input => {
+      input.disabled = false;
+    });
+    
+    // Store original values
+    originalBillingSettings = {
+      billingDate: document.getElementById('billingDate').value,
+      billingTime: document.getElementById('billingTime').value,
+      billingTimezone: document.getElementById('billingTimezone').value
+    };
+    
+    // Show/hide buttons
+    document.getElementById('editBillingSettingsBtn').classList.add('hidden');
+    document.getElementById('saveBillingSettingsBtn').classList.remove('hidden');
+    document.getElementById('cancelBillingSettingsBtn').classList.remove('hidden');
+  }
+  
+  function disableBillingEdit() {
+    const inputs = document.querySelectorAll('.billing-input');
+    inputs.forEach(input => {
+      input.disabled = true;
+    });
+    
+    // Restore original values
+    document.getElementById('billingDate').value = originalBillingSettings.billingDate;
+    document.getElementById('billingTime').value = originalBillingSettings.billingTime;
+    document.getElementById('billingTimezone').value = originalBillingSettings.billingTimezone;
+    
+    // Show/hide buttons
+    document.getElementById('editBillingSettingsBtn').classList.remove('hidden');
+    document.getElementById('saveBillingSettingsBtn').classList.add('hidden');
+    document.getElementById('cancelBillingSettingsBtn').classList.add('hidden');
+  }
+  
+  async function saveBillingSettingsAndDisable() {
+    await saveBillingSettings();
+    // Only disable edit mode if save was successful (no error thrown)
+    disableBillingEdit();
+  }
+
+  // Initialize billing functionality
+  async function initializeBilling() {
+    // Load billing settings
+    await loadBillingSettings();
+    
+    // Add event listeners for billing settings buttons
+    const editBillingSettingsBtn = document.getElementById('editBillingSettingsBtn');
+    if (editBillingSettingsBtn) {
+      editBillingSettingsBtn.addEventListener('click', enableBillingEdit);
+    }
+    
+    const saveBillingSettingsBtn = document.getElementById('saveBillingSettingsBtn');
+    if (saveBillingSettingsBtn) {
+      saveBillingSettingsBtn.addEventListener('click', saveBillingSettingsAndDisable);
+    }
+    
+    const cancelBillingSettingsBtn = document.getElementById('cancelBillingSettingsBtn');
+    if (cancelBillingSettingsBtn) {
+      cancelBillingSettingsBtn.addEventListener('click', disableBillingEdit);
+    }
+    console.log('Initializing billing functionality...');
+    
+    // Debug: Check if elements exist
+    const elements = getBillingElements();
+    console.log('Billing elements found:', elements);
+    
+    // Test Supabase connection first
+    try {
+      console.log('Testing Supabase connection...');
+      const { data, error } = await supabase.from('profiles').select('count').limit(1);
+      console.log('Supabase test result:', { data, error });
+      
+      if (error) {
+        console.error('Supabase connection failed:', error);
+        showBillingError('Supabase verbinding mislukt: ' + error.message);
+        return;
+      }
+      
+      console.log('Supabase connection successful');
+    } catch (err) {
+      console.error('Supabase test exception:', err);
+      showBillingError('Supabase test mislukt: ' + err.message);
+      return;
+    }
+    
+    // Wait a bit for DOM to be fully ready
+    setTimeout(async () => {
+      await loadBillingUsers();
+      setupBillingEventListeners();
+    }, 100);
+  }
+
+  // =====================================================
+  // INDUSTRIES MANAGEMENT
+  // =====================================================
+  
+  let currentIndustries = [];
+  
+  // Get industries elements
+  function getIndustriesElements() {
+    return {
+      addIndustryBtn: document.getElementById('addIndustryBtn'),
+      refreshIndustriesBtn: document.getElementById('refreshIndustriesBtn'),
+      industriesTable: document.getElementById('industriesTable'),
+      industriesTableBody: document.getElementById('industriesTableBody')
+    };
+  }
+  
+  // Load industries from database
+  async function loadIndustries() {
+    try {
+      console.log('Loading industries...');
+      
+      const response = await fetch('/api/industries');
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Error loading industries:', result.error);
+        showNotification('Fout bij laden branches: ' + result.error, 'error');
+        return;
+      }
+      
+      currentIndustries = result.data || [];
+      updateIndustriesTable();
+      
+      console.log('Industries loaded:', currentIndustries);
+      
+    } catch (error) {
+      console.error('Exception loading industries:', error);
+      showNotification('Fout bij laden branches: ' + error.message, 'error');
+    }
+  }
+  
+  // Update industries table
+  function updateIndustriesTable() {
+    const elements = getIndustriesElements();
+    if (!elements.industriesTableBody) return;
+    
+    elements.industriesTableBody.innerHTML = '';
+    
+    currentIndustries.forEach(industry => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td class="industry-name" data-industry-id="${industry.id}">${industry.name}</td>
+        <td class="industry-price">€${parseFloat(industry.price_per_lead).toFixed(2)}</td>
+        <td class="industry-description">${industry.description || '-'}</td>
+        <td class="industry-actions">
+          <button class="btn-modern btn-modern-outline btn-modern-compact edit-industry-btn" data-industry-id="${industry.id}">
+            <i class="fas fa-edit"></i> Bewerken
+          </button>
+          <a href="/admin/settings/industries/${industry.id}/form" class="btn-modern btn-modern-outline btn-modern-compact" style="margin-left: 8px;">
+            <i class="fas fa-file-alt"></i> Formulier
+          </a>
+        </td>
+      `;
+      elements.industriesTableBody.appendChild(row);
+    });
+    
+    // Add event listeners to action buttons
+    document.querySelectorAll('.edit-industry-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const industryId = e.target.closest('button').getAttribute('data-industry-id');
+        console.log('Edit button clicked for industry ID:', industryId);
+        console.log('Current industries:', currentIndustries);
+        
+        if (industryId) {
+          editIndustry(industryId);
+        } else {
+          console.error('No industry ID found on button');
+        }
+      });
+    });
+  }
+  
+  // Show industry modal
+  function showIndustryModal(industry = null) {
+    const isEdit = !!industry;
+    const modalTitle = isEdit ? 'Branche Bewerken' : 'Branche Toevoegen';
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>${modalTitle}</h2>
+          <button class="modal-close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="industryForm" class="form">
+            <div class="form-group">
+              <label for="industryName">Branche Naam:</label>
+              <input type="text" id="industryName" class="form-control" value="${industry?.name || ''}" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="industryPrice">Prijs per Lead (€):</label>
+              <input type="number" id="industryPrice" class="form-control" 
+                     value="${industry?.price_per_lead || '10.00'}" 
+                     step="0.01" min="0.01" required>
+              <small class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Prijswijzigingen gelden alleen voor nieuwe leads. Bestaande leads behouden hun oorspronkelijke prijs.
+              </small>
+            </div>
+            
+            <div class="form-group">
+              <label for="industryDescription">Beschrijving:</label>
+              <textarea id="industryDescription" class="form-control" rows="3">${industry?.description || ''}</textarea>
+            </div>
+            
+            <div class="form-actions">
+              <button type="button" class="btn-outline" id="cancelIndustryBtn">Annuleren</button>
+              <button type="submit" class="btn-primary" id="saveIndustryBtn">
+                <i class="fas fa-save"></i> ${isEdit ? 'Bijwerken' : 'Toevoegen'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    const form = modal.querySelector('#industryForm');
+    const closeModal = () => modal.remove();
+    
+    modal.querySelector('.modal-close').addEventListener('click', closeModal);
+    modal.querySelector('#cancelIndustryBtn').addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = {
+        name: document.getElementById('industryName').value.trim(),
+        price_per_lead: parseFloat(document.getElementById('industryPrice').value),
+        description: document.getElementById('industryDescription').value.trim()
+      };
+      
+      console.log('Form data being submitted:', formData);
+      console.log('Price input value:', document.getElementById('industryPrice').value);
+      console.log('Parsed price:', formData.price_per_lead);
+      
+      if (!formData.name || isNaN(formData.price_per_lead) || formData.price_per_lead < 0) {
+        showNotification('Vul alle verplichte velden correct in', 'error');
+        return;
+      }
+      
+      try {
+        const saveBtn = document.getElementById('saveIndustryBtn');
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opslaan...';
+        saveBtn.disabled = true;
+        
+        if (isEdit) {
+          await updateIndustry(industry.id, formData);
+        } else {
+          await createIndustry(formData);
+        }
+        
+        closeModal();
+        await loadIndustries();
+        showNotification(
+          `Branche ${isEdit ? 'bijgewerkt' : 'toegevoegd'}!`, 
+          'success'
+        );
+        
+      } catch (error) {
+        console.error('Error saving industry:', error);
+        showNotification('Fout bij opslaan: ' + error.message, 'error');
+        
+        const saveBtn = document.getElementById('saveIndustryBtn');
+        saveBtn.innerHTML = `<i class="fas fa-save"></i> ${isEdit ? 'Bijwerken' : 'Toevoegen'}`;
+        saveBtn.disabled = false;
+      }
+    });
+  }
+  
+  // Create new industry
+  async function createIndustry(industryData) {
+    const response = await fetch('/api/industries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(industryData)
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create industry');
+    }
+    
+    return result.data;
+  }
+  
+  // Update existing industry
+  async function updateIndustry(industryId, industryData) {
+    const response = await fetch(`/api/industries/${industryId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(industryData)
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update industry');
+    }
+    
+    return result.data;
+  }
+  
+  // Edit industry
+  function editIndustry(industryId) {
+    console.log('editIndustry called with ID:', industryId, 'Type:', typeof industryId);
+    console.log('Looking for industry in:', currentIndustries);
+    
+    // Try to find industry by ID (handle both string and number comparisons)
+    const industry = currentIndustries.find(i => 
+      i.id === industryId || 
+      i.id === parseInt(industryId) || 
+      i.id.toString() === industryId.toString()
+    );
+    console.log('Found industry:', industry);
+    
+    if (industry) {
+      console.log('Opening edit modal for industry:', industry.name);
+      showIndustryModal(industry);
+    } else {
+      console.error('Industry not found with ID:', industryId);
+      console.error('Available industry IDs:', currentIndustries.map(i => ({ id: i.id, type: typeof i.id, name: i.name })));
+      showNotification('Branche niet gevonden', 'error');
+    }
+  }
+  
+  
+  // Setup industries event listeners
+  function setupIndustriesEventListeners() {
+    const elements = getIndustriesElements();
+    
+    if (elements.addIndustryBtn) {
+      elements.addIndustryBtn.addEventListener('click', () => {
+        showIndustryModal();
+      });
+    }
+    
+    if (elements.refreshIndustriesBtn) {
+      elements.refreshIndustriesBtn.addEventListener('click', loadIndustries);
+    }
+  }
+  
+  // Initialize industries functionality
+  async function initializeIndustries() {
+    console.log('Initializing industries functionality...');
+    setupIndustriesEventListeners();
+    await loadIndustries();
+  }
+  
+  // Initialize branches when page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize branches functionality
+    initializeBranches();
+  });
+</script>
+
+<style>
+/* Billing Tab Styles */
+.billing-section {
+  margin-bottom: 30px;
+}
+
+.billing-actions {
+  margin-bottom: 20px;
+}
+
+.billing-test-results {
+  background: var(--light);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.billing-test-output {
+  font-family: monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.billing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .billing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.billing-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.billing-stat-item {
+  text-align: center;
+}
+
+.billing-stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--gray);
+  margin-bottom: 5px;
+}
+
+.billing-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--dark);
+}
+
+.billing-progress-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.billing-progress-circle {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.billing-progress-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.billing-progress-bg {
+  color: var(--light-gray);
+}
+
+.billing-progress-fill {
+  color: var(--success);
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.billing-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--dark);
+}
+
+.billing-amount-stats {
+  border-top: 1px solid var(--border);
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
+.billing-reset-info {
+  border-top: 1px solid var(--border);
+  padding-top: 15px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.billing-reset-text {
+  font-weight: 500;
+  color: var(--dark);
+  margin: 0 0 5px 0;
+}
+
+.billing-payment-method {
+  font-size: 0.9rem;
+  color: var(--gray);
+  margin: 0;
+}
+
+.billing-usage-overview {
+  margin-bottom: 15px;
+}
+
+.billing-usage-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.billing-usage-label {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.billing-usage-value {
+  font-weight: 500;
+  color: var(--dark);
+}
+
+.billing-progress-bar-container {
+  margin: 15px 0;
+}
+
+.billing-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--light-gray);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.billing-progress-bar .billing-progress-fill {
+  height: 100%;
+  background: var(--success);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.billing-status-messages {
+  margin: 10px 0;
+}
+
+.billing-status-message {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 5px 0;
+}
+
+.billing-status-error {
+  color: var(--danger);
+}
+
+.billing-status-warning {
+  color: var(--warning);
+}
+
+.billing-quota-slider-container {
+  margin: 20px 0;
+}
+
+.billing-slider-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--dark);
+  margin-bottom: 10px;
+}
+
+.billing-quota-slider {
+  width: 100%;
+  height: 6px;
+  background: var(--light-gray);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.billing-quota-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.billing-quota-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.billing-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--gray);
+  margin-top: 5px;
+}
+
+.billing-action-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.btn-full {
+  flex: 1;
+}
+
+.billing-error-display {
+  background: var(--light-danger);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.billing-error-title {
+  font-weight: 600;
+  color: var(--danger);
+  margin: 0 0 5px 0;
+}
+
+.billing-error-message {
+  color: var(--danger);
+  margin: 0;
+}
+
+.billing-payment-info {
+  border-top: 1px solid var(--border);
+  padding-top: 15px;
+  margin-top: 15px;
+  font-size: 0.8rem;
+  color: var(--gray);
+}
+
+.warning-badge {
+  background: var(--light-danger);
+  color: var(--danger);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.billing-instructions, .billing-troubleshooting {
+  background: var(--light);
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.billing-instructions p, .billing-troubleshooting p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+}
+
+.card-subtitle {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Industries Management Styles */
+.industries-container {
+  margin-top: 20px;
+}
+
+.industries-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.industries-table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.data-table th {
+  background: var(--primary-color);
+  color: white;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.data-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.data-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.industry-name {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.industry-price {
+  font-weight: 600;
+  color: var(--success-color);
+}
+
+.industry-description {
+  color: var(--gray);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+  text-align: center;
+  min-width: 60px;
+}
+
+.status-badge.active {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.status-badge.inactive {
+  background-color: var(--gray);
+  color: white;
+}
+
+.industry-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-sm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-sm.btn-outline {
+  background: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.btn-sm.btn-outline:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-sm.btn-success {
+  background: var(--success-color);
+  color: white;
+}
+
+.btn-sm.btn-warning {
+  background: var(--warning-color);
+  color: white;
+}
+
+/* Modal Styles for Industries */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--primary-color);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f0f0f0;
+  color: var(--primary-color);
+}
+
+.modal-body {
+  padding: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: normal !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+@media (max-width: 768px) {
+  .industries-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .industry-actions {
+    flex-direction: column;
+  }
+  
+  .data-table {
+    font-size: 0.9rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+    vertical-align: middle;
+  }
+}
+
+/* Industry Breakdown Styles */
+.industry-breakdown-list {
+  margin-top: 10px;
+}
+
+.industry-breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.industry-breakdown-item:last-of-type {
+  border-bottom: none;
+}
+
+.industry-info {
+  flex: 1;
+}
+
+.industry-name {
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 4px;
+}
+
+.industry-stats {
+  display: flex;
+  gap: 15px;
+  font-size: 0.9rem;
+}
+
+.industry-count {
+  color: var(--text-color);
+}
+
+.industry-amount {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.industry-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 120px;
+  justify-content: flex-end;
+}
+
+.progress-bar-small {
+  width: 60px;
+  height: 6px;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+  transition: width 0.3s ease;
+}
+
+.industry-percentage {
+  font-size: 0.8rem;
+  color: var(--gray);
+  min-width: 35px;
+  text-align: right;
+}
+
+.industry-breakdown-total {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 2px solid var(--primary-color);
+  text-align: center;
+}
+
+.total-info {
+  color: var(--primary-color);
+}
+
+.no-data-message {
+  text-align: center;
+  color: var(--gray);
+  font-style: italic;
+  padding: 20px;
+  margin: 0;
+}
+
+/* Remove margin from branches tab description */
+#branches-tab .settings-card-header p {
+  margin-bottom: 0;
+}
+
+/* Remove margin from all settings card header descriptions */
+.settings-card-header p {
+  margin-bottom: 0;
+}
+
+/* Billing Settings Section */
+.billing-settings-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.billing-settings-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--primary-color);
+}
+
+.section-divider {
+  border: none;
+  height: 1px;
+  background: #e9ecef;
+  margin: 30px 0;
+}
+
+/* Notification Styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  min-width: 300px;
+  max-width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease-out;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 8px;
+}
+
+.notification-message {
+  flex: 1;
+  font-weight: 500;
+  margin-right: 12px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+.notification-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.notification-info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .industry-breakdown-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .industry-progress {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .progress-bar-small {
+    flex: 1;
+    margin-right: 10px;
+  }
+}
+
+/* System Logs Styles */
+.log-type-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.log-type-badge.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.log-type-badge.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.log-type-badge.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.log-type-badge.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.log-type-badge.critical {
+  background-color: #f8d7da;
+  color: #721c24;
+  font-weight: bold;
+}
+
+.log-title {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 4px;
+}
+
+.log-description {
+  color: #6c757d;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.log-details {
+  color: #868e96;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.log-category {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.logs-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-state-content h3 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 18px;
+}
+
+.empty-state-content p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+.severity-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-badge.low {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.severity-badge.medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.severity-badge.high {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.severity-badge.critical {
+  background-color: #f8d7da;
+  color: #721c24;
+  font-weight: bold;
+}
+
+/* User information styling */
+.log-performed-by {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.performed-by-name {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.performed-by-email {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.admin-badge {
+  display: inline-block;
+  background-color: #e74c3c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Billing settings styling */
+.billing-input:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.billing-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.billing-actions .hidden {
+  display: none;
+}
+
+.btn-modern-success {
+  background-color: #28a745;
+  color: white;
+  border: 1px solid #28a745;
+}
+
+.btn-modern-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+</style>

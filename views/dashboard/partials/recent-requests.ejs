@@ -1,0 +1,86 @@
+<% if (leads && leads.length > 0) { %>
+  <div class="table-responsive">
+    <table class="table table-hover" id="leadsTable">
+      <thead>
+        <tr>
+          <th class="text-left">Naam</th>
+          <th class="text-left">Telefoon</th>
+          <th class="text-left">Status</th>
+          <th class="text-left">Datum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% leads.forEach(function(lead, index) { %>
+          <tr style="cursor: pointer;" onclick="document.getElementById('popup-<%= index %>').style.display='flex'" data-lead-id="<%= lead.id %>">
+            <td class="text-left"><%= lead.name || lead.first_name + ' ' + lead.last_name || 'Onbekend' %></td>
+            <td class="text-left"><%= lead.phone || '-' %></td>
+            <td class="text-left">
+              <span class="lead-status status-<%= lead.status %>">
+                <%= lead.status === 'new' ? 'Nieuw' :
+                    lead.status === 'assigned' ? 'Toegewezen' :
+                    lead.status === 'accepted' ? 'Geaccepteerd' :
+                    lead.status === 'rejected' ? 'Geweigerd' : 
+                    lead.status === 'completed' ? 'Voltooid' : lead.status %>
+              </span>
+            </td>
+            <td class="text-left"><%= new Date(lead.created_at).toLocaleDateString('nl-NL') %></td>
+          </tr>
+          
+          <!-- Popup voor deze aanvraag -->
+          <div id="popup-<%= index %>" class="modern-popup" style="display: none;" data-index="<%= index %>" data-id="<%= lead.id %>">
+            <div class="modern-popup-content">
+              <div class="modern-popup-header">
+                <h5>Aanvraag van <%= lead.name || lead.first_name + ' ' + lead.last_name || 'Onbekend' %></h5>
+                <button type="button" class="close" onclick="this.closest('.modern-popup').style.display='none'">
+                  <span>&times;</span>
+                </button>
+              </div>
+              <div class="modern-popup-body">
+                <div class="form-group">
+                  <label>Naam:</label>
+                  <p><%= lead.name || lead.first_name + ' ' + lead.last_name || 'Onbekend' %></p>
+                </div>
+                <div class="form-group">
+                  <label>E-mail:</label>
+                  <p><%= lead.email || '-' %></p>
+                </div>
+                <div class="form-group">
+                  <label>Telefoon:</label>
+                  <p><%= lead.phone || '-' %></p>
+                </div>
+                <div class="form-group">
+                  <label>Beschrijving:</label>
+                  <p><%= lead.description || lead.message || '-' %></p>
+                </div>
+                <div class="form-group">
+                  <label>Status:</label>
+                  <select class="form-control status-select" id="status-<%= lead.id %>">
+                    <option value="new" <%= lead.status === 'new' ? 'selected' : '' %>>Nieuw</option>
+                    <option value="assigned" <%= lead.status === 'assigned' ? 'selected' : '' %>>Toegewezen</option>
+                    <option value="accepted" <%= lead.status === 'accepted' ? 'selected' : '' %>>Geaccepteerd</option>
+                    <option value="rejected" <%= lead.status === 'rejected' ? 'selected' : '' %>>Geweigerd</option>
+                    <option value="completed" <%= lead.status === 'completed' ? 'selected' : '' %>>Voltooid</option>
+                  </select>
+                </div>
+                <div class="form-group invoice-amount-group" style="display: none;">
+                  <label>Factuur bedrag:</label>
+                  <input type="number" class="form-control" id="invoice-amount-<%= lead.id %>" step="0.01" min="0" placeholder="0.00">
+                </div>
+              </div>
+              <div class="modern-popup-footer">
+                <button type="button" class="btn btn-primary save-status-btn" data-lead-id="<%= lead.id %>">
+                  Opslaan
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modern-popup').style.display='none'">
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <p class="text-center text-muted">Je hebt nog geen aanvragen ontvangen.</p>
+<% } %>

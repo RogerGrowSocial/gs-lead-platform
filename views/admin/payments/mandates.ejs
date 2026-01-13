@@ -1,0 +1,17 @@
+<%
+var pageContent = `
+<div class="admin-page">
+  <h1>Mandaten</h1>
+  <p>Beheer SEPA mandaten</p>
+</div>
+`;
+%>
+
+<%- include('../../layouts/admin', { 
+    title: 'Mandaten', 
+    activeMenu: 'payments',
+    activeSubmenu: 'mandates',
+    user: user,
+    body: pageContent
+}) %>
+

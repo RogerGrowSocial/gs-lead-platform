@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <!-- Instant overlay pre-dim - direct donker bij tour start -->
+  <style>
+    /* DIRECTE dim zodra de pagina laadt - smooth transition om flash te voorkomen */
+    body.tour-pre-dim::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      pointer-events: none;
+      z-index: 2147483640; /* lager dan highlight & tooltip */
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+      animation: fadeInDim 0.15s ease-in forwards;
+    }
+    @keyframes fadeInDim {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+  <script>
+    (function(){
+      // DIRECT checken en class verwijderen als er geen tour is (voorkom flash)
+      // Check URL params VOORDAT body geladen is
+      var q = new URLSearchParams(location.search);
+      const hasTour = q.get('tour') === 'true' || q.get('startTour') === 'true';
+      const fromOnboarding = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('fromOnboarding') === 'true';
+      
+      // Wacht tot body geladen is voordat we class toevoegen/verwijderen
+      function handleTourPreDim() {
+        if (document.body) {
+          if (hasTour || fromOnboarding) {
+            // Alleen toevoegen als er echt een tour is
+            document.body.classList.add('tour-pre-dim');
+          } else {
+            // Expliciet verwijderen als er geen tour is (voorkom flash)
+            document.body.classList.remove('tour-pre-dim');
+            document.documentElement.classList.remove('tour-pre-dim');
+          }
+        } else {
+          // Body nog niet geladen, probeer opnieuw
+          setTimeout(handleTourPreDim, 10);
+        }
+      }
+      handleTourPreDim();
+    })();
+  </script>
+  
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <title><%= title %> | GrowSocial Lead Platform</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+  
+  <!-- Load fonts with swap - show fallback immediately, swap when loaded -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* Critical CSS: Match Inter font metrics exactly to prevent layout shifts */
+    @font-face {
+      font-family: 'Inter-fallback';
+      src: local('-apple-system'), local('BlinkMacSystemFont'), local('Segoe UI');
+      size-adjust: 100%;
+      ascent-override: 90%;
+      descent-override: 25%;
+      line-gap-override: 0%;
+    }
+    
+    /* Apply consistent font sizing from the start */
+    html {
+      font-size-adjust: 0.52;
+    }
+    
+    body {
+      font-family: 'Inter', 'Inter-fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size-adjust: 0.52;
+    }
+    
+    /* Explicit font sizing for table headers to prevent any shift */
+    table th {
+      font-size: 16px !important;
+      font-weight: 500 !important;
+      line-height: 1.5 !important;
+    }
+    
+    table td {
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+    }
+    
+    /* Reserve space for icons immediately to prevent flicker */
+    .fa, .fas, .far, .fal, .fab, .fad,
+    i.fa, i.fas, i.far, i.fal, i.fab, i.fad,
+    [class*="fa-"] {
+      display: inline-block !important;
+      font-style: normal !important;
+      font-variant: normal !important;
+      text-rendering: auto !important;
+      line-height: 1 !important;
+      width: 1em !important;
+      text-align: center !important;
+    }
+    
+    /* Dashboard icons - maak ze groter (alle Font Awesome icons op dashboard pagina's) */
+    body.dashboard-layout .main-content i.fa,
+    body.dashboard-layout .main-content i.fas,
+    body.dashboard-layout .main-content i.far,
+    body.dashboard-layout .main-content i.fal,
+    body.dashboard-layout .main-content i.fab,
+    body.dashboard-layout .main-content i.fad,
+    body.dashboard-layout .card i.fa,
+    body.dashboard-layout .card i.fas,
+    body.dashboard-layout .card i.far,
+    body.dashboard-layout .card i.fal,
+    body.dashboard-layout .card i.fab,
+    body.dashboard-layout .card i.fad,
+    .main-content .card i.fa,
+    .main-content .card i.fas,
+    .main-content .card i.far,
+    .main-content .card i.fal,
+    .main-content .card i.fab,
+    .main-content .card i.fad {
+      font-size: 1.5em !important;
+    }
+    
+    /* Sidebar menu icons groter maken */
+    .sidebar-menu-icon {
+      font-size: 1.5rem !important;
+      width: 1.5rem !important;
+    }
+    
+    /* User dropdown icons groter maken */
+    .user-dropdown-icon {
+      font-size: 1.3rem !important;
+      width: 1.3rem !important;
+    }
+  </style>
+  
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">
+  <!-- Design System -->
+  <link rel="stylesheet" href="/css/design-tokens.css">
+  <link rel="stylesheet" href="/css/chart-theme.css">
+  <!-- Component Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/leads.css">
+  <link rel="stylesheet" href="/css/admin/notifications.css">
+  <!-- Preload logo image to prevent layout shifts -->
+  <link rel="preload" href="/img/gs-logo-oranje.jpg" as="image">
+  <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
+    <% stylesheets.forEach(function(stylesheet) { %>
+      <link rel="stylesheet" href="<%= stylesheet %>">
+    <% }); %>
+  <% } %>
+  
+  <style>
+    :root {
+      --sidebar: #ffffff;
+      --sidebar-foreground: #4d4d4d;
+      --sidebar-hover: #fef5f0;
+      --sidebar-active: #EA5d0d;
+      --sidebar-active-fg: #ffffff;
+      --sidebar-border: #e5e7eb;
+    }
+    
+    body {
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Ensure all text elements use consistent font metrics */
+    table th, table td, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, textarea, select, label {
+      font-size-adjust: 0.52;
+    }
+    
+    .dashboard-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Perfect Sidebar */
+    .sidebar {
+      width: 80px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--sidebar-border);
+      position: fixed;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: width 200ms ease-in-out;
+      overflow: hidden;
+      z-index: 1000;
+    }
+    
+    .sidebar.expanded {
+      width: 240px;
+    }
+    
+    .logo-section {
+      height: 63px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--sidebar-border);
+      padding-left: 12px;
+      flex-shrink: 0;
+    }
+    
+    .logo-container {
+      width: 56px;
+      height: 63px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--sidebar-active);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    
+    .logo-image {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    
+    .logo-text {
+      font-weight: 600;
+      color: var(--sidebar-active);
+      white-space: nowrap;
+      margin-left: 0;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .logo-text {
+      opacity: 1;
+      width: auto;
+    }
+    
+    /* Support Section */
+    .support-section {
+      padding: 8px 0;
+      border-top: 1px solid var(--sidebar-border);
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+    
+    .support-link {
+      display: flex;
+      align-items: center;
+      height: 40px;
+      margin: 0 12px;
+      color: #9ca3af;
+      text-decoration: none;
+      transition: color 200ms ease-in-out;
+    }
+    
+    .support-link:hover {
+      color: #6b7280;
+      text-decoration: none;
+    }
+    
+    .support-link .icon-container {
+      width: 56px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .support-link svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+    
+    .support-text {
+      font-size: 12px;
+      font-weight: 400;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .support-text {
+      opacity: 1;
+      width: auto;
+    }
+    
+    .nav-section {
+      flex: 1;
+      padding: 24px 0 0 0;
+      overflow-y: auto;
+    }
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      height: 48px;
+      margin: 0 12px 4px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--sidebar-foreground);
+      text-decoration: none;
+      transition: background 200ms ease-in-out;
+    }
+    
+    .menu-item:hover {
+      background: var(--sidebar-hover);
+      text-decoration: none;
+    }
+    
+    .menu-item.active {
+      background: var(--sidebar-active);
+      color: var(--sidebar-active-fg);
+    }
+    
+    .icon-container {
+      width: 56px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .menu-item svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+    
+    .menu-label {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      transition: opacity 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .menu-label {
+      opacity: 1;
+      width: auto;
+    }
+    
+    .toggle-section {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .toggle-btn {
+      width: 32px;
+      height: 32px;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 200ms ease-in-out;
+      color: #6b7280;
+    }
+    
+    .toggle-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .toggle-btn svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 200ms ease-in-out;
+    }
+    
+    .sidebar.expanded .toggle-btn svg {
+      transform: rotate(180deg);
+    }
+    
+    /* Main content */
+    .main-content {
+      margin-left: 80px;
+      transition: margin-left 200ms ease-in-out;
+      width: 100%;
+    }
+    
+    .sidebar.expanded ~ .main-content {
+      margin-left: 240px;
+    }
+    
+    /* Dropdown items styling */
+    .user-dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 12px 16px;
+      color: #9ca3af;
+      font-size: 14px;
+      text-decoration: none !important;
+      transition: background 0.2s, color 0.2s;
+      position: relative;
+    }
+    
+    .user-dropdown-item:hover {
+      background: #f3f4f6;
+      color: #6b7280;
+      text-decoration: none !important;
+    }
+    
+    .user-dropdown-item svg,
+    .user-dropdown-item i {
+      color: inherit;
+    }
+
+    .notification-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background: #ea5d0d;
+      color: white;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    
+    /* Main header height */
+    .main-header {
+      height: 63px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 100;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px;
+      justify-content: space-between;
+    }
+    
+    .main-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    /* User dropdown styling */
+    .user-dropdown {
+      position: relative;
+    }
+    
+    .user-dropdown-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .user-dropdown-toggle:hover {
+      background: #f3f4f6;
+    }
+    
+    .user-info {
+      padding-left: 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .user-name {
+      color: #9ca3af;
+      font-weight: 500;
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    /* Avatar styling */
+    .user-avatar {
+      flex-shrink: 0;
+    }
+    
+    .user-avatar .avatar-placeholder {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      background: #f3f4f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    
+    .user-avatar img {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      min-height: 32px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    
+    .user-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      min-width: 200px;
+      z-index: 1000;
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+    }
+    
+    .user-dropdown-icon {
+      margin-right: 12px;
+      width: 16px;
+    }
+    
+    .main-container {
+      margin-top: 16px;
+      padding: 0 24px 24px;
+    }
+    
+    /* ============================================
+       SPOTLIGHT TOUR STYLES
+       ============================================ */
+    .spotlight-tour {
+      position: fixed;
+      inset: 0;
+      z-index: 99999999 !important;
+      pointer-events: none;
+    }
+    
+    .spotlight-tour.hidden {
+      display: none;
+    }
+    
+    .spotlight-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6) !important;
+      transition: clip-path 0.15s ease;
+      z-index: 99999999 !important;
+      pointer-events: auto;
+    }
+    
+    .spotlight-tooltip {
+      position: absolute;
+      width: 380px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+      pointer-events: auto;
+      transition: all 0.15s ease;
+      z-index: 100000000 !important;
+    }
+    
+    .spotlight-tooltip-wide {
+      width: 500px;
+    }
+    
+    .spotlight-content {
+      margin-bottom: 20px;
+    }
+    
+    .spotlight-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 8px 0;
+      line-height: 1.3;
+    }
+    
+    .spotlight-text {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+      line-height: 1.6;
+    }
+    
+    .spotlight-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .spotlight-tooltip-wide .spotlight-actions {
+      flex-direction: row;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    .spotlight-tooltip-wide .btn-finish {
+      flex: 0 1 auto;
+      min-width: 200px;
+    }
+    
+    .spotlight-tooltip-wide .btn-later {
+      flex: 0 1 auto;
+    }
+    
+    .btn-skip,
+    .btn-back {
+      padding: 10px 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    
+    .btn-skip:hover,
+    .btn-back:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+    
+    .btn-next {
+      flex: 1;
+      padding: 10px 20px;
+      background: #ea5d0d;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    
+    .btn-next:hover {
+      background: #d14d00;
+    }
+    
+    .btn-finish {
+      flex: 1;
+      padding: 10px 20px;
+      background: #ea5d0d;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    
+    .btn-finish:hover {
+      background: #d14d00;
+    }
+    
+    .btn-later {
+      padding: 10px 16px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    
+    .btn-later:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      color: #374151;
+    }
+    
+    .btn-back.hidden,
+    .btn-finish.hidden,
+    .btn-next.hidden,
+    .btn-later.hidden,
+    .btn-skip.hidden {
+      display: none !important;
+    }
+    
+  </style>
+</head>
+  <body class="<%= typeof pageClass !== 'undefined' ? pageClass : '' %>" data-page="<%= typeof pageClass !== 'undefined' ? pageClass : '' %>">
+  <div class="dashboard-container">
+    <!-- Perfect Sidebar -->
+    <aside class="sidebar expanded" id="sidebar" data-tour-id="sidebar">
+      <!-- Logo Section -->
+      <div class="logo-section">
+        <div class="logo-container">
+          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial" class="logo-image">
+        </div>
+        <span class="logo-text">GrowSocial</span>
+      </div>
+      
+      <!-- Navigation Section -->
+      <nav class="nav-section">
+        <a href="/dashboard" class="menu-item <%= activeMenu === 'dashboard' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+              <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+            </svg>
+          </div>
+          <span class="menu-label">Dashboard</span>
+        </a>
+        
+        <a href="/dashboard/leads" class="menu-item <%= activeMenu === 'leads' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Aanvragen</span>
+        </a>
+        
+        <a href="/dashboard/payments" class="menu-item <%= activeMenu === 'payments' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+              <line x1="2" x2="22" y1="10" y2="10"></line>
+            </svg>
+          </div>
+          <span class="menu-label">Betalingen</span>
+        </a>
+        
+        <a href="/dashboard/settings" class="menu-item <%= activeMenu === 'settings' ? 'active' : '' %>">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <span class="menu-label">Instellingen</span>
+        </a>
+      </nav>
+      
+      <!-- Support Section -->
+      <div class="support-section">
+        <a href="/support" class="support-link">
+          <div class="icon-container">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <circle cx="12" cy="17" r="0.5"></circle>
+            </svg>
+          </div>
+          <span class="support-text">Support</span>
+        </a>
+      </div>
+      
+      <!-- Toggle Section -->
+      <div class="toggle-section">
+        <button class="toggle-btn" id="toggleBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="main-header-left">
+          <h1><%= title %></h1>
+        </div>
+        
+        <div class="main-header-right">
+          <div class="user-dropdown">
+            <div class="user-dropdown-toggle">
+              <div class="user-avatar">
+                <% if (user.profile_picture) { %>
+                  <img src="<%= user.profile_picture %>" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                <% } else { %>
+                  <div class="avatar-placeholder">
+                    <i class="fas fa-user"></i>
+                  </div>
+                <% } %>
+              </div>
+              <div class="user-info">
+                <div class="user-name">
+                  <%= user.company_name || (user.first_name && user.last_name ? user.first_name + ' ' + user.last_name : user.email) %>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px; color: #9ca3af;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            
+            <div class="user-dropdown-menu">
+              <a href="/dashboard/leads" class="user-dropdown-item" id="leadsMenuItem">
+                <i class="fas fa-inbox user-dropdown-icon"></i>
+                Aanvragen
+                <span class="notification-badge" id="leadsNotificationBadge" style="display: none;">0</span>
+              </a>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/dashboard/settings" class="user-dropdown-item">
+                <i class="fas fa-circle-user user-dropdown-icon"></i>
+                Profiel
+              </a>
+              <a href="/dashboard/settings" class="user-dropdown-item">
+                <i class="fas fa-cog user-dropdown-icon"></i>
+                Instellingen
+              </a>
+              <% if (user && (user.user_metadata?.is_admin === true || user.is_admin === true)) { %>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/admin" class="user-dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="user-dropdown-icon" style="margin-right: 12px;">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                Manager portal
+              </a>
+              <% } %>
+              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+              <a href="/logout" class="user-dropdown-item">
+                <i class="fas fa-rectangle-xmark user-dropdown-icon"></i>
+                Uitloggen
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div class="main-container">
+        <div id="dashboard-title" style="font-family: Poppins, sans-serif; width: 600px; font-size: 24px; font-weight: 600; margin-bottom: 8px;">
+          <%= title || 'Dashboard' %>
+        </div>
+        <% if (typeof pageClass !== 'undefined' && pageClass === 'payments') { %>
+          <p style="color: #4B5563; margin-top: 8px; font-size: 16px; font-weight: 400; margin-bottom: 16px;">Beheer je betalingen en bankrekeningen</p>
+        <% } %>
+        <% if (typeof pageClass !== 'undefined' && pageClass === 'leads') { %>
+          <p style="color: #4B5563; margin-top: 8px; font-size: 16px; font-weight: 400; margin-bottom: 16px;">Bekijk en beheer al je aanvragen</p>
+        <% } %>
+        <% if (typeof pageClass !== 'undefined' && pageClass === 'dashboard') { %>
+          <p style="color: #4B5563; margin-top: 8px; font-size: 16px; font-weight: 400; margin-bottom: 16px;">Overzicht van je aanvragen en activiteiten</p>
+        <% } %>                
+        <% if (typeof success !== 'undefined' && success) { %>
+          <div class="alert alert-success">
+            <%= success %>
+            <button type="button" class="close">&times;</button>
+          </div>
+        <% } %>
+        
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="alert alert-danger">
+            <%= error %>
+            <button type="button" class="close">&times;</button>
+          </div>
+        <% } %>
+        
+        <%- body %>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Notification container (moved before scripts so it's always available) -->
+  <div class="notification-container"></div>
+  
+  <!-- Spotlight Tour -->
+  <div id="spotlightTour" class="spotlight-tour hidden">
+    <div class="spotlight-overlay"></div>
+    <div class="spotlight-tooltip">
+      <div class="spotlight-content">
+        <h3 class="spotlight-title"></h3>
+        <p class="spotlight-text"></p>
+      </div>
+      <div class="spotlight-actions">
+        <button class="btn-skip" onclick="skipTour()">Overslaan</button>
+        <button class="btn-back hidden" onclick="previousTourStep()">Terug</button>
+        <button class="btn-next" onclick="nextTourStep()">Volgende</button>
+        <button class="btn-finish hidden" onclick="finishTour()">Betaalmethode instellen</button>
+        <button class="btn-later hidden" onclick="laterTour()">Ik doe dit later</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
+  
+  <script src="/js/main.js"></script>
+  <% if (typeof scripts !== 'undefined' && scripts) { %>
+    <% scripts.forEach(function(script) { %>
+      <script src="<%= script %>"></script>
+    <% }); %>
+  <% } %>
+
+  <script>
+    // Perfect Sidebar Toggle
+    (function() {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('toggleBtn');
+      
+      if (!sidebar || !toggleBtn) return;
+      
+      // Load saved state - default to expanded
+      const savedState = localStorage.getItem('dashboardSidebarExpanded');
+      if (savedState === 'false') {
+        sidebar.classList.remove('expanded');
+      }
+      // If no saved state or if it's 'true', keep expanded (default)
+      
+      // Toggle handler
+      toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('expanded');
+        localStorage.setItem('dashboardSidebarExpanded', sidebar.classList.contains('expanded'));
+      });
+    })();
+  </script>
+  
+  <!-- Tour scripts, GLOBAAL voor alle dashboard pagina's -->
+  <script src="/js/onboarding-spotlight.js"></script>
+  <script src="/js/onboarding.js"></script>
+  
+  <!-- Auto-start tour wanneer ?tour=true in URL -->
+  <script>
+    (function () {
+      function normalizeAndAutoStartTour(retries) {
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+      
+        // 1) startTour => tour=true&step=0 normaliseren
+        if (params.get('startTour') === 'true') {
+          params.delete('startTour');
+          if (!params.has('tour')) params.set('tour', 'true');
+          if (!params.has('step')) params.set('step', '0');
+
+          const newUrl = url.pathname + '?' + params.toString();
+          window.history.replaceState({}, '', newUrl);
+        }
+
+        // Na normaliseren nogmaals params lezen
+        const p = new URLSearchParams(window.location.search);
+
+        // Geen tour? Dan ook geen "loading" scherm laten hangen
+        if (p.get('tour') !== 'true') {
+          // Verwijder ALLE tour-gerelateerde classes en overlays
+          document.body.classList.remove('tour-loading', 'gs-tour-active', 'tour-pre-dim');
+          document.documentElement.classList.remove('tour-pre-dim');
+          
+          // Clear sessionStorage flag als die er is
+          if (sessionStorage.getItem('fromOnboarding') === 'true') {
+            sessionStorage.removeItem('fromOnboarding');
+          }
+          
+          return;
+        }
+
+        // 2) Wachten tot GSTour + TOUR_STEPS echt bestaan
+        if (!window.GSTour || !window.TOUR_STEPS) {
+          if (retries > 0) {
+            // Nog niet geladen? over 100ms opnieuw proberen
+            return setTimeout(() => normalizeAndAutoStartTour(retries - 1), 100);
+            } else {
+            console.error('[GSTour] Could not load tour after retries');
+            document.body.classList.remove('tour-loading', 'gs-tour-active', 'tour-pre-dim');
+            return;
+          }
+        }
+
+        // 3) Tour daadwerkelijk starten
+        const stepParam = parseInt(p.get('step') || '0', 10);
+
+        console.log('[GSTour] AUTO start on', window.location.pathname, 'step', stepParam);
+
+        window.GSTour.start(window.TOUR_STEPS, {
+          initialIndex: stepParam,
+          onStepChange: window.syncUrlStep,
+          onFinish: window.finishTour,
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => normalizeAndAutoStartTour(30));
+      } else {
+        normalizeAndAutoStartTour(30);
+      }
+    })();
+  </script>
+  
+  <script src="https://js.mollie.com/v1/mollie.js"></script>
+  <script>
+    // Load unread messages count for notification badge
+    (function() {
+      async function loadUnreadCount() {
+        try {
+          const response = await fetch('/dashboard/api/leads/unread-messages-count', {
+            credentials: 'include'
+          });
+          
+          if (!response.ok) return;
+          
+          const data = await response.json();
+          if (data.success && data.count > 0) {
+            const badge = document.getElementById('leadsNotificationBadge');
+            if (badge) {
+              badge.textContent = data.count;
+              badge.style.display = 'inline-flex';
+            }
+          }
+        } catch (error) {
+          console.error('Error loading unread count:', error);
+        }
+      }
+      
+      // Load on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadUnreadCount);
+      } else {
+        loadUnreadCount();
+      }
+      
+      // Refresh every 30 seconds
+      setInterval(loadUnreadCount, 30000);
+    })();
+  </script>
+  </body>
+</html>

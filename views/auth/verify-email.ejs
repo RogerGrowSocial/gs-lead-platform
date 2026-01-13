@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-mail verificeren | GrowSocial</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <style>
+    :root { 
+      --brand:#ea5d0d; 
+      --brand-dark:#d35400; 
+      --ink:#222; 
+      --muted:#6b7280; 
+      --line:#e5e7eb; 
+      --success:#16a34a;
+      --error:#dc2626;
+    }
+    *{ box-sizing:border-box; }
+    body { 
+      font-family:'Poppins',sans-serif; 
+      background:#f9fafb; 
+      min-height:100vh; 
+      margin:0; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      padding:20px;
+    }
+    .wrap { 
+      width:100%; 
+      max-width:420px; 
+      text-align:center;
+    }
+    .card { 
+      background:#fff; 
+      border:1px solid #f3f4f6; 
+      border-radius:20px; 
+      box-shadow:0 8px 32px rgba(31,41,55,.10); 
+      padding:40px 24px; 
+    }
+    .logo {
+      width:64px;
+      height:64px;
+      margin:0 auto 1.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .logo img {
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      border-radius:8px;
+    }
+    h1 { 
+      font-size:1.5rem; 
+      margin:0 0 .5rem; 
+      color:var(--ink); 
+      font-weight:600;
+    }
+    .sub { 
+      color:var(--muted); 
+      font-size:1rem; 
+      margin:0 0 2rem; 
+      line-height:1.5;
+    }
+    .loader {
+      width:40px;
+      height:40px;
+      margin:0 auto;
+      border:4px solid #f3f4f6;
+      border-top-color:var(--brand);
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+    .message {
+      padding:1rem;
+      border-radius:8px;
+      margin-top:1rem;
+      font-weight:500;
+    }
+    .message--success {
+      background:#ecfdf5;
+      color:var(--success);
+      border:1px solid #bbf7d0;
+    }
+    .message--error {
+      background:#fff0f0;
+      color:var(--error);
+      border:1px solid #fecaca;
+    }
+    .btn { 
+      width:100%; 
+      height:42px; 
+      background:var(--brand); 
+      color:#fff; 
+      font-weight:700; 
+      font-size:1rem; 
+      border:none; 
+      border-radius:10px; 
+      box-shadow:0 2px 8px rgba(234,93,13,.10); 
+      cursor:pointer; 
+      transition:background .2s, box-shadow .2s, transform .2s; 
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      gap:.5rem;
+      text-decoration:none;
+      margin-top:1rem;
+    }
+    .btn:hover { 
+      background:var(--brand-dark); 
+      box-shadow:0 4px 16px rgba(234,93,13,.15); 
+      transform:translateY(-1px); 
+    }
+    .hidden {
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="logo">
+        <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial logo">
+      </div>
+      
+      <div id="loading">
+        <h1>E-mail verifiëren...</h1>
+        <p class="sub">Even geduld, we verifiëren je e-mailadres.</p>
+        <div class="loader"></div>
+      </div>
+
+      <div id="success" class="hidden">
+        <h1>E-mail geverifieerd! ✅</h1>
+        <p class="sub">Je e-mailadres is succesvol geverifieerd. Je wordt nu doorgestuurd...</p>
+        <div class="message message--success">
+          Je kunt nu inloggen met je account.
+        </div>
+      </div>
+
+      <div id="error" class="hidden">
+        <h1>Verificatie mislukt</h1>
+        <p class="sub">Er is een probleem opgetreden bij het verifiëren van je e-mailadres.</p>
+        <div class="message message--error" id="errorMessage">
+          Ongeldige of verlopen verificatielink.
+        </div>
+        <a href="/login" class="btn">Terug naar inloggen</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      try {
+        // Get Supabase URL and anon key from server
+        const SUPABASE_URL = '<%= SUPABASE_URL %>';
+        const SUPABASE_ANON_KEY = '<%= SUPABASE_ANON_KEY %>';
+        
+        // Parse hash fragment from URL
+        const hash = window.location.hash.substring(1); // Remove '#'
+        const params = new URLSearchParams(hash);
+        
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const type = params.get('type');
+        
+        if (!accessToken || !refreshToken) {
+          throw new Error('Geen toegangstoken gevonden in de verificatielink.');
+        }
+
+        // Create Supabase client
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Set the session using the tokens from the hash
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data.session) {
+          throw new Error('Geen sessie ontvangen na verificatie.');
+        }
+
+        // Session is set, now send to server to set cookies
+        // We'll use a fetch request to set cookies server-side
+        const response = await fetch('/auth/verify-email-callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
+        });
+
+        if (!response.ok) {
+          // If server callback fails, still try to redirect (session might be set client-side)
+          console.warn('Server callback failed, but session is set client-side');
+        }
+
+        // Show success and redirect
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        
+        // Redirect to onboarding (will redirect to dashboard if already completed)
+        setTimeout(() => {
+          window.location.href = '/onboarding?verified=success';
+        }, 2000);
+
+      } catch (error) {
+        console.error('Verification error:', error);
+        
+        // Show error
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+        
+        const errorMessage = error.message || 'Er is een fout opgetreden bij het verifiëren van je e-mail';
+        document.getElementById('errorMessage').textContent = errorMessage;
+      }
+    })();
+  </script>
+</body>
+</html>
+

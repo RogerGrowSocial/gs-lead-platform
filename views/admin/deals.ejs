@@ -1,0 +1,84 @@
+<%- include('../layouts/admin', {
+  title: 'Deals',
+  activeMenu: 'opportunities',
+  activeSubmenu: 'deals',
+  user: user,
+  body: `
+  <div class="settings-container">
+    <div class="page-header">
+      <div>
+        <h1>Deals</h1>
+        <p class="text-muted">Pipeline met openstaande en gesloten deals</p>
+      </div>
+      
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Overzicht</h2>
+        <p class="settings-card-subtitle">Laatste deals</p>
+      </div>
+      <div class="settings-card-body">
+        <div class="admins-table">
+          <div class="admins-table-head">
+            <div class="admins-row">
+              <div class="admins-cell">Titel</div>
+              <div class="admins-cell">Waarde (€)</div>
+              <div class="admins-cell">Status</div>
+              <div class="admins-cell">Fase</div>
+              <div class="admins-cell">Sales rep</div>
+              <div class="admins-cell">Aangemaakt</div>
+              <div class="admins-cell actions-cell">Acties</div>
+            </div>
+          </div>
+          <div class="admins-table-body">
+            ${ (deals || []).map(d => `
+              <div class="admins-row" data-id="${d.id}">
+                <div class="admins-cell"><div class="admin-name">${d.title || (d.opportunity?.title || '—')}</div></div>
+                <div class="admins-cell"><div class="payment-amount">€${Number(d.value_eur||0).toFixed(2)}</div></div>
+                <div class="admins-cell"><span class="status-badge ${d.status==='open'?'pending':(d.status==='won'?'active':'expired')}">${d.status}</span></div>
+                <div class="admins-cell"><div class="admin-role">${d.stage || 'proposal'}</div></div>
+                <div class="admins-cell"><div class="admin-email">${d.sales_rep_id || '—'}</div></div>
+                <div class="admins-cell"><div class="date-info"><div>${new Date(d.created_at).toLocaleDateString('nl-NL')}</div></div></div>
+                <div class="admins-cell actions-cell">
+                  <div class="action-buttons">
+                    <button class="btn-icon" onclick="openReminder('${d.id}')" title="Reminder"><i class="fas fa-bell"></i></button>
+                  </div>
+                </div>
+              </div>
+            `).join('') }
+            ${ (!deals || deals.length===0) ? `
+              <div class="admins-row"><div class="admins-cell">Nog geen deals</div></div>
+            ` : '' }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dealReminderModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:9999; align-items:center; justify-content:center;">
+      <div style="background:#fff; border-radius:8px; padding:16px; width:420px;">
+        <h3 style="margin:0 0 12px;">Reminder inplannen</h3>
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <input id="remindAt" type="datetime-local" style="flex:1; padding:8px; border:1px solid #e5e7eb; border-radius:6px;" />
+          <select id="remindType" style="width:140px; padding:8px; border:1px solid #e5e7eb; border-radius:6px;">
+            <option value="nudge">Nudge</option>
+            <option value="close">Close</option>
+            <option value="followup">Follow-up</option>
+          </select>
+        </div>
+        <textarea id="remindNote" rows="3" style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px;" placeholder="Notitie (optioneel)"></textarea>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
+          <button onclick="closeReminder()" class="btn-outline">Annuleren</button>
+          <button onclick="saveReminder()" class="btn-primary">Opslaan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  `,
+  scripts: [
+    `/js/admin/deals.js?v=${Date.now()}`
+  ],
+  stylesheets: (stylesheets || [])
+}) %>
+
+
