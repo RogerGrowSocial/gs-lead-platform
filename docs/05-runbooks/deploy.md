@@ -8,14 +8,7 @@
 
 This guide covers deploying the GS Lead Platform to production.
 
-**⚠️ NIEUW: Voor uitgebreide Vercel + Supabase + GitHub deployment, zie:**
-- **[DEPLOYMENT_GUIDE.md](../../DEPLOYMENT_GUIDE.md)** - Complete stap-voor-stap guide voor Vercel deployment
-- **[DEPLOYMENT_CHECKLIST.md](../../DEPLOYMENT_CHECKLIST.md)** - Deployment checklist
-
-**Current Status:** 
-- ✅ Vercel deployment guide beschikbaar
-- ✅ Automatische deployments via GitHub
-- ✅ Supabase integratie gedocumenteerd
+**Current Status:** Manual deployment (no automated CI/CD documented)
 
 ---
 
