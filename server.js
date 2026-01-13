@@ -1558,8 +1558,18 @@ app.use((req, res, next) => {
 
 // Error handler
 app.use((err, req, res, next) => {
+  console.error('❌ Error:', err.message)
   console.error(err.stack)
-  res.status(500).render("errors/500", { layout: false })
+  // Try to render error page, but don't crash if it fails
+  try {
+    res.status(500).render("errors/500", { layout: false })
+  } catch (renderError) {
+    // Fallback to JSON if render fails
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: err.message 
+    })
+  }
 })
 
 console.log('✅ All middleware and routes configured')
