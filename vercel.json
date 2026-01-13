@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "buildCommand": "npm install",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
+  "framework": null,
   "builds": [
     {
       "src": "server.js",
