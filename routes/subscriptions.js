@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+// Only load dotenv locally (Vercel uses environment variables directly)
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
+  require('dotenv').config();
+}
 const { body, validationResult } = require("express-validator");
 const supabase = require('../config/supabase');
 const { requireAuth } = require("../middleware/auth");

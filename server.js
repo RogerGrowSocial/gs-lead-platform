@@ -1568,10 +1568,10 @@ console.log('✅ All middleware and routes configured')
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
 
 // Export app for Vercel serverless functions
-if (isVercel) {
-  console.log('🚀 Running on Vercel (serverless mode)')
-  module.exports = app
-} else {
+// ALWAYS export app - Vercel needs this, local dev uses app.listen()
+module.exports = app
+
+if (!isVercel) {
   // Local development: start server with app.listen()
   console.log(`🚀 Starting server on port ${PORT}...`)
   console.log(`📝 About to call app.listen()...`)

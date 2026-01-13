@@ -1,6 +1,9 @@
 'use strict'
 
-require('dotenv').config()
+// Only load dotenv locally (Vercel uses environment variables directly)
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
+  require('dotenv').config()
+}
 const { GoogleAdsApi } = require('google-ads-api')
 const { supabaseAdmin } = require('../config/supabase')
 
