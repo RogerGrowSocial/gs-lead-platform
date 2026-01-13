@@ -105,8 +105,15 @@ const getLeadsRoutes = () => {
 console.log('✅ routes/leads will be loaded lazily')
 console.log('📂 Loading config/supabase...')
 const startSupabase = Date.now()
-const supabase = requireWithRetry('./config/supabase')
-console.log(`✅ config/supabase loaded (${Date.now() - startSupabase}ms)`)
+let supabase
+try {
+  supabase = requireWithRetry('./config/supabase')
+  console.log(`✅ config/supabase loaded (${Date.now() - startSupabase}ms)`)
+} catch (error) {
+  console.error('❌ Failed to load config/supabase:', error.message)
+  console.error('   Check if SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY are set')
+  throw error
+}
 console.log('📂 Loading middleware/auth...')
 const startAuth = Date.now()
 const { requireAuth, isAdmin } = requireWithRetry("./middleware/auth")
