@@ -1730,11 +1730,13 @@ process.on('SIGINT', async () => {
 })
 
 // Authenticatie middleware exporteren voor gebruik in andere modules
-// Alleen exporteren als dit bestand wordt geïmporteerd, niet als het direct wordt uitgevoerd
+// Alleen exporteren als dit bestand wordt geïmporteerd (zoals server-https.js)
+// Voor Vercel: app is al geëxporteerd, deze export wordt niet gebruikt
 if (require.main !== module && !isVercel) {
-  module.exports = {
-    supabase,
-    requireAuth,
-    isAdmin,
-  }
+  // Als geïmporteerd door ander bestand, exporteer helpers
+  // Maar app blijft de hoofd export voor Vercel
+  module.exports.app = app
+  module.exports.supabase = supabase
+  module.exports.requireAuth = requireAuth
+  module.exports.isAdmin = isAdmin
 }
