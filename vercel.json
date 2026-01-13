@@ -1,9 +1,16 @@
 {
   "version": 2,
+  "installCommand": "npm install",
+  "buildCommand": "echo 'No build step needed'",
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "node_modules/**"
+        ]
+      }
     }
   ],
   "routes": [
