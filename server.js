@@ -1,6 +1,7 @@
 console.log('🚀 Server.js starting...')
 
 // Check if running on Vercel (serverless) or locally
+// Must be defined early so it can be used throughout the file
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
 
 // Only load dotenv locally (Vercel uses environment variables directly)
@@ -283,15 +284,18 @@ app.use(refreshIfNeeded)
 const profileCache = new Map(); // userId -> { profile, roleName, timestamp }
 const PROFILE_CACHE_TTL = 5000; // 5 seconds cache
 
-// Cleanup old cache entries every minute
-setInterval(() => {
-  const now = Date.now();
-  for (const [userId, cached] of profileCache.entries()) {
-    if (now - cached.timestamp > PROFILE_CACHE_TTL) {
-      profileCache.delete(userId);
+// Cleanup old cache entries every minute (only in non-serverless environments)
+// In serverless, cache is cleared on each invocation anyway
+if (!isVercel) {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [userId, cached] of profileCache.entries()) {
+      if (now - cached.timestamp > PROFILE_CACHE_TTL) {
+        profileCache.delete(userId);
+      }
     }
-  }
-}, 60000);
+  }, 60000);
+}
 
 // Middleware om gebruiker beschikbaar te maken in alle views
 app.use(async (req, res, next) => {
