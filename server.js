@@ -431,6 +431,30 @@ app.use((req, res, next) => {
   next()
 })
 
+// CRITICAL: On Vercel, pre-load all routes FIRST to ensure bundling
+// This must happen before routes are used in the normal flow
+if (isVercel) {
+  console.log('📦 Pre-loading routes for Vercel bundling (before normal load)...')
+  try {
+    require('./routes/auth')
+    require('./routes/onboarding')
+    require('./routes/dashboard')
+    require('./routes/admin')
+    require('./routes/api')
+    require('./routes/forms')
+    require('./routes/leads')
+    require('./routes/internalCampaigns')
+    require('./routes/payments')
+    require('./routes/subscriptions')
+    require('./routes/webhooks')
+    require('./routes/users')
+    console.log('✅ All routes pre-loaded for bundling')
+  } catch (preloadError) {
+    console.error('❌ CRITICAL: Failed to pre-load routes:', preloadError.message)
+    throw preloadError
+  }
+}
+
 // Routes importeren (load all routes directly like before)
 console.log('📂 Loading routes...')
 const startAuthRoutes = Date.now()
@@ -1638,29 +1662,12 @@ if (isVercel) {
   }
 }
 
-// On Vercel, pre-load ALL routes and commonly used services to ensure they're bundled
-// This prevents "Cannot find module" errors at runtime
+// On Vercel, pre-load commonly used services to ensure they're bundled
+// Routes are already pre-loaded above before normal route loading
 if (isVercel) {
-  console.log('📦 Pre-loading routes and services for Vercel bundling...')
+  console.log('📦 Pre-loading services for Vercel bundling...')
   try {
-    // CRITICAL: Pre-load all routes first (these are required during server init)
-    console.log('  📂 Pre-loading routes...')
-    require('./routes/auth')
-    require('./routes/onboarding')
-    require('./routes/dashboard')
-    require('./routes/admin')
-    require('./routes/api')
-    require('./routes/forms')
-    require('./routes/leads')
-    require('./routes/internalCampaigns')
-    require('./routes/payments')
-    require('./routes/subscriptions')
-    require('./routes/webhooks')
-    require('./routes/users')
-    console.log('  ✅ All routes pre-loaded')
-    
     // Pre-load services that are frequently required dynamically in routes
-    console.log('  📦 Pre-loading services...')
     require('./services/systemLogService')
     require('./services/activityService')
     require('./services/notificationService')
