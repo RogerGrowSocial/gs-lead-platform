@@ -725,7 +725,7 @@
 
   <script>
     // Pass server data to JavaScript
-    window.userCustomerData = <%- JSON.stringify(typeof userCustomer !== 'undefined' ? userCustomer : null) %>;
+    window.userCustomerData = ${JSON.stringify(typeof userCustomer !== 'undefined' ? userCustomer : null)};
     
     window.tasksData = {
       tasks: ${JSON.stringify(tasks || [])},
