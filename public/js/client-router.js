@@ -23,7 +23,9 @@
       '/onboarding'
     ],
     // Selector voor main content area (probeer verschillende selectors)
-    contentSelector: '.main-content, main, #main-content, .content-wrapper, .main-container, .admin-content, .dashboard-content',
+    // Voor admin: .main-container binnen .main-content
+    // Voor dashboard: .main-content of .content-wrapper
+    contentSelector: '.main-container, .main-content, main, #main-content, .content-wrapper, .admin-content, .dashboard-content',
     // Cache voor geladen content
     cache: new Map(),
     cacheMaxAge: 5 * 60 * 1000 // 5 minuten
@@ -88,26 +90,63 @@
       const doc = parser.parseFromString(html, 'text/html');
       
       // Find main content - probeer verschillende selectors
+      // Voor admin layout: zoek .main-container binnen .main-content
+      // Voor dashboard: zoek .main-content direct
       let content = null;
-      const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
       
-      for (const selector of selectors) {
-        content = doc.querySelector(selector);
-        if (content) break;
+      // Eerst proberen .main-container (admin layout)
+      content = doc.querySelector('.main-container');
+      
+      // Als dat niet werkt, probeer .main-content
+      if (!content) {
+        content = doc.querySelector('.main-content');
+      }
+      
+      // Fallback naar andere selectors
+      if (!content) {
+        const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
+        for (const selector of selectors) {
+          content = doc.querySelector(selector);
+          if (content) break;
+        }
       }
 
       // Als nog steeds geen content, probeer body > main of body > .container
       if (!content) {
         content = doc.querySelector('body > main') || 
                   doc.querySelector('body > .container') ||
-                  doc.querySelector('body > div[class*="main"]') ||
-                  doc.body;
+                  doc.querySelector('body > div[class*="main"]');
       }
 
-      // Extract alleen de innerHTML, niet de hele body
-      const contentHtml = content === doc.body ? 
-        Array.from(doc.body.children).map(el => el.outerHTML).join('') : 
-        content.innerHTML;
+      // Laatste fallback: gebruik body maar skip header/footer
+      if (!content || content === doc.body) {
+        const mainEl = doc.querySelector('main');
+        if (mainEl) {
+          content = mainEl;
+        } else {
+          // Extract alleen children van body (skip scripts, etc)
+          const bodyChildren = Array.from(doc.body.children);
+          const mainContent = bodyChildren.find(el => 
+            el.classList.contains('main-content') || 
+            el.classList.contains('main-container') ||
+            el.tagName === 'MAIN'
+          );
+          content = mainContent || doc.body;
+        }
+      }
+
+      // Extract content HTML
+      let contentHtml;
+      if (content === doc.body) {
+        // Skip scripts, styles, etc - alleen main content
+        const skipTags = ['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE'];
+        contentHtml = Array.from(content.children)
+          .filter(el => !skipTags.includes(el.tagName))
+          .map(el => el.outerHTML)
+          .join('');
+      } else {
+        contentHtml = content.innerHTML;
+      }
 
       // Cache de content
       CONFIG.cache.set(url, {
@@ -151,15 +190,28 @@
       const content = await fetchPageContent(url);
 
       // Find content container - probeer verschillende selectors
+      // Voor admin: .main-container binnen .main-content
+      // Voor dashboard: .main-content direct
       let container = null;
-      const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
       
-      for (const selector of selectors) {
-        container = document.querySelector(selector);
-        if (container) break;
+      // Eerst proberen .main-container (admin layout)
+      container = document.querySelector('.main-container');
+      
+      // Als dat niet werkt, probeer .main-content
+      if (!container) {
+        container = document.querySelector('.main-content');
+      }
+      
+      // Fallback naar andere selectors
+      if (!container) {
+        const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
+        for (const selector of selectors) {
+          container = document.querySelector(selector);
+          if (container) break;
+        }
       }
 
-      // Fallback selectors
+      // Laatste fallback selectors
       if (!container) {
         container = document.querySelector('body > main') || 
                     document.querySelector('body > .container') ||
@@ -170,6 +222,12 @@
 
       if (!container) {
         console.error('[Client Router] Content container not found, falling back to full reload');
+        console.error('[Client Router] Available elements:', {
+          hasMain: !!document.querySelector('main'),
+          hasMainContent: !!document.querySelector('.main-content'),
+          hasMainContainer: !!document.querySelector('.main-container'),
+          bodyChildren: Array.from(document.body.children).map(el => el.tagName + (el.className ? '.' + el.className : ''))
+        });
         window.location.href = url;
         return;
       }
