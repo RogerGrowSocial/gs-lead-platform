@@ -25,8 +25,37 @@ async function createUserForTemplate(req) {
     }
 
     if (!profile) {
-      console.warn('⚠️ No profile found for user:', req.user.id);
-    } else {
+      // Profile doesn't exist - try to create it
+      console.log(`📝 Creating missing profile for user ${req.user.id} in createUserForTemplate`);
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: req.user.id,
+          email: req.user.email,
+          company_name: req.user.user_metadata?.company_name || null,
+          first_name: req.user.user_metadata?.first_name || null,
+          last_name: req.user.user_metadata?.last_name || null,
+          role_id: null,
+          status: 'active',
+          balance: 0,
+          is_admin: req.user.user_metadata?.is_admin === true || false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        })
+        .select('*')
+        .single();
+      
+      if (createError) {
+        console.error('❌ Error creating profile in createUserForTemplate:', createError);
+      } else {
+        console.log('✅ Profile created for user:', req.user.id);
+        profile = newProfile;
+      }
+    }
+    
+    if (profile) {
       console.log('✅ Profile found:', {
         first_name: profile.first_name,
         last_name: profile.last_name,
@@ -167,8 +196,42 @@ router.get('/', requireAuth, async (req, res) => {
         }
         // If step >= 99 but not completed, user is in tour - allow dashboard access
       } else {
-        // No profile found - should not happen but handle gracefully
-        console.warn('[DASHBOARD] No profile found for user:', req.user.id);
+        // No profile found - try to create it
+        console.log(`[DASHBOARD] Creating missing profile for user ${req.user.id}`);
+        const { data: newProfile, error: createError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({
+            id: req.user.id,
+            email: req.user.email,
+            company_name: req.user.user_metadata?.company_name || null,
+            first_name: req.user.user_metadata?.first_name || null,
+            last_name: req.user.user_metadata?.last_name || null,
+            role_id: null,
+            status: 'active',
+            balance: 0,
+            is_admin: req.user.user_metadata?.is_admin === true || false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          })
+          .select('onboarding_completed_at, onboarding_step')
+          .single();
+        
+        if (createError) {
+          console.error('[DASHBOARD] Error creating profile:', createError);
+        } else {
+          console.log('[DASHBOARD] ✅ Profile created for user:', req.user.id);
+          // Retry onboarding check with new profile
+          if (newProfile) {
+            const completed = !!newProfile?.onboarding_completed_at;
+            const step = newProfile?.onboarding_step || 0;
+            if (!completed && (step < 99 || step === null || step === undefined)) {
+              console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
+              return res.redirect('/onboarding');
+            }
+          }
+        }
       }
     } catch (obCheckErr) {
       console.error('[DASHBOARD] Onboarding status check exception:', obCheckErr);
@@ -3928,57 +3991,53 @@ router.post('/api/leads/:id/message', requireAuth, async (req, res) => {
 });
 
 // GET /dashboard/api/leads/unread-messages-count - Get count of unread messages for current user
+// OPTIMIZED: Use parallel queries and cache result
 router.get('/api/leads/unread-messages-count', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    
-    // Get all leads assigned to this user
-    const { data: userLeads, error: leadsError } = await supabase
-      .from('leads')
-      .select('id')
-      .or(`user_id.eq.${userId},assigned_to.eq.${userId}`);
-    
-    if (leadsError) {
-      console.error('Error fetching user leads:', leadsError);
-      return res.json({
-        success: true,
-        count: 0
-      });
-    }
-    
-    if (!userLeads || userLeads.length === 0) {
-      return res.json({
-        success: true,
-        count: 0
-      });
-    }
-    
-    const leadIds = userLeads.map(l => l.id);
-    
-    // Get messages from customers (not from this user) that are newer than last_checked_at
-    // For now, we'll count all messages from last 7 days that are not from this user
-    // TODO: Add last_checked_at tracking per lead per user
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    const { data: recentMessages, error: messagesError } = await supabase
-      .from('lead_activities')
-      .select('id, lead_id, created_by, created_at')
-      .eq('type', 'message')
-      .in('lead_id', leadIds)
-      .neq('created_by', userId)
-      .gte('created_at', sevenDaysAgo.toISOString());
+    // OPTIMIZED: Get user leads and messages in parallel
+    const [leadsResult, messagesResult] = await Promise.all([
+      // Get all leads assigned to this user
+      supabaseAdmin
+        .from('leads')
+        .select('id')
+        .or(`user_id.eq.${userId},assigned_to.eq.${userId}`),
+      // Get recent messages (will filter by lead_ids after)
+      supabaseAdmin
+        .from('lead_activities')
+        .select('lead_id')
+        .eq('type', 'message')
+        .neq('created_by', userId)
+        .gte('created_at', sevenDaysAgo.toISOString())
+    ]);
     
-    if (messagesError) {
-      console.error('Error fetching messages:', messagesError);
-      return res.json({
-        success: true,
-        count: 0
-      });
+    if (leadsResult.error) {
+      console.error('Error fetching user leads:', leadsResult.error);
+      return res.json({ success: true, count: 0 });
     }
     
+    if (messagesResult.error) {
+      console.error('Error fetching messages:', messagesResult.error);
+      return res.json({ success: true, count: 0 });
+    }
+    
+    const userLeads = leadsResult.data || [];
+    const recentMessages = messagesResult.data || [];
+    
+    if (userLeads.length === 0) {
+      return res.json({ success: true, count: 0 });
+    }
+    
+    const leadIds = new Set(userLeads.map(l => l.id));
+    
+    // Filter messages to only those from user's leads
+    const unreadMessages = recentMessages.filter(m => m.lead_id && leadIds.has(m.lead_id));
+    
     // Count unique leads with unread messages
-    const leadsWithUnread = new Set(recentMessages?.map(m => m.lead_id) || []);
+    const leadsWithUnread = new Set(unreadMessages.map(m => m.lead_id));
     
     res.json({
       success: true,

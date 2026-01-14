@@ -392,8 +392,38 @@ app.use(async (req, res, next) => {
           .eq('id', userId)
           .maybeSingle()
         
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('❌ Error fetching profile:', error)
+        } else if (error && error.code === 'PGRST116' || !fetchedProfile) {
+          // Profile doesn't exist - create it (upsert)
+          console.log(`📝 Creating missing profile for user ${userId} in loadUserProfile middleware`);
+          const { data: newProfile, error: upsertError } = await supabaseAdmin
+            .from('profiles')
+            .upsert({
+              id: userId,
+              email: req.user.email,
+              company_name: req.user.user_metadata?.company_name || null,
+              first_name: req.user.user_metadata?.first_name || null,
+              last_name: req.user.user_metadata?.last_name || null,
+              role_id: null,
+              status: 'active',
+              balance: 0,
+              is_admin: req.user.user_metadata?.is_admin === true || false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
+            })
+            .select('profile_picture, company_name, first_name, last_name, is_admin, role_id')
+            .single();
+          
+          if (upsertError) {
+            console.error('❌ Error creating profile in loadUserProfile middleware:', upsertError);
+            profile = null;
+          } else {
+            console.log('✅ Profile created for user:', userId);
+            profile = newProfile;
+          }
         } else {
           profile = fetchedProfile;
         }
@@ -596,6 +626,10 @@ console.log('📋 Registering routes...')
 const routeRegStart = Date.now()
 // Routes
 app.use("/", authRoutes)
+// Redirect /payments to /dashboard/payments for convenience
+app.get("/payments", requireAuth, (req, res) => {
+  res.redirect('/dashboard/payments');
+});
 app.use("/dashboard", requireAuth, dashboardRoutes)
 app.use("/onboarding", requireAuth, onboardingRoutes)
 app.use("/admin", requireAuth, isAdmin, adminRoutes)
