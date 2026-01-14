@@ -617,13 +617,14 @@ router.post("/register", async (req, res) => {
         console.log(`📧 Attempting to send welcome email to: ${email}`);
         
         // Generate password reset link for welcome email
-        const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'recovery',
-          email: email,
-          options: {
-            redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
-          }
-        });
+          const redirectBase = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+          const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'recovery',
+            email: email,
+            options: {
+              redirectTo: `${redirectBase}/auth/reset-password`
+            }
+          });
         
         if (resetError) {
           console.error("❌ Error generating password reset link for welcome email:", resetError);
@@ -1017,9 +1018,10 @@ router.post("/forgot-password", async (req, res) => {
       // For external emails, use Supabase's built-in resetPasswordForEmail (uses Mailgun)
       console.log(`📧 External email detected (${email}), using Supabase SMTP...`);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
-      });
+    const redirectBase = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${redirectBase}/auth/reset-password`
+    });
 
       if (error) {
         logger.error('Password reset request error:', error);
