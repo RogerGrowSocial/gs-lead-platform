@@ -64,7 +64,7 @@ function requireWithRetry(modulePath, maxRetries = 3) {
 }
 
 const expressStart = Date.now()
-const express = requireWithRetry("express")
+const express = isVercel ? require("express") : requireWithRetry("express")
 const expressTime = Date.now() - expressStart
 if (expressTime > 1000) {
   console.log(`⚠️ express loaded (${expressTime}ms - very slow! Disk might be full or slow)`)
@@ -109,7 +109,7 @@ const getLeadsRoutes = () => {
   if (!leadsRoutes) {
     console.log('📦 Loading routes/leads (lazy load)...')
     const startTime = Date.now()
-    leadsRoutes = requireWithRetry("./routes/leads")
+    leadsRoutes = isVercel ? require("./routes/leads") : requireWithRetry("./routes/leads")
     const loadTime = Date.now() - startTime
     console.log(`✅ routes/leads loaded (${loadTime}ms)`)
   }
@@ -120,7 +120,7 @@ console.log('📂 Loading config/supabase...')
 const startSupabase = Date.now()
 let supabase
 try {
-  supabase = requireWithRetry('./config/supabase')
+  supabase = isVercel ? require('./config/supabase') : requireWithRetry('./config/supabase')
   console.log(`✅ config/supabase loaded (${Date.now() - startSupabase}ms)`)
 } catch (error) {
   console.error('❌ Failed to load config/supabase:', error.message)
@@ -129,7 +129,7 @@ try {
 }
 console.log('📂 Loading middleware/auth...')
 const startAuth = Date.now()
-const { requireAuth, isAdmin } = requireWithRetry("./middleware/auth")
+const { requireAuth, isAdmin } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
 console.log(`✅ middleware/auth (requireAuth, isAdmin) loaded (${Date.now() - startAuth}ms)`)
 const startRefresh = Date.now()
 const { refreshIfNeeded } = require("./middleware/auth")
@@ -425,21 +425,21 @@ app.use((req, res, next) => {
 // Routes importeren (load all routes directly like before)
 console.log('📂 Loading routes...')
 const startAuthRoutes = Date.now()
-const authRoutes = requireWithRetry("./routes/auth")
+const authRoutes = isVercel ? require("./routes/auth") : requireWithRetry("./routes/auth")
 console.log(`✅ authRoutes loaded (${Date.now() - startAuthRoutes}ms)`)
 const startOnboarding = Date.now()
-const onboardingRoutes = requireWithRetry("./routes/onboarding")
+const onboardingRoutes = isVercel ? require("./routes/onboarding") : requireWithRetry("./routes/onboarding")
 console.log(`✅ onboardingRoutes loaded (${Date.now() - startOnboarding}ms)`)
 const startDashboard = Date.now()
-const dashboardRoutes = requireWithRetry("./routes/dashboard")
+const dashboardRoutes = isVercel ? require("./routes/dashboard") : requireWithRetry("./routes/dashboard")
 console.log(`✅ dashboardRoutes loaded (${Date.now() - startDashboard}ms)`)
 const startAdmin = Date.now()
-const adminRoutes = requireWithRetry("./routes/admin")
+const adminRoutes = isVercel ? require("./routes/admin") : requireWithRetry("./routes/admin")
 console.log(`✅ adminRoutes loaded (${Date.now() - startAdmin}ms)`)
 console.log('📂 Loading routes/api (this is a large file, may take a moment)...')
 console.log('   ⏳ Parsing 11,456 lines...')
 const startApi = Date.now()
-const apiRoutes = requireWithRetry("./routes/api")
+const apiRoutes = isVercel ? require("./routes/api") : requireWithRetry("./routes/api")
 const apiLoadTime = Date.now() - startApi
 if (apiLoadTime > 3000) {
   console.log(`⚠️  apiRoutes loaded (${apiLoadTime}ms - very slow! This is a large file)`)
@@ -447,7 +447,7 @@ if (apiLoadTime > 3000) {
   console.log(`✅ apiRoutes loaded (${apiLoadTime}ms)`)
 }
 const startForms = Date.now()
-const formsRoutes = requireWithRetry("./routes/forms")
+const formsRoutes = isVercel ? require("./routes/forms") : requireWithRetry("./routes/forms")
 console.log(`✅ formsRoutes loaded (${Date.now() - startForms}ms)`)
 // internalCampaignsRoutes loads heavy Google Ads services - load lazily
 let internalCampaignsRoutes = null
@@ -455,7 +455,7 @@ const getInternalCampaignsRoutes = () => {
   if (!internalCampaignsRoutes) {
     console.log('📦 Loading internalCampaignsRoutes...')
     const startTime = Date.now()
-    internalCampaignsRoutes = requireWithRetry("./routes/internalCampaigns")
+    internalCampaignsRoutes = isVercel ? require("./routes/internalCampaigns") : requireWithRetry("./routes/internalCampaigns")
     const loadTime = Date.now() - startTime
     console.log(`✅ internalCampaignsRoutes loaded (${loadTime}ms)`)
   }
