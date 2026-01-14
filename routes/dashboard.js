@@ -383,6 +383,7 @@ router.get('/', requireAuth, async (req, res) => {
     settings.lead_limit = monthlyQuota;
 
     res.render('dashboard/index', {
+      activeMenu: 'dashboard',
       user: userForTemplate,
       leads: recentLeads,
       payments: payments || [],
@@ -406,6 +407,7 @@ router.get('/', requireAuth, async (req, res) => {
     fallbackUser.balance = 0;
 
     res.render('dashboard/index', {
+      activeMenu: 'dashboard',
       user: fallbackUser,
       leads: [],
       payments: [],
@@ -2779,6 +2781,7 @@ router.get('/payments', requireAuth, async (req, res) => {
     console.log('📊 [PAYMENTS] Computed stats:', stats);
     
     res.render('dashboard/payments', {
+      activeMenu: 'payments',
       user: userForTemplate,
       payments: payments || [],
       paymentMethods: paymentMethods || [],

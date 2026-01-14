@@ -1728,6 +1728,7 @@ document.addEventListener('DOMContentLoaded', function() {
     activeMenu: 'settings',
     user: user,
     body: settingsContent,
+    stylesheets: ['/css/admin/adminSettings.css'],
     scripts: (currentTab === 'payment' ? ['/js/settings.js', '/js/payments.js'] : ['/js/settings.js'])
 }) %>
 
