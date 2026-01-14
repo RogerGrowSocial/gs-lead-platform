@@ -1638,12 +1638,29 @@ if (isVercel) {
   }
 }
 
-// On Vercel, pre-load commonly used services to ensure they're bundled
+// On Vercel, pre-load ALL routes and commonly used services to ensure they're bundled
 // This prevents "Cannot find module" errors at runtime
 if (isVercel) {
-  console.log('📦 Pre-loading commonly used services for Vercel bundling...')
+  console.log('📦 Pre-loading routes and services for Vercel bundling...')
   try {
+    // CRITICAL: Pre-load all routes first (these are required during server init)
+    console.log('  📂 Pre-loading routes...')
+    require('./routes/auth')
+    require('./routes/onboarding')
+    require('./routes/dashboard')
+    require('./routes/admin')
+    require('./routes/api')
+    require('./routes/forms')
+    require('./routes/leads')
+    require('./routes/internalCampaigns')
+    require('./routes/payments')
+    require('./routes/subscriptions')
+    require('./routes/webhooks')
+    require('./routes/users')
+    console.log('  ✅ All routes pre-loaded')
+    
     // Pre-load services that are frequently required dynamically in routes
+    console.log('  📦 Pre-loading services...')
     require('./services/systemLogService')
     require('./services/activityService')
     require('./services/notificationService')
@@ -1683,10 +1700,12 @@ if (isVercel) {
     require('./services/automaticBillingService')
     require('./services/subscriptionBillingService')
     require('./services/billingCronJob')
-    console.log('✅ All commonly used services pre-loaded for Vercel')
+    console.log('✅ All routes and services pre-loaded for Vercel')
   } catch (preloadError) {
-    console.warn('⚠️ Some services failed to pre-load (non-critical):', preloadError.message)
-    // Continue anyway - services will be loaded on-demand
+    console.error('❌ CRITICAL: Failed to pre-load modules:', preloadError.message)
+    console.error(preloadError.stack)
+    // Don't continue if routes fail to load - this is critical
+    throw preloadError
   }
 }
 
