@@ -481,12 +481,16 @@ async function isManagerOrAdmin(req, res, next) {
  * Clear auth cookies and (optionally) sign out on Supabase (not required server-side).
  */
 async function clearSession(req, res) {
+  // Determine cookie domain dynamically based on host
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+  const cookieDomain = isVercel ? undefined : (process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined);
+
   const cookieOptions = {
-    httpOnly: true, 
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
+    sameSite: process.env.NODE_ENV === "production" ? 'lax' : 'lax', // Changed from 'none' to 'lax'
     path: '/',
-    domain: process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined
+    domain: cookieDomain
   };
   res.clearCookie('sb-access-token', cookieOptions);
   res.clearCookie('sb-refresh-token', cookieOptions);
@@ -497,12 +501,17 @@ function setAuthCookies(res, session) {
   const refresh = session?.refresh_token;
   const exp = session?.expires_in ? Number(session.expires_in) * 1000 : 60 * 60 * 1000;
 
+  // Determine cookie domain dynamically based on host
+  // On Vercel, don't set domain to allow cookies to work across subdomains
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+  const cookieDomain = isVercel ? undefined : (process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined);
+
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax',
+    sameSite: process.env.NODE_ENV === "production" ? 'lax' : 'lax', // Changed from 'none' to 'lax' for better compatibility
     path: '/',
-    domain: process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined
+    domain: cookieDomain
   };
 
   if (access) {

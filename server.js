@@ -292,6 +292,10 @@ const mailHtmlNoCache = (req, res, next) => {
 app.use('/admin/mail', mailHtmlNoCache)
 
 // Sessie configuratie
+// Determine cookie domain dynamically - don't set domain on Vercel
+const isVercelForCookies = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+const sessionCookieDomain = isVercelForCookies ? undefined : (process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined);
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "gs-lead-platform-secret",
@@ -302,8 +306,8 @@ app.use(
       maxAge: 1000 * 60 * 60 * 24, // 1 dag
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? 'none' : 'lax', // 'none' for cross-domain redirects
-      domain: process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined // Adjust domain as needed
+      sameSite: process.env.NODE_ENV === "production" ? 'lax' : 'lax', // Changed from 'none' to 'lax' for better compatibility
+      domain: sessionCookieDomain
     },
   }),
 )
