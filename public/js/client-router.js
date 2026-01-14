@@ -8,17 +8,10 @@
 
   // Config
   const CONFIG = {
-    // Routes die client-side geladen moeten worden
+    // Routes die client-side geladen moeten worden (alle admin en dashboard routes)
     clientRoutes: [
       '/dashboard',
-      '/dashboard/leads',
-      '/dashboard/payments',
-      '/dashboard/settings',
-      '/admin',
-      '/admin/leads',
-      '/admin/users',
-      '/admin/customers',
-      '/admin/settings'
+      '/admin'
     ],
     // Routes die altijd full page reload moeten doen
     skipRoutes: [
@@ -26,10 +19,11 @@
       '/logout',
       '/register',
       '/api/',
-      '/auth/'
+      '/auth/',
+      '/onboarding'
     ],
-    // Selector voor main content area
-    contentSelector: '.main-content, main, #main-content, .content-wrapper',
+    // Selector voor main content area (probeer verschillende selectors)
+    contentSelector: '.main-content, main, #main-content, .content-wrapper, .main-container, .admin-content, .dashboard-content',
     // Cache voor geladen content
     cache: new Map(),
     cacheMaxAge: 5 * 60 * 1000 // 5 minuten
@@ -58,7 +52,7 @@
       return false;
     }
 
-    // Check of het een client route is
+    // Check of het een client route is (prefix match)
     return CONFIG.clientRoutes.some(route => href.startsWith(route));
   }
 
@@ -93,19 +87,27 @@
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
       
-      // Find main content
+      // Find main content - probeer verschillende selectors
       let content = null;
-      for (const selector of CONFIG.contentSelector.split(',')) {
-        content = doc.querySelector(selector.trim());
+      const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
+      
+      for (const selector of selectors) {
+        content = doc.querySelector(selector);
         if (content) break;
       }
 
+      // Als nog steeds geen content, probeer body > main of body > .container
       if (!content) {
-        // Fallback: gebruik body content
-        content = doc.body;
+        content = doc.querySelector('body > main') || 
+                  doc.querySelector('body > .container') ||
+                  doc.querySelector('body > div[class*="main"]') ||
+                  doc.body;
       }
 
-      const contentHtml = content.innerHTML;
+      // Extract alleen de innerHTML, niet de hele body
+      const contentHtml = content === doc.body ? 
+        Array.from(doc.body.children).map(el => el.outerHTML).join('') : 
+        content.innerHTML;
 
       // Cache de content
       CONFIG.cache.set(url, {
@@ -148,15 +150,28 @@
       // Fetch content
       const content = await fetchPageContent(url);
 
-      // Find content container
+      // Find content container - probeer verschillende selectors
       let container = null;
-      for (const selector of CONFIG.contentSelector.split(',')) {
-        container = document.querySelector(selector.trim());
+      const selectors = CONFIG.contentSelector.split(',').map(s => s.trim());
+      
+      for (const selector of selectors) {
+        container = document.querySelector(selector);
         if (container) break;
       }
 
+      // Fallback selectors
       if (!container) {
-        throw new Error('Content container not found');
+        container = document.querySelector('body > main') || 
+                    document.querySelector('body > .container') ||
+                    document.querySelector('body > div[class*="main"]') ||
+                    document.querySelector('.admin-content') ||
+                    document.querySelector('.dashboard-content');
+      }
+
+      if (!container) {
+        console.error('[Client Router] Content container not found, falling back to full reload');
+        window.location.href = url;
+        return;
       }
 
       // Update content met fade effect
@@ -204,8 +219,10 @@
 
     } catch (error) {
       console.error('[Client Router] Navigation failed:', error);
-      // Fallback naar full page reload
-      window.location.href = url;
+      // Fallback naar full page reload na korte delay
+      setTimeout(() => {
+        window.location.href = url;
+      }, 100);
       return;
     } finally {
       isNavigating = false;
@@ -248,12 +265,18 @@
       return;
     }
 
+    // Skip form submissions en special links
+    if (link.closest('form') || link.hasAttribute('download')) {
+      return;
+    }
+
     // Check of we client-side moeten navigeren
     if (!shouldHandleClientSide(href)) {
       return; // Laat browser normale navigatie doen
     }
 
     e.preventDefault();
+    e.stopPropagation();
     navigateTo(href);
   }
 
@@ -269,7 +292,7 @@
    * Initialize router
    */
   function init() {
-    // Intercept link clicks
+    // Intercept link clicks (use capture phase to catch early)
     document.addEventListener('click', handleLinkClick, true);
 
     // Handle browser back/forward
@@ -278,7 +301,13 @@
     // Update active menu items on initial load
     updateActiveMenuItems(window.location.pathname);
 
-    console.log('[Client Router] Initialized');
+    // Debug: log initialization
+    if (window.GS_DEBUG || localStorage.getItem('GS_DEBUG') === 'true') {
+      console.log('[Client Router] Initialized', {
+        clientRoutes: CONFIG.clientRoutes,
+        currentUrl: window.location.pathname
+      });
+    }
   }
 
   // Initialize when DOM is ready
