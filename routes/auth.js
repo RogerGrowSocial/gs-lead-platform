@@ -1063,7 +1063,7 @@ router.post("/reset-password", async (req, res) => {
     const { access_token, refresh_token, password } = req.body
     const supabase = createBaseClient();
 
-    if (!access_token || !refresh_token || !password) {
+    if (!access_token || !password) {
       return res.render("auth/reset-password", {
         layout: false,
         error: "Vul alle verplichte velden in",
@@ -1072,20 +1072,50 @@ router.post("/reset-password", async (req, res) => {
       })
     }
 
-    // Set session from recovery tokens
-    const { error: sessionError } = await supabase.auth.setSession({
-      access_token,
-      refresh_token
-    });
-
-    if (sessionError) {
-      logger.error('Password reset setSession error:', sessionError);
-      return res.render("auth/reset-password", {
-        layout: false,
-        error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
+    // If we have refresh_token, set session directly. Otherwise, try verifyOtp recovery with the token.
+    if (refresh_token) {
+      const { error: sessionError } = await supabase.auth.setSession({
         access_token,
         refresh_token
-      })
+      });
+      if (sessionError) {
+        logger.error('Password reset setSession error:', sessionError);
+        return res.render("auth/reset-password", {
+          layout: false,
+          error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
+          access_token,
+          refresh_token
+        })
+      }
+    } else {
+      // Attempt to exchange token for session using verifyOtp (recovery)
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: access_token,
+        type: 'recovery'
+      });
+      if (verifyError || !data?.session?.refresh_token || !data?.session?.access_token) {
+        logger.error('Password reset verifyOtp error:', verifyError);
+        return res.render("auth/reset-password", {
+          layout: false,
+          error: "De reset link is ongeldig of verlopen. Vraag een nieuwe link aan.",
+          access_token: '',
+          refresh_token: ''
+        })
+      }
+      const { access_token: at, refresh_token: rt } = data.session;
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: at,
+        refresh_token: rt
+      });
+      if (sessionError) {
+        logger.error('Password reset setSession (after verifyOtp) error:', sessionError);
+        return res.render("auth/reset-password", {
+          layout: false,
+          error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
+          access_token: '',
+          refresh_token: ''
+        })
+      }
     }
 
     // Update password via Supabase Auth
