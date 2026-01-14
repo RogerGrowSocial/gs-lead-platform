@@ -39,6 +39,26 @@
     color: var(--secondary);
     background-color: var(--white);
   }
+
+  /* Client-side router: Smooth transitions */
+  .main-content,
+  main,
+  #main-content,
+  .content-wrapper {
+    transition: opacity 150ms ease-in-out;
+  }
+
+  body.navigating .main-content,
+  body.navigating main,
+  body.navigating #main-content,
+  body.navigating .content-wrapper {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  body.navigating {
+    cursor: wait;
+  }
   
   a {
     color: var(--primary);
