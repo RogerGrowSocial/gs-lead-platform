@@ -2549,6 +2549,127 @@ async function handleBulkDelete(tableName, ids, req, res, options = {}) {
   }
 }
 
+// Bootstrap endpoint for admin - returns all common data in one request
+router.get("/admin/bootstrap", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const startTime = Date.now();
+    
+    // Fetch all data in parallel
+    const [
+      permissionsResult,
+      usersResult,
+      industriesResult,
+      aiRouterSettingsResult
+    ] = await Promise.all([
+      // Permissions
+      Promise.resolve().then(() => {
+        const isAdmin = req.user.user_metadata?.is_admin === true;
+        return {
+          success: true,
+          permissions: isAdmin ? [
+            'leads.create', 'leads.read', 'leads.update', 'leads.delete', 'leads.bulk_delete',
+            'users.create', 'users.read', 'users.update', 'users.delete',
+            'admin.access', 'admin.settings'
+          ] : [
+            'leads.read', 'leads.create'
+          ],
+          is_admin: isAdmin,
+          user_id: req.user.id
+        };
+      }),
+      // Users list (basic, without quota for speed)
+      supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email, company_name, is_admin, created_at, employee_status')
+        .order('first_name', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return { success: true, users: data || [] };
+        })
+        .catch(err => {
+          console.error('Error fetching users in bootstrap:', err);
+          return { success: false, users: [], error: err.message };
+        }),
+      // Industries
+      supabaseAdmin
+        .from('industries')
+        .select('id, name, description, price_per_lead, is_active')
+        .eq('is_active', true)
+        .order('name')
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return { success: true, data: data || [] };
+        })
+        .catch(err => {
+          console.error('Error fetching industries in bootstrap:', err);
+          return { success: false, data: [], error: err.message };
+        }),
+      // AI Router Settings
+      supabaseAdmin
+        .from('ai_router_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['region_weight', 'performance_weight', 'fairness_weight', 'auto_assign_enabled', 'auto_assign_threshold'])
+        .then(({ data, error }) => {
+          if (error) throw error;
+          const settingsMap = {};
+          if (data) {
+            data.forEach(s => {
+              settingsMap[s.setting_key] = s.setting_value;
+            });
+          }
+          return {
+            success: true,
+            data: {
+              regionWeight: parseInt(settingsMap.region_weight || '50', 10),
+              performanceWeight: parseInt(settingsMap.performance_weight || '50', 10),
+              fairnessWeight: parseInt(settingsMap.fairness_weight || '50', 10),
+              autoAssign: settingsMap.auto_assign_enabled !== 'false',
+              autoAssignThreshold: parseInt(settingsMap.auto_assign_threshold || '70', 10)
+            }
+          };
+        })
+        .catch(err => {
+          console.error('Error fetching AI router settings in bootstrap:', err);
+          return {
+            success: false,
+            data: {
+              regionWeight: 50,
+              performanceWeight: 50,
+              fairnessWeight: 50,
+              autoAssign: false,
+              autoAssignThreshold: 70
+            },
+            error: err.message
+          };
+        })
+    ]);
+
+    const loadTime = Date.now() - startTime;
+    console.log(`✅ /admin/bootstrap loaded in ${loadTime}ms`);
+
+    res.json({
+      success: true,
+      permissions: permissionsResult,
+      users: usersResult.success ? usersResult.users : [],
+      industries: industriesResult.success ? industriesResult.data : [],
+      aiRouterSettings: aiRouterSettingsResult.success ? aiRouterSettingsResult.data : {
+        regionWeight: 50,
+        performanceWeight: 50,
+        fairnessWeight: 50,
+        autoAssign: false,
+        autoAssignThreshold: 70
+      },
+      loadTime: loadTime
+    });
+  } catch (err) {
+    console.error('Bootstrap error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Er is een fout opgetreden bij het ophalen van bootstrap data'
+    });
+  }
+});
+
 // Get user permissions (simplified version using is_admin)
 router.get("/permissions", requireAuth, async (req, res) => {
   try {
@@ -8374,6 +8495,158 @@ router.get('/health/mollie', async (req, res) => {
 // =====================================================
 // ONBOARDING ENDPOINTS
 // =====================================================
+
+// Bootstrap endpoint for dashboard - returns all common data in one request
+router.get("/dashboard/bootstrap", requireAuth, async (req, res) => {
+  try {
+    const startTime = Date.now();
+    const userId = req.user.id;
+    
+    // Fetch all data in parallel
+    const [
+      unreadCountResult,
+      onboardingStatusResult,
+      settingsResult
+    ] = await Promise.all([
+      // Unread messages count
+      supabase
+        .from('leads')
+        .select('id')
+        .or(`user_id.eq.${userId},assigned_to.eq.${userId}`)
+        .then(async ({ data: userLeads, error: leadsError }) => {
+          if (leadsError || !userLeads || userLeads.length === 0) {
+            return { success: true, count: 0 };
+          }
+          
+          const leadIds = userLeads.map(l => l.id);
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          
+          const { data: recentMessages, error: messagesError } = await supabase
+            .from('lead_activities')
+            .select('id, lead_id, created_by, created_at')
+            .eq('type', 'message')
+            .in('lead_id', leadIds)
+            .neq('created_by', userId)
+            .gte('created_at', sevenDaysAgo.toISOString());
+          
+          if (messagesError) {
+            return { success: true, count: 0 };
+          }
+          
+          const leadsWithUnread = new Set(recentMessages?.map(m => m.lead_id) || []);
+          return { success: true, count: leadsWithUnread.size };
+        })
+        .catch(err => {
+          console.error('Error fetching unread count in bootstrap:', err);
+          return { success: true, count: 0 };
+        }),
+      // Onboarding status
+      supabase
+        .rpc('get_onboarding_status', { p_user_id: userId })
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return { success: true, data: data };
+        })
+        .catch(err => {
+          console.error('Error fetching onboarding status in bootstrap:', err);
+          return { success: false, data: null, error: err.message };
+        }),
+      // Settings
+      supabaseAdmin
+        .from('settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+        .then(({ data: settings, error }) => {
+          if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            throw error;
+          }
+          
+          // Use getSettingsForUser logic for defaults
+          let finalSettings = settings;
+          if (!finalSettings) {
+            finalSettings = { 
+              lead_limit: 10, 
+              notifications_enabled: 1, 
+              paused: 0, 
+              two_factor_enabled: 0, 
+              new_lead_notification: 1, 
+              payment_notification: 1, 
+              account_notification: 1, 
+              marketing_notification: 0,
+              quota_warning_notification: 1,
+              quota_reached_notification: 1,
+              lead_assigned_notification: 1,
+              lead_status_changed_notification: 0,
+              subscription_expiring_notification: 1,
+              subscription_expired_notification: 1,
+              login_from_new_device_notification: 1,
+              whatsapp_notification_enabled: 0
+            };
+          }
+          
+          // Normalize two_factor_enabled
+          if (finalSettings.two_factor_enabled === true || finalSettings.two_factor_enabled === 'true' || finalSettings.two_factor_enabled === '1' || finalSettings.two_factor_enabled === 1) {
+            finalSettings.two_factor_enabled = 1;
+          } else {
+            finalSettings.two_factor_enabled = 0;
+          }
+          
+          // Ensure all fields exist
+          if (!finalSettings.new_lead_notification) finalSettings.new_lead_notification = 0;
+          if (!finalSettings.payment_notification) finalSettings.payment_notification = 0;
+          if (finalSettings.account_notification === undefined || finalSettings.account_notification === null) finalSettings.account_notification = 1;
+          if (finalSettings.marketing_notification === undefined || finalSettings.marketing_notification === null) finalSettings.marketing_notification = 0;
+          if (finalSettings.quota_warning_notification === undefined || finalSettings.quota_warning_notification === null) finalSettings.quota_warning_notification = 1;
+          if (finalSettings.quota_reached_notification === undefined || finalSettings.quota_reached_notification === null) finalSettings.quota_reached_notification = 1;
+          if (finalSettings.lead_assigned_notification === undefined || finalSettings.lead_assigned_notification === null) finalSettings.lead_assigned_notification = 1;
+          if (finalSettings.lead_status_changed_notification === undefined || finalSettings.lead_status_changed_notification === null) finalSettings.lead_status_changed_notification = 0;
+          if (finalSettings.subscription_expiring_notification === undefined || finalSettings.subscription_expiring_notification === null) finalSettings.subscription_expiring_notification = 1;
+          if (finalSettings.subscription_expired_notification === undefined || finalSettings.subscription_expired_notification === null) finalSettings.subscription_expired_notification = 1;
+          if (finalSettings.login_from_new_device_notification === undefined || finalSettings.login_from_new_device_notification === null) finalSettings.login_from_new_device_notification = 1;
+          if (finalSettings.whatsapp_notification_enabled === undefined || finalSettings.whatsapp_notification_enabled === null) finalSettings.whatsapp_notification_enabled = 0;
+          
+          return { success: true, settings: finalSettings };
+        })
+        .catch(err => {
+          console.error('Error fetching settings in bootstrap:', err);
+          return {
+            success: false,
+            settings: {
+              lead_limit: 10,
+              notifications_enabled: 1,
+              paused: 0,
+              two_factor_enabled: 0
+            },
+            error: err.message
+          };
+        })
+    ]);
+
+    const loadTime = Date.now() - startTime;
+    console.log(`✅ /dashboard/bootstrap loaded in ${loadTime}ms`);
+
+    res.json({
+      success: true,
+      unreadCount: unreadCountResult.count || 0,
+      onboardingStatus: onboardingStatusResult.success ? onboardingStatusResult.data : null,
+      settings: settingsResult.success ? settingsResult.settings : {
+        lead_limit: 10,
+        notifications_enabled: 1,
+        paused: 0,
+        two_factor_enabled: 0
+      },
+      loadTime: loadTime
+    });
+  } catch (err) {
+    console.error('Dashboard bootstrap error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Er is een fout opgetreden bij het ophalen van bootstrap data'
+    });
+  }
+});
 
 // Get onboarding status
 router.get("/onboarding/status", requireAuth, async (req, res) => {

@@ -34,6 +34,10 @@
   // State
   let isNavigating = false;
   let currentUrl = window.location.pathname;
+  let bootstrapData = {
+    admin: null,
+    dashboard: null
+  };
 
   /**
    * Check of een route client-side geladen moet worden
@@ -175,6 +179,57 @@
   }
 
   /**
+   * Load bootstrap data for admin or dashboard
+   */
+  async function loadBootstrapData(url) {
+    const isAdmin = url.startsWith('/admin');
+    const isDashboard = url.startsWith('/dashboard');
+    
+    if (!isAdmin && !isDashboard) {
+      return null;
+    }
+    
+    // Check if we already have fresh bootstrap data (cache for 30 seconds)
+    const cacheKey = isAdmin ? 'admin' : 'dashboard';
+    const cached = bootstrapData[cacheKey];
+    if (cached && (Date.now() - cached.timestamp) < 30000) {
+      return cached.data;
+    }
+    
+    try {
+      const endpoint = isAdmin ? '/api/admin/bootstrap' : '/api/dashboard/bootstrap';
+      const response = await fetch(endpoint, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        bootstrapData[cacheKey] = {
+          data: data,
+          timestamp: Date.now()
+        };
+        
+        // Store in window for easy access by other scripts
+        if (isAdmin) {
+          window.adminBootstrapData = data;
+        } else {
+          window.dashboardBootstrapData = data;
+        }
+        
+        console.log(`✅ Bootstrap data loaded for ${cacheKey} in ${data.loadTime || 0}ms`);
+        return data;
+      }
+    } catch (error) {
+      console.error(`Error loading bootstrap data for ${cacheKey}:`, error);
+    }
+    
+    return null;
+  }
+
+  /**
    * Update page content zonder reload
    */
   async function navigateTo(url, pushState = true) {
@@ -188,8 +243,14 @@
       // Show loading indicator
       document.body.classList.add('navigating');
 
+      // Load bootstrap data in parallel with page content (if admin or dashboard)
+      const bootstrapPromise = loadBootstrapData(url);
+
       // Fetch content (returns { content, fullHtml })
       const { content, fullHtml } = await fetchPageContent(url);
+      
+      // Wait for bootstrap data (but don't block if it's slow)
+      await bootstrapPromise;
 
       // Find content container - probeer verschillende selectors
       // Voor admin: .main-container binnen .main-content
