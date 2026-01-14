@@ -280,9 +280,9 @@ async function requireAuth(req, res, next) {
       if (!isPollingEndpoint) {
         console.warn('⚠️ No profile found for user:', req.user.id, '- attempting to create profile');
         
-        // Ensure profile exists (upsert)
+        // Ensure profile exists (upsert) - WAIT for it to complete
         try {
-          const { error: upsertError } = await supabaseAdmin
+          const { data: newProfile, error: upsertError } = await supabaseAdmin
             .from('profiles')
             .upsert({
               id: req.user.id,
@@ -298,18 +298,27 @@ async function requireAuth(req, res, next) {
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'id'
-            });
+            })
+            .select()
+            .single();
           
           if (upsertError) {
             console.error('Error creating profile in middleware:', upsertError);
           } else {
-            console.log('✅ Profile created for user:', req.user.id);
+            console.log('✅ Profile created/updated for user:', req.user.id);
+            // Update profile variable so it's available for the rest of the middleware
+            profile = newProfile;
+            // Cache it
+            profileStatusCache.set(cacheKey, {
+              profile: profile,
+              timestamp: Date.now()
+            });
           }
         } catch (err) {
           console.error('Exception creating profile in middleware:', err);
         }
       }
-      // Continue if no profile found (don't block user - profile might be created async)
+      // Continue even if profile creation failed (don't block user)
       return next();
     }
 
