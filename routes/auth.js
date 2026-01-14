@@ -14,10 +14,10 @@ async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
   const target = requestedPath || '/dashboard'
 
   try {
-    // OPTIMIZED: Fetch profile first (we need role_id to fetch role)
+    // OPTIMIZED: Fetch profile with role_id (role column doesn't exist in profiles table)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_admin, role_id, role')
+      .select('is_admin, role_id')
       .eq('id', userId)
       .maybeSingle()
 
@@ -26,12 +26,9 @@ async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
       return target || '/dashboard'
     }
 
-    // If we have role_id, fetch role in parallel (but we already have profile.role as fallback)
-    // For speed, we'll use profile.role directly if available, otherwise fetch role
-    let roleName = profile?.role || null
-    
-    // Only fetch role if we don't have role name but have role_id
-    if (!roleName && profile?.role_id) {
+    // Fetch role name from roles table if role_id exists
+    let roleName = null
+    if (profile?.role_id) {
       const { data: role, error: roleError } = await supabaseAdmin
         .from('roles')
         .select('name')

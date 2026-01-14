@@ -274,11 +274,12 @@ router.get('/', requireAuth, async (req, res) => {
     // Get user settings (service role om RLS-issues te voorkomen)
     let settings = { lead_limit: 50, paused: 0 };
     try {
+      // FIX: lead_limit doesn't exist in profiles table - get from settings table instead
       const { data: settingsData, error: settingsError } = await supabaseAdmin
-      .from('profiles')
+      .from('settings')
       .select('lead_limit, paused')
-      .eq('id', req.user.id)
-      .single();
+      .eq('user_id', req.user.id)
+      .maybeSingle();
       
       if (settingsError) {
         console.error('❌ [DASHBOARD] Error fetching settings:', settingsError);
