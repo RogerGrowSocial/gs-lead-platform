@@ -123,22 +123,27 @@ async function requireAuth(req, res, next) {
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('status')
-      .eq('id', req.user.id);
+      .eq('id', req.user.id)
+      .maybeSingle(); // Use maybeSingle for cleaner result
 
     if (error) {
-      console.error('Error checking user status:', error);
+      // Only log non-critical errors (don't spam logs)
+      const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll') || req.path.includes('/unread-messages-count') || req.path.includes('/onboarding/status');
+      if (!isPollingEndpoint) {
+        console.error('Error checking user status:', error.message);
+      }
       // Continue if we can't check status (don't block user)
       return next();
     }
 
-    const profile = profiles?.[0];
+    const profile = profiles;
     if (!profile) {
       // Only log for non-polling endpoints to reduce noise
-      const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll');
+      const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll') || req.path.includes('/unread-messages-count') || req.path.includes('/onboarding/status');
       if (!isPollingEndpoint) {
-        console.error('No profile found for user:', req.user.id);
+        console.warn('⚠️ No profile found for user:', req.user.id, '- profile may not be created yet');
       }
-      // Continue if no profile found (don't block user)
+      // Continue if no profile found (don't block user - profile might be created async)
       return next();
     }
 
