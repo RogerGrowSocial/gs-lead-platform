@@ -357,11 +357,22 @@ if (!isVercel) {
 }
 
 // Middleware om gebruiker beschikbaar te maken in alle views
+// OPTIMIZED: Skip for static assets and API routes that don't need user data
 app.use(async (req, res, next) => {
+  // Skip for static assets and API routes that don't render views
+  if (req.path.startsWith('/css/') || 
+      req.path.startsWith('/js/') || 
+      req.path.startsWith('/images/') || 
+      req.path.startsWith('/uploads/') ||
+      (req.path.startsWith('/api/') && !req.path.includes('/admin'))) {
+    return next();
+  }
+
   try {
     if (req.user) {
       const userId = req.user.id;
       const now = Date.now();
+      const start = req.performanceTimings ? process.hrtime.bigint() : null;
       
       // Check cache first
       let profile = null;
@@ -385,32 +396,21 @@ app.use(async (req, res, next) => {
           console.error('❌ Error fetching profile:', error)
         } else {
           profile = fetchedProfile;
-          // Only log on cache miss to reduce noise
-          if (!cached) {
-            console.log('👤 Loaded profile for user:', userId, '- Profile picture:', profile?.profile_picture)
-          }
         }
         
         // Get role name if role_id exists (with caching)
         if (profile?.role_id) {
           const roleId = profile.role_id;
-          const now = Date.now();
           const cachedRole = rolesCache.get(roleId);
           
           if (cachedRole && (now - cachedRole.timestamp) < ROLES_CACHE_TTL) {
             roleName = cachedRole.role.name;
           } else {
-            const { data: role } = await supabaseAdmin
-              .from('roles')
-              .select('name')
-              .eq('id', roleId)
-              .single()
+            // Use roleCache utility for better caching
+            const { getRoleById } = require('./utils/roleCache');
+            const role = await getRoleById(roleId);
             if (role) {
               roleName = role.name;
-              rolesCache.set(roleId, {
-                role: role,
-                timestamp: now
-              });
             }
           }
         }
@@ -421,6 +421,13 @@ app.use(async (req, res, next) => {
           roleName,
           timestamp: now
         });
+      }
+      
+      // Track middleware timing
+      if (start && req.performanceTimings) {
+        const end = process.hrtime.bigint();
+        const time = Number(end - start) / 1000000;
+        req.performanceTimings.middleware['loadUserProfile'] = time;
       }
       
       // Merge profile data with auth user

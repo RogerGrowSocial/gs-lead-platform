@@ -7789,19 +7789,25 @@ router.get('/tasks', requireAuth, async (req, res) => {
     let employees = [];
     
     if (canViewAll) {
-      // Get all profiles with their roles
-      const { data: allProfiles, error: profilesError } = await supabaseAdmin
-        .from('profiles')
-        .select('id, first_name, last_name, email, role_id, employee_status, is_admin')
-        .order('first_name');
+      // OPTIMIZED: Fetch profiles and roles in parallel
+      const [profilesResult, rolesResult] = await Promise.all([
+        supabaseAdmin
+          .from('profiles')
+          .select('id, first_name, last_name, email, role_id, employee_status, is_admin')
+          .order('first_name'),
+        // Get roles using cache
+        Promise.resolve().then(async () => {
+          const { getRoleMap } = require('../utils/roleCache');
+          return await getRoleMap();
+        })
+      ]);
+      
+      const { data: allProfiles, error: profilesError } = profilesResult;
+      const { roleMap: roleMapRaw, roles: allRoles } = rolesResult;
       
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
       }
-      
-      // Get roles to identify employee roles vs customer roles (using cache)
-      const { getRoleMap } = require('../utils/roleCache');
-      const { roleMap: roleMapRaw, roles: allRoles } = await getRoleMap();
       
       // Create role map
       const roleMap = {};
