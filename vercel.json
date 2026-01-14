@@ -1,28 +1,18 @@
 {
   "version": 2,
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "buildCommand": "echo 'No build step needed'",
-  "builds": [
-    {
-      "src": "server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "node_modules/**"
-        ]
-      }
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "**"
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "server.js"
+      "dest": "/api/index.js"
     }
-  ],
-  "functions": {
-    "server.js": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
-  }
+  ]
 }
