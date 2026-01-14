@@ -7672,7 +7672,8 @@ router.get("/users/current/industry-preferences", requireAuth, async (req, res) 
   try {
     const userId = req.user.id;
     
-    const { data: preferences, error } = await supabase
+    // Use supabaseAdmin to bypass RLS and ensure it works even if profile doesn't exist yet
+    const { data: preferences, error } = await supabaseAdmin
       .from('user_industry_preferences')
       .select(`
         industry_id,
@@ -7685,25 +7686,33 @@ router.get("/users/current/industry-preferences", requireAuth, async (req, res) 
       `)
       .eq('user_id', userId);
     
-    if (error) throw error;
+    // If error, just log it and continue with empty preferences
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user industry preferences:', error);
+    }
     
     // Also get all available industries
-    const { data: allIndustries, error: industriesError } = await supabase
+    const { data: allIndustries, error: industriesError } = await supabaseAdmin
       .from('industries')
       .select('id, name, description, price_per_lead, is_active')
       .eq('is_active', true)
       .order('name');
     
-    if (industriesError) throw industriesError;
+    if (industriesError) {
+      console.error('Error fetching industries:', industriesError);
+      return res.status(500).json({ error: 'Failed to get industries' });
+    }
     
-    // Create a map of user preferences
+    // Create a map of user preferences (handle null/undefined preferences)
     const preferenceMap = {};
-    preferences.forEach(pref => {
-      preferenceMap[pref.industry_id] = pref.is_enabled;
-    });
+    if (preferences && Array.isArray(preferences)) {
+      preferences.forEach(pref => {
+        preferenceMap[pref.industry_id] = pref.is_enabled;
+      });
+    }
     
     // Combine with all industries
-    const result = allIndustries.map(industry => ({
+    const result = (allIndustries || []).map(industry => ({
       industry_id: industry.id,
       industry_name: industry.name,
       industry_description: industry.description,
@@ -7939,7 +7948,7 @@ router.get("/users/current/location-preferences", requireAuth, async (req, res) 
     ];
     
     // Get user preferences from user_location_preferences table
-    // Use supabaseAdmin to bypass RLS if needed, but try regular supabase first for RLS
+    // Use supabaseAdmin to bypass RLS and ensure it works even if profile doesn't exist yet
     const { data: preferences, error: prefError } = await supabaseAdmin
       .from('user_location_preferences')
       .select('location_code, location_name, is_enabled')
@@ -7952,7 +7961,18 @@ router.get("/users/current/location-preferences", requireAuth, async (req, res) 
         .from('profiles')
         .select('lead_locations')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+      
+      // If profile doesn't exist, return all locations as disabled
+      if (profileError && profileError.code === 'PGRST116') {
+        const result = availableLocations.map(location => ({
+          location_code: location.code,
+          location_name: location.name,
+          location_icon: location.icon,
+          is_enabled: false
+        }));
+        return res.json(result);
+      }
       
       if (profileError) throw profileError;
       
@@ -7969,7 +7989,18 @@ router.get("/users/current/location-preferences", requireAuth, async (req, res) 
       return res.json(result);
     }
     
-    if (prefError) throw prefError;
+    // If other error, log but don't fail - return empty preferences
+    if (prefError) {
+      console.error('Error fetching location preferences:', prefError);
+      // Return all locations as disabled
+      const result = availableLocations.map(location => ({
+        location_code: location.code,
+        location_name: location.name,
+        location_icon: location.icon,
+        is_enabled: false
+      }));
+      return res.json(result);
+    }
     
     // Create a map of user preferences
     const preferenceMap = {};
