@@ -77,7 +77,7 @@ const path = require("path")
 console.log(`  ✅ path (${Date.now() - pathStart}ms)`)
 
 const sessionStart = Date.now()
-const session = requireWithRetry("express-session")
+const session = isVercel ? require("express-session") : requireWithRetry("express-session")
 console.log(`  ✅ express-session (${Date.now() - sessionStart}ms)`)
 
 const cookieParserStart = Date.now()
