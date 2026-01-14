@@ -1164,4 +1164,219 @@ router.get('/auth/callback', async (req, res) => {
     }
 });
 
+// =====================================================
+// RABOBANK API OAUTH ROUTES
+// =====================================================
+
+const RabobankApiService = require('../services/rabobankApiService')
+const { requireAuth } = require('../middleware/auth')
+
+/**
+ * GET /auth/rabobank/connect
+ * Initiates OAuth 2.0 flow to connect Rabobank account
+ */
+router.get('/rabobank/connect', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    
+    if (!userId) {
+      return res.redirect('/dashboard?error=Je moet ingelogd zijn om je bankrekening te koppelen')
+    }
+
+    // Check if Rabobank API is configured
+    if (!RabobankApiService.isAvailable()) {
+      console.error('[Rabobank] API credentials not configured')
+      return res.redirect('/dashboard?error=Rabobank API is niet geconfigureerd')
+    }
+
+    // Generate state for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex')
+    
+    // Store state in session for verification
+    if (!req.session) {
+      req.session = {}
+    }
+    req.session.rabobank_oauth_state = state
+    req.session.rabobank_oauth_user_id = userId
+
+    // Build redirect URI
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
+    const redirectUri = `${baseUrl}/auth/rabobank/callback`
+
+    // Request account information scope (aisp = Account Information Service Provider)
+    const scopes = ['aisp']
+
+    // Generate authorization URL
+    const authUrl = RabobankApiService.getAuthorizationUrl(redirectUri, state, scopes)
+
+    console.log(`[Rabobank] Redirecting user ${userId} to authorization URL`)
+    res.redirect(authUrl)
+
+  } catch (error) {
+    console.error('[Rabobank] Error initiating OAuth flow:', error)
+    res.redirect('/dashboard?error=Er is een fout opgetreden bij het verbinden met Rabobank')
+  }
+})
+
+/**
+ * GET /auth/rabobank/callback
+ * Handles OAuth callback from Rabobank
+ */
+router.get('/rabobank/callback', requireAuth, async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query
+    const userId = req.user?.id
+
+    // Check for OAuth errors
+    if (error) {
+      console.error(`[Rabobank] OAuth error: ${error} - ${error_description}`)
+      return res.redirect(`/dashboard?error=Autorisatie geweigerd: ${error_description || error}`)
+    }
+
+    // Verify state parameter (CSRF protection)
+    if (!req.session || !req.session.rabobank_oauth_state) {
+      console.error('[Rabobank] No state found in session')
+      return res.redirect('/dashboard?error=Ongeldige sessie. Probeer opnieuw.')
+    }
+
+    if (state !== req.session.rabobank_oauth_state) {
+      console.error('[Rabobank] State mismatch - possible CSRF attack')
+      return res.redirect('/dashboard?error=Ongeldige autorisatie. Probeer opnieuw.')
+    }
+
+    // Verify user ID matches
+    if (req.session.rabobank_oauth_user_id !== userId) {
+      console.error('[Rabobank] User ID mismatch')
+      return res.redirect('/dashboard?error=Ongeldige gebruiker. Probeer opnieuw.')
+    }
+
+    if (!code) {
+      return res.redirect('/dashboard?error=Geen autorisatiecode ontvangen van Rabobank')
+    }
+
+    // Build redirect URI (must match the one used in authorization)
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
+    const redirectUri = `${baseUrl}/auth/rabobank/callback`
+
+    // Exchange authorization code for access token
+    console.log(`[Rabobank] Exchanging code for token for user ${userId}`)
+    const tokenData = await RabobankApiService.exchangeCodeForToken(code, redirectUri)
+
+    // Calculate token expiration time
+    const expiresAt = new Date()
+    expiresAt.setSeconds(expiresAt.getSeconds() + (tokenData.expires_in || 3600))
+
+    // Fetch account information to get IBAN and account details
+    let accountInfo = null
+    let accountIban = null
+    let accountName = null
+
+    try {
+      console.log(`[Rabobank] Fetching account information for user ${userId}`)
+      accountInfo = await RabobankApiService.getAccountInformation(tokenData.access_token)
+      
+      // Extract account details from response
+      // Rabobank API returns accounts in different formats, adjust based on actual response
+      if (accountInfo.accounts && accountInfo.accounts.length > 0) {
+        const firstAccount = accountInfo.accounts[0]
+        accountIban = firstAccount.iban || firstAccount.accountId
+        accountName = firstAccount.name || firstAccount.accountName || 'Rabobank Rekening'
+      } else if (accountInfo.iban) {
+        accountIban = accountInfo.iban
+        accountName = accountInfo.name || 'Rabobank Rekening'
+      }
+    } catch (accountError) {
+      console.error('[Rabobank] Error fetching account information:', accountError)
+      // Continue anyway - we can fetch account info later
+    }
+
+    // Store connection in database
+    const { data: connection, error: dbError } = await supabaseAdmin
+      .from('bank_connections')
+      .upsert({
+        user_id: userId,
+        provider: 'rabobank',
+        provider_account_id: accountIban || null,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || null,
+        token_expires_at: expiresAt.toISOString(),
+        token_type: tokenData.token_type || 'Bearer',
+        scope: tokenData.scope || 'aisp',
+        account_iban: accountIban,
+        account_name: accountName,
+        account_type: 'current', // Default, can be updated later
+        account_currency: 'EUR',
+        account_status: 'enabled',
+        connection_status: 'active',
+        last_synced_at: new Date().toISOString(),
+        error_count: 0
+      }, {
+        onConflict: 'user_id,provider,account_iban',
+        ignoreDuplicates: false
+      })
+      .select()
+      .single()
+
+    if (dbError) {
+      console.error('[Rabobank] Database error storing connection:', dbError)
+      throw new Error(`Database error: ${dbError.message}`)
+    }
+
+    // Clear OAuth state from session
+    if (req.session) {
+      delete req.session.rabobank_oauth_state
+      delete req.session.rabobank_oauth_user_id
+    }
+
+    console.log(`[Rabobank] Successfully connected account for user ${userId}`)
+    res.redirect('/dashboard?success=Rabobank rekening succesvol gekoppeld')
+
+  } catch (error) {
+    console.error('[Rabobank] Error in OAuth callback:', error)
+    
+    // Clear session state on error
+    if (req.session) {
+      delete req.session.rabobank_oauth_state
+      delete req.session.rabobank_oauth_user_id
+    }
+
+    res.redirect(`/dashboard?error=Er is een fout opgetreden bij het koppelen van je Rabobank rekening: ${error.message}`)
+  }
+})
+
+/**
+ * GET /auth/rabobank/disconnect
+ * Disconnects Rabobank account
+ */
+router.get('/rabobank/disconnect', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const { connection_id } = req.query
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Delete bank connection
+    const { error: deleteError } = await supabaseAdmin
+      .from('bank_connections')
+      .delete()
+      .eq('user_id', userId)
+      .eq('provider', 'rabobank')
+      .eq('id', connection_id || '') // If connection_id provided, only delete that one
+
+    if (deleteError) {
+      console.error('[Rabobank] Error disconnecting:', deleteError)
+      return res.redirect('/dashboard?error=Kon rekening niet ontkoppelen')
+    }
+
+    console.log(`[Rabobank] Disconnected account for user ${userId}`)
+    res.redirect('/dashboard?success=Rabobank rekening succesvol ontkoppeld')
+
+  } catch (error) {
+    console.error('[Rabobank] Error disconnecting:', error)
+    res.redirect('/dashboard?error=Er is een fout opgetreden bij het ontkoppelen')
+  }
+})
+
 module.exports = router
