@@ -90,7 +90,7 @@ console.log(`  ✅ morgan (${Date.now() - morganStart}ms)`)
 
 const bcryptStart = Date.now()
 console.log('  ⏳ Loading bcrypt (this can be slow on first load)...')
-const bcrypt = requireWithRetry("bcrypt")
+const bcrypt = isVercel ? require("bcrypt") : requireWithRetry("bcrypt")
 console.log(`  ✅ bcrypt (${Date.now() - bcryptStart}ms)`)
 
 const multerStart = Date.now()
