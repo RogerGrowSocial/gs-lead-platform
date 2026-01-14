@@ -6,6 +6,10 @@ const SystemLogService = require('../services/systemLogService');
 const authLogCache = new Map();
 const AUTH_LOG_COOLDOWN = 30000; // 30 seconds cooldown between same user auth logs
 
+// Profile status cache to reduce database queries
+const profileStatusCache = new Map();
+const PROFILE_STATUS_CACHE_TTL = 60000; // 1 minute cache for profile status
+
 /**
  * Check if we should log authentication for this user
  * @param {string} userId - User ID
@@ -30,14 +34,21 @@ function shouldLogAuth(userId, action) {
 /**
  * Try to ensure a valid user session on the request.
  * If access token is invalid/expired but a refresh token exists, refresh and re-set cookies.
+ * OPTIMIZED: Skip Supabase client creation if no cookies exist.
  */
 async function refreshIfNeeded(req, res, next) {
   try {
-    const base = createBaseClient();
+    // OPTIMIZED: Check cookies first before creating Supabase client
     const access = req.cookies?.['sb-access-token'];
     const refresh = req.cookies?.['sb-refresh-token'];
 
-    if (!access) return next(); // no session, nothing to refresh
+    if (!access && !refresh) {
+      // No cookies at all - skip all Supabase calls (fast path)
+      return next();
+    }
+
+    // Only create Supabase client if we have cookies
+    const base = createBaseClient();
 
     // Try to get user with current access token
     const scoped = createRequestClient(req);
@@ -115,28 +126,60 @@ async function requireAuth(req, res, next) {
     return res.redirect(`/login?returnTo=${returnTo}`);
   }
 
-  // ✅ Check if user account is active
+  // ✅ Check if user account is active (with caching to reduce DB queries)
   try {
-    const { createBaseClient } = require('../lib/supabase');
-    const supabase = createBaseClient();
+    // Check cache first
+    const cacheKey = `profile_status_${req.user.id}`;
+    const cached = profileStatusCache.get(cacheKey);
+    const now = Date.now();
     
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('status')
-      .eq('id', req.user.id)
-      .maybeSingle(); // Use maybeSingle for cleaner result
+    let profile = null;
+    
+    if (cached && (now - cached.timestamp) < PROFILE_STATUS_CACHE_TTL) {
+      // Use cached profile status
+      profile = cached.profile;
+    } else {
+      // Fetch from database
+      const { createBaseClient } = require('../lib/supabase');
+      const supabase = createBaseClient();
+      
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('status')
+        .eq('id', req.user.id)
+        .maybeSingle(); // Use maybeSingle for cleaner result
 
-    if (error) {
-      // Only log non-critical errors (don't spam logs)
-      const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll') || req.path.includes('/unread-messages-count') || req.path.includes('/onboarding/status');
-      if (!isPollingEndpoint) {
-        console.error('Error checking user status:', error.message);
+      if (error) {
+        // Only log non-critical errors (don't spam logs)
+        const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll') || req.path.includes('/unread-messages-count') || req.path.includes('/onboarding/status');
+        if (!isPollingEndpoint) {
+          console.error('Error checking user status:', error.message);
+        }
+        // Continue if we can't check status (don't block user)
+        return next();
       }
-      // Continue if we can't check status (don't block user)
-      return next();
-    }
 
-    const profile = profiles;
+      profile = profiles;
+      
+      // Cache the result
+      if (profile) {
+        profileStatusCache.set(cacheKey, {
+          profile: profile,
+          timestamp: now
+        });
+      }
+      
+      // Clean old cache entries (keep cache size reasonable)
+      if (profileStatusCache.size > 1000) {
+        const entriesToDelete = [];
+        for (const [key, value] of profileStatusCache.entries()) {
+          if ((now - value.timestamp) > PROFILE_STATUS_CACHE_TTL) {
+            entriesToDelete.push(key);
+          }
+        }
+        entriesToDelete.forEach(key => profileStatusCache.delete(key));
+      }
+    }
     if (!profile) {
       // Only log for non-polling endpoints to reduce noise
       const isPollingEndpoint = req.path.includes('/progress') || req.path.includes('/poll') || req.path.includes('/unread-messages-count') || req.path.includes('/onboarding/status');
