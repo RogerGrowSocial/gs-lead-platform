@@ -141,67 +141,6 @@ async function refreshIfNeeded(req, res, next) {
   }
 }
 
-    // Only create Supabase client if we have cookies
-    const base = createBaseClient();
-
-    // Try to get user with current access token
-    const scoped = createRequestClient(req);
-    let { data: userData, error: userErr } = await scoped.auth.getUser();
-
-    if (!userErr && userData?.user) {
-      req.user = userData.user;
-      
-      // Log successful authentication (with rate limiting)
-      if (shouldLogAuth(userData.user.id, 'authenticated')) {
-        SystemLogService.logAuth(
-          userData.user.id,
-          'authenticated',
-          'Gebruiker succesvol geauthenticeerd',
-          req.ip,
-          req.get('User-Agent')
-        ).catch(err => console.log('Auth logging failed:', err));
-      }
-      
-      return next();
-    }
-
-    // If there is a refresh token, try refreshing the session
-    if (refresh) {
-      const { data: refreshData, error: refreshErr } = await base.auth.refreshSession({ refresh_token: refresh });
-      if (!refreshErr && refreshData?.session) {
-        // Set new cookies
-        setAuthCookies(res, refreshData.session);
-        // Recreate a scoped client with fresh access token
-        req.cookies['sb-access-token'] = refreshData.session.access_token;
-        const scopedRefreshed = createRequestClient(req);
-        const { data: userData2, error: userErr2 } = await scopedRefreshed.auth.getUser();
-        if (!userErr2 && userData2?.user) {
-          req.user = userData2.user;
-          
-          // Log successful token refresh (with rate limiting)
-          if (shouldLogAuth(userData2.user.id, 'token_refreshed')) {
-            SystemLogService.logAuth(
-              userData2.user.id,
-              'token_refreshed',
-              'Gebruiker token succesvol ververst',
-              req.ip,
-              req.get('User-Agent')
-            ).catch(err => console.log('Auth logging failed:', err));
-          }
-          
-          return next();
-        }
-      }
-    }
-
-    // Fallthrough: no valid user
-    return next();
-  } catch (e) {
-    // Do not crash the request; just proceed unauthenticated
-    return next();
-  }
-}
-
 /**
  * Protect routes that require authentication.
  */
