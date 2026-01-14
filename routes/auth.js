@@ -1060,14 +1060,31 @@ router.get("/reset-password", (req, res) => {
 // Process password reset
 router.post("/reset-password", async (req, res) => {
   try {
-    const { token, password } = req.body
+    const { access_token, refresh_token, password } = req.body
     const supabase = createBaseClient();
 
-    if (!token || !password) {
+    if (!access_token || !refresh_token || !password) {
       return res.render("auth/reset-password", {
         layout: false,
         error: "Vul alle verplichte velden in",
-        token
+        access_token,
+        refresh_token
+      })
+    }
+
+    // Set session from recovery tokens
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token,
+      refresh_token
+    });
+
+    if (sessionError) {
+      logger.error('Password reset setSession error:', sessionError);
+      return res.render("auth/reset-password", {
+        layout: false,
+        error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
+        access_token,
+        refresh_token
       })
     }
 
@@ -1081,7 +1098,8 @@ router.post("/reset-password", async (req, res) => {
       return res.render("auth/reset-password", {
         layout: false,
         error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
-        token
+        access_token,
+        refresh_token
       })
     }
 
