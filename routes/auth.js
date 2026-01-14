@@ -917,6 +917,7 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body
     const supabase = createBaseClient();
+    const redirectBase = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
 
     if (!email) {
       return res.render("auth/forgot-password", {
@@ -941,7 +942,7 @@ router.post("/forgot-password", async (req, res) => {
           type: 'recovery',
           email: email,
           options: {
-            redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
+            redirectTo: `${redirectBase}/reset-password`
           }
         });
 
@@ -1018,9 +1019,8 @@ router.post("/forgot-password", async (req, res) => {
       // For external emails, use Supabase's built-in resetPasswordForEmail (uses Mailgun)
       console.log(`📧 External email detected (${email}), using Supabase SMTP...`);
       
-    const redirectBase = process.env.APP_URL || process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${redirectBase}/auth/reset-password`
+      redirectTo: `${redirectBase}/reset-password`
     });
 
       if (error) {
