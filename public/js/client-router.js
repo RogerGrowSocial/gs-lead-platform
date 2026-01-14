@@ -60,13 +60,14 @@
 
   /**
    * Haal content op via fetch
+   * Returns both content HTML and full HTML for stylesheet extraction
    */
   async function fetchPageContent(url) {
     try {
       // Check cache eerst
       const cached = CONFIG.cache.get(url);
       if (cached && (Date.now() - cached.timestamp) < CONFIG.cacheMaxAge) {
-        return cached.html;
+        return { content: cached.html, fullHtml: cached.fullHtml || '' };
       }
 
       // Fetch nieuwe content
@@ -148,9 +149,10 @@
         contentHtml = content.innerHTML;
       }
 
-      // Cache de content
+      // Cache de content (zowel content als full HTML voor stylesheet extraction)
       CONFIG.cache.set(url, {
         html: contentHtml,
+        fullHtml: html, // Store full HTML for stylesheet extraction
         timestamp: Date.now()
       });
 
@@ -165,7 +167,7 @@
         entriesToDelete.forEach(key => CONFIG.cache.delete(key));
       }
 
-      return contentHtml;
+      return { content: contentHtml, fullHtml: html };
     } catch (error) {
       console.error('[Client Router] Error fetching content:', error);
       throw error;
@@ -186,8 +188,8 @@
       // Show loading indicator
       document.body.classList.add('navigating');
 
-      // Fetch content
-      const content = await fetchPageContent(url);
+      // Fetch content (returns { content, fullHtml })
+      const { content, fullHtml } = await fetchPageContent(url);
 
       // Find content container - probeer verschillende selectors
       // Voor admin: .main-container binnen .main-content
@@ -245,11 +247,63 @@
         window.history.pushState({ url: url }, '', url);
       }
 
-      // Update page title (haal uit nieuwe content als mogelijk)
-      const titleMatch = content.match(/<title>(.*?)<\/title>/i);
-      if (titleMatch) {
-        document.title = titleMatch[1];
+      // Update page title en load new stylesheets from the fetched HTML
+      const fullDoc = new DOMParser().parseFromString(fullHtml, 'text/html');
+      
+      // Update title
+      const newTitle = fullDoc.querySelector('title');
+      if (newTitle) {
+        document.title = newTitle.textContent;
       }
+
+      // Load new stylesheets from head
+      const newStylesheets = Array.from(fullDoc.head.querySelectorAll('link[rel="stylesheet"]'));
+      const existingStylesheets = new Set(
+        Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
+          .map(link => link.href)
+      );
+
+      // Load new stylesheets that don't exist yet
+      newStylesheets.forEach(link => {
+        const href = link.href || link.getAttribute('href');
+        if (href && !existingStylesheets.has(href)) {
+          // Skip base stylesheets that are always loaded (design-tokens, style.css, etc)
+          const baseStylesheets = [
+            '/css/design-tokens.css',
+            '/css/chart-theme.css',
+            '/css/style.css',
+            '/css/admin/notifications.css',
+            'cdnjs.cloudflare.com',
+            'fonts.googleapis.com'
+          ];
+          
+          const isBaseStylesheet = baseStylesheets.some(base => href.includes(base));
+          
+          if (!isBaseStylesheet) {
+            const newLink = document.createElement('link');
+            newLink.rel = 'stylesheet';
+            newLink.href = href;
+            newLink.media = link.getAttribute('media') || 'all';
+            document.head.appendChild(newLink);
+            
+            // Mark as page-specific for cleanup later
+            newLink.setAttribute('data-page-specific', 'true');
+          }
+        }
+      });
+
+      // Remove old page-specific stylesheets (cleanup)
+      document.head.querySelectorAll('link[rel="stylesheet"][data-page-specific="true"]').forEach(link => {
+        const href = link.href;
+        const stillNeeded = newStylesheets.some(newLink => {
+          const newHref = newLink.href || newLink.getAttribute('href');
+          return newHref === href;
+        });
+        
+        if (!stillNeeded) {
+          link.remove();
+        }
+      });
 
       // Re-initialize scripts in nieuwe content
       // Execute any script tags in the new content
