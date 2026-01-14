@@ -150,7 +150,7 @@ router.post("/login", async (req, res) => {
     const { data: settings, error: settingsError } = settingsResult;
     const twoFactorEnabled = settings?.two_factor_enabled === 1 || settings?.two_factor_enabled === true;
 
-      if (twoFactorEnabled && settings?.two_factor_secret) {
+    if (twoFactorEnabled && settings?.two_factor_secret) {
         // Check if user has "remember device" cookie
         const rememberToken = req.cookies?.[`2fa_remember_${data.user.id}`];
         const rememberExpiry = req.cookies?.[`2fa_remember_exp_${data.user.id}`];
@@ -220,10 +220,6 @@ router.post("/login", async (req, res) => {
         // Redirect to 2FA verification page
         return res.redirect('/verify-2fa');
       }
-    } catch (twoFactorError) {
-      console.error('Error checking 2FA status during login:', twoFactorError);
-      // Continue with normal login if we can't check 2FA
-    }
 
     // Set cookies and redirect with success message
     setAuthCookies(res, data.session);
