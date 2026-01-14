@@ -101,51 +101,57 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // ✅ Check user status before allowing login (optimized - use maybeSingle for faster query)
-    try {
-      const { data: profile, error: profileError } = await supabase
+    // OPTIMIZED: Run status check and 2FA check in parallel for maximum speed
+    const [profileResult, settingsResult] = await Promise.all([
+      // Check user status
+      supabase
         .from('profiles')
         .select('status')
         .eq('id', data.user.id)
-        .maybeSingle(); // Use maybeSingle instead of array - faster and cleaner
-
-      if (!profileError && profile) {
-        if (profile.status === 'inactive') {
-          // Clear any session that might have been set
-          await supabase.auth.signOut();
-          return res.status(400).render('auth/login', {
-            error: 'Je account is gedeactiveerd. Neem contact op met de beheerder.',
-            success: null,
-            values: { email },
-            returnTo
-          });
-        }
-
-        if (profile.status === 'pending') {
-          // Clear any session that might have been set
-          await supabase.auth.signOut();
-          return res.status(400).render('auth/login', {
-            error: 'Je account is nog in afwachting van goedkeuring. Neem contact op met de beheerder.',
-            success: null,
-            values: { email },
-            returnTo
-          });
-        }
-      }
-    } catch (statusError) {
-      console.error('Error checking user status during login:', statusError);
-      // Continue with login if we can't check status
-    }
-
-    // ✅ Check if 2FA is enabled for this user (optimized query)
-    try {
-      const { data: settings, error: settingsError } = await supabaseAdmin
+        .maybeSingle()
+        .catch(err => {
+          console.error('Error checking user status:', err);
+          return { data: null, error: err };
+        }),
+      // Check if 2FA is enabled
+      supabaseAdmin
         .from('settings')
         .select('two_factor_enabled, two_factor_secret')
         .eq('user_id', data.user.id)
-        .maybeSingle(); // Already using maybeSingle - good
+        .maybeSingle()
+        .catch(err => {
+          console.error('Error checking 2FA settings:', err);
+          return { data: null, error: err };
+        })
+    ]);
 
-      const twoFactorEnabled = settings?.two_factor_enabled === 1 || settings?.two_factor_enabled === true;
+    // Check user status
+    const { data: profile, error: profileError } = profileResult;
+    if (!profileError && profile) {
+      if (profile.status === 'inactive') {
+        await supabase.auth.signOut();
+        return res.status(400).render('auth/login', {
+          error: 'Je account is gedeactiveerd. Neem contact op met de beheerder.',
+          success: null,
+          values: { email },
+          returnTo
+        });
+      }
+
+      if (profile.status === 'pending') {
+        await supabase.auth.signOut();
+        return res.status(400).render('auth/login', {
+          error: 'Je account is nog in afwachting van goedkeuring. Neem contact op met de beheerder.',
+          success: null,
+          values: { email },
+          returnTo
+        });
+      }
+    }
+
+    // Check 2FA
+    const { data: settings, error: settingsError } = settingsResult;
+    const twoFactorEnabled = settings?.two_factor_enabled === 1 || settings?.two_factor_enabled === true;
 
       if (twoFactorEnabled && settings?.two_factor_secret) {
         // Check if user has "remember device" cookie
