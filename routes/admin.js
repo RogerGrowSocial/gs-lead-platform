@@ -7264,34 +7264,17 @@ router.get("/employees", requireAuth, isAdmin, async (req, res) => {
     
     console.log(`📊 Fetched ${allProfiles?.length || 0} total profiles from database`);
     
-    // Fetch roles to filter out customers/consumers
-    const { data: allRoles, error: rolesError } = await supabaseAdmin
-      .from('roles')
-      .select('id, name, description, display_name')
+    // Fetch roles to filter out customers/consumers (using cache)
+    const { getRoleMap } = require('../utils/roleCache');
+    const { roleMap: roleMapRaw, roleDisplayMap, roles: allRoles } = await getRoleMap();
     
-    if (rolesError) {
-      console.error('❌ Error fetching roles:', rolesError);
-    }
-    
-    console.log(`📋 Fetched ${allRoles?.length || 0} roles from database`);
-    if (allRoles && allRoles.length > 0) {
-      console.log(`   Sample roles:`, allRoles.slice(0, 5).map(r => ({
-        id: String(r.id),
-        name: r.name,
-        display_name: r.display_name || 'NULL'
-      })));
-    }
-    
-    // Create a map of role IDs to role names (normalize to lowercase strings for matching)
+    // Normalize role map to lowercase for matching
     const roleMap = {};
-    const roleDisplayMap = {}; // Map role IDs to display names
-    if (allRoles) {
-      allRoles.forEach(role => {
-        const roleIdStr = String(role.id).toLowerCase();
-        roleMap[roleIdStr] = role.name?.toLowerCase() || '';
-        roleDisplayMap[roleIdStr] = role.display_name || null;
-      });
-    }
+    Object.entries(roleMapRaw).forEach(([roleId, roleName]) => {
+      roleMap[String(roleId).toLowerCase()] = roleName?.toLowerCase() || '';
+    });
+    
+    console.log(`📋 Loaded ${allRoles?.length || 0} roles from cache`);
     
     console.log(`📋 Role map created with ${Object.keys(roleMap).length} roles`);
     if (Object.keys(roleMap).length > 0) {
@@ -7816,22 +7799,15 @@ router.get('/tasks', requireAuth, async (req, res) => {
         console.error('Error fetching profiles:', profilesError);
       }
       
-      // Get roles to identify employee roles vs customer roles
-      const { data: allRoles, error: rolesError } = await supabaseAdmin
-        .from('roles')
-        .select('id, name');
-      
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-      }
+      // Get roles to identify employee roles vs customer roles (using cache)
+      const { getRoleMap } = require('../utils/roleCache');
+      const { roleMap: roleMapRaw, roles: allRoles } = await getRoleMap();
       
       // Create role map
       const roleMap = {};
-      if (allRoles) {
-        allRoles.forEach(role => {
-          roleMap[String(role.id)] = role.name?.toLowerCase() || '';
-        });
-      }
+      Object.entries(roleMapRaw).forEach(([roleId, roleName]) => {
+        roleMap[String(roleId)] = roleName?.toLowerCase() || '';
+      });
       
       // Filter to only employees
       // Include all roles EXCEPT customer/consumer/klant

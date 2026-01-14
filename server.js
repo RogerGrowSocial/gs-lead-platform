@@ -328,6 +328,12 @@ app.use(refreshIfNeeded)
 const profileCache = new Map(); // userId -> { profile, roleName, timestamp }
 const PROFILE_CACHE_TTL = 5000; // 5 seconds cache
 
+// Roles cache - roles change rarely, cache for 5 minutes
+const rolesCache = new Map(); // roleId -> { role, timestamp }
+const ROLES_CACHE_TTL = 300000; // 5 minutes cache
+let allRolesCache = null; // Cache for all roles
+let allRolesCacheTimestamp = null;
+
 // Cleanup old cache entries every minute (only in non-serverless environments)
 // In serverless, cache is cleared on each invocation anyway
 if (!isVercel) {
@@ -337,6 +343,15 @@ if (!isVercel) {
       if (now - cached.timestamp > PROFILE_CACHE_TTL) {
         profileCache.delete(userId);
       }
+    }
+    for (const [roleId, cached] of rolesCache.entries()) {
+      if (now - cached.timestamp > ROLES_CACHE_TTL) {
+        rolesCache.delete(roleId);
+      }
+    }
+    if (allRolesCacheTimestamp && (now - allRolesCacheTimestamp) > ROLES_CACHE_TTL) {
+      allRolesCache = null;
+      allRolesCacheTimestamp = null;
     }
   }, 60000);
 }
@@ -376,15 +391,27 @@ app.use(async (req, res, next) => {
           }
         }
         
-        // Get role name if role_id exists
+        // Get role name if role_id exists (with caching)
         if (profile?.role_id) {
-          const { data: role } = await supabaseAdmin
-            .from('roles')
-            .select('name')
-            .eq('id', profile.role_id)
-            .single()
-          if (role) {
-            roleName = role.name
+          const roleId = profile.role_id;
+          const now = Date.now();
+          const cachedRole = rolesCache.get(roleId);
+          
+          if (cachedRole && (now - cachedRole.timestamp) < ROLES_CACHE_TTL) {
+            roleName = cachedRole.role.name;
+          } else {
+            const { data: role } = await supabaseAdmin
+              .from('roles')
+              .select('name')
+              .eq('id', roleId)
+              .single()
+            if (role) {
+              roleName = role.name;
+              rolesCache.set(roleId, {
+                role: role,
+                timestamp: now
+              });
+            }
           }
         }
         
