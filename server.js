@@ -244,7 +244,7 @@ if (app.get('env') !== 'production') {
 
 // Configureer view engine
 // Harden EJS file loading against transient ECANCELED read errors (Node 22/macOS)
-const ejs = requireWithRetry('ejs')
+const ejs = isVercel ? require('ejs') : requireWithRetry('ejs')
 ejs.fileLoader = (filePath) => {
   let lastErr = null
   for (let i = 0; i < 3; i++) {
