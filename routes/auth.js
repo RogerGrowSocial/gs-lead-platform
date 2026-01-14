@@ -99,15 +99,55 @@ router.post("/login", async (req, res) => {
     }
 
     // OPTIMIZED: Run status check and 2FA check in parallel for maximum speed
+    // Also ensure profile exists (upsert) to prevent "No profile found" errors
     const [profileResult, settingsResult] = await Promise.all([
-      // Check user status
-      supabase
+      // Check user status and ensure profile exists
+      supabaseAdmin
         .from('profiles')
-        .select('status')
+        .select('status, email, company_name, first_name, last_name')
         .eq('id', data.user.id)
         .maybeSingle()
+        .then(async ({ data: profile, error: profileError }) => {
+          // If profile doesn't exist, create it (upsert)
+          if (profileError && profileError.code === 'PGRST116' || !profile) {
+            console.log(`📝 Creating missing profile for user ${data.user.id}`);
+            const { data: newProfile, error: createError } = await supabaseAdmin
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                email: data.user.email,
+                company_name: data.user.user_metadata?.company_name || null,
+                first_name: data.user.user_metadata?.first_name || null,
+                last_name: data.user.user_metadata?.last_name || null,
+                role_id: null, // Will be set by admin if needed
+                status: 'active',
+                balance: 0,
+                is_admin: data.user.user_metadata?.is_admin === true || false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'id'
+              })
+              .select('status')
+              .single();
+            
+            if (createError) {
+              console.error('Error creating profile:', createError);
+              return { data: null, error: createError };
+            }
+            
+            return { data: newProfile || { status: 'active' }, error: null };
+          }
+          
+          if (profileError) {
+            console.error('Error checking user status:', profileError);
+            return { data: null, error: profileError };
+          }
+          
+          return { data: profile, error: null };
+        })
         .catch(err => {
-          console.error('Error checking user status:', err);
+          console.error('Error in profile check/ensure:', err);
           return { data: null, error: err };
         }),
       // Check if 2FA is enabled
