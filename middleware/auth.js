@@ -37,6 +37,7 @@ function shouldLogAuth(userId, action) {
  * OPTIMIZED: Skip Supabase client creation if no cookies exist.
  */
 async function refreshIfNeeded(req, res, next) {
+  const start = req.performanceTimings ? process.hrtime.bigint() : null;
   try {
     // OPTIMIZED: Check cookies first before creating Supabase client
     const access = req.cookies?.['sb-access-token'];
@@ -44,8 +45,101 @@ async function refreshIfNeeded(req, res, next) {
 
     if (!access && !refresh) {
       // No cookies at all - skip all Supabase calls (fast path)
+      if (start && req.performanceTimings) {
+        const end = process.hrtime.bigint();
+        const time = Number(end - start) / 1000000;
+        req.performanceTimings.middleware['refreshIfNeeded'] = time;
+      }
       return next();
     }
+
+    // Only create Supabase client if we have cookies
+    const base = createBaseClient();
+    const scoped = createRequestClient(req);
+    let { data: userData, error: userErr } = await scoped.auth.getUser();
+
+    if (!userErr && userData?.user) {
+      req.user = userData.user;
+      
+      // Log successful authentication (with rate limiting)
+      if (shouldLogAuth(userData.user.id, 'authenticated')) {
+        SystemLogService.logAuth(
+          userData.user.id,
+          'authenticated',
+          'Gebruiker succesvol geauthenticeerd',
+          req.ip,
+          req.get('User-Agent')
+        ).catch(err => console.log('Auth logging failed:', err));
+      }
+      
+      if (start && req.performanceTimings) {
+        const end = process.hrtime.bigint();
+        const time = Number(end - start) / 1000000;
+        req.performanceTimings.middleware['refreshIfNeeded'] = time;
+      }
+      return next();
+    }
+
+    // Try refresh if we have refresh token
+    if (refresh && userErr) {
+      const { data: refreshData, error: refreshErr } = await base.auth.refreshSession({
+        refresh_token: refresh
+      });
+
+      if (!refreshErr && refreshData?.session) {
+        // Set new cookies
+        res.cookie('sb-access-token', refreshData.session.access_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+        });
+        res.cookie('sb-refresh-token', refreshData.session.refresh_token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
+        });
+
+        req.user = refreshData.session.user;
+        
+        if (shouldLogAuth(refreshData.session.user.id, 'refreshed')) {
+          SystemLogService.logAuth(
+            refreshData.session.user.id,
+            'refreshed',
+            'Sessie vernieuwd',
+            req.ip,
+            req.get('User-Agent')
+          ).catch(err => console.log('Auth logging failed:', err));
+        }
+        
+        if (start && req.performanceTimings) {
+          const end = process.hrtime.bigint();
+          const time = Number(end - start) / 1000000;
+          req.performanceTimings.middleware['refreshIfNeeded'] = time;
+        }
+        
+        return next();
+      }
+    }
+
+    // Fallthrough: no valid user
+    if (start && req.performanceTimings) {
+      const end = process.hrtime.bigint();
+      const time = Number(end - start) / 1000000;
+      req.performanceTimings.middleware['refreshIfNeeded'] = time;
+    }
+    return next();
+  } catch (e) {
+    // Do not crash the request; just proceed unauthenticated
+    if (start && req.performanceTimings) {
+      const end = process.hrtime.bigint();
+      const time = Number(end - start) / 1000000;
+      req.performanceTimings.middleware['refreshIfNeeded'] = time;
+    }
+    return next();
+  }
+}
 
     // Only create Supabase client if we have cookies
     const base = createBaseClient();

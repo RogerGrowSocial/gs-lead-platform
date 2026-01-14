@@ -269,6 +269,10 @@ ejs.fileLoader = (filePath) => {
 app.set("view engine", "ejs")
 app.set("views", path.join(__dirname, "views"))
 
+// Performance logging middleware (must be early to track everything)
+const { performanceLog } = require('./middleware/performance')
+app.use(performanceLog)
+
 // Middleware
 app.use(morgan("dev"))
 app.use(express.json())
