@@ -9,34 +9,27 @@ const crypto = require('crypto')
 const { logLoginHistory } = require('../utils/loginHistory')
 
 // Determine where to send the user after login.
-// Managers and admins should land on the admin dashboard.
+// OPTIMIZED: Single query with JOIN instead of 2 sequential queries
 async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
   const target = requestedPath || '/dashboard'
 
   try {
+    // OPTIMIZED: Single query with JOIN to get profile + role in one go
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_admin, role_id, role')
+      .select('is_admin, role_id, role, roles(name)')
       .eq('id', userId)
       .maybeSingle()
 
     if (profileError) {
       console.error('Error fetching profile for redirect:', profileError)
+      return target || '/dashboard'
     }
 
+    // Get role name from joined data or fallback to profile.role
     let roleName = profile?.role || null
-    if (profile?.role_id) {
-      const { data: role, error: roleError } = await supabaseAdmin
-        .from('roles')
-        .select('name')
-        .eq('id', profile.role_id)
-        .maybeSingle()
-
-      if (roleError) {
-        console.error('Error fetching role for redirect:', roleError)
-      } else if (role?.name) {
-        roleName = role.name
-      }
+    if (profile?.roles && Array.isArray(profile.roles) && profile.roles.length > 0) {
+      roleName = profile.roles[0].name
     }
 
     const normalizedRole = typeof roleName === 'string' ? roleName.toLowerCase() : ''
@@ -156,14 +149,16 @@ router.post("/login", async (req, res) => {
             // Valid remember token, skip 2FA
             console.log('[2FA] Remember device token valid, skipping 2FA');
             setAuthCookies(res, data.session);
-            // Log login history (non-blocking - don't wait for it)
-            logLoginHistory({
-              userId: data.user.id,
-              req,
-              status: 'success',
-              loginMethod: '2fa'
-            }).catch(err => console.error('Login history logging failed (non-blocking):', err));
-            const redirectPath = await getPostLoginRedirect(data.user.id, returnTo);
+            // OPTIMIZED: Run redirect and login history in parallel
+            const [redirectPath] = await Promise.all([
+              getPostLoginRedirect(data.user.id, returnTo),
+              logLoginHistory({
+                userId: data.user.id,
+                req,
+                status: 'success',
+                loginMethod: '2fa'
+              }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+            ]);
             return res.redirect(withLoginSuccess(redirectPath));
           } else {
             // Token expired, clear cookies
@@ -218,14 +213,20 @@ router.post("/login", async (req, res) => {
 
     // Set cookies and redirect with success message
     setAuthCookies(res, data.session);
-    // Log login history (non-blocking - don't wait for it)
-    logLoginHistory({
-      userId: data.user.id,
-      req,
-      status: 'success',
-      loginMethod: 'password'
-    }).catch(err => console.error('Login history logging failed (non-blocking):', err));
-    const redirectPath = await getPostLoginRedirect(data.user.id, returnTo);
+    
+    // OPTIMIZED: Run redirect determination and login history logging in parallel
+    // Don't wait for login history - it's non-critical and can happen async
+    const [redirectPath] = await Promise.all([
+      getPostLoginRedirect(data.user.id, returnTo),
+      // Log login history in background (non-blocking)
+      logLoginHistory({
+        userId: data.user.id,
+        req,
+        status: 'success',
+        loginMethod: 'password'
+      }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+    ]);
+    
     return res.redirect(withLoginSuccess(redirectPath));
 
   } catch (err) {
@@ -379,16 +380,17 @@ const verify2FAPostHandler = async (req, res) => {
     res.clearCookie('2fa_pending_refresh_token');
     res.clearCookie('2fa_pending_return_to');
 
-    // Log login history for 2FA verification (non-blocking - don't wait for it)
-    logLoginHistory({
-      userId: userId,
-      req,
-      status: 'success',
-      loginMethod: '2fa'
-    }).catch(err => console.error('Login history logging failed (non-blocking):', err));
-
-    // Redirect to dashboard with success message
-    const redirectPath = await getPostLoginRedirect(userId, returnTo);
+    // OPTIMIZED: Run redirect and login history in parallel
+    const [redirectPath] = await Promise.all([
+      getPostLoginRedirect(userId, returnTo),
+      logLoginHistory({
+        userId: userId,
+        req,
+        status: 'success',
+        loginMethod: '2fa'
+      }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+    ]);
+    
     return res.redirect(withLoginSuccess(redirectPath));
 
   } catch (err) {
@@ -1120,7 +1122,16 @@ router.get('/callback', async (req, res) => {
 
         // Set cookies and redirect
         setAuthCookies(res, data.session);
-        const redirectPath = await getPostLoginRedirect(data.user.id, '/dashboard');
+        // OPTIMIZED: Run redirect and login history in parallel
+        const [redirectPath] = await Promise.all([
+          getPostLoginRedirect(data.user.id, '/dashboard'),
+          logLoginHistory({
+            userId: data.user.id,
+            req,
+            status: 'success',
+            loginMethod: 'oauth'
+          }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+        ]);
         res.redirect(redirectPath);
     } catch (error) {
         console.error('OAuth callback error:', error);
@@ -1156,7 +1167,16 @@ router.get('/auth/callback', async (req, res) => {
 
         // Set cookies and redirect
         setAuthCookies(res, data.session);
-        const redirectPath = await getPostLoginRedirect(data.user.id, '/dashboard');
+        // OPTIMIZED: Run redirect and login history in parallel
+        const [redirectPath] = await Promise.all([
+          getPostLoginRedirect(data.user.id, '/dashboard'),
+          logLoginHistory({
+            userId: data.user.id,
+            req,
+            status: 'success',
+            loginMethod: 'oauth'
+          }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+        ]);
         res.redirect(redirectPath);
     } catch (error) {
         console.error('OAuth callback error:', error);

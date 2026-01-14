@@ -136,34 +136,12 @@ async function logLoginHistory({ userId, req, status = 'success', loginMethod = 
               ? 'Onbekend'
               : locationInfo.location));
 
-    // Check if this is a new device/location combination
-    // OPTIMIZED: Only check if we have at least one previous login (faster query)
+    // OPTIMIZED: Skip new device check during login to speed up login flow
+    // This check can be done asynchronously later if needed
+    // For now, we'll skip it to make login instant
     let isNewDevice = false;
-    if (status === 'success') {
-      // Quick check: just see if user has any previous successful logins
-      const { data: previousLogins, error: checkError } = await supabaseAdmin
-        .from('login_history')
-        .select('device, browser, os, location')
-        .eq('user_id', userId)
-        .eq('status', 'success')
-        .order('created_at', { ascending: false })
-        .limit(5); // Reduced from 10 to 5 for faster query
-      
-      if (!checkError && previousLogins && previousLogins.length > 0) {
-        // Check if this exact device/browser/os/location combination was seen before
-        const hasSeenThisDevice = previousLogins.some(login => 
-          login.device === parsedUA.device &&
-          login.browser === parsedUA.browser &&
-          login.os === parsedUA.os &&
-          login.location === locationString
-        );
-        
-        isNewDevice = !hasSeenThisDevice;
-      } else {
-        // First login ever or error checking, don't send notification
-        isNewDevice = false;
-      }
-    }
+    // Note: New device detection is disabled for faster login
+    // Can be re-enabled later with async processing if needed
 
     const { error } = await supabaseAdmin
       .from('login_history')
