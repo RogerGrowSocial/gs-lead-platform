@@ -1,7 +1,8 @@
 {
   "version": 2,
   "installCommand": "npm ci",
-  "buildCommand": "echo 'No build step needed'",
+  "buildCommand": "echo 'Express.js app - no Next.js build needed' && rm -rf .next 2>/dev/null || true",
+  "framework": null,
   "functions": {
     "api/index.js": {
       "maxDuration": 30,
