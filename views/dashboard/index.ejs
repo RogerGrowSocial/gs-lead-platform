@@ -103,11 +103,11 @@
             </div>
             <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
               <i class="fas fa-check-circle" style="font-size: 1.5rem; color: #4B5563;"></i>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    
+      
       <!-- Deze maand gebruikt -->
       <div class="card">
         <div class="card-content">
@@ -121,13 +121,13 @@
               <div class="progress-bar-container">
                 <div class="progress-bar-track">
                   <div class="progress-bar-fill" style="width: ${usagePercentage}%; background-color: ${usagePercentage >= 90 ? '#EF4444' : usagePercentage >= 70 ? '#F59E0B' : '#10B981'};"></div>
-          </div>
-        </div>
+                </div>
+              </div>
               ` : ''}
-        </div>
+            </div>
             <div style="height: 4rem; width: 4rem; background-color: #F3F4F6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
               <i class="fas fa-chart-line" style="font-size: 1.5rem; color: #4B5563;"></i>
-      </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1273,6 +1273,7 @@
     title: 'Dashboard', 
     activeMenu: 'dashboard',
     pageClass: 'dashboard',
+    stylesheets: ['/css/admin/dashboard.css'],
     user: user || {
       balance: 250.00,
       payment_method: 'ideal'
