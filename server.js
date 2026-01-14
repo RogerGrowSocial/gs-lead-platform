@@ -464,14 +464,14 @@ app.use((req, res, next) => {
 
 // Performance: Add caching headers for static assets
 app.use((req, res, next) => {
-  // Cache static assets (CSS, JS, images) for 1 hour
-  if (req.path.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-    res.set('Cache-Control', 'public, max-age=3600, immutable')
+  // Cache static assets (CSS, JS, images) for 1 year (immutable)
+  if (req.path.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
+    res.set('Cache-Control', 'public, max-age=31536000, immutable')
   }
   // Cache API responses that don't change often (with shorter TTL)
   else if (req.path.startsWith('/api/') && req.method === 'GET') {
     // Don't cache authenticated endpoints or endpoints that return user-specific data
-    if (!req.path.includes('/dashboard') && !req.path.includes('/user') && !req.path.includes('/profile')) {
+    if (!req.path.includes('/dashboard') && !req.path.includes('/user') && !req.path.includes('/profile') && !req.path.includes('/admin')) {
       res.set('Cache-Control', 'public, max-age=60, s-maxage=300') // 1 min browser, 5 min CDN
     }
   }

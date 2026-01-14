@@ -9605,11 +9605,12 @@ router.get("/customers/:id", requireAuth, isAdmin, async (req, res) => {
         .order('first_name')
         .limit(200),
       
-      // Get roles (limited)
-      supabaseAdmin
-        .from('roles')
-        .select('id, name, display_name')
-        .limit(50)
+      // Get roles (using cache)
+      Promise.resolve().then(async () => {
+        const { getAllRoles } = require('../utils/roleCache');
+        const roles = await getAllRoles();
+        return { data: roles.slice(0, 50), error: null };
+      })
     ]);
 
     const { data: customerStats, error: statsError } = customerStatsResult;
@@ -10121,11 +10122,12 @@ router.get("/contacts/:id", requireAuth, isAdmin, async (req, res) => {
         .order('first_name')
         .limit(200),
       
-      // Get roles
-      supabaseAdmin
-        .from('roles')
-        .select('id, name, display_name')
-        .limit(50),
+      // Get roles (using cache)
+      Promise.resolve().then(async () => {
+        const { getAllRoles } = require('../utils/roleCache');
+        const roles = await getAllRoles();
+        return { data: roles.slice(0, 50), error: null };
+      }),
       
       // Get customer if contact is linked to one (will be filtered after)
       Promise.resolve({ data: null, error: null })
