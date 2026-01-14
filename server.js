@@ -102,12 +102,11 @@ const fs = require("fs")
 console.log(`  ✅ fs (${Date.now() - fsStart}ms)`)
 
 console.log(`✅ All core modules loaded (total: ${Date.now() - pathStart}ms)`)
-// Load routes/leads lazily to avoid blocking startup
-// (It was hanging during require, possibly due to ECANCELED errors or file system issues)
+// Load routes/leads - on Vercel load immediately, locally lazy load to avoid blocking
 let leadsRoutes = null
 const getLeadsRoutes = () => {
   if (!leadsRoutes) {
-    console.log('📦 Loading routes/leads (lazy load)...')
+    console.log('📦 Loading routes/leads...')
     const startTime = Date.now()
     leadsRoutes = isVercel ? require("./routes/leads") : requireWithRetry("./routes/leads")
     const loadTime = Date.now() - startTime
@@ -115,7 +114,13 @@ const getLeadsRoutes = () => {
   }
   return leadsRoutes
 }
-console.log('✅ routes/leads will be loaded lazily')
+// On Vercel, pre-load to avoid runtime errors
+if (isVercel) {
+  leadsRoutes = require("./routes/leads")
+  console.log('✅ routes/leads pre-loaded for Vercel')
+} else {
+  console.log('✅ routes/leads will be loaded lazily')
+}
 console.log('📂 Loading config/supabase...')
 const startSupabase = Date.now()
 let supabase
@@ -132,7 +137,7 @@ const startAuth = Date.now()
 const { requireAuth, isAdmin } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
 console.log(`✅ middleware/auth (requireAuth, isAdmin) loaded (${Date.now() - startAuth}ms)`)
 const startRefresh = Date.now()
-const { refreshIfNeeded } = require("./middleware/auth")
+const { refreshIfNeeded } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
 console.log(`✅ middleware/auth (refreshIfNeeded) loaded (${Date.now() - startRefresh}ms)`)
 
 // Multer configuration for profile picture uploads
@@ -453,7 +458,7 @@ if (apiLoadTime > 3000) {
 const startForms = Date.now()
 const formsRoutes = isVercel ? require("./routes/forms") : requireWithRetry("./routes/forms")
 console.log(`✅ formsRoutes loaded (${Date.now() - startForms}ms)`)
-// internalCampaignsRoutes loads heavy Google Ads services - load lazily
+// internalCampaignsRoutes loads heavy Google Ads services - load lazily locally, immediately on Vercel
 let internalCampaignsRoutes = null
 const getInternalCampaignsRoutes = () => {
   if (!internalCampaignsRoutes) {
@@ -465,7 +470,13 @@ const getInternalCampaignsRoutes = () => {
   }
   return internalCampaignsRoutes
 }
-console.log('✅ internalCampaignsRoutes will be loaded lazily')
+// On Vercel, pre-load to avoid runtime errors
+if (isVercel) {
+  internalCampaignsRoutes = require("./routes/internalCampaigns")
+  console.log('✅ internalCampaignsRoutes pre-loaded for Vercel')
+} else {
+  console.log('✅ internalCampaignsRoutes will be loaded lazily')
+}
 
 console.log('📋 Registering routes...')
 const routeRegStart = Date.now()
@@ -1515,7 +1526,7 @@ app.get('*', async (req, res, next) => {
     }
     
     // Get site by domain
-    const SiteService = require('./services/siteService');
+    const SiteService = isVercel ? require('./services/siteService') : requireWithRetry('./services/siteService');
     const host = req.hostname || req.headers.host;
     const site = await SiteService.getSiteByDomain(host);
     
@@ -1530,7 +1541,7 @@ app.get('*', async (req, res, next) => {
     }
     
     // Get landing page
-    const PartnerLandingPageService = require('./services/partnerLandingPageService');
+    const PartnerLandingPageService = isVercel ? require('./services/partnerLandingPageService') : requireWithRetry('./services/partnerLandingPageService');
     const landingPage = await PartnerLandingPageService.getLandingPageByPath(site.id, normalizedPath);
     
     if (!landingPage || landingPage.status !== 'live') {
@@ -1624,6 +1635,58 @@ if (isVercel) {
     console.error('   Please set these in Vercel Dashboard → Settings → Environment Variables')
   } else {
     console.log('✅ All required environment variables are set')
+  }
+}
+
+// On Vercel, pre-load commonly used services to ensure they're bundled
+// This prevents "Cannot find module" errors at runtime
+if (isVercel) {
+  console.log('📦 Pre-loading commonly used services for Vercel bundling...')
+  try {
+    // Pre-load services that are frequently required dynamically in routes
+    require('./services/systemLogService')
+    require('./services/activityService')
+    require('./services/notificationService')
+    require('./services/emailService')
+    require('./services/invoiceService')
+    require('./services/balanceService')
+    require('./services/leadAssignmentService')
+    require('./services/leadSegmentService')
+    require('./services/partnerLandingPageService')
+    require('./services/siteService')
+    require('./services/userRiskAssessmentService')
+    require('./services/kvkApiService')
+    require('./services/leadDemandPlannerService')
+    require('./services/segmentSyncService')
+    require('./services/pauseExpiryService')
+    require('./services/leadValuePredictionService')
+    require('./services/formOptimizationService')
+    require('./services/partnerFormCustomizationService')
+    require('./services/aiSalesAssistService')
+    require('./services/questionEngineService')
+    require('./services/partnerDemandService')
+    require('./services/partnerCampaignService')
+    require('./services/campaignProgressService')
+    require('./services/googleAdsCampaignBuilderService')
+    require('./services/googleAdsOptimizationService')
+    require('./services/partnerMarketingOrchestratorService')
+    require('./services/employeeService')
+    require('./services/taskService')
+    require('./services/timeEntryService')
+    require('./services/payoutService')
+    require('./services/scraperService')
+    require('./services/rabobankApiService')
+    require('./services/whatsappService')
+    require('./services/imapSyncService')
+    require('./services/aiMailService')
+    require('./services/ticketAssignmentService')
+    require('./services/automaticBillingService')
+    require('./services/subscriptionBillingService')
+    require('./services/billingCronJob')
+    console.log('✅ All commonly used services pre-loaded for Vercel')
+  } catch (preloadError) {
+    console.warn('⚠️ Some services failed to pre-load (non-critical):', preloadError.message)
+    // Continue anyway - services will be loaded on-demand
   }
 }
 

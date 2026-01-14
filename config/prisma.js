@@ -7,6 +7,12 @@ let prisma = null;
 let beforeExitHandlerRegistered = false;
 
 function getPrisma() {
+  // Check if DATABASE_URL is set (required for Prisma)
+  const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL or SUPABASE_DB_URL environment variable is required for Prisma. Prisma is legacy - most code uses Supabase client instead.');
+  }
+
   if (!prisma) {
     prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error'],
