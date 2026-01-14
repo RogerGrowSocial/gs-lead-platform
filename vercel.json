@@ -4,16 +4,78 @@
   "buildCommand": "echo 'Express.js app - no Next.js build needed' && rm -rf .next 2>/dev/null || true",
   "framework": null,
   "functions": {
+    "api/dashboard.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "routes/**,services/**,middleware/**,config/**,views/**,helpers/**,utils/**,lib/**,hooks/**,components/**,guards/**,integrations/**,templates/**,cron/**,public/**"
+    },
+    "api/admin.js": {
+      "maxDuration": 30,
+      "memory": 1024,
+      "includeFiles": "routes/**,services/**,middleware/**,config/**,views/**,helpers/**,utils/**,lib/**,hooks/**,components/**,guards/**,integrations/**,templates/**,cron/**,public/**"
+    },
     "api/index.js": {
       "maxDuration": 30,
       "memory": 1024,
-      "includeFiles": "routes/**,services/**,middleware/**,config/**,views/**,helpers/**,utils/**,lib/**,hooks/**,components/**,guards/**,integrations/**,templates/**"
+      "includeFiles": "routes/**,services/**,middleware/**,config/**,views/**,helpers/**,utils/**,lib/**,hooks/**,components/**,guards/**,integrations/**,templates/**,cron/**,public/**"
     }
   },
   "routes": [
     {
+      "src": "/dashboard/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/dashboard/api/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/onboarding/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/api/admin.js"
+    },
+    {
+      "src": "/admin/api/(.*)",
+      "dest": "/api/admin.js"
+    },
+    {
+      "src": "/api/admin/(.*)",
+      "dest": "/api/admin.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/login",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/logout",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/payments",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/forms/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/leads/(.*)",
+      "dest": "/api/dashboard.js"
+    },
+    {
+      "src": "/",
+      "dest": "/api/dashboard.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/api/index.js"
+      "dest": "/api/dashboard.js"
     }
   ]
 }

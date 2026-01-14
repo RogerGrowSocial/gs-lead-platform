@@ -833,3 +833,208 @@ body {
   font-size: 16px;
   font-weight: 600;
 }
+
+/* ============================================
+   ACCOUNTINFORMATIE CARD
+   ============================================ */
+.account-info-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+}
+
+.account-info-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 20px 0;
+}
+
+/* Account Info Items Container */
+.account-info-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Individual Account Info Item */
+.account-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Icon Container */
+.account-info-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  border-radius: 8px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.account-info-icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Content Container */
+.account-info-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-info-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.account-info-value {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.badge-blue {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-green {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Settings Button */
+.btn-settings {
+  width: 100%;
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+}
+
+.btn-settings:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  text-decoration: none;
+  color: #374151;
+}
+
+.btn-settings:active {
+  transform: scale(0.98);
+}
+
+/* ============================================
+   SNELLE ACTIES CARD
+   ============================================ */
+.quick-actions-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.quick-actions-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+/* Quick Actions Buttons Container */
+.quick-actions-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Individual Quick Action Button */
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.quick-action-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+  color: #6b7280;
+  transition: color 150ms ease;
+}
+
+.quick-action-btn:hover {
+  background: #f9fafb;
+  border-color: #ea5d0d;
+  color: #ea5d0d;
+  text-decoration: none;
+}
+
+.quick-action-btn:hover svg {
+  color: #ea5d0d;
+}
+
+.quick-action-btn:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 1024px) {
+  .account-info-card,
+  .quick-actions-card {
+    padding: 20px;
+  }
+
+  .account-info-items {
+    gap: 14px;
+  }
+}

@@ -58,6 +58,15 @@
       return false;
     }
 
+    // Force full page reload bij cross-area navigatie (dashboard <-> admin)
+    const currentArea = currentUrl.startsWith('/admin') ? 'admin' : (currentUrl.startsWith('/dashboard') ? 'dashboard' : null);
+    const targetArea = href.startsWith('/admin') ? 'admin' : (href.startsWith('/dashboard') ? 'dashboard' : null);
+    
+    if (currentArea && targetArea && currentArea !== targetArea) {
+      console.log('[Client Router] Cross-area navigation detected, forcing full reload:', currentArea, '->', targetArea);
+      return false; // Force full page reload
+    }
+
     // Check of het een client route is (prefix match)
     return CONFIG.clientRoutes.some(route => href.startsWith(route));
   }

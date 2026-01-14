@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= landingPage.seo_title || landingPage.title %></title>
   <meta name="description" content="<%= landingPage.seo_description || landingPage.subtitle %>">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/webp" href="/img/favicon-growsocial.webp">
+  <link rel="shortcut icon" type="image/webp" href="/img/favicon-growsocial.webp">
+  <link rel="apple-touch-icon" href="/img/favicon-growsocial.webp">
+  
   <!-- Google Ads / GA4 gtag + Consent Mode v2 -->
   <%- include('public/partials/gtag-consent', { googleAdsTagId, ga4MeasurementId }) %>
   <!-- Tailwind CSS CDN -->

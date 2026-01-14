@@ -105,11 +105,13 @@ Het logo wordt automatisch geladen vanaf `{{ .SiteURL }}/img/gs-logo-oranje.jpg`
 
 **Belangrijk**: Zorg ervoor dat:
 1. Je **Site URL** correct is ingesteld in Supabase Dashboard → **Settings** → **API** → **Site URL**
-2. Het logo bestand beschikbaar is op je publieke URL (bijv. `https://jouw-domein.nl/img/gs-logo-oranje.jpg`)
+   - Production: `https://app.growsocialmedia.nl`
+   - Development: `http://localhost:3000`
+2. Het logo bestand beschikbaar is op je publieke URL: `https://app.growsocialmedia.nl/img/gs-logo-oranje.jpg`
 
 Als je logo niet laadt, kun je ook een absolute URL gebruiken:
 ```html
-<img src="https://jouw-domein.nl/img/gs-logo-oranje.jpg" alt="GrowSocial" class="logo-image">
+<img src="https://app.growsocialmedia.nl/img/gs-logo-oranje.jpg" alt="GrowSocial" class="logo-image">
 ```
 
 ### 4.3 Contact Informatie Aanpassen
@@ -130,16 +132,43 @@ Voor productie gebruik je best een custom SMTP provider:
 
 1. Ga naar **Project Settings** → **Auth** → **SMTP Settings**
 2. Configureer je SMTP instellingen:
-   - **SMTP Host**: `smtp.eu.mailgun.org` (of je provider)
-   - **SMTP Port**: `587`
+   - **SMTP Host**: `smtp.eu.mailgun.org` (EU region voor GDPR compliance)
+   - **SMTP Port**: `587` (STARTTLS)
    - **SMTP User**: `postmaster@growsocialmedia.nl`
-   - **SMTP Password**: Je Mailgun SMTP password
-   - **Sender Email**: `notificaties@growsocialmedia.nl`
+   - **SMTP Password**: Je Mailgun SMTP password (zie COMPLETE_SMTP_SETUP.md)
+   - **Sender Email**: `noreply@growsocialmedia.nl`
    - **Sender Name**: `GrowSocial`
 
-### 5.2 SPF/DKIM Records
+**BELANGRIJK**: 
+- Gebruik **EU region** (`smtp.eu.mailgun.org`) voor GDPR compliance
+- Het SMTP password moet worden aangemaakt in Mailgun Dashboard → Domain Settings → SMTP credentials
+- Zie `COMPLETE_SMTP_SETUP.md` voor volledige configuratie instructies
 
-Zorg ervoor dat je SPF en DKIM records correct zijn ingesteld bij je DNS provider voor betere email deliverability.
+### 5.2 Site URL Configuratie
+
+1. Ga naar **Project Settings** → **API**
+2. Stel **Site URL** in:
+   - Production: `https://app.growsocialmedia.nl`
+   - Development: `http://localhost:3000`
+
+### 5.3 Redirect URLs
+
+1. Ga naar **Project Settings** → **Auth** → **URL Configuration**
+2. Voeg toe aan **Redirect URLs**:
+   ```
+   https://app.growsocialmedia.nl/auth/verify-email
+   https://app.growsocialmedia.nl/auth/reset-password
+   https://app.growsocialmedia.nl/auth/callback
+   http://localhost:3000/auth/verify-email
+   http://localhost:3000/auth/reset-password
+   http://localhost:3000/auth/callback
+   ```
+
+### 5.4 SPF/DKIM/DMARC Records
+
+Zorg ervoor dat je SPF, DKIM en DMARC records correct zijn ingesteld bij je DNS provider voor betere email deliverability en om niet in spam te komen.
+
+**Zie `COMPLETE_SMTP_SETUP.md` voor volledige DNS records configuratie.**
 
 ## Troubleshooting
 

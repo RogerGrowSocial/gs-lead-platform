@@ -279,9 +279,15 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, "public")))
 
-// Handle favicon requests gracefully
+// Handle favicon requests - serve the actual favicon file
 app.get('/favicon.ico', (req, res) => {
-  res.status(204).end()
+  const faviconPath = path.join(__dirname, 'public', 'img', 'favicon-growsocial.webp')
+  if (fs.existsSync(faviconPath)) {
+    res.type('image/webp')
+    res.sendFile(faviconPath)
+  } else {
+    res.status(204).end()
+  }
 })
 app.use(cookieParser())
 
@@ -1844,9 +1850,11 @@ if (isVercel) {
 // ALWAYS export app - Vercel needs this, local dev uses app.listen()
 // Wrap in try-catch to catch any initialization errors
 try {
+  // For backward compatibility: export app directly
+  // New entrypoints (api/dashboard.js, api/admin.js) use createApp factory
   module.exports = app
   if (isVercel) {
-    console.log('✅ App exported successfully for Vercel')
+    console.log('✅ App exported successfully for Vercel (legacy api/index.js)')
   }
 } catch (error) {
   console.error('❌ Error exporting app:', error.message)

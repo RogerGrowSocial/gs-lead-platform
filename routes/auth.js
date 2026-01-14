@@ -610,6 +610,61 @@ router.post("/register", async (req, res) => {
       })
     }
 
+    // Send welcome email with password setup link (non-blocking)
+    // This runs in background so it doesn't delay the registration response
+    (async () => {
+      try {
+        console.log(`📧 Attempting to send welcome email to: ${email}`);
+        
+        // Generate password reset link for welcome email
+        const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: email,
+          options: {
+            redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
+          }
+        });
+        
+        if (resetError) {
+          console.error("❌ Error generating password reset link for welcome email:", resetError);
+          logger.error('Welcome email password reset link generation failed:', resetError);
+        } else if (!resetData || !resetData.properties?.action_link) {
+          console.error("❌ No reset link generated for welcome email");
+          logger.error('Welcome email: No reset link generated');
+        } else {
+          console.log("✅ Password reset link generated for welcome email:", email);
+          
+          // Get user profile data for welcome email
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          
+          // Send welcome email
+          const EmailService = require('../services/emailService');
+          const emailService = new EmailService();
+          
+          const emailSent = await emailService.sendWelcomeEmail({
+            email,
+            first_name: profile?.first_name || '',
+            last_name: profile?.last_name || ''
+          }, resetData.properties?.action_link);
+          
+          if (emailSent) {
+            console.log("✅ Welcome email sent successfully to:", email);
+            logger.info('Welcome email sent successfully after registration', { email, userId: data.user.id });
+          } else {
+            console.error("❌ Failed to send welcome email to:", email);
+            logger.error('Welcome email failed to send after registration', { email, userId: data.user.id });
+          }
+        }
+      } catch (emailErr) {
+        console.error("❌ Exception while sending welcome email after registration:", emailErr);
+        logger.error('Welcome email exception after registration', { email, error: emailErr.message });
+      }
+    })();
+
     // Check email confirmation status
     const isEmailConfirmed = !!data.user.email_confirmed_at;
     const hasSession = !!data.session;
@@ -680,7 +735,7 @@ router.post("/register", async (req, res) => {
     res.render("auth/register", {
       layout: false,
       error: null,
-      success: "Registratie succesvol! Controleer je e-mail (en spam folder) om je account te verifiëren.",
+      success: "Registratie succesvol! Controleer je e-mail (en spam folder) voor verificatie en welkomstemail met wachtwoord setup link.",
       formData: { email: email }, // Also include email in formData as fallback
       userEmail: email // Pass email for resend functionality
     })
@@ -870,24 +925,117 @@ router.post("/forgot-password", async (req, res) => {
       })
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
-    })
+    // Check if email is internal (same domain) - use dual SMTP for internal emails
+    const EmailService = require('../services/emailService');
+    const emailService = new EmailService();
+    const isInternal = emailService.isInternalEmail(email);
 
-    if (error) {
-      logger.error('Password reset request error:', error);
-      return res.render("auth/forgot-password", {
+    if (isInternal) {
+      // For internal emails, use our own emailService with dual SMTP
+      console.log(`📧 Internal email detected (${email}), using dual SMTP...`);
+      
+      try {
+        // Generate recovery link via Supabase admin API
+        const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: email,
+          options: {
+            redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
+          }
+        });
+
+        if (resetError) {
+          console.error("❌ Error generating password reset link:", resetError);
+          logger.error('Password reset link generation failed:', resetError);
+          return res.render("auth/forgot-password", {
+            layout: false,
+            error: resetError.message || "Er is een fout opgetreden bij het genereren van de reset link",
+            success: null
+          });
+        }
+
+        if (!resetData || !resetData.properties?.action_link) {
+          console.error("❌ No reset link generated");
+          logger.error('Password reset: No reset link generated');
+          return res.render("auth/forgot-password", {
+            layout: false,
+            error: "Er is een fout opgetreden bij het genereren van de reset link",
+            success: null
+          });
+        }
+
+        // Get user profile for personalization
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', resetData.user.id)
+          .maybeSingle();
+
+        // Render password reset email template
+        const htmlContent = emailService.renderTemplate('supabase-reset-password', {
+          email: email,
+          first_name: profile?.first_name || '',
+          last_name: profile?.last_name || '',
+          reset_link: resetData.properties.action_link
+        });
+
+        // Send via our emailService (uses dual SMTP - Mijndomein for internal)
+        const emailSent = await emailService.sendEmail({
+          to: email,
+          subject: 'Reset je wachtwoord',
+          html: htmlContent
+        });
+
+        if (!emailSent) {
+          console.error("❌ Failed to send password reset email via emailService");
+          logger.error('Password reset email failed to send', { email });
+          return res.render("auth/forgot-password", {
+            layout: false,
+            error: "Er is een fout opgetreden bij het versturen van de email. Probeer het later opnieuw.",
+            success: null
+          });
+        }
+
+        console.log(`✅ Password reset email sent via emailService (dual SMTP) to: ${email}`);
+        logger.info('Password reset email sent via emailService', { email, isInternal: true });
+
+        return res.render("auth/forgot-password", {
+          layout: false,
+          error: null,
+          success: "Als dit e-mailadres bestaat, ontvang je een e-mail met instructies om je wachtwoord te resetten."
+        });
+      } catch (emailErr) {
+        console.error("❌ Exception while sending password reset email:", emailErr);
+        logger.error('Password reset email exception', { email, error: emailErr.message });
+        return res.render("auth/forgot-password", {
+          layout: false,
+          error: "Er is een fout opgetreden bij het versturen van de email. Probeer het later opnieuw.",
+          success: null
+        });
+      }
+    } else {
+      // For external emails, use Supabase's built-in resetPasswordForEmail (uses Mailgun)
+      console.log(`📧 External email detected (${email}), using Supabase SMTP...`);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${req.protocol}://${req.get('host')}/auth/reset-password`
+      });
+
+      if (error) {
+        logger.error('Password reset request error:', error);
+        return res.render("auth/forgot-password", {
+          layout: false,
+          error: error.message || "Er is een fout opgetreden",
+          success: null
+        });
+      }
+
+      res.render("auth/forgot-password", {
         layout: false,
-        error: error.message || "Er is een fout opgetreden",
-        success: null
-      })
+        error: null,
+        success: "Als dit e-mailadres bestaat, ontvang je een e-mail met instructies om je wachtwoord te resetten."
+      });
     }
-
-    res.render("auth/forgot-password", {
-      layout: false,
-      error: null,
-      success: "Als dit e-mailadres bestaat, ontvang je een e-mail met instructies om je wachtwoord te resetten."
-    })
   } catch (error) {
     logger.error("Password reset request error:", error)
     res.render("auth/forgot-password", {

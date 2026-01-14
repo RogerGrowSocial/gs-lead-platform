@@ -160,7 +160,7 @@
                   <tbody>
                     ${displayLeads.map(function(lead, index) {
                       return `
-                        <tr style="cursor: pointer;" onclick="document.getElementById('popup-${index}').style.display='flex'" data-lead-id="${lead.id}">
+                        <tr style="cursor: pointer;" data-lead-id="${lead.id}" data-popup-id="popup-${index}">
                           <td class="text-left">${lead.name || 'Onbekend'}</td>
                           <td class="text-left">${lead.phone || '-'}</td>
                           <td class="text-left">
@@ -800,200 +800,6 @@
     }
   }
   
-  /* ============================================
-     ACCOUNTINFORMATIE CARD
-     ============================================ */
-  .account-info-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    margin-bottom: 16px;
-  }
-
-  .account-info-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 20px 0;
-  }
-
-  /* Account Info Items Container */
-  .account-info-items {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-  /* Individual Account Info Item */
-  .account-info-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  /* Icon Container */
-  .account-info-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f9fafb;
-    border-radius: 8px;
-    color: #6b7280;
-    flex-shrink: 0;
-  }
-  
-  .account-info-icon svg {
-    width: 20px !important;
-    height: 20px !important;
-  }
-
-  /* Content Container */
-  .account-info-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .account-info-label {
-    font-size: 13px;
-    color: #6b7280;
-    font-weight: 500;
-  }
-
-  .account-info-value {
-    font-size: 14px;
-    color: #111827;
-    font-weight: 600;
-  }
-
-  /* Badges */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    width: fit-content;
-  }
-
-  .badge-blue {
-    background: #dbeafe;
-    color: #1e40af;
-    border: 1px solid #bfdbfe;
-  }
-
-  .badge-green {
-    background: #dcfce7;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-  }
-
-  .badge-warning {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
-  }
-
-  /* Settings Button */
-  .btn-settings {
-    width: 100%;
-    padding: 10px 16px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 150ms ease;
-    text-decoration: none;
-    display: block;
-    text-align: center;
-  }
-
-  .btn-settings:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
-    text-decoration: none;
-    color: #374151;
-  }
-
-  .btn-settings:active {
-    transform: scale(0.98);
-  }
-
-  /* ============================================
-     SNELLE ACTIES CARD
-     ============================================ */
-  .quick-actions-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  }
-
-  .quick-actions-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111827;
-    margin: 0 0 16px 0;
-  }
-
-  /* Quick Actions Buttons Container */
-  .quick-actions-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  /* Individual Quick Action Button */
-  .quick-action-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 150ms ease;
-  }
-
-  .quick-action-btn svg {
-    width: 20px !important;
-    height: 20px !important;
-    flex-shrink: 0;
-    color: #6b7280;
-    transition: color 150ms ease;
-  }
-
-  .quick-action-btn:hover {
-    background: #f9fafb;
-    border-color: #ea5d0d;
-    color: #ea5d0d;
-    text-decoration: none;
-  }
-
-  .quick-action-btn:hover svg {
-    color: #ea5d0d;
-  }
-
-  .quick-action-btn:active {
-    transform: scale(0.98);
-  }
-  
   /* Ensure columns don't stretch beyond their width */
   .row .col-lg-4 {
     max-width: 33.333333%;
@@ -1003,17 +809,6 @@
   .row .col-lg-4 .card {
     width: 100%;
     max-width: 100%;
-  }
-  
-  @media (max-width: 1024px) {
-    .account-info-card,
-    .quick-actions-card {
-      padding: 20px;
-    }
-
-    .account-info-items {
-      gap: 14px;
-    }
   }
   
   /* Voeg extra styling toe voor de tabel */
@@ -1176,6 +971,34 @@
       margin: 10px;
     }
   }
+  
+  /* Loading indicator styles */
+  .loading-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 </style>
 
 <%- include('../layouts/dashboard', { 
@@ -1192,43 +1015,61 @@
 }) %>
 
 <script>
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  // Tour initialization is now handled in dashboard.ejs layout
+// Function to update statistics (must be global for use in popups)
+async function updateStatistics() {
+  try {
+    const response = await fetch('/dashboard/statistics', {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Update statistics cards
+    const totalLeadsElement = document.querySelector('[data-stat="total-leads"]');
+    const newLeadsElement = document.querySelector('[data-stat="new-leads"]');
+    const acceptedLeadsElement = document.querySelector('[data-stat="accepted-leads"]');
+    const totalRevenueElement = document.querySelector('[data-stat="total-revenue"]');
+    
+    if (totalLeadsElement) totalLeadsElement.textContent = data.totalLeads;
+    if (newLeadsElement) newLeadsElement.textContent = data.newLeads;
+    if (acceptedLeadsElement) acceptedLeadsElement.textContent = data.acceptedLeads;
+    if (totalRevenueElement) totalRevenueElement.textContent = `€${data.totalRevenue.toFixed(2)}`;
+    
+  } catch (error) {
+    console.error('Error updating statistics:', error);
+    showNotification('error', 'Er is een fout opgetreden bij het bijwerken van de statistieken');
+  }
+}
 
-  // Charts verwijderd — dashboard werkt zonder grafieken
-
-  // Function to update statistics
-  async function updateStatistics() {
-    try {
-      const response = await fetch('/dashboard/statistics', {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
+// Function to initialize popups and event listeners
+function initDashboardPopups() {
+  // Add click handlers to table rows to open popups
+  document.querySelectorAll('tr[data-popup-id]').forEach(row => {
+    const popupId = row.getAttribute('data-popup-id');
+    if (popupId) {
+      // Remove existing listeners to prevent duplicates
+      const newRow = row.cloneNode(true);
+      row.parentNode.replaceChild(newRow, row);
+      
+      newRow.addEventListener('click', function(e) {
+        // Don't open popup if clicking on buttons or links
+        if (e.target.closest('button, a, .status-action')) {
+          return;
+        }
+        
+        const popup = document.getElementById(popupId);
+        if (popup) {
+          popup.style.display = 'flex';
         }
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Update statistics cards
-      const totalLeadsElement = document.querySelector('[data-stat="total-leads"]');
-      const newLeadsElement = document.querySelector('[data-stat="new-leads"]');
-      const acceptedLeadsElement = document.querySelector('[data-stat="accepted-leads"]');
-      const totalRevenueElement = document.querySelector('[data-stat="total-revenue"]');
-      
-      if (totalLeadsElement) totalLeadsElement.textContent = data.totalLeads;
-      if (newLeadsElement) newLeadsElement.textContent = data.newLeads;
-      if (acceptedLeadsElement) acceptedLeadsElement.textContent = data.acceptedLeads;
-      if (totalRevenueElement) totalRevenueElement.textContent = `€${data.totalRevenue.toFixed(2)}`;
-      
-    } catch (error) {
-      console.error('Error updating statistics:', error);
-      showNotification('error', 'Er is een fout opgetreden bij het bijwerken van de statistieken');
     }
-  }
+  });
 
   // Event listeners voor alle popups
   document.querySelectorAll('.modern-popup').forEach(popup => {
@@ -1239,7 +1080,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Status select change handler
     const statusSelect = popup.querySelector('.status-select');
     if (statusSelect) {
-      statusSelect.addEventListener('change', function() {
+      // Remove existing listeners to prevent duplicates
+      const newStatusSelect = statusSelect.cloneNode(true);
+      statusSelect.parentNode.replaceChild(newStatusSelect, statusSelect);
+      
+      newStatusSelect.addEventListener('change', function() {
         const invoiceSection = popup.querySelector('.invoice-section');
         if (this.value === 'accepted') {
           invoiceSection.style.display = 'block';
@@ -1252,7 +1097,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Save status handler - Volledig nieuwe implementatie
     const saveButton = popup.querySelector('.save-status');
     if (saveButton) {
-      saveButton.onclick = async function(e) {
+      // Remove existing listeners
+      const newSaveButton = saveButton.cloneNode(true);
+      saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+      
+      newSaveButton.onclick = async function(e) {
         e.preventDefault();
         e.stopPropagation();
 
@@ -1278,8 +1127,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // 3. UI voorbereiden voor de update
-        saveButton.disabled = true;
-        saveButton.textContent = 'Bezig met opslaan...';
+        newSaveButton.disabled = true;
+        newSaveButton.textContent = 'Bezig met opslaan...';
         
         // Voeg een loading indicator toe
         const loadingIndicator = document.createElement('div');
@@ -1325,8 +1174,8 @@ document.addEventListener('DOMContentLoaded', function() {
           showNotification('error', 'Er is een fout opgetreden bij het bijwerken van de status. Probeer het later opnieuw.');
         } finally {
           // 11. Herstel de UI
-          saveButton.disabled = false;
-          saveButton.textContent = 'Opslaan';
+          newSaveButton.disabled = false;
+          newSaveButton.textContent = 'Opslaan';
           if (loadingIndicator && loadingIndicator.parentNode) {
             loadingIndicator.parentNode.removeChild(loadingIndicator);
           }
@@ -1339,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper functie om de lead status in de UI bij te werken
     function updateLeadStatusInUI(leadId, status, leadData) {
       // Update status badge in table
-      const statusCell = tableRow.querySelector('td:nth-child(3)');
+      const statusCell = tableRow ? tableRow.querySelector('td:nth-child(3)') : null;
       if (statusCell) {
         const statusText = {
           'new': 'Nieuw',
@@ -1363,41 +1212,13 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Voeg CSS toe voor de loading indicator
-    const style = document.createElement('style');
-    style.textContent = `
-      .loading-indicator {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      }
-      
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-
     // Close popup handlers
     popup.querySelectorAll('.close-popup').forEach(button => {
-      button.onclick = function(e) {
+      // Remove existing listeners
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+      
+      newButton.onclick = function(e) {
         if (e) {
           e.preventDefault();
         }
@@ -1421,6 +1242,20 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     };
   });
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // Tour initialization is now handled in dashboard.ejs layout
+  // Charts verwijderd — dashboard werkt zonder grafieken
+  
+  // Initialize popups
+  initDashboardPopups();
+});
+
+// Also initialize when page is loaded via client-side router
+window.addEventListener('page:loaded', function() {
+  initDashboardPopups();
 });
 
 // Function to show notification
