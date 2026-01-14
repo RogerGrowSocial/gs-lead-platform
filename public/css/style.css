@@ -37,7 +37,19 @@
     font-size: 16px;
     line-height: 1.5;
     color: var(--secondary);
-    background-color: var(--white);
+    background-color: #ffffff !important;
+  }
+  
+  /* Force white background for dashboard pages */
+  body.dashboard-layout,
+  body.dashboard {
+    background-color: #ffffff !important;
+  }
+  
+  .dashboard-container,
+  .main-content,
+  .main-container {
+    background-color: #ffffff !important;
   }
 
   /* Client-side router: Smooth transitions */
