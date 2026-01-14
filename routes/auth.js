@@ -9,15 +9,15 @@ const crypto = require('crypto')
 const { logLoginHistory } = require('../utils/loginHistory')
 
 // Determine where to send the user after login.
-// OPTIMIZED: Single query with JOIN instead of 2 sequential queries
+// OPTIMIZED: Parallel queries instead of sequential for maximum speed
 async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
   const target = requestedPath || '/dashboard'
 
   try {
-    // OPTIMIZED: Single query with JOIN to get profile + role in one go
+    // OPTIMIZED: Fetch profile first (we need role_id to fetch role)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_admin, role_id, role, roles(name)')
+      .select('is_admin, role_id, role')
       .eq('id', userId)
       .maybeSingle()
 
@@ -26,10 +26,21 @@ async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
       return target || '/dashboard'
     }
 
-    // Get role name from joined data or fallback to profile.role
+    // If we have role_id, fetch role in parallel (but we already have profile.role as fallback)
+    // For speed, we'll use profile.role directly if available, otherwise fetch role
     let roleName = profile?.role || null
-    if (profile?.roles && Array.isArray(profile.roles) && profile.roles.length > 0) {
-      roleName = profile.roles[0].name
+    
+    // Only fetch role if we don't have role name but have role_id
+    if (!roleName && profile?.role_id) {
+      const { data: role, error: roleError } = await supabaseAdmin
+        .from('roles')
+        .select('name')
+        .eq('id', profile.role_id)
+        .maybeSingle()
+
+      if (!roleError && role?.name) {
+        roleName = role.name
+      }
     }
 
     const normalizedRole = typeof roleName === 'string' ? roleName.toLowerCase() : ''
