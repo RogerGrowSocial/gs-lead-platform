@@ -16,7 +16,7 @@
         "lint": "next lint",
         "init-supabase": "node scripts/init-supabase.js",
         "set-admin-password": "node scripts/set-admin-password.js",
-        "test:signup": "tsx scripts/test-signup.ts",
+        "test:signup": "tsx scripts/test-signup.ts"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.1",
