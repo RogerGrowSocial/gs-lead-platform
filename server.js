@@ -447,6 +447,42 @@ app.use((req, res, next) => {
   next()
 })
 
+// Client-side router support: Wrap res.render to return only content for AJAX requests
+app.use((req, res, next) => {
+  const isAjax = req.get('X-Requested-With') === 'XMLHttpRequest';
+  
+  if (isAjax) {
+    // Store original render function
+    const originalRender = res.render.bind(res);
+    
+    // Override render to return only content
+    res.render = function(view, data, callback) {
+      // Set flag to skip layout
+      if (data && typeof data === 'object') {
+        data._skipLayout = true;
+      }
+      
+      // Call original render
+      return originalRender(view, data, (err, html) => {
+        if (err) {
+          if (callback) return callback(err);
+          return res.status(500).send('Error rendering view');
+        }
+        
+        // Parse HTML and extract only main content
+        // For now, return full HTML - client-router will extract content
+        if (callback) {
+          callback(null, html);
+        } else {
+          res.send(html);
+        }
+      });
+    };
+  }
+  
+  next();
+})
+
 // CRITICAL: On Vercel, pre-load all routes FIRST to ensure bundling
 // This must happen before routes are used in the normal flow
 if (isVercel) {
