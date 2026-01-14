@@ -151,75 +151,75 @@ router.post("/login", async (req, res) => {
     const twoFactorEnabled = settings?.two_factor_enabled === 1 || settings?.two_factor_enabled === true;
 
     if (twoFactorEnabled && settings?.two_factor_secret) {
-        // Check if user has "remember device" cookie
-        const rememberToken = req.cookies?.[`2fa_remember_${data.user.id}`];
-        const rememberExpiry = req.cookies?.[`2fa_remember_exp_${data.user.id}`];
+      // Check if user has "remember device" cookie
+      const rememberToken = req.cookies?.[`2fa_remember_${data.user.id}`];
+      const rememberExpiry = req.cookies?.[`2fa_remember_exp_${data.user.id}`];
 
-        if (rememberToken && rememberExpiry) {
-          const now = Date.now();
-          const expiry = parseInt(rememberExpiry, 10);
+      if (rememberToken && rememberExpiry) {
+        const now = Date.now();
+        const expiry = parseInt(rememberExpiry, 10);
 
-          if (now < expiry) {
-            // Valid remember token, skip 2FA
-            console.log('[2FA] Remember device token valid, skipping 2FA');
-            setAuthCookies(res, data.session);
-            // OPTIMIZED: Run redirect and login history in parallel
-            const [redirectPath] = await Promise.all([
-              getPostLoginRedirect(data.user.id, returnTo),
-              logLoginHistory({
-                userId: data.user.id,
-                req,
-                status: 'success',
-                loginMethod: '2fa'
-              }).catch(err => console.error('Login history logging failed (non-blocking):', err))
-            ]);
-            return res.redirect(withLoginSuccess(redirectPath));
-          } else {
-            // Token expired, clear cookies
-            res.clearCookie(`2fa_remember_${data.user.id}`);
-            res.clearCookie(`2fa_remember_exp_${data.user.id}`);
-          }
+        if (now < expiry) {
+          // Valid remember token, skip 2FA
+          console.log('[2FA] Remember device token valid, skipping 2FA');
+          setAuthCookies(res, data.session);
+          // OPTIMIZED: Run redirect and login history in parallel
+          const [redirectPath] = await Promise.all([
+            getPostLoginRedirect(data.user.id, returnTo),
+            logLoginHistory({
+              userId: data.user.id,
+              req,
+              status: 'success',
+              loginMethod: '2fa'
+            }).catch(err => console.error('Login history logging failed (non-blocking):', err))
+          ]);
+          return res.redirect(withLoginSuccess(redirectPath));
+        } else {
+          // Token expired, clear cookies
+          res.clearCookie(`2fa_remember_${data.user.id}`);
+          res.clearCookie(`2fa_remember_exp_${data.user.id}`);
         }
-
-        // 2FA is enabled and no valid remember token - redirect to 2FA verification
-        // Store session temporarily in cookies for 2FA verification
-        // IMPORTANT: Don't sign out - just store the tokens temporarily
-        const sessionData = data.session;
-        
-        // Set temporary cookies for 2FA verification
-        res.cookie('2fa_pending_user_id', data.user.id, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 10 * 60 * 1000 // 10 minutes
-        });
-        res.cookie('2fa_pending_access_token', sessionData.access_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 10 * 60 * 1000 // 10 minutes
-        });
-        res.cookie('2fa_pending_refresh_token', sessionData.refresh_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 10 * 60 * 1000 // 10 minutes
-        });
-        res.cookie('2fa_pending_return_to', returnTo || '/dashboard', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 10 * 60 * 1000 // 10 minutes
-        });
-
-        // Clear the main session cookies so user isn't fully logged in yet
-        // But DON'T call supabase.auth.signOut() - that invalidates the tokens
-        res.clearCookie('sb-access-token');
-        res.clearCookie('sb-refresh-token');
-
-        // Redirect to 2FA verification page
-        return res.redirect('/verify-2fa');
       }
+
+      // 2FA is enabled and no valid remember token - redirect to 2FA verification
+      // Store session temporarily in cookies for 2FA verification
+      // IMPORTANT: Don't sign out - just store the tokens temporarily
+      const sessionData = data.session;
+      
+      // Set temporary cookies for 2FA verification
+      res.cookie('2fa_pending_user_id', data.user.id, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 10 * 60 * 1000 // 10 minutes
+      });
+      res.cookie('2fa_pending_access_token', sessionData.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 10 * 60 * 1000 // 10 minutes
+      });
+      res.cookie('2fa_pending_refresh_token', sessionData.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 10 * 60 * 1000 // 10 minutes
+      });
+      res.cookie('2fa_pending_return_to', returnTo || '/dashboard', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 10 * 60 * 1000 // 10 minutes
+      });
+
+      // Clear the main session cookies so user isn't fully logged in yet
+      // But DON'T call supabase.auth.signOut() - that invalidates the tokens
+      res.clearCookie('sb-access-token');
+      res.clearCookie('sb-refresh-token');
+
+      // Redirect to 2FA verification page
+      return res.redirect('/verify-2fa');
+    }
 
     // Set cookies and redirect with success message
     setAuthCookies(res, data.session);
