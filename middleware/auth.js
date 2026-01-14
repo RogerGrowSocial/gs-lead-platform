@@ -221,6 +221,7 @@ async function requireAuth(req, res, next) {
         
         // Ensure profile exists (upsert) - WAIT for it to complete
         try {
+          const { supabaseAdmin } = require('../config/supabase');
           const { data: newProfile, error: upsertError } = await supabaseAdmin
             .from('profiles')
             .upsert({
