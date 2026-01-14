@@ -17,8 +17,6 @@
         "init-supabase": "node scripts/init-supabase.js",
         "set-admin-password": "node scripts/set-admin-password.js",
         "test:signup": "tsx scripts/test-signup.ts",
-        "arcade:pack": "free-tex-packer-cli --width 2048 --height 2048 --padding 2 --format json --texture public/arcade/atlas/office.png --data public/arcade/atlas/office.json public/arcade/raw/*.png || echo 'Note: Run npm install first. Sprites will be generated at runtime if atlas is missing.'",
-        "arcade:assets": "node scripts/unpack-kenney-arcade-assets.js"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.1",

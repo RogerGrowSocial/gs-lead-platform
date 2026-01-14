@@ -1385,18 +1385,6 @@
                 Sales portal
               </a>
               <% } %>
-              <% 
-                // Check if user is admin or manager for Arcade Mode
-                const userIsAdminOrManager = (typeof isUserAdmin !== 'undefined' && isUserAdmin === true) || 
-                                            (typeof user !== 'undefined' && (user.user_metadata?.is_admin === true || user.is_admin === true));
-              %>
-              <% if (userIsAdminOrManager) { %>
-              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
-              <a href="/admin/arcade" class="user-dropdown-item">
-                <i class="fas fa-gamepad user-dropdown-icon"></i>
-                Arcade Mode
-              </a>
-              <% } %>
               <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
               <a href="/logout" class="user-dropdown-item">
                 <i class="fas fa-rectangle-xmark user-dropdown-icon"></i>

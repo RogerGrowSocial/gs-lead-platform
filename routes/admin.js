@@ -1447,23 +1447,6 @@ router.get("/dashboard", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.redirect('/admin');
 })
 
-// Arcade Mode - Admin/Manager only
-router.get("/arcade", requireAuth, isManagerOrAdmin, async (req, res) => {
-  try {
-    // Render without layout (full-bleed arcade mode)
-    res.render("admin/arcade", {
-      title: "Arcade Mode",
-      layout: false
-    });
-  } catch (err) {
-    console.error("Arcade route error:", err);
-    res.status(500).render('errors/500', {
-      message: 'Er is een fout opgetreden bij het laden van Arcade Mode',
-      error: err.message
-    });
-  }
-})
-
 // Gebruikers beheren
 router.get("/profiles", requireAuth, isAdmin, async (req, res) => {
   try {
