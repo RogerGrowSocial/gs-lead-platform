@@ -56,9 +56,25 @@ const performanceLog = (req, res, next) => {
   };
 
   // Track database queries by wrapping Supabase client methods
-  // This will be called when Supabase client is created
-  if (global.supabaseAdmin) {
-    const originalFrom = global.supabaseAdmin.from;
+  // Try to get supabaseAdmin from various sources
+  let supabaseAdminToTrack = null;
+  try {
+    // Try global first
+    if (global.supabaseAdmin) {
+      supabaseAdminToTrack = global.supabaseAdmin;
+    } else {
+      // Try requiring the config
+      const supabaseConfig = require('../config/supabase');
+      if (supabaseConfig && supabaseConfig.supabaseAdmin) {
+        supabaseAdminToTrack = supabaseConfig.supabaseAdmin;
+      }
+    }
+  } catch (e) {
+    // Ignore - supabase might not be loaded yet
+  }
+
+  if (supabaseAdminToTrack) {
+    const originalFrom = supabaseAdminToTrack.from;
     const queryTracker = new Map();
     let queryCounter = 0;
 
@@ -144,6 +160,11 @@ const performanceLog = (req, res, next) => {
       
       return query;
     };
+    
+    // Also wrap global if it exists
+    if (global.supabaseAdmin) {
+      global.supabaseAdmin.from = supabaseAdminToTrack.from;
+    }
   }
 
   // Log when response finishes
@@ -232,8 +253,12 @@ const performanceLog = (req, res, next) => {
 
     logParts.push(`${'='.repeat(80)}\n`);
 
-    // Only log if total time > 100ms or there are warnings or database queries (to avoid log spam)
-    if (totalTime > 100 || warnings.length > 0 || timings.database.length > 0) {
+    // Always log for admin routes, API routes, or if slow/warnings/queries exist
+    const isImportantRoute = req.path.startsWith('/admin/') || 
+                             req.path.startsWith('/api/') || 
+                             req.path.startsWith('/dashboard');
+    
+    if (isImportantRoute || totalTime > 50 || warnings.length > 0 || timings.database.length > 0) {
       console.log(logParts.join('\n'));
     }
   });
