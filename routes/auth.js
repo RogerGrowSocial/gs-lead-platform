@@ -991,7 +991,7 @@ router.post("/forgot-password", async (req, res) => {
           logger.error('Password reset email failed to send', { email });
           return res.render("auth/forgot-password", {
             layout: false,
-            error: "Er is een fout opgetreden bij het versturen van de email. Probeer het later opnieuw.",
+            error: "Er is een fout opgetreden bij het versturen van de email. Controleer of de interne SMTP gegevens (Mijndomein) correct zijn en probeer het opnieuw.",
             success: null
           });
         }

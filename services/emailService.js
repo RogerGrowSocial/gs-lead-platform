@@ -36,10 +36,10 @@ class EmailService {
         console.warn(`⚠️  Template "${templateName}" has unreplaced placeholders:`, remainingPlaceholders);
       }
 
-      // Validate HTML structure
-      const htmlTagCount = (template.match(/<html>/gi) || []).length;
+      // Validate HTML structure (more tolerant for attributes on <html> / <body>)
+      const htmlTagCount = (template.match(/<html[^>]*>/gi) || []).length;
       const closingHtmlTagCount = (template.match(/<\/html>/gi) || []).length;
-      const bodyTagCount = (template.match(/<body>/gi) || []).length;
+      const bodyTagCount = (template.match(/<body[^>]*>/gi) || []).length;
       const closingBodyTagCount = (template.match(/<\/body>/gi) || []).length;
 
       if (htmlTagCount !== closingHtmlTagCount || bodyTagCount !== closingBodyTagCount) {
