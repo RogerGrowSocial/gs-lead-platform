@@ -410,8 +410,16 @@
     // Update sidebar menu items
     document.querySelectorAll('.menu-item, .nav-link').forEach(item => {
       const href = item.getAttribute('href');
-      if (href && url.startsWith(href)) {
-        item.classList.add('active');
+      if (href) {
+        // Exact match for /dashboard (not /dashboard/leads, etc.)
+        if (href === '/dashboard' && url === '/dashboard') {
+          item.classList.add('active');
+        } else if (href !== '/dashboard' && url.startsWith(href)) {
+          // For other routes, use startsWith
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
       } else {
         item.classList.remove('active');
       }
