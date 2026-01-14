@@ -932,7 +932,7 @@ var leadsContent = `
   
   <script>
     // Industry Preferences Management
-    document.addEventListener('DOMContentLoaded', function() {
+    function initIndustryPreferencesModule() {
       var industryPreferencesGrid = document.getElementById('industryPreferencesGrid');
       
       if (!industryPreferencesGrid) {
@@ -1399,6 +1399,20 @@ var leadsContent = `
           window.showNotification(message, type, 5000, false);
         }
       }
+    }
+    
+    // Initialize on DOMContentLoaded (initial page load)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initIndustryPreferencesModule);
+    } else {
+      // DOM already loaded, initialize immediately
+      initIndustryPreferencesModule();
+    }
+    
+    // Also initialize on page:loaded event (client-side routing)
+    window.addEventListener('page:loaded', function() {
+      // Small delay to ensure DOM is updated
+      setTimeout(initIndustryPreferencesModule, 100);
     });
   </script>
 </div>
@@ -1588,7 +1602,7 @@ var leadsContent = `
   
   <script>
     // Location Preferences Management
-    document.addEventListener('DOMContentLoaded', function() {
+    function initLocationPreferencesModule() {
       var locationPreferencesGrid = document.getElementById('locationPreferencesGrid');
       
       if (!locationPreferencesGrid) {
@@ -1851,6 +1865,20 @@ var leadsContent = `
           isLoading = false;
         });
       }
+    }
+    
+    // Initialize on DOMContentLoaded (initial page load)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initLocationPreferencesModule);
+    } else {
+      // DOM already loaded, initialize immediately
+      initLocationPreferencesModule();
+    }
+    
+    // Also initialize on page:loaded event (client-side routing)
+    window.addEventListener('page:loaded', function() {
+      // Small delay to ensure DOM is updated
+      setTimeout(initLocationPreferencesModule, 100);
     });
   </script>
 </div>
