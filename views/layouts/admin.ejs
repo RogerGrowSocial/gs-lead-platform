@@ -2000,5 +2000,25 @@
     window.addEventListener('beforeunload', stopSimulationCheck);
   })();
   </script>
+
+  <!-- Vercel Speed Insights -->
+  <script>
+    // Initialize Speed Insights tracking queue
+    window.siq = window.siq || [];
+    window.si = window.si || ((...args) => {
+      if (window.siq) {
+        window.siq.push(args);
+      }
+    });
+
+    // Load Speed Insights script
+    (function() {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.vercel-analytics.com/v1/script.js';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  </script>
 </body>
 </html>
