@@ -166,15 +166,26 @@ const upload = multer({
 })
 
 // Initialize cron jobs for invoice automation
-console.log('📅 Loading cron jobs...')
-requireWithRetry('./cron/invoiceJobs')
-console.log('✅ invoiceJobs loaded')
+// Skip on Vercel - cron jobs don't run in serverless functions
+let billingCron
+if (!isVercel) {
+  console.log('📅 Loading cron jobs...')
+  requireWithRetry('./cron/invoiceJobs')
+  console.log('✅ invoiceJobs loaded')
 
-// Initialize billing cron job
-console.log('💰 Loading BillingCronJob...')
-const BillingCronJob = requireWithRetry('./services/billingCronJob')
-const billingCron = new BillingCronJob()
-console.log('✅ BillingCronJob created')
+  // Initialize billing cron job
+  console.log('💰 Loading BillingCronJob...')
+  const BillingCronJob = requireWithRetry('./services/billingCronJob')
+  billingCron = new BillingCronJob()
+  console.log('✅ BillingCronJob created')
+} else {
+  console.log('⏭️  Skipping cron jobs on Vercel (serverless functions don\'t support cron)')
+  // Create a dummy billingCron object to prevent errors
+  billingCron = {
+    start: () => Promise.resolve(),
+    stop: () => Promise.resolve()
+  }
+}
 
 // Initialize risk assessment worker (listens to database triggers)
 // NOTE: Loading this lazily in app.listen() to avoid blocking server startup
