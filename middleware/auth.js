@@ -473,8 +473,16 @@ async function isEmployeeOrAdmin(req, res, next) {
         .eq('id', profile.role_id)
         .maybeSingle();
 
-      if (!roleError && role) {
+      if (roleError) {
+        console.log('Error fetching role for employee access check:', roleError);
+        // If we can't fetch the role, allow access (fail open for backward compatibility)
+        return next();
+      }
+
+      if (role) {
         const roleName = role.name?.toLowerCase() || '';
+        console.log(`Checking role access for user ${req.user.id}: role="${roleName}"`);
+        
         // Block customer/consumer roles
         if (roleName === 'consumer' || roleName === 'customer' || roleName === 'klant') {
           SystemLogService.logAuth(
@@ -490,7 +498,13 @@ async function isEmployeeOrAdmin(req, res, next) {
             error: 'Klanten hebben geen toegang tot het admin gebied'
           });
         }
-        // Allow employee roles and admin roles
+        
+        // Allow all other roles (manager, employee, admin, etc.)
+        console.log(`Access granted for role: ${roleName}`);
+        return next();
+      } else {
+        console.log(`No role found for role_id: ${profile.role_id}`);
+        // If role doesn't exist, allow access (fail open for backward compatibility)
         return next();
       }
     }
