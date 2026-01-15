@@ -79,10 +79,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/api/dashboard.js",
-      "headers": {
-        "Cache-Control": "public, max-age=0, must-revalidate"
-      }
+      "dest": "/api/dashboard.js"
     }
   ]
 }
