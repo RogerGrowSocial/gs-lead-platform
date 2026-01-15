@@ -1071,10 +1071,16 @@ router.post("/forgot-password", async (req, res) => {
 
 // Password reset page
 router.get("/reset-password", (req, res) => {
+  // Get tokens from query params (set by client-side hash parsing)
+  const token = req.query.token || req.query.access_token || '';
+  const refresh_token = req.query.refresh_token || '';
+  
   res.render("auth/reset-password", {
     layout: false,
     error: null,
-    token: req.query.token
+    token: token,
+    access_token: token,
+    refresh_token: refresh_token
   })
 })
 
