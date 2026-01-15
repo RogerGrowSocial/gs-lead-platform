@@ -652,8 +652,8 @@
     }
     
     .submenu-item.active {
-      background-color: #fb923c;
-      color: #ffffff;
+      background-color: #f3f4f6;
+      color: #111827;
       font-weight: 500;
     }
     
@@ -983,7 +983,7 @@
         </a>
         <div class="submenu">
           <a href="/admin/leads" class="submenu-item <%= (activeMenu === 'leads' && !locals.activeSubmenu) ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
@@ -997,14 +997,14 @@
             Leadstroom
           </a>
           <a href="/admin/leads/activities" class="submenu-item <%= locals.activeSubmenu === 'activities' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
             Activiteiten
           </a>
           <% if (canAccessAllMenus) { %>
           <a href="/admin/leads/industries" class="submenu-item <%= locals.activeSubmenu === 'industries' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
@@ -1030,14 +1030,14 @@
         </a>
         <div class="submenu">
           <a href="/admin/opportunities" class="submenu-item <%= (activeMenu === 'opportunities' && !locals.activeSubmenu) ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2"></rect>
               <path d="M16 7V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"></path>
             </svg>
             Kansen
           </a>
           <a href="/admin/opportunities/deals" class="submenu-item <%= locals.activeSubmenu === 'deals' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"></path>
               <path d="M4 13h16"></path>
               <path d="M8 17h8"></path>
@@ -1181,7 +1181,7 @@
           <a href="/admin/services/settings" class="submenu-item <%= locals.activeSubmenu === 'settings' ? 'active' : '' %>">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m9.5-8.5L8.5 8.5m7 7l-3-3m-4 0l-3 3m7-7l3-3"></path>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
             </svg>
             Instellingen
           </a>
@@ -1290,7 +1290,7 @@
           <div class="icon-container">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
-              <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m9.5-8.5L8.5 8.5m7 7l-3-3m-4 0l-3 3m7-7l3-3"></path>
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
             </svg>
           </div>
           <span class="menu-label">Instellingen</span>
