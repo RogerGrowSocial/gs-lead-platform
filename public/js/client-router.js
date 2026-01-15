@@ -28,7 +28,10 @@
     contentSelector: '.main-container, .main-content, main, #main-content, .content-wrapper, .admin-content, .dashboard-content',
     // Cache voor geladen content
     cache: new Map(),
-    cacheMaxAge: 5 * 60 * 1000 // 5 minuten
+    cacheMaxAge: 10 * 60 * 1000, // 10 minuten (verhoogd voor betere performance)
+    // Prefetch links on hover voor instant loading
+    prefetchOnHover: true,
+    prefetchDelay: 100 // ms delay before prefetch
   };
 
   // State
@@ -304,13 +307,16 @@
         return;
       }
 
-      // Update content met fade effect
+      // Update content met snelle fade effect (50ms voor instant feel)
       container.style.opacity = '0';
-      container.style.transition = 'opacity 150ms ease-out';
+      container.style.transition = 'opacity 50ms ease-out';
       
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       container.innerHTML = content;
+      
+      // Force reflow voor snellere rendering
+      container.offsetHeight;
       
       // Update browser history
       if (pushState) {
@@ -392,12 +398,16 @@
         detail: { url: url, content: content } 
       }));
 
-      // Fade in nieuwe content
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Fade in nieuwe content (instant - no delay)
       container.style.opacity = '1';
 
-      // Update active menu items
+      // Update active menu items immediately
       updateActiveMenuItems(url);
+      
+      // Re-initialize submenu toggles after content update
+      if (typeof window.reinitSubmenus === 'function') {
+        window.reinitSubmenus();
+      }
 
     } catch (error) {
       console.error('[Client Router] Navigation failed:', error);
@@ -416,21 +426,50 @@
    * Update active menu items
    */
   function updateActiveMenuItems(url) {
+    // Remove all active states first
+    document.querySelectorAll('.menu-item, .nav-link, .submenu-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    
     // Update sidebar menu items
     document.querySelectorAll('.menu-item, .nav-link').forEach(item => {
       const href = item.getAttribute('href');
-      if (href) {
-        // Exact match for /dashboard (not /dashboard/leads, etc.)
-        if (href === '/dashboard' && url === '/dashboard') {
-          item.classList.add('active');
-        } else if (href !== '/dashboard' && url.startsWith(href)) {
-          // For other routes, use startsWith
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
+      if (!href) return;
+      
+      // Exact match for /admin and /dashboard root pages
+      if ((href === '/admin' && url === '/admin') || 
+          (href === '/dashboard' && url === '/dashboard')) {
+        item.classList.add('active');
+        return;
+      }
+      
+      // For other routes, check if URL starts with href
+      // But exclude exact matches that should be exact (like /admin matching /admin/leads)
+      if (url.startsWith(href)) {
+        // Special case: /admin should not match /admin/leads, etc.
+        if (href === '/admin' && url !== '/admin') {
+          return; // Don't activate /admin for sub-routes
         }
-      } else {
-        item.classList.remove('active');
+        item.classList.add('active');
+        
+        // If this is a submenu parent, expand it
+        if (item.classList.contains('has-submenu')) {
+          item.classList.add('expanded');
+        }
+      }
+    });
+    
+    // Update submenu items
+    document.querySelectorAll('.submenu-item').forEach(item => {
+      const href = item.getAttribute('href');
+      if (href && url.startsWith(href)) {
+        item.classList.add('active');
+        // Expand parent submenu
+        const parentMenu = item.closest('.submenu')?.previousElementSibling;
+        if (parentMenu && parentMenu.classList.contains('has-submenu')) {
+          parentMenu.classList.add('expanded');
+          parentMenu.classList.add('active');
+        }
       }
     });
   }

@@ -1419,61 +1419,62 @@
         localStorage.setItem('adminSidebarExpanded', sidebar.classList.contains('expanded'));
       });
       
-      // Submenu toggle functionality
-      const submenuToggles = document.querySelectorAll('[data-submenu-toggle]');
-      submenuToggles.forEach(toggle => {
-        const chevron = toggle.querySelector('.menu-chevron');
-        const submenu = toggle.nextElementSibling;
-        
-        // Auto-expand submenu if it contains an active item
-        if (submenu && submenu.classList.contains('submenu')) {
-          const hasActiveItem = submenu.querySelector('.submenu-item.active');
-          if (hasActiveItem || toggle.classList.contains('active')) {
-            toggle.classList.add('expanded');
-          }
-        }
-        
-        // Toggle submenu when clicking anywhere on the menu item (not just chevron)
-        toggle.addEventListener('click', (e) => {
-          // If clicking a submenu item link, allow navigation
-          if (e.target.closest('.submenu-item')) {
-            return; // Allow normal navigation
-          }
+      // Submenu toggle functionality - make it reusable
+      function initSubmenus() {
+        const submenuToggles = document.querySelectorAll('[data-submenu-toggle]');
+        submenuToggles.forEach(toggle => {
+          // Remove old listeners by cloning (clean slate)
+          const newToggle = toggle.cloneNode(true);
+          toggle.parentNode.replaceChild(newToggle, toggle);
           
-          // If clicking the chevron or menu item itself, toggle submenu
-          const clickedChevron = e.target.closest('.menu-chevron');
-          const isMenuLabel = e.target.closest('.menu-label');
+          const submenu = newToggle.nextElementSibling;
           
-          if (clickedChevron || isMenuLabel || e.target === toggle) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (submenu && submenu.classList.contains('submenu')) {
-              const isExpanded = toggle.classList.contains('expanded');
-              
-              // Close all other expanded submenus first
-              submenuToggles.forEach(otherToggle => {
-                if (otherToggle !== toggle && otherToggle.classList.contains('expanded')) {
-                  otherToggle.classList.remove('expanded');
-                }
-              });
-              
-              // Toggle this submenu
-              toggle.classList.toggle('expanded');
-              
-              // If we're expanding, scroll the active item into view
-              if (!isExpanded && submenu.querySelector('.submenu-item.active')) {
-                setTimeout(() => {
-                  const activeItem = submenu.querySelector('.submenu-item.active');
-                  if (activeItem) {
-                    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }
-                }, 100);
-              }
+          // Auto-expand submenu if it contains an active item
+          if (submenu && submenu.classList.contains('submenu')) {
+            const hasActiveItem = submenu.querySelector('.submenu-item.active');
+            if (hasActiveItem || newToggle.classList.contains('active')) {
+              newToggle.classList.add('expanded');
             }
           }
+          
+          // Toggle submenu when clicking anywhere on the menu item (not just chevron)
+          newToggle.addEventListener('click', (e) => {
+            // If clicking a submenu item link, allow navigation
+            if (e.target.closest('.submenu-item')) {
+              return; // Allow normal navigation
+            }
+            
+            // If clicking the chevron or menu item itself, toggle submenu
+            const clickedChevron = e.target.closest('.menu-chevron');
+            const isMenuLabel = e.target.closest('.menu-label');
+            
+            if (clickedChevron || isMenuLabel || e.target === newToggle) {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              if (submenu && submenu.classList.contains('submenu')) {
+                const isExpanded = newToggle.classList.contains('expanded');
+                
+                // Close all other expanded submenus first
+                document.querySelectorAll('[data-submenu-toggle]').forEach(otherToggle => {
+                  if (otherToggle !== newToggle && otherToggle.classList.contains('expanded')) {
+                    otherToggle.classList.remove('expanded');
+                  }
+                });
+                
+                // Toggle this submenu
+                newToggle.classList.toggle('expanded');
+              }
+            }
+          });
         });
-      });
+      }
+      
+      // Initialize on load
+      initSubmenus();
+      
+      // Make it available globally for re-initialization after client-side navigation
+      window.reinitSubmenus = initSubmenus;
     })();
   </script>
   
