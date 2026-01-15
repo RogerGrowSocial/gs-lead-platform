@@ -89,7 +89,22 @@ router.post("/login", async (req, res) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data?.session) {
-      const msg = (error && error.message) || 'Inloggen mislukt. Controleer je gegevens.';
+      let msg = 'Inloggen mislukt. Controleer je gegevens.';
+      if (error && error.message) {
+        // Translate common error messages to Dutch
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes('missing email') || errorMsg.includes('missing phone')) {
+          msg = 'E-mailadres of telefoonnummer is verplicht';
+        } else if (errorMsg.includes('invalid login') || errorMsg.includes('invalid credentials')) {
+          msg = 'Ongeldige inloggegevens. Controleer je e-mailadres en wachtwoord.';
+        } else if (errorMsg.includes('email not confirmed')) {
+          msg = 'Je e-mailadres is nog niet bevestigd. Check je inbox.';
+        } else if (errorMsg.includes('too many requests')) {
+          msg = 'Te veel pogingen. Probeer het later opnieuw.';
+        } else {
+          msg = error.message;
+        }
+      }
       return res.status(400).render('auth/login', {
         error: msg,
         success: null,
@@ -957,7 +972,7 @@ router.post("/forgot-password", async (req, res) => {
           logger.error('Password reset link generation failed:', resetError);
           return res.render("auth/forgot-password", {
             layout: false,
-            error: resetError.message || "Er is een fout opgetreden bij het genereren van de reset link",
+            error: "Er is een fout opgetreden bij het genereren van de reset link",
             success: null
           });
         }
@@ -1033,7 +1048,7 @@ router.post("/forgot-password", async (req, res) => {
         logger.error('Password reset request error:', error);
         return res.render("auth/forgot-password", {
           layout: false,
-          error: error.message || "Er is een fout opgetreden",
+          error: "Er is een fout opgetreden bij het aanvragen van een wachtwoord reset",
           success: null
         });
       }
@@ -1078,6 +1093,8 @@ router.post("/reset-password", async (req, res) => {
       })
     }
 
+    let sessionEstablished = false;
+
     // If we have refresh_token, set session directly. Otherwise, try verifyOtp recovery with the token.
     if (refresh_token) {
       const { error: sessionError } = await supabase.auth.setSession({
@@ -1088,11 +1105,12 @@ router.post("/reset-password", async (req, res) => {
         logger.error('Password reset setSession error:', sessionError);
         return res.render("auth/reset-password", {
           layout: false,
-          error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
-          access_token,
-          refresh_token
+          error: "De reset link is ongeldig of verlopen. Vraag een nieuwe link aan.",
+          access_token: '',
+          refresh_token: ''
         })
       }
+      sessionEstablished = true;
     } else {
       // Attempt to exchange token for session using verifyOtp (recovery)
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
@@ -1117,35 +1135,59 @@ router.post("/reset-password", async (req, res) => {
         logger.error('Password reset setSession (after verifyOtp) error:', sessionError);
         return res.render("auth/reset-password", {
           layout: false,
-          error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
+          error: "De reset link is ongeldig of verlopen. Vraag een nieuwe link aan.",
           access_token: '',
           refresh_token: ''
         })
       }
+      sessionEstablished = true;
     }
 
-    // Update password via Supabase Auth
+    // Only update password if we successfully established a session
+    if (!sessionEstablished) {
+      return res.render("auth/reset-password", {
+        layout: false,
+        error: "De reset link is ongeldig of verlopen. Vraag een nieuwe link aan.",
+        access_token: '',
+        refresh_token: ''
+      })
+    }
+
+    // Update password via Supabase Auth (this works with the established session)
     const { error } = await supabase.auth.updateUser({
       password: password
     })
 
     if (error) {
       logger.error('Password update error:', error);
+      // Translate error messages to Dutch
+      let errorMsg = "Er is een fout opgetreden bij het resetten van het wachtwoord";
+      if (error.message) {
+        const errMsg = error.message.toLowerCase();
+        if (errMsg.includes('password')) {
+          errorMsg = "Het wachtwoord voldoet niet aan de vereisten. Gebruik minimaal 8 tekens.";
+        } else if (errMsg.includes('session') || errMsg.includes('token')) {
+          errorMsg = "De reset link is ongeldig of verlopen. Vraag een nieuwe link aan.";
+        }
+      }
       return res.render("auth/reset-password", {
         layout: false,
-        error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
-        access_token,
-        refresh_token
+        error: errorMsg,
+        access_token: '',
+        refresh_token: ''
       })
     }
 
+    // Sign out the recovery session and redirect to login
+    await supabase.auth.signOut();
     res.redirect("/login?reset=success")
   } catch (error) {
     logger.error("Password reset error:", error)
     res.render("auth/reset-password", {
       layout: false,
       error: "Er is een fout opgetreden bij het resetten van het wachtwoord",
-      token: req.body.token
+      access_token: '',
+      refresh_token: ''
     })
   }
 })
@@ -1266,7 +1308,7 @@ const verifyEmailCallbackHandler = async (req, res) => {
     const { access_token, refresh_token } = req.body;
     
     if (!access_token || !refresh_token) {
-      return res.status(400).json({ error: 'Missing tokens' });
+      return res.status(400).json({ error: 'Ontbrekende tokens' });
     }
 
     const supabase = createBaseClient();
@@ -1279,11 +1321,20 @@ const verifyEmailCallbackHandler = async (req, res) => {
 
     if (error) {
       logger.error('Email verification callback error:', error);
-      return res.status(400).json({ error: error.message });
+      let errorMsg = 'Er is een fout opgetreden bij het verifiëren van je e-mailadres';
+      if (error.message) {
+        const errMsg = error.message.toLowerCase();
+        if (errMsg.includes('token') || errMsg.includes('expired') || errMsg.includes('invalid')) {
+          errorMsg = 'De verificatielink is ongeldig of verlopen. Vraag een nieuwe link aan.';
+        } else {
+          errorMsg = error.message;
+        }
+      }
+      return res.status(400).json({ error: errorMsg });
     }
 
     if (!data?.session) {
-      return res.status(400).json({ error: 'No session created' });
+      return res.status(400).json({ error: 'Geen sessie aangemaakt' });
     }
 
     // Set cookies
