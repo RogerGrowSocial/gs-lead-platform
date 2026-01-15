@@ -19,7 +19,7 @@ async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
       .from('profiles')
       .select('is_admin, role_id')
       .eq('id', userId)
-      .maybeSingle()
+      .single()
 
     if (profileError) {
       console.error('Error fetching profile for redirect:', profileError)
@@ -33,7 +33,7 @@ async function getPostLoginRedirect(userId, requestedPath = '/dashboard') {
         .from('roles')
         .select('name')
         .eq('id', profile.role_id)
-        .maybeSingle()
+        .single()
 
       if (!roleError && role?.name) {
         roleName = role.name
