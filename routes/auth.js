@@ -102,12 +102,14 @@ router.post("/login", async (req, res) => {
     // Also ensure profile exists (upsert) to prevent "No profile found" errors
     const [profileResult, settingsResult] = await Promise.all([
       // Check user status and ensure profile exists
-      supabaseAdmin
-        .from('profiles')
-        .select('status, email, company_name, first_name, last_name')
-        .eq('id', data.user.id)
-        .maybeSingle()
-        .then(async ({ data: profile, error: profileError }) => {
+      (async () => {
+        try {
+          const { data: profile, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('status, email, company_name, first_name, last_name')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          
           // If profile doesn't exist, create it (upsert)
           if (profileError && profileError.code === 'PGRST116' || !profile) {
             console.log(`📝 Creating missing profile for user ${data.user.id}`);
@@ -145,21 +147,25 @@ router.post("/login", async (req, res) => {
           }
           
           return { data: profile, error: null };
-        })
-        .catch(err => {
+        } catch (err) {
           console.error('Error in profile check/ensure:', err);
           return { data: null, error: err };
-        }),
+        }
+      })(),
       // Check if 2FA is enabled
-      supabaseAdmin
-        .from('settings')
-        .select('two_factor_enabled, two_factor_secret')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-        .catch(err => {
+      (async () => {
+        try {
+          const { data: settings, error: settingsError } = await supabaseAdmin
+            .from('settings')
+            .select('two_factor_enabled, two_factor_secret')
+            .eq('user_id', data.user.id)
+            .maybeSingle();
+          return { data: settings, error: settingsError };
+        } catch (err) {
           console.error('Error checking 2FA settings:', err);
           return { data: null, error: err };
-        })
+        }
+      })()
     ]);
 
     // Check user status
