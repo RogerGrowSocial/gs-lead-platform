@@ -222,28 +222,40 @@ async function requireAuth(req, res, next) {
         // Ensure profile exists (upsert) - WAIT for it to complete
         try {
           const { supabaseAdmin } = require('../config/supabase');
-          // First check if profile exists to get role_id
+          // First check if profile exists to preserve role_id (which has NOT NULL constraint)
           const { data: existingProfile } = await supabaseAdmin
             .from('profiles')
             .select('role_id')
             .eq('id', req.user.id)
-            .single();
+            .maybeSingle();
+          
+          // Build upsert data - preserve existing role_id if profile exists
+          const upsertData = {
+            id: req.user.id,
+            email: req.user.email,
+            company_name: req.user.user_metadata?.company_name || null,
+            first_name: req.user.user_metadata?.first_name || null,
+            last_name: req.user.user_metadata?.last_name || null,
+            status: 'active',
+            balance: 0,
+            is_admin: req.user.user_metadata?.is_admin === true || false,
+            updated_at: new Date().toISOString()
+          };
+          
+          // Only include role_id if profile exists and has a role_id (preserve it)
+          // If profile doesn't exist, don't set role_id (let database handle default or constraint)
+          if (existingProfile?.role_id) {
+            upsertData.role_id = existingProfile.role_id;
+          }
+          
+          // Only set created_at if profile doesn't exist
+          if (!existingProfile) {
+            upsertData.created_at = new Date().toISOString();
+          }
           
           const { data: newProfile, error: upsertError } = await supabaseAdmin
             .from('profiles')
-            .upsert({
-              id: req.user.id,
-              email: req.user.email,
-              company_name: req.user.user_metadata?.company_name || null,
-              first_name: req.user.user_metadata?.first_name || null,
-              last_name: req.user.user_metadata?.last_name || null,
-              role_id: existingProfile?.role_id || undefined, // Use existing role_id or omit if null constraint exists
-              status: 'active',
-              balance: 0,
-              is_admin: req.user.user_metadata?.is_admin === true || false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }, {
+            .upsert(upsertData, {
               onConflict: 'id'
             })
             .select()
@@ -251,6 +263,24 @@ async function requireAuth(req, res, next) {
           
           if (upsertError) {
             console.error('Error creating profile in middleware:', upsertError);
+            // If error is due to role_id constraint, try to fetch existing profile instead
+            if (upsertError.code === '23502' && upsertError.message?.includes('role_id')) {
+              console.log('⚠️ role_id constraint error, attempting to fetch existing profile');
+              const { data: fetchedProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('*')
+                .eq('id', req.user.id)
+                .single();
+              
+              if (fetchedProfile) {
+                profile = fetchedProfile;
+                profileStatusCache.set(cacheKey, {
+                  profile: profile,
+                  timestamp: Date.now()
+                });
+                console.log('✅ Using existing profile after role_id constraint error');
+              }
+            }
           } else {
             console.log('✅ Profile created/updated for user:', req.user.id);
             // Update profile variable so it's available for the rest of the middleware
