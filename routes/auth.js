@@ -1236,13 +1236,13 @@ router.post("/logout", async (req, res) => {
       }
     }
     
-    const supabase = createBaseClient();
-    
     // Sign out from Supabase
     try {
+      const supabase = createBaseClient();
       await supabase.auth.signOut();
     } catch (err) {
       console.error('Error signing out from Supabase:', err);
+      // Continue with logout even if signOut fails
     }
     
     // Clear all auth cookies
