@@ -222,6 +222,13 @@ async function requireAuth(req, res, next) {
         // Ensure profile exists (upsert) - WAIT for it to complete
         try {
           const { supabaseAdmin } = require('../config/supabase');
+          // First check if profile exists to get role_id
+          const { data: existingProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('role_id')
+            .eq('id', req.user.id)
+            .single();
+          
           const { data: newProfile, error: upsertError } = await supabaseAdmin
             .from('profiles')
             .upsert({
@@ -230,7 +237,7 @@ async function requireAuth(req, res, next) {
               company_name: req.user.user_metadata?.company_name || null,
               first_name: req.user.user_metadata?.first_name || null,
               last_name: req.user.user_metadata?.last_name || null,
-              role_id: null,
+              role_id: existingProfile?.role_id || undefined, // Use existing role_id or omit if null constraint exists
               status: 'active',
               balance: 0,
               is_admin: req.user.user_metadata?.is_admin === true || false,
