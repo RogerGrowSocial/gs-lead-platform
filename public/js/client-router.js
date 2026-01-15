@@ -447,47 +447,51 @@
       item.classList.remove('active');
     });
     
-    // Update sidebar menu items
-    document.querySelectorAll('.menu-item, .nav-link').forEach(item => {
-      const href = item.getAttribute('href');
-      if (!href) return;
-      
-      // Exact match for /admin and /dashboard root pages
-      if ((href === '/admin' && url === '/admin') || 
-          (href === '/dashboard' && url === '/dashboard')) {
-        item.classList.add('active');
-        return;
-      }
-      
-      // For other routes, check if URL starts with href
-      // But exclude exact matches that should be exact (like /admin matching /admin/leads)
-      if (url.startsWith(href)) {
-        // Special case: /admin should not match /admin/leads, etc.
-        if (href === '/admin' && url !== '/admin') {
-          return; // Don't activate /admin for sub-routes
-        }
-        item.classList.add('active');
-        
-        // If this is a submenu parent, expand it
-        if (item.classList.contains('has-submenu')) {
-          item.classList.add('expanded');
-        }
-      }
-    });
-    
-    // Update submenu items
+    // First, check submenu items (they take priority)
+    let hasActiveSubmenu = false;
     document.querySelectorAll('.submenu-item').forEach(item => {
       const href = item.getAttribute('href');
       if (href && url.startsWith(href)) {
         item.classList.add('active');
-        // Expand parent submenu
+        hasActiveSubmenu = true;
+        // Expand parent submenu (but don't make parent active)
         const parentMenu = item.closest('.submenu')?.previousElementSibling;
         if (parentMenu && parentMenu.classList.contains('has-submenu')) {
           parentMenu.classList.add('expanded');
-          parentMenu.classList.add('active');
         }
       }
     });
+    
+    // Only activate parent menu items if NO submenu item is active
+    if (!hasActiveSubmenu) {
+      // Update sidebar menu items
+      document.querySelectorAll('.menu-item, .nav-link').forEach(item => {
+        const href = item.getAttribute('href');
+        if (!href) return;
+        
+        // Exact match for /admin and /dashboard root pages
+        if ((href === '/admin' && url === '/admin') || 
+            (href === '/dashboard' && url === '/dashboard')) {
+          item.classList.add('active');
+          return;
+        }
+        
+        // For other routes, check if URL starts with href
+        // But exclude exact matches that should be exact (like /admin matching /admin/leads)
+        if (url.startsWith(href)) {
+          // Special case: /admin should not match /admin/leads, etc.
+          if (href === '/admin' && url !== '/admin') {
+            return; // Don't activate /admin for sub-routes
+          }
+          item.classList.add('active');
+          
+          // If this is a submenu parent, expand it
+          if (item.classList.contains('has-submenu')) {
+            item.classList.add('expanded');
+          }
+        }
+      });
+    }
   }
 
   /**
