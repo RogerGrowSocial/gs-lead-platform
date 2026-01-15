@@ -638,7 +638,7 @@ app.get("/payments", requireAuth, (req, res) => {
 });
 app.use("/dashboard", requireAuth, dashboardRoutes)
 app.use("/onboarding", requireAuth, onboardingRoutes)
-app.use("/admin", requireAuth, isAdmin, adminRoutes)
+app.use("/admin", requireAuth, adminRoutes)
 app.use("/api", apiRoutes)
 app.use("/leads", (req, res, next) => {
   getLeadsRoutes()(req, res, next)
