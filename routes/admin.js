@@ -1448,7 +1448,7 @@ router.get("/dashboard", async (req, res) => {
 })
 
 // Gebruikers beheren
-router.get("/profiles", requireAuth, isAdmin, async (req, res) => {
+router.get("/profiles", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const itemsPerPage = parseInt(req.query.itemsPerPage) || 10;
@@ -1511,7 +1511,7 @@ router.get("/profiles", requireAuth, isAdmin, async (req, res) => {
 });
 
 // Users beheren (alias voor profiles)
-router.get("/users", requireAuth, isAdmin, async (req, res) => {
+router.get("/users", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     console.log("🔍 Admin users route called");
     
@@ -2446,7 +2446,7 @@ router.delete("/api/users/:id", requireAuth, isAdmin, async (req, res) => {
 
 
 // Leads beheren
-router.get("/leads", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     // Use supabaseAdmin to bypass RLS and get ALL leads from the platform
     const { data: leads, error } = await supabaseAdmin
@@ -2636,7 +2636,7 @@ router.get("/customer-leads/:id", requireAuth, isAdmin, async (req, res) => {
 });
 
 // Betalingen beheren
-router.get("/payments", requireAuth, isAdmin, async (req, res) => {
+router.get("/payments", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     // Ensure user object is available
     await ensureUser(req);
@@ -4218,7 +4218,7 @@ router.get("/users/roles", requireAuth, isAdmin, async (req, res) => {
 })
 
 // Leads submenu routes
-router.get("/leads/industries", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/industries", requireAuth, isManagerOrAdmin, async (req, res) => {
   res.render("admin/leads/industries", {
     title: "Branches",
     activeMenu: "leads",
@@ -4227,7 +4227,7 @@ router.get("/leads/industries", requireAuth, isAdmin, async (req, res) => {
   })
 })
 
-router.get("/leads/activities", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/activities", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/activities", {
     title: "Activiteiten",
     activeMenu: "leads",
@@ -4287,7 +4287,7 @@ router.get("/leads/engine/campagnes", requireAuth, isAdmin, async (req, res) => 
   })
 })
 
-router.get("/leads/engine", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom",
     activeMenu: "leadstroom",
@@ -4719,7 +4719,7 @@ router.post("/settings/industries/:industryId/form", requireAuth, isAdmin, async
 });
 
 // Payments submenu routes
-router.get("/payments/invoices", requireAuth, isAdmin, async (req, res) => {
+router.get("/payments/invoices", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/payments/invoices", {
     title: "Facturen",
     activeMenu: "payments",
@@ -4728,7 +4728,7 @@ router.get("/payments/invoices", requireAuth, isAdmin, async (req, res) => {
   })
 })
 
-router.get("/payments/mandates", requireAuth, isAdmin, async (req, res) => {
+router.get("/payments/mandates", requireAuth, isManagerOrAdmin, async (req, res) => {
   res.render("admin/payments/mandates", {
     title: "Mandaten",
     activeMenu: "payments",
@@ -7057,7 +7057,7 @@ Technisch: ${emailError.message}`;
 })
 
 // ===== TICKETS ROUTES =====
-router.get("/tickets", requireAuth, isAdmin, async (req, res) => {
+router.get("/tickets", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { status, priority, assigned_to, search } = req.query
     
@@ -7241,7 +7241,7 @@ router.get("/tickets/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 })
 
 // ===== EMPLOYEES ROUTES =====
-router.get("/employees", requireAuth, isAdmin, async (req, res) => {
+router.get("/employees", requireAuth, isManagerOrAdmin, async (req, res) => {
   console.log('🚀 EMPLOYEES ROUTE CALLED - Starting...');
   try {
     const { search, status, role } = req.query
@@ -8356,7 +8356,7 @@ function setCachedKPIs(data) {
   kpiCache.timestamp = Date.now();
 }
 
-router.get("/customers", requireAuth, isAdmin, async (req, res) => {
+router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   const startTime = Date.now();
   const timings = {};
   
@@ -8732,7 +8732,7 @@ router.get("/customers", requireAuth, isAdmin, async (req, res) => {
 })
 
 // ===== CALENDAR ROUTE =====
-router.get("/calendar", requireAuth, isAdmin, async (req, res) => {
+router.get("/calendar", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const currentUserId = req.user?.id;
     const isAdminUser = req.user?.user_metadata?.is_admin || false;
@@ -8861,7 +8861,7 @@ function setCachedContactsKPIs(data) {
   contactsKpiCache.timestamp = Date.now();
 }
 
-router.get("/contacts", requireAuth, isAdmin, async (req, res) => {
+router.get("/contacts", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   const startTime = Date.now();
   const timings = {};
   
@@ -13550,7 +13550,7 @@ router.post('/api/mail/bulk/delete', requireAuth, isEmployeeOrAdmin, async (req,
 })
 
 // Opportunities (Kansen)
-router.get('/opportunities', requireAuth, isAdmin, async (req, res) => {
+router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const perPage = 20;
@@ -13713,7 +13713,7 @@ router.get('/opportunities', requireAuth, isAdmin, async (req, res) => {
 });
 
 // Deals list (under Kansen) - MUST be before /opportunities/:id route
-router.get('/opportunities/deals', requireAuth, isAdmin, async (req, res) => {
+router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { data: deals } = await supabaseAdmin
       .from('deals')
@@ -13735,7 +13735,7 @@ router.get('/opportunities/deals', requireAuth, isAdmin, async (req, res) => {
 })
 
 // View single opportunity detail
-router.get('/opportunities/:id', requireAuth, isAdmin, async (req, res) => {
+router.get('/opportunities/:id', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
