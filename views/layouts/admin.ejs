@@ -1295,50 +1295,6 @@
           </div>
           <span class="menu-label">Instellingen</span>
         </a>
-        <a href="/admin/settings" class="menu-item has-submenu <%= (activeMenu === 'settings' || locals.activeSubmenu === 'bugs' || locals.activeSubmenu === 'todos') ? 'active' : '' %> <%= (locals.activeSubmenu === 'billing' || locals.activeSubmenu === 'activities' || locals.activeSubmenu === 'bugs' || locals.activeSubmenu === 'todos') ? 'expanded' : '' %>" data-submenu-toggle>
-          <div class="icon-container">
-            <svg viewBox="0 0 24 24">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
-            </svg>
-          </div>
-          <span class="menu-label">Instellingen</span>
-          <svg class="menu-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </a>
-        <div class="submenu">
-          <a href="/admin/settings/billing" class="submenu-item <%= locals.activeSubmenu === 'billing' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M12 2v20M2 12h20"></path>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
-            Facturering
-          </a>
-          <a href="/admin/settings/activities" class="submenu-item <%= locals.activeSubmenu === 'activities' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M12 8v4l3 3"></path>
-              <circle cx="12" cy="12" r="10"></circle>
-            </svg>
-            Activiteit
-          </a>
-          <a href="/admin/settings/bugs" class="submenu-item <%= locals.activeSubmenu === 'bugs' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
-              <path d="M8 8h8M8 12h8M8 16h8"></path>
-              <circle cx="8" cy="8" r="1" fill="currentColor"></circle>
-              <circle cx="16" cy="8" r="1" fill="currentColor"></circle>
-            </svg>
-            Bugs
-          </a>
-          <a href="/admin/settings/todos" class="submenu-item <%= locals.activeSubmenu === 'todos' ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 11l3 3L22 4"></path>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </svg>
-            To-Do's
-          </a>
-        </div>
       </nav>
       
       <!-- Toggle Section -->
