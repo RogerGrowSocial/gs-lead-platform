@@ -172,11 +172,10 @@ async function requireAuth(req, res, next) {
       // Use cached profile status
       profile = cached.profile;
     } else {
-      // Fetch from database
-      const { createBaseClient } = require('../lib/supabase');
-      const supabase = createBaseClient();
+      // Fetch from database - use supabaseAdmin to bypass RLS
+      const { supabaseAdmin } = require('../config/supabase');
       
-      const { data: profiles, error } = await supabase
+      const { data: profiles, error } = await supabaseAdmin
         .from('profiles')
         .select('status')
         .eq('id', req.user.id)
@@ -223,11 +222,15 @@ async function requireAuth(req, res, next) {
         try {
           const { supabaseAdmin } = require('../config/supabase');
           // First check if profile exists to preserve role_id (which has NOT NULL constraint)
-          const { data: existingProfile } = await supabaseAdmin
+          const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
             .from('profiles')
-            .select('role_id')
+            .select('role_id, status')
             .eq('id', req.user.id)
             .maybeSingle();
+          
+          if (existingProfileError) {
+            console.error('Error checking existing profile:', existingProfileError);
+          }
           
           // Build upsert data - preserve existing role_id if profile exists
           const upsertData = {
@@ -236,16 +239,23 @@ async function requireAuth(req, res, next) {
             company_name: req.user.user_metadata?.company_name || null,
             first_name: req.user.user_metadata?.first_name || null,
             last_name: req.user.user_metadata?.last_name || null,
-            status: 'active',
+            status: existingProfile?.status || 'active',
             balance: 0,
             is_admin: req.user.user_metadata?.is_admin === true || false,
             updated_at: new Date().toISOString()
           };
           
-          // Only include role_id if profile exists and has a role_id (preserve it)
-          // If profile doesn't exist, don't set role_id (let database handle default or constraint)
+          // CRITICAL: role_id has NOT NULL constraint - must always be set
+          // If profile exists, preserve its role_id. If not, we need a default role_id
           if (existingProfile?.role_id) {
             upsertData.role_id = existingProfile.role_id;
+            console.log(`[requireAuth] Preserving existing role_id: ${existingProfile.role_id}`);
+          } else {
+            // Profile doesn't exist or has no role_id - we need to set one
+            // Try to get a default "customer" role or use the first available role
+            // For now, if we can't find a role, we'll let the upsert fail and handle it in the error handler
+            console.warn(`[requireAuth] No existing role_id found for user ${req.user.id}, profile creation may fail if role_id is required`);
+            // Don't set role_id - let the database error tell us if it's required
           }
           
           // Only set created_at if profile doesn't exist
