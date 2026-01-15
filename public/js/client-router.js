@@ -381,17 +381,33 @@
         }
       });
 
-      // Re-initialize scripts in nieuwe content
-      // Execute any script tags in the new content
+      // Re-initialize scripts in nieuwe content (async for faster rendering)
       const scripts = container.querySelectorAll('script');
-      scripts.forEach(oldScript => {
-        const newScript = document.createElement('script');
-        Array.from(oldScript.attributes).forEach(attr => {
-          newScript.setAttribute(attr.name, attr.value);
+      if (scripts.length > 0) {
+        // Execute scripts asynchronously to not block rendering
+        Promise.all(Array.from(scripts).map(oldScript => {
+          return new Promise((resolve) => {
+            const newScript = document.createElement('script');
+            Array.from(oldScript.attributes).forEach(attr => {
+              newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.textContent = oldScript.textContent;
+            
+            // Load async scripts in parallel
+            if (newScript.src) {
+              newScript.onload = resolve;
+              newScript.onerror = resolve; // Continue even if script fails
+            } else {
+              // Inline scripts execute immediately
+              resolve();
+            }
+            
+            oldScript.parentNode.replaceChild(newScript, oldScript);
+          });
+        })).catch(() => {
+          // Continue even if some scripts fail
         });
-        newScript.textContent = oldScript.textContent;
-        oldScript.parentNode.replaceChild(newScript, oldScript);
-      });
+      }
 
       // Trigger custom event voor andere scripts
       window.dispatchEvent(new CustomEvent('page:loaded', { 
@@ -518,6 +534,46 @@
   }
 
   /**
+   * Prefetch page on link hover for instant loading
+   */
+  function setupPrefetch() {
+    if (!CONFIG.prefetchOnHover) return;
+    
+    let prefetchTimeout = null;
+    
+    document.addEventListener('mouseenter', (e) => {
+      const link = e.target.closest('a');
+      if (!link) return;
+      
+      const href = link.getAttribute('href');
+      if (!href || !shouldHandleClientSide(href)) return;
+      
+      // Clear any existing timeout
+      if (prefetchTimeout) {
+        clearTimeout(prefetchTimeout);
+      }
+      
+      // Prefetch after short delay
+      prefetchTimeout = setTimeout(() => {
+        // Only prefetch if not already cached
+        const cached = CONFIG.cache.get(href);
+        if (!cached || (Date.now() - cached.timestamp) > CONFIG.cacheMaxAge) {
+          fetchPageContent(href).catch(() => {
+            // Silently fail - prefetch is optional
+          });
+        }
+      }, CONFIG.prefetchDelay);
+    }, true);
+    
+    document.addEventListener('mouseleave', () => {
+      if (prefetchTimeout) {
+        clearTimeout(prefetchTimeout);
+        prefetchTimeout = null;
+      }
+    }, true);
+  }
+
+  /**
    * Initialize router
    */
   function init() {
@@ -527,6 +583,9 @@
     // Handle browser back/forward
     window.addEventListener('popstate', handlePopState);
 
+    // Setup prefetching for faster navigation
+    setupPrefetch();
+
     // Update active menu items on initial load
     updateActiveMenuItems(window.location.pathname);
 
@@ -534,7 +593,8 @@
     if (window.GS_DEBUG || localStorage.getItem('GS_DEBUG') === 'true') {
       console.log('[Client Router] Initialized', {
         clientRoutes: CONFIG.clientRoutes,
-        currentUrl: window.location.pathname
+        currentUrl: window.location.pathname,
+        prefetchEnabled: CONFIG.prefetchOnHover
       });
     }
   }
