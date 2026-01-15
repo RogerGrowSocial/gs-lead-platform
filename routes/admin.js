@@ -2530,7 +2530,7 @@ router.get("/leads", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 })
 
 // Customer Lead Single Page
-router.get("/customer-leads/:id", requireAuth, isAdmin, async (req, res) => {
+router.get("/customer-leads/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const leadId = req.params.id;
     
@@ -2734,7 +2734,7 @@ router.get("/payments", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 });
 
 // Admin invoice viewing route - handles both invoice IDs and payment IDs
-router.get("/payments/invoice/:id", requireAuth, isAdmin, async (req, res) => {
+router.get("/payments/invoice/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const id = req.params.id;
     logger.info(`Admin invoice route called for ID: ${id}`);
@@ -4237,7 +4237,7 @@ router.get("/leads/activities", requireAuth, isEmployeeOrAdmin, async (req, res)
 })
 
 // Sub-routes for tabs (for better performance) - MUST come before /leads/engine
-router.get("/leads/engine/overview", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine/overview", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom - Overzicht",
     activeMenu: "leadstroom",
@@ -4247,7 +4247,7 @@ router.get("/leads/engine/overview", requireAuth, isAdmin, async (req, res) => {
   })
 })
 
-router.get("/leads/engine/segments", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine/segments", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom - Segmenten",
     activeMenu: "leadstroom",
@@ -4257,7 +4257,7 @@ router.get("/leads/engine/segments", requireAuth, isAdmin, async (req, res) => {
   })
 })
 
-router.get("/leads/engine/ai-actions", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine/ai-actions", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom - AI Acties",
     activeMenu: "leadstroom",
@@ -4267,7 +4267,7 @@ router.get("/leads/engine/ai-actions", requireAuth, isAdmin, async (req, res) =>
   })
 })
 
-router.get("/leads/engine/content", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine/content", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom - Content",
     activeMenu: "leadstroom",
@@ -4277,7 +4277,7 @@ router.get("/leads/engine/content", requireAuth, isAdmin, async (req, res) => {
   })
 })
 
-router.get("/leads/engine/campagnes", requireAuth, isAdmin, async (req, res) => {
+router.get("/leads/engine/campagnes", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   res.render("admin/leads/engine", {
     title: "Leadstroom - Campagnes",
     activeMenu: "leadstroom",
@@ -9458,7 +9458,7 @@ router.get('/customers/:customerId/invoices/:invoiceId', requireAuth, isAdmin, a
 });
 
 // Single customer page (MUST BE AFTER invoice routes)
-router.get("/customers/:id", requireAuth, isAdmin, async (req, res) => {
+router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`🔍 Admin single customer route called for ID: ${id}`);
@@ -10058,7 +10058,7 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
 });
 
 // ===== CONTACT SINGLE PAGE =====
-router.get("/contacts/:id", requireAuth, isAdmin, async (req, res) => {
+router.get("/contacts/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     console.log(`🔍 Admin single contact route called for ID: ${id}`);
