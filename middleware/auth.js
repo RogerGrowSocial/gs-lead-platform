@@ -489,18 +489,19 @@ async function isEmployeeOrAdmin(req, res, next) {
 
   // Check database profile for admin status
   try {
-    const { createBaseClient } = require('../lib/supabase');
-    const supabase = createBaseClient();
+    // Use supabaseAdmin to bypass RLS and ensure we can always read the profile
+    const { supabaseAdmin } = require('../config/supabase');
     
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('is_admin, role_id')
       .eq('id', req.user.id)
       .single();
 
     if (error) {
-      console.log('Error checking profile for employee access:', error);
-      console.log('User ID:', req.user.id, 'Email:', req.user.email);
+      console.log('[isEmployeeOrAdmin] Error checking profile for employee access:', error);
+      console.log('[isEmployeeOrAdmin] User ID:', req.user.id, 'Email:', req.user.email);
+      console.log('[isEmployeeOrAdmin] Error code:', error.code, 'Error message:', error.message);
       return res.status(403).render('errors/403', { 
         message: 'Geen toegang tot deze pagina',
         error: 'Kon gebruikersgegevens niet ophalen'
