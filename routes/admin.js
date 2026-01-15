@@ -1319,7 +1319,7 @@ router.get("/money", requireAuth, isAdmin, async (req, res) => {
 });
 
 // Admin dashboard
-router.get("/", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     // Statistieken ophalen
     const stats = {
@@ -1442,7 +1442,7 @@ router.get("/", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 })
 
 // Admin dashboard alias
-router.get("/dashboard", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+router.get("/dashboard", async (req, res) => {
   // Redirect to main admin dashboard
   res.redirect('/admin');
 })
