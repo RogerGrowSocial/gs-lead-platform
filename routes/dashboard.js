@@ -166,38 +166,111 @@ async function createUserForTemplate(req) {
 router.get('/', requireAuth, async (req, res) => {
   try {
     // Redirect new users to dedicated onboarding page (server-side, before heavy queries)
+    // Skip onboarding for managers and employees (non-customer roles)
     try {
-      const { data: ob, error: obErr } = await supabaseAdmin
-        .from('profiles')
-        .select('onboarding_completed_at, onboarding_step')
-        .eq('id', req.user.id)
-        .single()
-
-      if (obErr) {
-        console.warn('[DASHBOARD] Onboarding status check error:', obErr.message);
-        // If error, continue to dashboard (fail gracefully)
-      } else if (ob) {
-        const completed = !!ob?.onboarding_completed_at;
-        const step = ob?.onboarding_step || 0;
+      // First check if user is admin, manager, or employee (should skip onboarding)
+      let shouldSkipOnboarding = false;
+      
+      // Check if user is admin
+      if (req.user.user_metadata?.is_admin === true) {
+        shouldSkipOnboarding = true;
+      } else {
+        // Check role to see if user is manager or employee (not customer)
+        const { data: profileCheck, error: profileCheckErr } = await supabaseAdmin
+          .from('profiles')
+          .select('is_admin, role_id')
+          .eq('id', req.user.id)
+          .single();
         
-        console.log('[DASHBOARD] Onboarding check:', {
-          userId: req.user.id,
-          completed: completed,
-          step: step,
-          shouldRedirect: !completed && step < 99
-        });
-        
-        // Redirect if onboarding not completed and step is less than 99
-        // Step 99 means "ready for tour" - allow access to dashboard even if not fully completed
-        // Also redirect if step is NULL (new users)
-        if (!completed && (step < 99 || step === null || step === undefined)) {
-          console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
-          return res.redirect('/onboarding');
+        if (!profileCheckErr && profileCheck) {
+          // Admins skip onboarding
+          if (profileCheck.is_admin === true) {
+            shouldSkipOnboarding = true;
+          } else if (profileCheck.role_id) {
+            // Check role name
+            const { data: role, error: roleErr } = await supabaseAdmin
+              .from('roles')
+              .select('name')
+              .eq('id', profileCheck.role_id)
+              .maybeSingle();
+            
+            if (!roleErr && role) {
+              const roleName = role.name?.toLowerCase() || '';
+              // Skip onboarding for managers and employees (not customers)
+              if (roleName.includes('manager') || 
+                  roleName.includes('employee') || 
+                  roleName.includes('werknemer') ||
+                  roleName.includes('admin')) {
+                shouldSkipOnboarding = true;
+              } else if (roleName === 'consumer' || roleName === 'customer' || roleName === 'klant') {
+                // Customers should see onboarding
+                shouldSkipOnboarding = false;
+              }
+            }
+          }
         }
+      }
+      
+      // If user should skip onboarding, mark it as completed
+      if (shouldSkipOnboarding) {
+        const { data: ob, error: obErr } = await supabaseAdmin
+          .from('profiles')
+          .select('onboarding_completed_at, onboarding_step')
+          .eq('id', req.user.id)
+          .single();
+        
+        // Auto-complete onboarding for managers/employees if not already completed
+        if (!obErr && ob && !ob.onboarding_completed_at) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({
+              onboarding_completed_at: new Date().toISOString(),
+              onboarding_step: 99
+            })
+            .eq('id', req.user.id);
+          console.log('[DASHBOARD] Auto-completed onboarding for manager/employee:', req.user.id);
+        }
+        // Continue to dashboard (skip onboarding redirect)
+      } else {
+        // Regular onboarding check for customers
+        const { data: ob, error: obErr } = await supabaseAdmin
+          .from('profiles')
+          .select('onboarding_completed_at, onboarding_step')
+          .eq('id', req.user.id)
+          .single()
+
+        if (obErr) {
+          console.warn('[DASHBOARD] Onboarding status check error:', obErr.message);
+          // If error, continue to dashboard (fail gracefully)
+        } else if (ob) {
+          const completed = !!ob?.onboarding_completed_at;
+          const step = ob?.onboarding_step || 0;
+          
+          console.log('[DASHBOARD] Onboarding check:', {
+            userId: req.user.id,
+            completed: completed,
+            step: step,
+            shouldRedirect: !completed && step < 99
+          });
+          
+          // Redirect if onboarding not completed and step is less than 99
+          // Step 99 means "ready for tour" - allow access to dashboard even if not fully completed
+          // Also redirect if step is NULL (new users)
+          if (!completed && (step < 99 || step === null || step === undefined)) {
+            console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
+            return res.redirect('/onboarding');
+          }
         // If step >= 99 but not completed, user is in tour - allow dashboard access
       } else {
         // No profile found - try to create it
         console.log(`[DASHBOARD] Creating missing profile for user ${req.user.id}`);
+        
+        // Check if user should skip onboarding before creating profile
+        let shouldSkipOnboarding = false;
+        if (req.user.user_metadata?.is_admin === true) {
+          shouldSkipOnboarding = true;
+        }
+        
         const { data: newProfile, error: createError } = await supabaseAdmin
           .from('profiles')
           .upsert({
@@ -210,20 +283,51 @@ router.get('/', requireAuth, async (req, res) => {
             status: 'active',
             balance: 0,
             is_admin: req.user.user_metadata?.is_admin === true || false,
+            onboarding_completed_at: shouldSkipOnboarding ? new Date().toISOString() : null,
+            onboarding_step: shouldSkipOnboarding ? 99 : 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'id'
           })
-          .select('onboarding_completed_at, onboarding_step')
+          .select('onboarding_completed_at, onboarding_step, role_id')
           .single();
         
         if (createError) {
           console.error('[DASHBOARD] Error creating profile:', createError);
         } else {
           console.log('[DASHBOARD] ✅ Profile created for user:', req.user.id);
-          // Retry onboarding check with new profile
-          if (newProfile) {
+          
+          // If profile was created with role_id, check if it's manager/employee
+          if (newProfile?.role_id && !shouldSkipOnboarding) {
+            const { data: role, error: roleErr } = await supabaseAdmin
+              .from('roles')
+              .select('name')
+              .eq('id', newProfile.role_id)
+              .maybeSingle();
+            
+            if (!roleErr && role) {
+              const roleName = role.name?.toLowerCase() || '';
+              if (roleName.includes('manager') || 
+                  roleName.includes('employee') || 
+                  roleName.includes('werknemer') ||
+                  roleName.includes('admin')) {
+                // Auto-complete onboarding for managers/employees
+                await supabaseAdmin
+                  .from('profiles')
+                  .update({
+                    onboarding_completed_at: new Date().toISOString(),
+                    onboarding_step: 99
+                  })
+                  .eq('id', req.user.id);
+                shouldSkipOnboarding = true;
+                console.log('[DASHBOARD] Auto-completed onboarding for manager/employee:', req.user.id);
+              }
+            }
+          }
+          
+          // Retry onboarding check with new profile (only for customers)
+          if (!shouldSkipOnboarding && newProfile) {
             const completed = !!newProfile?.onboarding_completed_at;
             const step = newProfile?.onboarding_step || 0;
             if (!completed && (step < 99 || step === null || step === undefined)) {
