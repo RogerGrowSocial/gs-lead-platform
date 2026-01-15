@@ -1154,16 +1154,17 @@ router.post("/reset-password", async (req, res) => {
     }
 
     // Update password via Supabase Auth (this works with the established session)
-    const { error } = await supabase.auth.updateUser({
+    logger.info('Updating password for user with established session');
+    const { error: updateError, data: updateData } = await supabase.auth.updateUser({
       password: password
     })
 
-    if (error) {
-      logger.error('Password update error:', error);
+    if (updateError) {
+      logger.error('Password update error:', updateError);
       // Translate error messages to Dutch
       let errorMsg = "Er is een fout opgetreden bij het resetten van het wachtwoord";
-      if (error.message) {
-        const errMsg = error.message.toLowerCase();
+      if (updateError.message) {
+        const errMsg = updateError.message.toLowerCase();
         if (errMsg.includes('password')) {
           errorMsg = "Het wachtwoord voldoet niet aan de vereisten. Gebruik minimaal 8 tekens.";
         } else if (errMsg.includes('session') || errMsg.includes('token')) {
@@ -1178,8 +1179,10 @@ router.post("/reset-password", async (req, res) => {
       })
     }
 
+    logger.info('Password updated successfully, signing out recovery session');
     // Sign out the recovery session and redirect to login
     await supabase.auth.signOut();
+    logger.info('Redirecting to login with success message');
     res.redirect("/login?reset=success")
   } catch (error) {
     logger.error("Password reset error:", error)
