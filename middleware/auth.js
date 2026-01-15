@@ -522,6 +522,7 @@ async function isEmployeeOrAdmin(req, res, next) {
 
     // If no role_id but user exists, allow access (backward compatibility)
     // This allows existing users without roles to still access
+    console.log(`[isEmployeeOrAdmin] Access granted: no role_id (backward compatibility)`);
     return next();
 
   } catch (err) {
