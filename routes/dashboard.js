@@ -260,7 +260,8 @@ router.get('/', requireAuth, async (req, res) => {
             console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
             return res.redirect('/onboarding');
           }
-        // If step >= 99 but not completed, user is in tour - allow dashboard access
+          // If step >= 99 but not completed, user is in tour - allow dashboard access
+        }
       } else {
         // No profile found - try to create it
         console.log(`[DASHBOARD] Creating missing profile for user ${req.user.id}`);
