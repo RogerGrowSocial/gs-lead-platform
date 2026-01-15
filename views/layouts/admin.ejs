@@ -956,7 +956,7 @@
         <!-- 1. 📊 Overzicht -->
         <a href="/admin" class="menu-item <%= (activeMenu === 'dashboard' && !activeSubmenu) ? 'active' : '' %>">
           <div class="icon-container">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="7" height="9" x="3" y="3" rx="1"></rect>
               <rect width="7" height="5" x="14" y="3" rx="1"></rect>
               <rect width="7" height="9" x="14" y="12" rx="1"></rect>
@@ -969,7 +969,7 @@
         <!-- 2. 🧲 Leads (with submenu) -->
         <a href="/admin/leads" class="menu-item has-submenu <%= (activeMenu === 'leads' || activeMenu === 'leadstroom' || locals.activeSubmenu === 'industries' || locals.activeSubmenu === 'activities' || locals.activeSubmenu === 'engine') ? 'active' : '' %> <%= (activeMenu === 'leads' || activeMenu === 'leadstroom' || locals.activeSubmenu === 'industries' || locals.activeSubmenu === 'activities' || locals.activeSubmenu === 'engine') ? 'expanded' : '' %>" data-submenu-toggle>
           <div class="icon-container">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
               <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -1016,7 +1016,7 @@
         <!-- 3. 💼 Sales (with submenu) -->
         <a href="/admin/opportunities" class="menu-item has-submenu <%= (activeMenu === 'opportunities' || locals.activeSubmenu === 'deals') ? 'active' : '' %> <%= (activeMenu === 'opportunities' || locals.activeSubmenu === 'deals') ? 'expanded' : '' %>" data-submenu-toggle>
           <div class="icon-container">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2"></rect>
               <path d="M16 7V5a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"></path>
               <path d="M12 12v5"></path>
@@ -1234,7 +1234,7 @@
         <!-- 9. 💳 Facturatie (with submenu) -->
         <a href="/admin/payments" class="menu-item has-submenu <%= (activeMenu === 'payments' || locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates') ? 'active' : '' %> <%= (activeMenu === 'payments' || locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates') ? 'expanded' : '' %>" data-submenu-toggle>
           <div class="icon-container">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="20" height="14" x="2" y="5" rx="2"></rect>
               <line x1="2" x2="22" y1="10" y2="10"></line>
             </svg>
@@ -1246,7 +1246,7 @@
         </a>
         <div class="submenu">
           <a href="/admin/payments" class="submenu-item <%= (activeMenu === 'payments' && !locals.activeSubmenu) ? 'active' : '' %>">
-            <svg viewBox="0 0 24 24">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="20" height="14" x="2" y="5" rx="2"></rect>
               <line x1="2" x2="22" y1="10" y2="10"></line>
             </svg>
