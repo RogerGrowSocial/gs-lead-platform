@@ -557,8 +557,17 @@ async function isEmployeeOrAdmin(req, res, next) {
           });
         }
         
-        // Allow all other roles (manager, employee, admin, etc.)
-        console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is not a customer role`);
+        // Explicitly allow manager, employee, admin, and werknemer roles
+        const allowedRoles = ['manager', 'employee', 'admin', 'administrator', 'werknemer', 'employee'];
+        const isAllowedRole = allowedRoles.some(allowed => roleName.includes(allowed));
+        
+        if (isAllowedRole) {
+          console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is an allowed role (manager/employee/admin)`);
+          return next();
+        }
+        
+        // Allow all other non-customer roles (fail open for backward compatibility)
+        console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is not a customer role (fail open)`);
         return next();
       } else {
         console.log(`[isEmployeeOrAdmin] No role found for role_id: ${profile.role_id}`);
