@@ -453,14 +453,21 @@ async function isEmployeeOrAdmin(req, res, next) {
 
     if (error) {
       console.log('Error checking profile for employee access:', error);
+      console.log('User ID:', req.user.id, 'Email:', req.user.email);
       return res.status(403).render('errors/403', { 
         message: 'Geen toegang tot deze pagina',
         error: 'Kon gebruikersgegevens niet ophalen'
       });
     }
 
+    console.log(`[isEmployeeOrAdmin] Checking access for user ${req.user.id} (${req.user.email}):`, {
+      is_admin: profile?.is_admin,
+      role_id: profile?.role_id
+    });
+
     // Admins always have access
     if (profile?.is_admin === true) {
+      console.log(`[isEmployeeOrAdmin] Access granted: user is admin`);
       return next();
     }
 
@@ -475,16 +482,19 @@ async function isEmployeeOrAdmin(req, res, next) {
 
       if (roleError) {
         console.log('Error fetching role for employee access check:', roleError);
+        console.log('Role ID:', profile.role_id);
         // If we can't fetch the role, allow access (fail open for backward compatibility)
+        console.log(`[isEmployeeOrAdmin] Access granted: role fetch error (fail open)`);
         return next();
       }
 
       if (role) {
         const roleName = role.name?.toLowerCase() || '';
-        console.log(`Checking role access for user ${req.user.id}: role="${roleName}"`);
+        console.log(`[isEmployeeOrAdmin] Checking role access for user ${req.user.id}: role_id="${profile.role_id}", role_name="${roleName}"`);
         
         // Block customer/consumer roles
         if (roleName === 'consumer' || roleName === 'customer' || roleName === 'klant') {
+          console.log(`[isEmployeeOrAdmin] Access DENIED: user has customer role "${roleName}"`);
           SystemLogService.logAuth(
             req.user.id,
             'employee_access_denied',
@@ -500,11 +510,12 @@ async function isEmployeeOrAdmin(req, res, next) {
         }
         
         // Allow all other roles (manager, employee, admin, etc.)
-        console.log(`Access granted for role: ${roleName}`);
+        console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is not a customer role`);
         return next();
       } else {
-        console.log(`No role found for role_id: ${profile.role_id}`);
+        console.log(`[isEmployeeOrAdmin] No role found for role_id: ${profile.role_id}`);
         // If role doesn't exist, allow access (fail open for backward compatibility)
+        console.log(`[isEmployeeOrAdmin] Access granted: role not found (fail open)`);
         return next();
       }
     }
