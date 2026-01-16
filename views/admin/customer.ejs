@@ -1003,26 +1003,13 @@
                       initials = '?'
                     }
                     
-                    return `
-                      <div class="team-member-card" data-assignment-id="${assignment.id}" data-employee-id="${employee.id}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'" onclick="window.location.href='/admin/employees/${employee.id}'">
-                        <div style="position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid #e5e7eb; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
-                          ${profilePicture ? `
-                            <img src="${profilePicture}" alt="${employeeName}" style="width: 100%; height: 100%; object-fit: cover;" />
-                          ` : `
-                            <span style="font-size: 28px; font-weight: 600; color: #6b7280;">${initials}</span>
-                          `}
-                        </div>
-                        <div style="text-align: center;">
-                          <p style="margin: 0; font-size: 0.875rem; font-weight: 500; color: #111827; line-height: 1.4;">${firstName || employeeName}</p>
-                          <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.4;">${roleName}</p>
-                        </div>
-                        ${typeof canEditCustomer !== 'undefined' && canEditCustomer ? `
-                        <button type="button" class="remove-employee-btn" data-employee-id="${employee.id}" style="position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; background: #ef4444; color: white; border: 2px solid white; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onmouseover="this.style.background='#dc2626'; this.style.transform='scale(1.1)'" onmouseout="this.style.background='#ef4444'; this.style.transform='scale(1)'" onclick="event.stopPropagation();">
-                          <i class="fas fa-times"></i>
-                        </button>
-                        ` : ''}
-                      </div>
-                    `
+                    var imgHtml = profilePicture 
+                      ? '<img src="' + profilePicture + '" alt="' + employeeName + '" style="width: 100%; height: 100%; object-fit: cover;" />'
+                      : '<span style="font-size: 28px; font-weight: 600; color: #6b7280;">' + initials + '</span>'
+                    var removeBtnHtml = (typeof canEditCustomer !== 'undefined' && canEditCustomer)
+                      ? '<button type="button" class="remove-employee-btn" data-employee-id="' + employee.id + '" style="position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; background: #ef4444; color: white; border: 2px solid white; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onmouseover="this.style.background=\'#dc2626\'; this.style.transform=\'scale(1.1)\'" onmouseout="this.style.background=\'#ef4444\'; this.style.transform=\'scale(1)\'" onclick="event.stopPropagation();"><i class="fas fa-times"></i></button>'
+                      : ''
+                    return '<div class="team-member-card" data-assignment-id="' + assignment.id + '" data-employee-id="' + employee.id + '" style="display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'" onclick="window.location.href=\'/admin/employees/' + employee.id + '\'"><div style="position: relative; width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid #e5e7eb; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.borderColor=\'#d1d5db\'; this.style.boxShadow=\'0 4px 12px rgba(0,0,0,0.1)\'" onmouseout="this.style.borderColor=\'#e5e7eb\'; this.style.boxShadow=\'none\'">' + imgHtml + '</div><div style="text-align: center;"><p style="margin: 0; font-size: 0.875rem; font-weight: 500; color: #111827; line-height: 1.4;">' + (firstName || employeeName) + '</p><p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.4;">' + roleName + '</p></div>' + removeBtnHtml + '</div>'
                   }).join('')}
                 </div>
               ` : `
@@ -1255,12 +1242,12 @@
           </label>
           <select id="employeeSelect" name="employee_id" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.9375rem; background: white;">
             <option value="">Selecteer een werknemer...</option>
-            ${(typeof customerData.allEmployees !== 'undefined' && customerData.allEmployees) ? customerData.allEmployees.map(function(emp) {
+            ${(typeof customerData !== 'undefined' && customerData.allEmployees) ? customerData.allEmployees.map(function(emp) {
               var empName = (emp.first_name && emp.last_name) ? emp.first_name + ' ' + emp.last_name : emp.email || 'Onbekend'
-              var isAssigned = (typeof customerData.responsibleEmployees !== 'undefined' && customerData.responsibleEmployees) 
+              var isAssigned = (typeof customerData !== 'undefined' && customerData.responsibleEmployees) 
                 ? customerData.responsibleEmployees.some(a => a.employee_id === emp.id)
                 : false
-              return isAssigned ? '' : `<option value="${emp.id}">${empName}${emp.email ? ' (' + emp.email + ')' : ''}</option>`
+              return isAssigned ? '' : '<option value="' + (emp.id || '') + '">' + empName + (emp.email ? ' (' + emp.email + ')' : '') + '</option>'
             }).join('') : ''}
           </select>
         </div>
@@ -1289,9 +1276,9 @@
   <script>
     // Make employees data available to JavaScript
     window.customerEmployeesData = {
-      customerId: '${customer.id}',
-      responsibleEmployees: ${JSON.stringify(customerData.responsibleEmployees || [])},
-      allEmployees: ${JSON.stringify(customerData.allEmployees || [])}
+      customerId: '${customer?.id || ''}',
+      responsibleEmployees: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : [])},
+      allEmployees: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : [])}
     };
     
     // Make labels available for edit mode
@@ -1300,10 +1287,10 @@
     window.currentStatus = '${status}';
     window.currentPriority = '${priority}';
     window.canEditCustomer = ${typeof canEditCustomer !== 'undefined' ? canEditCustomer : false};
-    window.customerData = ${JSON.stringify(customer)};
+    window.customerData = ${JSON.stringify(customer || {})};
     window.customerInvoicesData = {
-      customerId: '${customer.id}',
-      invoices: ${JSON.stringify(typeof customerData.invoices !== 'undefined' ? customerData.invoices : [])}
+      customerId: '${customer?.id || ''}',
+      invoices: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : [])}
     };
   </script>
   `,
