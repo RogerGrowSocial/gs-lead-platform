@@ -617,8 +617,6 @@
                 ${timeEntries.length > 0 ? `
                   <div class="user-activity-list">
                     ${timeEntries.slice(0, 10).map(function(entry) {
-                      var hours = Math.floor((entry.duration_minutes || 0) / 60)
-                      var minutes = (entry.duration_minutes || 0) % 60
                       var employeeName = entry.employee ? (entry.employee.first_name && entry.employee.last_name ? entry.employee.first_name + ' ' + entry.employee.last_name : entry.employee.email) : 'Onbekend'
                       var statusColors = {
                         'draft': '#6b7280',
