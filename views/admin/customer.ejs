@@ -310,11 +310,7 @@
               </h3>
               <div style="display:flex;align-items:center;gap:10px;">
                 <span id="customerAiSummaryMeta" style="font-size:12px;color:#6b7280;">
-                  <% if (customer.aiSummary && customer.aiSummary.updated_at) { %>
-                    Laatst bijgewerkt: <%= formatDateTime(customer.aiSummary.updated_at) %>
-                  <% } else { %>
-                    Nog geen samenvatting
-                  <% } %>
+                  " + (customer.aiSummary && customer.aiSummary.updated_at ? 'Laatst bijgewerkt: ' + formatDateTime(customer.aiSummary.updated_at) : 'Nog geen samenvatting') + "
                 </span>
                 <button type="button" id="refreshCustomerAiSummaryBtn" class="btn-primary" style="padding: 8px 14px; font-size: 14px; display:flex; align-items:center; gap:8px;">
                   <i class="fas fa-sparkles"></i>
@@ -324,11 +320,7 @@
             </div>
             <div id="customerAiSummaryBox" style="margin-top: 12px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
               <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6;">
-                <% if (customer.aiSummary && customer.aiSummary.summary) { %>
-                  <%= customer.aiSummary.summary %>
-                <% } else { %>
-                  Klik op "Genereer" om een AI samenvatting te maken.
-                <% } %>
+                " + (customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : 'Klik op "Genereer" om een AI samenvatting te maken.') + "
               </div>
             </div>
           </div>
