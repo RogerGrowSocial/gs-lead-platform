@@ -628,36 +628,13 @@
                       }
                       var statusColor = statusColors[entry.status] || '#6b7280'
                       
-                      return `
-                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/time-entries?employee_id=${entry.employee?.id || ''}'">
-                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
-                            <i class="fas fa-clock" style="color: ${statusColor};"></i>
-                          </div>
-                          <div class="user-activity-content" style="flex: 1;">
-                            <p class="user-activity-title">
-                              ${entry.task ? entry.task.title : entry.project_name || 'Geen project'}
-                              ${entry.note ? '<span style="color: #6b7280; font-weight: normal;"> - ' + entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '') + '</span>' : ''}
-                            </p>
-                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
-                              <span style="font-size: 11px; color: #6b7280;">
-                                <i class="fas fa-user" style="margin-right: 4px;"></i>
-                                <a href="/admin/employees/${entry.employee?.id || ''}" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">${employeeName}</a>
-                              </span>
-                              <span style="font-size: 11px; color: #6b7280;">
-                                <i class="fas fa-clock" style="margin-right: 4px;"></i>
-                                ${hours}u ${minutes}min
-                              </span>
-                              <span style="font-size: 11px; color: #6b7280;">
-                                <i class="fas fa-calendar" style="margin-right: 4px;"></i>
-                                ${formatDate(entry.start_at)}
-                              </span>
-                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
-                                ${entry.status === 'draft' ? 'Concept' : entry.status === 'submitted' ? 'Ingediend' : entry.status === 'approved' ? 'Goedgekeurd' : entry.status === 'rejected' ? 'Afgewezen' : entry.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      `
+                      var taskTitle = entry.task ? entry.task.title : entry.project_name || 'Geen project'
+                      var noteHtml = entry.note ? '<span style="color: #6b7280; font-weight: normal;"> - ' + entry.note.substring(0, 50) + (entry.note.length > 50 ? '...' : '') + '</span>' : ''
+                      var empId = entry.employee ? (entry.employee.id || '') : ''
+                      var durationHours = Math.floor(entry.duration_minutes / 60)
+                      var durationMins = entry.duration_minutes % 60
+                      var statusText = entry.status === 'draft' ? 'Concept' : entry.status === 'submitted' ? 'Ingediend' : entry.status === 'approved' ? 'Goedgekeurd' : entry.status === 'rejected' ? 'Afgewezen' : entry.status
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/time-entries?employee_id=' + empId + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-clock" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + taskTitle + noteHtml + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;"><span style="font-size: 11px; color: #6b7280;"><i class="fas fa-user" style="margin-right: 4px;"></i><a href="/admin/employees/' + empId + '" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">' + employeeName + '</a></span><span style="font-size: 11px; color: #6b7280;"><i class="fas fa-clock" style="margin-right: 4px;"></i>' + durationHours + 'u ' + durationMins + 'min</span><span style="font-size: 11px; color: #6b7280;"><i class="fas fa-calendar" style="margin-right: 4px;"></i>' + formatDate(entry.start_at) + '</span><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + statusText + '</span></div></div></div>'
                     }).join('')}
                   </div>
                   ${timeEntries.length > 10 ? `
