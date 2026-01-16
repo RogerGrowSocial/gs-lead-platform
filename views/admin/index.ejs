@@ -1,7 +1,3 @@
-<link rel="stylesheet" href="/css/admin/adminPayments.css">
-<link rel="stylesheet" href="/css/admin/dashboard-charts.css">
-<link rel="stylesheet" href="/css/admin/monthly-growth.css">
-<link rel="stylesheet" href="/css/admin/revenue-chart.css">
 <%
   // Bereken percentages voor KPI-kaarten
   const userGrowth = stats && stats.previousTotalUsers > 0 
@@ -472,6 +468,13 @@
     title: 'Admin Dashboard', 
     activeMenu: 'dashboard',
     user: user,
+    stylesheets: [
+      '/css/admin/dashboard.css',
+      '/css/admin/adminPayments.css',
+      '/css/admin/dashboard-charts.css',
+      '/css/admin/monthly-growth.css',
+      '/css/admin/revenue-chart.css'
+    ],
     body: dashboardContent
 }) %>
 
