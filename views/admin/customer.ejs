@@ -125,7 +125,9 @@
   showBackButton: true,
   backButtonUrl: '/admin/customers',
   backButtonText: 'Terug naar klanten',
-  body: "
+  body: (function() {
+    var output = '';
+    output += `
   <div class="user-detail-page">
     <!-- Main Content Grid -->
     <div class="user-detail-grid-new">
@@ -136,33 +138,33 @@
           <div class="user-card-content">
             <div class="user-info-avatar-section">
               <div id="customerAvatarTrigger" style="cursor: pointer; position: relative; display: inline-block;">
-                <span class="user-avatar-large-new" id="customerAvatar" aria-hidden="true" style="" + (customer.logo_url ? 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);' : '') + "">
-                  " + (customer.logo_url ? '<img src="' + customer.logo_url + '" alt="' + customerName + '" loading="eager" decoding="async" width="120" height="120" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: white;" onerror="this.style.display=\'none\'; this.parentElement.querySelector(\'div\').style.display=\'flex\';" />' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);color:#6b7280;border-radius:50%;border:2px solid #e5e7eb;"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>') + "
+                <span class="user-avatar-large-new" id="customerAvatar" aria-hidden="true" style="${customer.logo_url ? 'box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);' : ''}">
+                  ${customer.logo_url ? `<img src="${customer.logo_url}" alt="${customerName}" loading="eager" decoding="async" width="120" height="120" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; background: white;" onerror="this.style.display='none'; this.parentElement.querySelector('div').style.display='flex';" />` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);color:#6b7280;border-radius:50%;border:2px solid #e5e7eb;"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`}
                 </span>
               </div>
               <input type="file" id="customerLogoUpload" accept="image/*" style="display: none;" />
               <div class="user-info-name-section" style="flex: 1;">
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                  <h1 class="user-info-name-new" id="customerNameDisplay" style="flex: 1; margin: 0;">" + customerName + "</h1>
-                  " + (typeof canEditCustomer !== 'undefined' && canEditCustomer ? '<button type="button" id="editCustomerBtn" class="edit-customer-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color=\'#6b7280\'" onmouseout="this.style.color=\'#9ca3af\'"><i class="fas fa-pencil-alt" style="font-size: 18px;"></i></button>' : '') + "
+                  <h1 class="user-info-name-new" id="customerNameDisplay" style="flex: 1; margin: 0;">${customerName}</h1>
+                  ${(typeof canEditCustomer !== 'undefined' && canEditCustomer ? '<button type="button" id="editCustomerBtn" class="edit-customer-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color=\'#6b7280\'" onmouseout="this.style.color=\'#9ca3af\'"><i class="fas fa-pencil-alt" style="font-size: 18px;"></i></button>' : '')}
                 </div>
                 <div class="user-info-badges-container" id="badgesContainer">
-                  <span class="status-badge" id="statusBadge" data-field="status" data-edit-type="select" data-options='" + JSON.stringify(Object.keys(statusLabels)) + "' style="background-color: " + (status === 'active' ? '#10b98120' : '#6b728020') + "; color: " + (status === 'active' ? '#10b981' : '#6b7280') + "; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                    " + (statusLabels[status] || status) + "
+                  <span class="status-badge" id="statusBadge" data-field="status" data-edit-type="select" data-options='${JSON.stringify(Object.keys(statusLabels))}' style="background-color: ${(status === 'active' ? '#10b98120' : '#6b728020')}; color: ${(status === 'active' ? '#10b981' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${(statusLabels[status] || status)}
                   </span>
-                  <span class="status-badge" id="priorityBadge" data-field="priority" data-edit-type="select" data-options='" + JSON.stringify(Object.keys(priorityLabels)) + "' style="background-color: " + (priority === 'high' ? '#ef444420' : priority === 'urgent' ? '#dc262620' : priority === 'low' ? '#6b728020' : '#3b82f620') + "; color: " + (priority === 'high' ? '#ef4444' : priority === 'urgent' ? '#dc2626' : priority === 'low' ? '#6b7280' : '#3b82f6') + "; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                    " + (priorityLabels[priority] || priority) + "
+                  <span class="status-badge" id="priorityBadge" data-field="priority" data-edit-type="select" data-options='${JSON.stringify(Object.keys(priorityLabels))}' style="background-color: ${(priority === 'high' ? '#ef444420' : priority === 'urgent' ? '#dc262620' : priority === 'low' ? '#6b728020' : '#3b82f620')}; color: ${(priority === 'high' ? '#ef4444' : priority === 'urgent' ? '#dc2626' : priority === 'low' ? '#6b7280' : '#3b82f6')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${(priorityLabels[priority] || priority)}
                   </span>
-                  " + (userAccount ? '<span class="user-role-badge-new is-user"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Heeft account</span>' : '') + "
+                  ${(userAccount ? '<span class="user-role-badge-new is-user"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Heeft account</span>' : '')}
                 </div>
               </div>
             </div>
-            " + (customer.company_name ? '<div class="user-info-company-section"><div class="user-info-company-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg></div><span class="user-info-company-name">' + customer.company_name + '</span></div><div class="user-info-company-divider"></div>' : '') + "
+            ${(customer.company_name ? '<div class="user-info-company-section"><div class="user-info-company-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-building2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg></div><span class="user-info-company-name">' + customer.company_name + '</span></div><div class="user-info-company-divider"></div>' : '')}
             <div class="user-info-contact-section">
-              " + (hasEmail ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><a href="mailto:' + customer.email + '" class="user-info-contact-text" data-field="email" data-edit-type="text" style="text-decoration: none; color: inherit;">' + customer.email + '</a></div>' : '') + "
-              " + (hasPhone ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><a href="tel:' + customer.phone + '" class="user-info-contact-text" data-field="phone" data-edit-type="text" style="text-decoration: none; color: inherit;">' + customer.phone + '</a></div>' : '') + "
-              " + (hasLocation ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(location) + '" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="address" data-edit-type="text" style="text-decoration: none; color: inherit;">' + location + '</a></div>' : '') + "
-              " + (customer.domain ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg><a href="' + (customer.website && customer.website.startsWith('http') ? customer.website : customer.domain.startsWith('http') ? customer.domain : 'https://' + (customer.website || customer.domain)) + '" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="domain" data-edit-type="text" style="text-decoration: none; color: inherit;">' + customer.domain + '</a></div>' : '') + "
+              ${(hasEmail ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><a href="mailto:' + customer.email + '" class="user-info-contact-text" data-field="email" data-edit-type="text" style="text-decoration: none; color: inherit;">' + customer.email + '</a></div>' : '')}
+              ${(hasPhone ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><a href="tel:' + customer.phone + '" class="user-info-contact-text" data-field="phone" data-edit-type="text" style="text-decoration: none; color: inherit;">' + customer.phone + '</a></div>' : '')}
+              ${(hasLocation ? '<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(location) + '" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="address" data-edit-type="text" style="text-decoration: none; color: inherit;">' + location + '</a></div>' : '')}
+              ${customer.domain ? `<div class="user-info-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg><a href="${customer.website && customer.website.startsWith('http') ? customer.website : customer.domain.startsWith('http') ? customer.domain : 'https://' + (customer.website || customer.domain)}" target="_blank" rel="noopener noreferrer" class="user-info-contact-text" data-field="domain" data-edit-type="text" style="text-decoration: none; color: inherit;">${customer.domain}</a></div>` : ''}
             </div>
           </div>
         </div>
@@ -175,62 +177,62 @@
               <!-- Tickets -->
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Totaal Tickets</p>
-                <p class="user-stat-value-new">" + (stats.total_tickets || 0) + "</p>
+                <p class="user-stat-value-new">${(stats.total_tickets || 0)}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Open Tickets</p>
-                <p class="user-stat-value-new" style="color: #ef4444;">" + (stats.open_tickets || 0) + "</p>
+                <p class="user-stat-value-new" style="color: #ef4444;">${(stats.open_tickets || 0)}</p>
               </div>
-              " + (stats.high_priority_tickets > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Hoge Prioriteit</p><p class="user-stat-value-new" style="color: #f59e0b;">' + stats.high_priority_tickets + '</p></div>' : '') + "
+              ${(stats.high_priority_tickets > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Hoge Prioriteit</p><p class="user-stat-value-new" style="color: #f59e0b;">' + stats.high_priority_tickets + '</p></div>' : '')}
               
               <!-- Emails -->
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Totaal E-mails</p>
-                <p class="user-stat-value-new">" + (stats.total_emails || 0) + "</p>
+                <p class="user-stat-value-new">${(stats.total_emails || 0)}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Ongelezen</p>
-                <p class="user-stat-value-new" style="color: #3b82f6;">" + (stats.unread_emails || 0) + "</p>
+                <p class="user-stat-value-new" style="color: #3b82f6;">${(stats.unread_emails || 0)}</p>
               </div>
               
               <!-- Tasks -->
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Totaal Taken</p>
-                <p class="user-stat-value-new">" + (stats.total_tasks || 0) + "</p>
+                <p class="user-stat-value-new">${(stats.total_tasks || 0)}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Open Taken</p>
-                <p class="user-stat-value-new" style="color: #f59e0b;">" + (stats.open_tasks || 0) + "</p>
+                <p class="user-stat-value-new" style="color: #f59e0b;">${(stats.open_tasks || 0)}</p>
               </div>
-              " + (stats.in_progress_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">In Uitvoering</p><p class="user-stat-value-new" style="color: #8b5cf6;">' + stats.in_progress_tasks + '</p></div>' : '') + "
-              " + (stats.done_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Afgerond</p><p class="user-stat-value-new" style="color: #10b981;">' + stats.done_tasks + '</p></div>' : '') + "
+              ${(stats.in_progress_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">In Uitvoering</p><p class="user-stat-value-new" style="color: #8b5cf6;">' + stats.in_progress_tasks + '</p></div>' : '')}
+              ${(stats.done_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Afgerond</p><p class="user-stat-value-new" style="color: #10b981;">' + stats.done_tasks + '</p></div>' : '')}
               
               <!-- Time Tracking -->
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Totaal Uren</p>
                 <p class="user-stat-value-new" style="color: #3b82f6;">
-                  " + (stats.total_hours || 0) + "u " + (stats.total_minutes || 0) + "min
+                  ${(stats.total_hours || 0)}u ${(stats.total_minutes || 0)}min
                 </p>
               </div>
-              " + (stats.total_time_entries > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Tijdregistraties</p><p class="user-stat-value-new">' + stats.total_time_entries + '</p></div>' : '') + "
+              ${(stats.total_time_entries > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Tijdregistraties</p><p class="user-stat-value-new">' + stats.total_time_entries + '</p></div>' : '')}
               
               <!-- Employees -->
-              " + (stats.responsible_employees > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Werknemers</p><p class="user-stat-value-new" style="color: #ea5d0d;">' + stats.responsible_employees + '</p></div>' : '') + "
+              ${(stats.responsible_employees > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Werknemers</p><p class="user-stat-value-new" style="color: #ea5d0d;">' + stats.responsible_employees + '</p></div>' : '')}
               
               <!-- Task Value -->
-              " + (stats.task_value_total > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Waarde Taken</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.task_value_total) + '</p></div>' : '') + "
+              ${(stats.task_value_total > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Waarde Taken</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.task_value_total) + '</p></div>' : '')}
               
               <!-- Revenue -->
-              " + (stats.total_revenue > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Omzet</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_revenue) + '</p></div>' : '') + "
+              ${(stats.total_revenue > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Omzet</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_revenue) + '</p></div>' : '')}
               
               <!-- Paid Revenue -->
-              " + (stats.total_paid > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Betaald</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_paid) + '</p></div>' : '') + "
+              ${(stats.total_paid > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Betaald</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_paid) + '</p></div>' : '')}
               
               <!-- Outstanding -->
-              " + (stats.total_outstanding > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Openstaand</p><p class="user-stat-value-new" style="color: #f59e0b;">' + formatCurrency(stats.total_outstanding) + '</p></div>' : '') + "
+              ${(stats.total_outstanding > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Openstaand</p><p class="user-stat-value-new" style="color: #f59e0b;">' + formatCurrency(stats.total_outstanding) + '</p></div>' : '')}
               
               <!-- Total Invoices -->
-              " + (stats.total_invoices > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Facturen</p><p class="user-stat-value-new">' + stats.total_invoices + '</p></div>' : '') + "
+              ${(stats.total_invoices > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Facturen</p><p class="user-stat-value-new">' + stats.total_invoices + '</p></div>' : '')}
             </div>
           </div>
         </div>
@@ -242,59 +244,59 @@
             <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Company display</p>
-                <p class="user-stat-value-new" id="computedCompanyDisplayName">" + (customer.company_display_name || '-') + "</p>
+                <p class="user-stat-value-new" id="computedCompanyDisplayName">${(customer.company_display_name || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized domain</p>
-                <p class="user-stat-value-new" id="computedNormalizedDomain">" + (customer.normalized_domain || '-') + "</p>
+                <p class="user-stat-value-new" id="computedNormalizedDomain">${(customer.normalized_domain || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized website</p>
-                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl">" + (customer.normalized_website_url || '-') + "</p>
+                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl">${(customer.normalized_website_url || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized phone</p>
-                <p class="user-stat-value-new" id="computedNormalizedPhone">" + (customer.normalized_phone || '-') + "</p>
+                <p class="user-stat-value-new" id="computedNormalizedPhone">${(customer.normalized_phone || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Dedupe key (primary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeyPrimary">" + (customer.dedupe_key_primary || '-') + "</p>
+                <p class="user-stat-value-new" id="computedDedupeKeyPrimary">${(customer.dedupe_key_primary || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Dedupe key (secondary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeySecondary">" + (customer.dedupe_key_secondary || '-') + "</p>
+                <p class="user-stat-value-new" id="computedDedupeKeySecondary">${(customer.dedupe_key_secondary || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Days since last interaction</p>
-                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction">" + ((customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-') + "</p>
+                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction">${((customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Overdue next activity</p>
-                <p class="user-stat-value-new" id="computedHasOverdueNextActivity">" + (customer.has_overdue_next_activity ? 'Ja' : 'Nee') + "</p>
+                <p class="user-stat-value-new" id="computedHasOverdueNextActivity">${(customer.has_overdue_next_activity ? 'Ja' : 'Nee')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Activity bucket</p>
-                <p class="user-stat-value-new" id="computedActivityBucket">" + (customer.activity_bucket || '-') + "</p>
+                <p class="user-stat-value-new" id="computedActivityBucket">${(customer.activity_bucket || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Contact pressure</p>
-                <p class="user-stat-value-new" id="computedContactPressure">" + ((customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-') + "</p>
+                <p class="user-stat-value-new" id="computedContactPressure">${((customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Is contactable</p>
-                <p class="user-stat-value-new" id="computedIsContactable">" + (customer.is_contactable ? 'Ja' : 'Nee') + "</p>
+                <p class="user-stat-value-new" id="computedIsContactable">${(customer.is_contactable ? 'Ja' : 'Nee')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Data quality</p>
-                <p class="user-stat-value-new" id="computedDataQualityScore">" + ((customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-') + "</p>
+                <p class="user-stat-value-new" id="computedDataQualityScore">${((customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Full address</p>
-                <p class="user-stat-value-new" id="computedFullAddress">" + (customer.full_address || '-') + "</p>
+                <p class="user-stat-value-new" id="computedFullAddress">${(customer.full_address || '-')}</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Duplicate candidate</p>
-                <p class="user-stat-value-new" id="computedIsDuplicateCandidate">" + (customer.is_duplicate_candidate ? 'Ja' : 'Nee') + "</p>
+                <p class="user-stat-value-new" id="computedIsDuplicateCandidate">${(customer.is_duplicate_candidate ? 'Ja' : 'Nee')}</p>
               </div>
             </div>
           </div>
@@ -310,7 +312,7 @@
               </h3>
               <div style="display:flex;align-items:center;gap:10px;">
                 <span id="customerAiSummaryMeta" style="font-size:12px;color:#6b7280;">
-                  " + (customer.aiSummary && customer.aiSummary.updated_at ? 'Laatst bijgewerkt: ' + formatDateTime(customer.aiSummary.updated_at) : 'Nog geen samenvatting') + "
+                  ${(customer.aiSummary && customer.aiSummary.updated_at ? 'Laatst bijgewerkt: ' + formatDateTime(customer.aiSummary.updated_at) : 'Nog geen samenvatting')}
                 </span>
                 <button type="button" id="refreshCustomerAiSummaryBtn" class="btn-primary" style="padding: 8px 14px; font-size: 14px; display:flex; align-items:center; gap:8px;">
                   <i class="fas fa-sparkles"></i>
@@ -320,7 +322,7 @@
             </div>
             <div id="customerAiSummaryBox" style="margin-top: 12px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
               <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6;">
-                " + (customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : 'Klik op "Genereer" om een AI samenvatting te maken.') + "
+                ${(customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : 'Klik op "Genereer" om een AI samenvatting te maken.')}
               </div>
             </div>
           </div>
@@ -342,7 +344,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">Tickets</h3>
-                  <a href="/admin/tickets?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/tickets?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-plus"></i> Nieuw Ticket
                   </a>
                 </div>
@@ -365,7 +367,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">E-mails</h3>
-                  <a href="/admin/mail?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/mail?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-envelope"></i> Bekijk alle e-mails
                   </a>
                 </div>
@@ -388,7 +390,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">Taken</h3>
-                  <a href="/admin/tasks?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/tasks?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-plus"></i> Nieuwe Taak
                   </a>
                 </div>
@@ -466,7 +468,7 @@
                       <i class="fas fa-upload"></i> Importeer CSV
                     </label>
                     <input type="file" id="invoiceImportFile" accept=".csv" style="display: none;" />
-                    <a href="/admin/customers/" + customer.id + "/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <a href="/admin/customers/${customer.id}/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
                       <i class="fas fa-plus"></i> Nieuwe Factuur
                     </a>
                   </div>
@@ -484,7 +486,7 @@
               <div class="user-card-content">
                 <h3 class="user-card-title-small">Recente Activiteit</h3>
                 <div class="user-activity-list">
-                  " + (activities.length > 0 ? activities.map(function(activity) {
+                  ${(activities.length > 0 ? activities.map(function(activity) {
                     var icon = 'fa-clock'
                     if (activity.category === 'authentication') icon = 'fa-sign-in-alt'
                     else if (activity.category === 'billing') icon = 'fa-credit-card'
@@ -493,7 +495,7 @@
                     else if (activity.type === 'success') icon = 'fa-check-circle'
                     
                     return '<div class="user-activity-item"><div class="user-activity-icon"><i class="fas ' + icon + '"></i></div><div class="user-activity-content"><p class="user-activity-title">' + (activity.title || activity.message || 'Activiteit') + '</p><p class="user-activity-date">' + formatDateTime(activity.created_at) + '</p></div></div>'
-                  }).join('') : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text">Geen activiteit gevonden.</p></div>') + "
+                  }).join('') : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text">Geen activiteit gevonden.</p></div>')}
                 </div>
               </div>
             </div>
@@ -511,24 +513,24 @@
               <!-- Status & Priority -->
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
                 <span style="font-size: 0.875rem; color: #6b7280;">Status</span>
-                <span class="status-badge" style="background-color: " + (stats.status === 'active' ? '#10b98120' : '#6b728020') + "; color: " + (stats.status === 'active' ? '#10b981' : '#6b7280') + "; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                  " + (stats.status === 'active' ? 'Actief' : stats.status === 'inactive' ? 'Inactief' : stats.status) + "
+                <span class="status-badge" style="background-color: ${(stats.status === 'active' ? '#10b98120' : '#6b728020')}; color: ${(stats.status === 'active' ? '#10b981' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                  ${(stats.status === 'active' ? 'Actief' : stats.status === 'inactive' ? 'Inactief' : stats.status)}
                 </span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
                 <span style="font-size: 0.875rem; color: #6b7280;">Prioriteit</span>
-                <span class="status-badge" style="background-color: " + (stats.priority === 'high' ? '#ef444420' : stats.priority === 'urgent' ? '#dc262620' : '#6b728020') + "; color: " + (stats.priority === 'high' ? '#ef4444' : stats.priority === 'urgent' ? '#dc2626' : '#6b7280') + "; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                  " + (stats.priority === 'high' ? 'Hoog' : stats.priority === 'urgent' ? 'Urgent' : stats.priority === 'low' ? 'Laag' : 'Normaal') + "
+                <span class="status-badge" style="background-color: ${(stats.priority === 'high' ? '#ef444420' : stats.priority === 'urgent' ? '#dc262620' : '#6b728020')}; color: ${(stats.priority === 'high' ? '#ef4444' : stats.priority === 'urgent' ? '#dc2626' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                  ${(stats.priority === 'high' ? 'Hoog' : stats.priority === 'urgent' ? 'Urgent' : stats.priority === 'low' ? 'Laag' : 'Normaal')}
                 </span>
               </div>
               
               <!-- Key Metrics -->
-              " + (stats.open_tickets > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Open Tickets</span><span style="font-weight: 600; color: #ef4444;">' + stats.open_tickets + '</span></div>' : '') + "
-              " + (stats.open_tasks > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Open Taken</span><span style="font-weight: 600; color: #f59e0b;">' + stats.open_tasks + '</span></div>' : '') + "
-              " + (stats.unread_emails > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Ongelezen E-mails</span><span style="font-weight: 600; color: #3b82f6;">' + stats.unread_emails + '</span></div>' : '') + "
-              " + (stats.responsible_employees > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Verantwoordelijke Werknemers</span><span style="font-weight: 600; color: #ea5d0d;">' + stats.responsible_employees + '</span></div>' : '') + "
-              " + (stats.total_time_minutes > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Totaal Uren</span><span style="font-weight: 600; color: #3b82f6;">' + (stats.total_hours || 0) + 'u ' + (stats.total_minutes || 0) + 'min</span></div>' : '') + "
-              " + (stats.task_value_total > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;"><span style="font-size: 0.875rem; color: #6b7280;">Waarde Taken</span><span style="font-weight: 600; color: #10b981;">' + formatCurrency(stats.task_value_total) + '</span></div>' : '') + "
+              ${(stats.open_tickets > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Open Tickets</span><span style="font-weight: 600; color: #ef4444;">' + stats.open_tickets + '</span></div>' : '')}
+              ${(stats.open_tasks > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Open Taken</span><span style="font-weight: 600; color: #f59e0b;">' + stats.open_tasks + '</span></div>' : '')}
+              ${(stats.unread_emails > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Ongelezen E-mails</span><span style="font-weight: 600; color: #3b82f6;">' + stats.unread_emails + '</span></div>' : '')}
+              ${(stats.responsible_employees > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Verantwoordelijke Werknemers</span><span style="font-weight: 600; color: #ea5d0d;">' + stats.responsible_employees + '</span></div>' : '')}
+              ${(stats.total_time_minutes > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Totaal Uren</span><span style="font-weight: 600; color: #3b82f6;">' + (stats.total_hours || 0) + 'u ' + (stats.total_minutes || 0) + 'min</span></div>' : '')}
+              ${(stats.task_value_total > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;"><span style="font-size: 0.875rem; color: #6b7280;">Waarde Taken</span><span style="font-weight: 600; color: #10b981;">' + formatCurrency(stats.task_value_total) + '</span></div>' : '')}
             </div>
           </div>
         </div>
@@ -544,20 +546,20 @@
               <div class="user-info-item">
                 <p class="user-info-label">Laatste update</p>
                 <p class="user-info-value">
-                  " + (customer.updated_at ? formatDateTime(customer.updated_at) : 'Nog niet bijgewerkt') + "
+                  ${(customer.updated_at ? formatDateTime(customer.updated_at) : 'Nog niet bijgewerkt')}
                 </p>
               </div>
               
               <div class="user-info-item">
                 <p class="user-info-label">Laatste activiteit</p>
                 <p class="user-info-value">
-                  " + (customer.last_ticket_activity || customer.last_email_activity ? formatRelativeTime(customer.last_ticket_activity || customer.last_email_activity) : 'Geen activiteit') + "
+                  ${(customer.last_ticket_activity || customer.last_email_activity ? formatRelativeTime(customer.last_ticket_activity || customer.last_email_activity) : 'Geen activiteit')}
                 </p>
               </div>
               
               <div class="user-info-item">
                 <p class="user-info-label">Klant ID</p>
-                <p class="user-info-value user-info-mono">" + (customer.id ? customer.id.substring(0, 8) : '-') + "</p>
+                <p class="user-info-value user-info-mono">${(customer.id ? customer.id.substring(0, 8) : '-')}</p>
               </div>
             </div>
           </div>
@@ -642,18 +644,18 @@
       <div class="modal-body" style="padding: 24px;">
         <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
           <div style="position: relative; display: inline-block;">
-            <div id="customerLogoPreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: " + (customer.logo_url ? 'default' : 'pointer') + "; transition: all 0.2s;" + (!customer.logo_url ? 'onclick="document.getElementById(\'customerLogoUpload\').click();"' : '') + " onmouseover=\"" + (!customer.logo_url ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : '') + "\" onmouseout=\"" + (!customer.logo_url ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : '') + "\">
+            <div id="customerLogoPreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: ${(customer.logo_url ? 'default' : 'pointer')}; transition: all 0.2s;${(!customer.logo_url ? 'onclick="document.getElementById(\'customerLogoUpload\').click();"' : '')} onmouseover=\"${(!customer.logo_url ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : '')}\" onmouseout=\"${(!customer.logo_url ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : '')}\">
               <img 
                 id="customerLogoPreview" 
-                src=\"" + (customer.logo_url || '') + "\" 
-                alt=\"" + (customer.name || customer.company_name || 'Klant') + "\" 
+                src=\"${(customer.logo_url || '')}\" 
+                alt=\"${(customer.name || customer.company_name || 'Klant')}\" 
                 loading="lazy"
                 decoding="async"
                 width="180"
                 height="180"
-                style="max-width: 100%; max-height: 100%; object-fit: contain; display: " + (customer.logo_url ? 'block' : 'none') + ";"
+                style="max-width: 100%; max-height: 100%; object-fit: contain; display: ${(customer.logo_url ? 'block' : 'none')};"
               >
-              " + (!customer.logo_url ? '<div id="logoPlaceholderContent" style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;transition: all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;transition: all 0.2s;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span style="font-size:13px;font-weight:500;">Upload logo</span></div>' : '') + "
+              ${(!customer.logo_url ? '<div id="logoPlaceholderContent" style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#9ca3af;transition: all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.5;transition: all 0.2s;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span style="font-size:13px;font-weight:500;">Upload logo</span></div>' : '')}
             </div>
           </div>
           <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
@@ -823,24 +825,26 @@
   <script>
     // Make employees data available to JavaScript
     window.customerEmployeesData = {
-      customerId: '" + (customer && customer.id ? customer.id : '') + "',
+      customerId: '${(customer && customer.id ? customer.id : '')}',
       responsibleEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : []) + ",
       allEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : []) + "
     };
     
     // Make labels available for edit mode
-    window.statusLabels = " + JSON.stringify(statusLabels) + ";
-    window.priorityLabels = " + JSON.stringify(priorityLabels) + ";
-    window.currentStatus = '" + status + "';
-    window.currentPriority = '" + priority + "';
-    window.canEditCustomer = " + (typeof canEditCustomer !== 'undefined' ? canEditCustomer : false) + ";
+    window.statusLabels = ${JSON.stringify(statusLabels)};
+    window.priorityLabels = ${JSON.stringify(priorityLabels)};
+    window.currentStatus = '${status}';
+    window.currentPriority = '${priority}';
+    window.canEditCustomer = ${(typeof canEditCustomer !== 'undefined' ? canEditCustomer : false)};
     window.customerData = " + JSON.stringify(customer || {}) + ";
     window.customerInvoicesData = {
-      customerId: '" + (customer && customer.id ? customer.id : '') + "',
+      customerId: '${(customer && customer.id ? customer.id : '')}',
       invoices: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : []) + "
     };
   </script>
-  ",
+  `;
+    return output;
+  })(),
   scripts: ['/js/admin/customer.js'],
   stylesheets: ['/css/admin/users.css', '/css/admin/customers.css', '/css/admin/payments-table.css']
 }) %>
