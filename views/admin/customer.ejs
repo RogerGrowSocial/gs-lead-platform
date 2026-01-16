@@ -489,25 +489,8 @@
                       var statusColor = ticketStatus === 'open' ? '#ef4444' : ticketStatus === 'closed' ? '#10b981' : '#6b7280'
                       var priorityColor = priorityColors[ticketPriority] || '#6b7280'
                       
-                      return `
-                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/tickets/${ticket.id}'">
-                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
-                            <i class="fas fa-ticket-alt" style="color: ${statusColor};"></i>
-                          </div>
-                          <div class="user-activity-content" style="flex: 1;">
-                            <p class="user-activity-title">${ticket.subject || 'Geen onderwerp'}</p>
-                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
-                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
-                                ${ticketStatus === 'open' ? 'Open' : ticketStatus === 'closed' ? 'Gesloten' : ticketStatus}
-                              </span>
-                              <span class="status-badge" style="background-color: ${priorityColor}20; color: ${priorityColor}; font-size: 11px; padding: 2px 8px;">
-                                ${priorityLabels[ticketPriority] || ticketPriority}
-                              </span>
-                              <p class="user-activity-date">${formatDateTime(ticket.created_at)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      `
+                      var ticketStatusText = ticketStatus === 'open' ? 'Open' : ticketStatus === 'closed' ? 'Gesloten' : ticketStatus
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/tickets/' + ticket.id + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-ticket-alt" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + (ticket.subject || 'Geen onderwerp') + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;"><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + ticketStatusText + '</span><span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; font-size: 11px; padding: 2px 8px;">' + (priorityLabels[ticketPriority] || ticketPriority) + '</span><p class="user-activity-date">' + formatDateTime(ticket.created_at) + '</p></div></div></div>'
                     }).join('')}
                   </div>
                   <a href="/admin/tickets?customer_id=${customer.id}" class="user-activity-view-all">
@@ -539,20 +522,11 @@
                   <div class="user-activity-list">
                     ${emails.map(function(email) {
                       var isUnread = !email.read_at
-                      return `
-                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/mail/${email.id}'">
-                          <div class="user-activity-icon" style="background-color: ${isUnread ? '#3b82f620' : '#6b728020'};">
-                            <i class="fas fa-envelope" style="color: ${isUnread ? '#3b82f6' : '#6b7280'};"></i>
-                          </div>
-                          <div class="user-activity-content" style="flex: 1;">
-                            <p class="user-activity-title" style="font-weight: ${isUnread ? '600' : '400'};">
-                              ${email.subject || 'Geen onderwerp'}
-                              ${isUnread ? '<span style="color: #3b82f6; margin-left: 8px; font-size: 10px;">(Ongelezen)</span>' : ''}
-                            </p>
-                            <p class="user-activity-date">${formatDateTime(email.created_at)}</p>
-                          </div>
-                        </div>
-                      `
+                      var unreadBg = isUnread ? '#3b82f620' : '#6b728020'
+                      var unreadColor = isUnread ? '#3b82f6' : '#6b7280'
+                      var unreadWeight = isUnread ? '600' : '400'
+                      var unreadBadge = isUnread ? '<span style="color: #3b82f6; margin-left: 8px; font-size: 10px;">(Ongelezen)</span>' : ''
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/mail/' + email.id + '\'"><div class="user-activity-icon" style="background-color: ' + unreadBg + ';"><i class="fas fa-envelope" style="color: ' + unreadColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title" style="font-weight: ' + unreadWeight + ';">' + (email.subject || 'Geen onderwerp') + unreadBadge + '</p><p class="user-activity-date">' + formatDateTime(email.created_at) + '</p></div></div>'
                     }).join('')}
                   </div>
                   <a href="/admin/mail?customer_id=${customer.id}" class="user-activity-view-all">
@@ -601,42 +575,10 @@
                       var priorityColor = priorityColors[taskPriority] || '#6b7280'
                       var employeeName = task.employee ? (task.employee.first_name && task.employee.last_name ? task.employee.first_name + ' ' + task.employee.last_name : task.employee.email) : 'Niet toegewezen'
                       
-                      return `
-                        <div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href='/admin/tasks/${task.id}'">
-                          <div class="user-activity-icon" style="background-color: ${statusColor}20;">
-                            <i class="fas fa-tasks" style="color: ${statusColor};"></i>
-                          </div>
-                          <div class="user-activity-content" style="flex: 1;">
-                            <p class="user-activity-title">${task.title || 'Geen titel'}</p>
-                            <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
-                              <span class="status-badge" style="background-color: ${statusColor}20; color: ${statusColor}; font-size: 11px; padding: 2px 8px;">
-                                ${statusLabels[taskStatus] || taskStatus}
-                              </span>
-                              <span class="status-badge" style="background-color: ${priorityColor}20; color: ${priorityColor}; font-size: 11px; padding: 2px 8px;">
-                                ${priorityLabels[taskPriority] || taskPriority}
-                              </span>
-                              ${task.employee ? `
-                                <span style="font-size: 11px; color: #6b7280;">
-                                  <i class="fas fa-user" style="margin-right: 4px;"></i>
-                                  <a href="/admin/employees/${task.employee.id}" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">${employeeName}</a>
-                                </span>
-                              ` : ''}
-                              ${task.due_at ? `
-                                <span style="font-size: 11px; color: #6b7280;">
-                                  <i class="fas fa-calendar" style="margin-right: 4px;"></i>
-                                  ${formatDate(task.due_at)}
-                                </span>
-                              ` : ''}
-                              ${task.value_cents > 0 ? `
-                                <span style="font-size: 11px; color: #6b7280;">
-                                  <i class="fas fa-euro-sign" style="margin-right: 4px;"></i>
-                                  ${formatCurrency(task.value_cents)}
-                                </span>
-                              ` : ''}
-                            </div>
-                          </div>
-                        </div>
-                      `
+                      var employeeHtml = task.employee ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-user" style="margin-right: 4px;"></i><a href="/admin/employees/' + task.employee.id + '" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">' + employeeName + '</a></span>' : ''
+                      var dueHtml = task.due_at ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-calendar" style="margin-right: 4px;"></i>' + formatDate(task.due_at) + '</span>' : ''
+                      var valueHtml = task.value_cents > 0 ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-euro-sign" style="margin-right: 4px;"></i>' + formatCurrency(task.value_cents) + '</span>' : ''
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/tasks/' + task.id + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-tasks" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + (task.title || 'Geen titel') + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;"><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + (statusLabels[taskStatus] || taskStatus) + '</span><span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; font-size: 11px; padding: 2px 8px;">' + (priorityLabels[taskPriority] || taskPriority) + '</span>' + employeeHtml + dueHtml + valueHtml + '</div></div></div>'
                     }).join('')}
                   </div>
                   <a href="/admin/tasks?customer_id=${customer.id}" class="user-activity-view-all">
@@ -667,18 +609,7 @@
                         var employeeName = total.employee.first_name && total.employee.last_name 
                           ? total.employee.first_name + ' ' + total.employee.last_name 
                           : total.employee.email
-                        return `
-                          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                              <i class="fas fa-user" style="color: #6b7280;"></i>
-                              <a href="/admin/employees/${total.employee.id}" style="color: #111827; text-decoration: none; font-weight: 500;">
-                                ${employeeName}
-                              </a>
-                              <span style="font-size: 12px; color: #6b7280;">(${total.entries_count} registraties)</span>
-                            </div>
-                            <span style="font-weight: 600; color: #111827;">${hours}u ${minutes}min</span>
-                          </div>
-                        `
+                        return '<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px;"><div style="display: flex; align-items: center; gap: 8px;"><i class="fas fa-user" style="color: #6b7280;"></i><a href="/admin/employees/' + total.employee.id + '" style="color: #111827; text-decoration: none; font-weight: 500;">' + employeeName + '</a><span style="font-size: 12px; color: #6b7280;">(' + total.entries_count + ' registraties)</span></div><span style="font-weight: 600; color: #111827;">' + hours + 'u ' + minutes + 'min</span></div>'
                       }).join('')}
                     </div>
                   </div>
@@ -780,17 +711,7 @@
                     else if (activity.type === 'error') icon = 'fa-exclamation-triangle'
                     else if (activity.type === 'success') icon = 'fa-check-circle'
                     
-                    return `
-                      <div class="user-activity-item">
-                        <div class="user-activity-icon">
-                          <i class="fas ${icon}"></i>
-                        </div>
-                        <div class="user-activity-content">
-                          <p class="user-activity-title">${activity.title || activity.message || 'Activiteit'}</p>
-                          <p class="user-activity-date">${formatDateTime(activity.created_at)}</p>
-                        </div>
-                      </div>
-                    `
+                    return '<div class="user-activity-item"><div class="user-activity-icon"><i class="fas ' + icon + '"></i></div><div class="user-activity-content"><p class="user-activity-title">' + (activity.title || activity.message || 'Activiteit') + '</p><p class="user-activity-date">' + formatDateTime(activity.created_at) + '</p></div></div>'
                   }).join('') : `
                     <div style="text-align: center; padding: 3rem 1rem;">
                       <p class="user-empty-text">Geen activiteit gevonden.</p>
@@ -954,14 +875,8 @@
               <h3 class="user-card-title-small" style="margin-bottom: 1rem;">E-mailadressen</h3>
               <div class="user-info-list">
                 ${customerEmails.map(function(email) {
-                  return `
-                    <div class="user-info-item">
-                      <p class="user-info-label">
-                        ${email.email}
-                        ${email.is_primary ? '<span style="color: #10b981; font-size: 11px; margin-left: 8px;">(Primair)</span>' : ''}
-                      </p>
-                    </div>
-                  `
+                  var primaryBadge = email.is_primary ? '<span style="color: #10b981; font-size: 11px; margin-left: 8px;">(Primair)</span>' : ''
+                  return '<div class="user-info-item"><p class="user-info-label">' + email.email + primaryBadge + '</p></div>'
                 }).join('')}
               </div>
             </div>
