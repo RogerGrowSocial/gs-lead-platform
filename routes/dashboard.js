@@ -261,79 +261,79 @@ router.get('/', requireAuth, async (req, res) => {
             return res.redirect('/onboarding');
           }
           // If step >= 99 but not completed, user is in tour - allow dashboard access
-        }
-      } else {
-        // No profile found - try to create it
-        console.log(`[DASHBOARD] Creating missing profile for user ${req.user.id}`);
-        
-        // Check if user should skip onboarding before creating profile
-        let shouldSkipOnboarding = false;
-        if (req.user.user_metadata?.is_admin === true) {
-          shouldSkipOnboarding = true;
-        }
-        
-        const { data: newProfile, error: createError } = await supabaseAdmin
-          .from('profiles')
-          .upsert({
-            id: req.user.id,
-            email: req.user.email,
-            company_name: req.user.user_metadata?.company_name || null,
-            first_name: req.user.user_metadata?.first_name || null,
-            last_name: req.user.user_metadata?.last_name || null,
-            role_id: null,
-            status: 'active',
-            balance: 0,
-            is_admin: req.user.user_metadata?.is_admin === true || false,
-            onboarding_completed_at: shouldSkipOnboarding ? new Date().toISOString() : null,
-            onboarding_step: shouldSkipOnboarding ? 99 : 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'id'
-          })
-          .select('onboarding_completed_at, onboarding_step, role_id')
-          .single();
-        
-        if (createError) {
-          console.error('[DASHBOARD] Error creating profile:', createError);
         } else {
-          console.log('[DASHBOARD] ✅ Profile created for user:', req.user.id);
+          // No profile found - try to create it
+          console.log(`[DASHBOARD] Creating missing profile for user ${req.user.id}`);
           
-          // If profile was created with role_id, check if it's manager/employee
-          if (newProfile?.role_id && !shouldSkipOnboarding) {
-            const { data: role, error: roleErr } = await supabaseAdmin
-              .from('roles')
-              .select('name')
-              .eq('id', newProfile.role_id)
-              .maybeSingle();
-            
-            if (!roleErr && role) {
-              const roleName = role.name?.toLowerCase() || '';
-              if (roleName.includes('manager') || 
-                  roleName.includes('employee') || 
-                  roleName.includes('werknemer') ||
-                  roleName.includes('admin')) {
-                // Auto-complete onboarding for managers/employees
-                await supabaseAdmin
-                  .from('profiles')
-                  .update({
-                    onboarding_completed_at: new Date().toISOString(),
-                    onboarding_step: 99
-                  })
-                  .eq('id', req.user.id);
-                shouldSkipOnboarding = true;
-                console.log('[DASHBOARD] Auto-completed onboarding for manager/employee:', req.user.id);
-              }
-            }
+          // Check if user should skip onboarding before creating profile
+          let shouldSkipOnboarding = false;
+          if (req.user.user_metadata?.is_admin === true) {
+            shouldSkipOnboarding = true;
           }
           
-          // Retry onboarding check with new profile (only for customers)
-          if (!shouldSkipOnboarding && newProfile) {
-            const completed = !!newProfile?.onboarding_completed_at;
-            const step = newProfile?.onboarding_step || 0;
-            if (!completed && (step < 99 || step === null || step === undefined)) {
-              console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
-              return res.redirect('/onboarding');
+          const { data: newProfile, error: createError } = await supabaseAdmin
+            .from('profiles')
+            .upsert({
+              id: req.user.id,
+              email: req.user.email,
+              company_name: req.user.user_metadata?.company_name || null,
+              first_name: req.user.user_metadata?.first_name || null,
+              last_name: req.user.user_metadata?.last_name || null,
+              role_id: null,
+              status: 'active',
+              balance: 0,
+              is_admin: req.user.user_metadata?.is_admin === true || false,
+              onboarding_completed_at: shouldSkipOnboarding ? new Date().toISOString() : null,
+              onboarding_step: shouldSkipOnboarding ? 99 : 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
+            })
+            .select('onboarding_completed_at, onboarding_step, role_id')
+            .single();
+          
+          if (createError) {
+            console.error('[DASHBOARD] Error creating profile:', createError);
+          } else {
+            console.log('[DASHBOARD] ✅ Profile created for user:', req.user.id);
+            
+            // If profile was created with role_id, check if it's manager/employee
+            if (newProfile?.role_id && !shouldSkipOnboarding) {
+              const { data: role, error: roleErr } = await supabaseAdmin
+                .from('roles')
+                .select('name')
+                .eq('id', newProfile.role_id)
+                .maybeSingle();
+              
+              if (!roleErr && role) {
+                const roleName = role.name?.toLowerCase() || '';
+                if (roleName.includes('manager') || 
+                    roleName.includes('employee') || 
+                    roleName.includes('werknemer') ||
+                    roleName.includes('admin')) {
+                  // Auto-complete onboarding for managers/employees
+                  await supabaseAdmin
+                    .from('profiles')
+                    .update({
+                      onboarding_completed_at: new Date().toISOString(),
+                      onboarding_step: 99
+                    })
+                    .eq('id', req.user.id);
+                  shouldSkipOnboarding = true;
+                  console.log('[DASHBOARD] Auto-completed onboarding for manager/employee:', req.user.id);
+                }
+              }
+            }
+            
+            // Retry onboarding check with new profile (only for customers)
+            if (!shouldSkipOnboarding && newProfile) {
+              const completed = !!newProfile?.onboarding_completed_at;
+              const step = newProfile?.onboarding_step || 0;
+              if (!completed && (step < 99 || step === null || step === undefined)) {
+                console.log('[DASHBOARD] Redirecting to onboarding for user:', req.user.id);
+                return res.redirect('/onboarding');
+              }
             }
           }
         }
