@@ -9616,7 +9616,14 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
         const { getAllRoles } = require('../utils/roleCache');
         const roles = await getAllRoles();
         return { data: roles.slice(0, 50), error: null };
-      })
+      }),
+      
+      // Get user profile (duplicate of userAccountResult for consistency)
+      supabase
+        .from('profiles')
+        .select('is_admin, role_id')
+        .eq('id', req.user.id)
+        .single()
     ]);
 
     const { data: customerStats, error: statsError } = customerStatsResult;
@@ -9630,7 +9637,7 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
     const { data: tasks } = tasksResult;
     const { data: timeEntries } = timeEntriesResult;
     const { data: invoices } = invoicesResult;
-    const { data: userProfile } = userAccountResult; // This is now userProfile query
+    const { data: userProfile } = userProfileResult || userAccountResult; // Use userProfileResult if available, fallback to userAccountResult
     const { data: responsibleEmployees } = responsibleEmployeesResult;
     const { data: allProfiles, error: profilesError } = allProfilesResult;
     const { data: allRoles, error: rolesError } = allRolesResult;
