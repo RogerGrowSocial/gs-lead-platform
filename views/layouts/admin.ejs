@@ -21,6 +21,7 @@
   <!-- Component Styles -->
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin/notifications.css">
+  <link rel="stylesheet" href="/css/admin/time-tracker.css">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
     <% stylesheets.forEach(function(stylesheet) { %>
       <link rel="stylesheet" href="<%= stylesheet %>" media="all" data-page-specific="true">
@@ -1395,6 +1396,13 @@
   <!-- Client-side router voor snelle navigatie -->
   <script src="/js/client-router.js"></script>
   <script src="/js/main.js"></script>
+  <script>
+    // Make user ID available for time tracker
+    <% if (typeof user !== 'undefined' && user && user.id) { %>
+      window.currentUserId = '<%= user.id %>';
+    <% } %>
+  </script>
+  <script src="/js/admin/time-tracker.js"></script>
   <% if (typeof scripts !== 'undefined' && scripts) { %>
     <% scripts.forEach(function(script) { %>
       <script src="<%= script %>"></script>

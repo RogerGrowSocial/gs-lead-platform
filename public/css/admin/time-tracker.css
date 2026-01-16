@@ -1,0 +1,46 @@
+/* Time Tracker Component Styles */
+
+.time-tracker-btn {
+  position: relative;
+}
+
+.time-tracker-btn:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.time-tracker-popover {
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.time-tracker-popover button:hover {
+  opacity: 0.9;
+}
+
+.time-tracker-popover #timeTrackerStart:hover {
+  background-color: #2563eb !important;
+}
+
+.time-tracker-popover #timeTrackerSwitch:hover {
+  background-color: #2563eb !important;
+}
+
+.time-tracker-popover #timeTrackerStop:hover {
+  background-color: #dc2626 !important;
+}
+
+.time-tracker-popover #timeTrackerClose:hover {
+  color: #374151 !important;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+}

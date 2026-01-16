@@ -14881,6 +14881,25 @@ router.post('/employees/:id/time-entries/clock-out', requireAuth, async (req, re
   }
 })
 
+// POST /api/employees/:id/time-entries/switch-task
+// Switch task - close current active timer and start new one immediately
+router.post('/employees/:id/time-entries/switch-task', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    // Employees can only switch their own tasks
+    if (req.user.id !== id) {
+      return res.status(403).json({ ok: false, error: 'Forbidden' })
+    }
+
+    const newEntry = await TimeEntryService.switchTask(id, req.body)
+    res.json({ ok: true, data: newEntry })
+  } catch (error) {
+    console.error('Error switching task:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
 // PUT /api/employees/:id/time-entries/active-timer
 // Update active timer (change project, customer, task, note)
 router.put('/employees/:id/time-entries/active-timer', requireAuth, async (req, res) => {

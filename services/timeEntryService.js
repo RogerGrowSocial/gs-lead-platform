@@ -531,6 +531,72 @@ class TimeEntryService {
   }
 
   /**
+   * Switch task - Close current active timer and start new one immediately
+   * This allows switching tasks without clocking out
+   * @param {string} employeeId - UUID of employee
+   * @param {Object} newEntryData - New entry data (project, customer, task, note)
+   * @returns {Promise<Object>} New active time entry
+   */
+  static async switchTask(employeeId, newEntryData = {}) {
+    try {
+      // Get current active timer
+      const { data: activeTimer, error: fetchError } = await supabaseAdmin
+        .from('time_entries')
+        .select('id, start_at')
+        .eq('employee_id', employeeId)
+        .eq('is_active_timer', true)
+        .maybeSingle()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      const now = new Date()
+
+      // If there's an active timer, close it first
+      if (activeTimer) {
+        const start = new Date(activeTimer.start_at)
+        const durationMinutes = Math.round((now - start) / (1000 * 60))
+
+        await supabaseAdmin
+          .from('time_entries')
+          .update({
+            end_at: now.toISOString(),
+            duration_minutes: durationMinutes,
+            is_active_timer: false,
+            updated_at: now.toISOString()
+          })
+          .eq('id', activeTimer.id)
+      }
+
+      // Start new timer immediately
+      const { data, error } = await supabaseAdmin
+        .from('time_entries')
+        .insert({
+          employee_id: employeeId,
+          task_id: newEntryData.task_id || null,
+          customer_id: newEntryData.customer_id || null,
+          project_name: newEntryData.project_name || null,
+          start_at: now.toISOString(),
+          end_at: null,
+          duration_minutes: 0,
+          note: newEntryData.note || null,
+          status: 'draft',
+          is_active_timer: true
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      return data
+    } catch (error) {
+      console.error('Error switching task:', error)
+      throw error
+    }
+  }
+
+  /**
    * Log audit entry
    * @private
    */
