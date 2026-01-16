@@ -242,59 +242,59 @@
             <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Company display</p>
-                <p class="user-stat-value-new" id="computedCompanyDisplayName"><%= customer.company_display_name || '-' %></p>
+                <p class="user-stat-value-new" id="computedCompanyDisplayName">" + (customer.company_display_name || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized domain</p>
-                <p class="user-stat-value-new" id="computedNormalizedDomain"><%= customer.normalized_domain || '-' %></p>
+                <p class="user-stat-value-new" id="computedNormalizedDomain">" + (customer.normalized_domain || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized website</p>
-                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl"><%= customer.normalized_website_url || '-' %></p>
+                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl">" + (customer.normalized_website_url || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Normalized phone</p>
-                <p class="user-stat-value-new" id="computedNormalizedPhone"><%= customer.normalized_phone || '-' %></p>
+                <p class="user-stat-value-new" id="computedNormalizedPhone">" + (customer.normalized_phone || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Dedupe key (primary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeyPrimary"><%= customer.dedupe_key_primary || '-' %></p>
+                <p class="user-stat-value-new" id="computedDedupeKeyPrimary">" + (customer.dedupe_key_primary || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Dedupe key (secondary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeySecondary"><%= customer.dedupe_key_secondary || '-' %></p>
+                <p class="user-stat-value-new" id="computedDedupeKeySecondary">" + (customer.dedupe_key_secondary || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Days since last interaction</p>
-                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction"><%= (customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-' %></p>
+                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction">" + ((customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Overdue next activity</p>
-                <p class="user-stat-value-new" id="computedHasOverdueNextActivity"><%= customer.has_overdue_next_activity ? 'Ja' : 'Nee' %></p>
+                <p class="user-stat-value-new" id="computedHasOverdueNextActivity">" + (customer.has_overdue_next_activity ? 'Ja' : 'Nee') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Activity bucket</p>
-                <p class="user-stat-value-new" id="computedActivityBucket"><%= customer.activity_bucket || '-' %></p>
+                <p class="user-stat-value-new" id="computedActivityBucket">" + (customer.activity_bucket || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Contact pressure</p>
-                <p class="user-stat-value-new" id="computedContactPressure"><%= (customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-' %></p>
+                <p class="user-stat-value-new" id="computedContactPressure">" + ((customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Is contactable</p>
-                <p class="user-stat-value-new" id="computedIsContactable"><%= customer.is_contactable ? 'Ja' : 'Nee' %></p>
+                <p class="user-stat-value-new" id="computedIsContactable">" + (customer.is_contactable ? 'Ja' : 'Nee') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Data quality</p>
-                <p class="user-stat-value-new" id="computedDataQualityScore"><%= (customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-' %></p>
+                <p class="user-stat-value-new" id="computedDataQualityScore">" + ((customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Full address</p>
-                <p class="user-stat-value-new" id="computedFullAddress"><%= customer.full_address || '-' %></p>
+                <p class="user-stat-value-new" id="computedFullAddress">" + (customer.full_address || '-') + "</p>
               </div>
               <div class="user-stat-item-new">
                 <p class="user-stat-label-new">Duplicate candidate</p>
-                <p class="user-stat-value-new" id="computedIsDuplicateCandidate"><%= customer.is_duplicate_candidate ? 'Ja' : 'Nee' %></p>
+                <p class="user-stat-value-new" id="computedIsDuplicateCandidate">" + (customer.is_duplicate_candidate ? 'Ja' : 'Nee') + "</p>
               </div>
             </div>
           </div>
