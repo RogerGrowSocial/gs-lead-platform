@@ -41,6 +41,21 @@
         return;
       }
 
+      // Check if button already exists (prevent duplicates)
+      const existingBtn = document.getElementById('timeTrackerBtn');
+      if (existingBtn) {
+        console.warn('[TimeTracker] Clock button already exists, reusing');
+        this.clockButton = existingBtn;
+        const existingPopover = document.getElementById('timeTrackerPopover');
+        if (existingPopover) {
+          this.popover = existingPopover;
+        } else {
+          // Create popover if it doesn't exist
+          this.createPopover(headerRight);
+        }
+        return;
+      }
+
       // Create clock icon button (before user dropdown)
       const clockButton = document.createElement('button');
       clockButton.className = 'time-tracker-btn';
@@ -79,6 +94,18 @@
       // Insert before user dropdown
       headerRight.insertBefore(clockButton, headerRight.firstChild);
 
+      this.clockButton = clockButton;
+      this.createPopover(headerRight);
+    }
+
+    createPopover(headerRight) {
+      // Check if popover already exists
+      const existingPopover = document.getElementById('timeTrackerPopover');
+      if (existingPopover) {
+        this.popover = existingPopover;
+        return;
+      }
+
       // Create popover
       const popover = document.createElement('div');
       popover.className = 'time-tracker-popover';
@@ -100,7 +127,6 @@
       headerRight.style.position = 'relative';
       headerRight.appendChild(popover);
 
-      this.clockButton = clockButton;
       this.popover = popover;
     }
 
@@ -446,6 +472,12 @@
 
   // Initialize when DOM is ready
   function initTimeTracker() {
+    // Check if time tracker already exists
+    if (window.timeTracker) {
+      console.log('[TimeTracker] Time tracker already initialized, skipping');
+      return;
+    }
+
     // Get user ID from window or try to extract from page
     let userId = null;
     
@@ -470,6 +502,16 @@
     if (!userId) {
       console.warn('[TimeTracker] User ID not found, time tracker disabled');
       return;
+    }
+
+    // Clean up any existing UI elements (in case of page reload/navigation)
+    const existingBtn = document.getElementById('timeTrackerBtn');
+    const existingPopover = document.getElementById('timeTrackerPopover');
+    if (existingBtn) {
+      existingBtn.remove();
+    }
+    if (existingPopover) {
+      existingPopover.remove();
     }
 
     window.timeTracker = new TimeTracker(userId);
