@@ -350,7 +350,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">Tickets</h3>
-                  <a href="/admin/tickets?customer_id=` + customer.id + `" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/tickets?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-plus"></i> Nieuw Ticket
                   </a>
                 </div>
@@ -373,7 +373,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">E-mails</h3>
-                  <a href="/admin/mail?customer_id=` + customer.id + `" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/mail?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-envelope"></i> Bekijk alle e-mails
                   </a>
                 </div>
@@ -396,7 +396,7 @@
               <div class="user-card-content">
                 <div class="user-card-header-with-action">
                   <h3 class="user-card-title-small">Taken</h3>
-                  <a href="/admin/tasks?customer_id=` + customer.id + `" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                  <a href="/admin/tasks?customer_id=" + customer.id + "" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
                     <i class="fas fa-plus"></i> Nieuwe Taak
                   </a>
                 </div>
@@ -474,7 +474,7 @@
                       <i class="fas fa-upload"></i> Importeer CSV
                     </label>
                     <input type="file" id="invoiceImportFile" accept=".csv" style="display: none;" />
-                    <a href="/admin/customers/` + customer.id + `/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <a href="/admin/customers/" + customer.id + "/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
                       <i class="fas fa-plus"></i> Nieuwe Factuur
                     </a>
                   </div>
@@ -650,11 +650,11 @@
       <div class="modal-body" style="padding: 24px;">
         <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
           <div style="position: relative; display: inline-block;">
-            <div id="customerLogoPreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: " + (customer.logo_url ? 'default' : 'pointer') + "; transition: all 0.2s;" " + (!customer.logo_url ? 'onclick="document.getElementById(\'customerLogoUpload\').click();"' : '') + " onmouseover="" + (!customer.logo_url ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : '') + "" onmouseout="" + (!customer.logo_url ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : '') + "">
+            <div id="customerLogoPreviewContainer" class="logo-drop-zone" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; border: 2px solid #e5e7eb; background: #f9fafb; display: flex; align-items: center; justify-content: center; position: relative; cursor: " + (customer.logo_url ? 'default' : 'pointer') + "; transition: all 0.2s;" + (!customer.logo_url ? 'onclick="document.getElementById(\'customerLogoUpload\').click();"' : '') + " onmouseover=\"" + (!customer.logo_url ? 'this.style.borderColor=\'#d1d5db\'; this.style.background=\'#f3f4f6\';' : '') + "\" onmouseout=\"" + (!customer.logo_url ? 'this.style.borderColor=\'#e5e7eb\'; this.style.background=\'#f9fafb\';' : '') + "\">
               <img 
                 id="customerLogoPreview" 
-                src="" + (customer.logo_url || '') + "" 
-                alt="" + (customer.name || customer.company_name || 'Klant') + "" 
+                src=\"" + (customer.logo_url || '') + "\" 
+                alt=\"" + (customer.name || customer.company_name || 'Klant') + "\" 
                 loading="lazy"
                 decoding="async"
                 width="180"
@@ -832,20 +832,20 @@
     // Make employees data available to JavaScript
     window.customerEmployeesData = {
       customerId: '" + (customer && customer.id ? customer.id : '') + "',
-      responsibleEmployees: ` + JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : []) + ",
-      allEmployees: ` + JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : []) + "
+      responsibleEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : []) + ",
+      allEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : []) + "
     };
     
     // Make labels available for edit mode
-    window.statusLabels = ` + JSON.stringify(statusLabels) + ";
-    window.priorityLabels = ` + JSON.stringify(priorityLabels) + ";
-    window.currentStatus = '` + status + `';
-    window.currentPriority = '` + priority + `';
+    window.statusLabels = " + JSON.stringify(statusLabels) + ";
+    window.priorityLabels = " + JSON.stringify(priorityLabels) + ";
+    window.currentStatus = '" + status + "';
+    window.currentPriority = '" + priority + "';
     window.canEditCustomer = " + (typeof canEditCustomer !== 'undefined' ? canEditCustomer : false) + ";
-    window.customerData = ` + JSON.stringify(customer || {}) + ";
+    window.customerData = " + JSON.stringify(customer || {}) + ";
     window.customerInvoicesData = {
       customerId: '" + (customer && customer.id ? customer.id : '') + "',
-      invoices: ` + JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : []) + "
+      invoices: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : []) + "
     };
   </script>
   ",
