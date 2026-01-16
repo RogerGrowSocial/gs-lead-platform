@@ -844,8 +844,8 @@
     window.canEditCustomer = ${typeof canEditCustomer !== 'undefined' ? canEditCustomer : false};
     window.customerData = ${JSON.stringify(customer || {})};
     window.customerInvoicesData = {
-      customerId: '${customer?.id || ''}',
-      invoices: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : [])}
+      customerId: '` + (customer && customer.id ? customer.id : '') + `',
+      invoices: ` + JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : []) + `
     };
   </script>
   `,
