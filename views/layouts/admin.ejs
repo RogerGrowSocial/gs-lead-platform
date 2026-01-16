@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/css/admin/notifications.css">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
     <% stylesheets.forEach(function(stylesheet) { %>
-      <link rel="stylesheet" href="<%= stylesheet %>" media="all">
+      <link rel="stylesheet" href="<%= stylesheet %>" media="all" data-page-specific="true">
     <% }); %>
   <% } %>
   <% if (typeof extraHead !== 'undefined' && extraHead) { %>

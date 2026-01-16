@@ -360,6 +360,15 @@
             newLink.rel = 'stylesheet';
             newLink.href = href;
             newLink.media = link.getAttribute('media') || 'all';
+            
+            // Add load/error handlers to ensure CSS is loaded
+            newLink.onload = function() {
+              console.log('[Client Router] ✅ Loaded stylesheet:', href);
+            };
+            newLink.onerror = function() {
+              console.error('[Client Router] ❌ Failed to load stylesheet:', href);
+            };
+            
             document.head.appendChild(newLink);
             
             // Mark as page-specific for cleanup later
