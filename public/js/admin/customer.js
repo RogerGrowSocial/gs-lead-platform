@@ -222,7 +222,7 @@
     return refreshCustomerAiSummaryWithId(currentCustomerId);
   }
 
-  async function refreshCustomerAiSummaryWithId(customerIdToUse) {
+  async function refreshCustomerAiSummaryWithId(customerIdToUse, showNotification = true) {
     if (!customerIdToUse) {
       console.warn('[AI Summary] No customerId provided');
       return;
@@ -237,7 +237,12 @@
       return;
     }
 
-    const originalBtnHtml = btn ? btn.innerHTML : '';
+    // Store original button HTML if not already stored
+    if (btn && !btn.dataset.originalHtml) {
+      btn.dataset.originalHtml = btn.innerHTML;
+    }
+    const originalBtnHtml = btn?.dataset.originalHtml || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path><path d="M21 3v5h-5"></path></svg>`;
+    
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path><path d="M21 3v5h-5"></path></svg>`;
@@ -283,7 +288,8 @@
         if (summaryLoading) {
           summaryLoading.style.display = 'none';
         }
-        if (window.showNotification) {
+        // Only show notification if explicitly requested (manual refresh)
+        if (showNotification && window.showNotification) {
           window.showNotification('AI samenvatting bijgewerkt', 'success');
         }
       } else {
@@ -293,7 +299,7 @@
         if (summaryLoading) {
           summaryLoading.style.display = 'none';
         }
-        if (window.showNotification) {
+        if (showNotification && window.showNotification) {
           window.showNotification('Geen samenvatting ontvangen', 'error');
         }
       }
@@ -304,13 +310,13 @@
       if (summaryLoading) {
         summaryLoading.style.display = 'none';
       }
-      if (window.showNotification) {
+      if (showNotification && window.showNotification) {
         window.showNotification(err.message || 'Kon AI samenvatting niet genereren', 'error');
       }
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = originalBtnHtml || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path><path d="M21 3v5h-5"></path></svg>`;
+        btn.innerHTML = originalBtnHtml;
       }
     }
   }
@@ -386,13 +392,26 @@
   // AI Chat (Customer)
   // ------------------------------------------------------------
   async function sendAiChatMessage(message) {
-    if (!customerId || !message || !message.trim()) return;
+    const currentCustomerId = getCustomerId();
+    if (!currentCustomerId || !message || !message.trim()) {
+      console.warn('[AI Chat] No customerId or message');
+      return;
+    }
     
     const input = document.getElementById('customerAiChatInput');
     const submitBtn = document.getElementById('customerAiChatSubmit');
     const responseDiv = document.getElementById('customerAiChatResponse');
     
-    if (!input || !submitBtn || !responseDiv) return;
+    if (!input || !submitBtn || !responseDiv) {
+      console.warn('[AI Chat] Required elements not found');
+      return;
+    }
+    
+    // Store original button HTML if not already stored
+    if (!submitBtn.dataset.originalHtml) {
+      submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+    }
+    const originalBtnHtml = submitBtn.dataset.originalHtml;
     
     // Disable input and show loading
     input.disabled = true;
@@ -400,9 +419,10 @@
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     responseDiv.style.display = 'block';
     responseDiv.textContent = 'AI denkt na...';
+    responseDiv.style.color = '#374151';
     
     try {
-      const res = await fetch(`/admin/api/customers/${customerId}/ai-chat`, {
+      const res = await fetch(`/admin/api/customers/${currentCustomerId}/ai-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
@@ -415,6 +435,7 @@
       }
       
       responseDiv.textContent = data.response || 'Geen antwoord ontvangen';
+      responseDiv.style.color = '#374151';
     } catch (err) {
       console.error('AI chat error:', err);
       responseDiv.textContent = 'Fout: ' + (err.message || 'Kon bericht niet verzenden');
@@ -422,15 +443,12 @@
     } finally {
       input.disabled = false;
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m22 2-7 20-4-9-9-4Z"></path>
-          <path d="M22 2 11 13"></path>
-        </svg>
-        Verzend
-      `;
+      submitBtn.innerHTML = originalBtnHtml;
       input.value = '';
       input.focus();
+      // Reset button color to default after sending
+      submitBtn.style.background = '#f3f4f6';
+      submitBtn.style.color = '#6b7280';
     }
   }
 
@@ -456,12 +474,19 @@
   }
 
   // Function to initialize AI summary
+  // Use a flag to prevent multiple initializations
+  let aiSummaryInitialized = false;
   function initAiSummary() {
+    // Prevent multiple initializations
+    if (aiSummaryInitialized) {
+      return;
+    }
+    
     const currentCustomerId = getCustomerId();
     
     if (!currentCustomerId) {
       console.warn('[AI Summary] No customerId available, retrying...');
-      // Retry after a short delay (max 3 retries)
+      // Retry after a short delay (max 5 retries)
       if (!initAiSummary.retryCount) {
         initAiSummary.retryCount = 0;
       }
@@ -474,6 +499,8 @@
       return;
     }
 
+    // Mark as initialized to prevent multiple calls
+    aiSummaryInitialized = true;
     console.log('[AI Summary] Using customerId:', currentCustomerId);
 
     // Auto-generate AI summary if it doesn't exist
@@ -499,33 +526,31 @@
           summaryLoading.style.display = 'block';
         }
         
-        // Generate summary in background (use currentCustomerId)
-        refreshCustomerAiSummaryWithId(currentCustomerId).catch(err => {
+        // Generate summary in background (use currentCustomerId, no notification)
+        refreshCustomerAiSummaryWithId(currentCustomerId, false).catch(err => {
           console.error('[AI Summary] Failed to generate on page load:', err);
           // Error handling is done in refreshCustomerAiSummaryWithId
         });
       }
     }
 
-    // Setup refresh button
+    // Setup refresh button (only once)
     const refreshBtn = document.getElementById('refreshCustomerAiSummaryBtn');
-    if (refreshBtn) {
-      // Remove any existing listeners to prevent duplicates
-      const newRefreshBtn = refreshBtn.cloneNode(true);
-      refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
-      
-      newRefreshBtn.addEventListener('click', (e) => {
+    if (refreshBtn && !refreshBtn.dataset.listenerAdded) {
+      refreshBtn.dataset.listenerAdded = 'true';
+      refreshBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         console.log('[AI Summary] Refresh button clicked');
         const btnCustomerId = getCustomerId();
         if (btnCustomerId) {
-          refreshCustomerAiSummaryWithId(btnCustomerId);
+          // Show notification for manual refresh
+          refreshCustomerAiSummaryWithId(btnCustomerId, true);
         } else {
           console.error('[AI Summary] No customerId available for refresh');
         }
       });
-    } else {
+    } else if (!refreshBtn) {
       console.warn('[AI Summary] Refresh button not found');
     }
   }
@@ -535,16 +560,27 @@
   document.addEventListener('DOMContentLoaded', () => {
     try { renderComputedPanel(); } catch (e) { /* ignore */ }
 
-    // Try to initialize immediately, then retry if needed
-    setTimeout(initAiSummary, 100);
-    // Also retry after longer delays in case script tags load slowly
-    setTimeout(initAiSummary, 500);
-    setTimeout(initAiSummary, 1000);
+    // Initialize AI summary once (with retry logic inside)
+    initAiSummary();
 
     // AI Chat form handler
     const chatForm = document.getElementById('customerAiChatForm');
     const chatInput = document.getElementById('customerAiChatInput');
-    if (chatForm && chatInput) {
+    const chatSubmitBtn = document.getElementById('customerAiChatSubmit');
+    
+    if (chatForm && chatInput && chatSubmitBtn) {
+      // Update submit button color when typing
+      chatInput.addEventListener('input', (e) => {
+        const hasText = e.target.value.trim().length > 0;
+        if (hasText) {
+          chatSubmitBtn.style.background = '#ea5d0d';
+          chatSubmitBtn.style.color = '#ffffff';
+        } else {
+          chatSubmitBtn.style.background = '#f3f4f6';
+          chatSubmitBtn.style.color = '#6b7280';
+        }
+      });
+      
       chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const message = chatInput.value.trim();
