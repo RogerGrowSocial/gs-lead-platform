@@ -3263,6 +3263,18 @@ a:hover [data-slot="badge"].text-foreground {
   margin-bottom: 16px;
 }
 
+/* KPI Cards - Sticky in Overview tab only */
+.kpi-cards-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #ffffff;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .kpi-cards-grid {
   display: grid;
   grid-template-columns: 1fr;
