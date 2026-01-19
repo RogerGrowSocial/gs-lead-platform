@@ -8,13 +8,13 @@
 
   // Activity types for the dropdown
   const ACTIVITY_TYPES = [
-    { value: 'website', label: 'Website' },
-    { value: 'seo', label: 'SEO' },
-    { value: 'ads', label: 'Ads' },
+    { value: 'task', label: 'Taken' }, // Special value for task selection
+    { value: 'klantenwerk', label: 'Klantenwerk' },
+    { value: 'platform', label: 'Platform' },
     { value: 'sales', label: 'Sales' },
     { value: 'support', label: 'Support' },
-    { value: 'admin', label: 'Admin' },
-    { value: 'other', label: 'Overig' }
+    { value: 'overleg', label: 'Overleg' },
+    { value: 'operations', label: 'Operations' }
   ];
 
   class TimeTracker {
@@ -23,6 +23,9 @@
       this.currentEntry = null;
       this.timerInterval = null;
       this.isOpen = false;
+      this.tasks = [];
+      this.customers = [];
+      this.contacts = [];
       
       this.init();
     }
@@ -74,7 +77,7 @@
         padding: 8px;
         color: #bdbec9;
         transition: color 0.2s;
-        margin-right: 20px;
+        margin-right: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -123,7 +126,7 @@
         position: absolute;
         top: calc(100% + 8px);
         right: 0;
-        width: 320px;
+        width: 360px;
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
@@ -167,11 +170,59 @@
               </select>
             </div>
 
+            <!-- Task Selection (shown when "Taken" is selected) -->
+            <div id="timeTrackerTaskContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Taak
+              </label>
+              <input 
+                type="text" 
+                id="timeTrackerTaskSearch" 
+                placeholder="Zoek taak..." 
+                autocomplete="off"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+              />
+              <div id="timeTrackerTaskDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerTaskId" />
+            </div>
+
+            <!-- Customer Selection (shown when task is selected or "Taken" is selected) -->
+            <div id="timeTrackerCustomerContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Klant
+              </label>
+              <input 
+                type="text" 
+                id="timeTrackerCustomerSearch" 
+                placeholder="Zoek klant..." 
+                autocomplete="off"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+              />
+              <div id="timeTrackerCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerCustomerId" />
+            </div>
+
+            <!-- Contact Selection (shown when task is selected) -->
+            <div id="timeTrackerContactContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Contact
+              </label>
+              <input 
+                type="text" 
+                id="timeTrackerContactSearch" 
+                placeholder="Zoek contact..." 
+                autocomplete="off"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+              />
+              <div id="timeTrackerContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerContactId" />
+            </div>
+
             <div style="margin-bottom: 12px;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
-                Notitie (optioneel)
+                Titel <span style="color: #ef4444;">*</span>
               </label>
-              <input type="text" id="timeTrackerNote" placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+              <input type="text" id="timeTrackerNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
             <div style="display: flex; gap: 8px; margin-top: 16px;">
@@ -199,9 +250,9 @@
 
             <div style="margin-bottom: 12px;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
-                Notitie (optioneel)
+                Titel <span style="color: #ef4444;">*</span>
               </label>
-              <input type="text" id="timeTrackerSwitchNote" placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+              <input type="text" id="timeTrackerSwitchNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
             <div style="display: flex; gap: 8px;">
@@ -239,6 +290,32 @@
         closeBtn.addEventListener('click', () => this.closePopover());
       }
 
+      // Activity change handler
+      const activitySelect = this.popover.querySelector('#timeTrackerActivity');
+      if (activitySelect) {
+        activitySelect.addEventListener('change', () => this.handleActivityChange());
+      }
+
+      // Task search handler
+      const taskSearch = this.popover.querySelector('#timeTrackerTaskSearch');
+      if (taskSearch) {
+        taskSearch.addEventListener('input', (e) => this.handleTaskSearch(e.target.value));
+        taskSearch.addEventListener('focus', () => this.loadTasks());
+      }
+
+      // Customer search handler
+      const customerSearch = this.popover.querySelector('#timeTrackerCustomerSearch');
+      if (customerSearch) {
+        customerSearch.addEventListener('input', (e) => this.handleCustomerSearch(e.target.value));
+        customerSearch.addEventListener('focus', () => this.loadCustomers());
+      }
+
+      // Contact search handler
+      const contactSearch = this.popover.querySelector('#timeTrackerContactSearch');
+      if (contactSearch) {
+        contactSearch.addEventListener('input', (e) => this.handleContactSearch(e.target.value));
+      }
+
       // Start button
       const startBtn = this.popover.querySelector('#timeTrackerStart');
       if (startBtn) {
@@ -263,6 +340,259 @@
           this.closePopover();
         }
       });
+    }
+
+    handleActivityChange() {
+      const activity = this.popover.querySelector('#timeTrackerActivity').value;
+      const taskContainer = this.popover.querySelector('#timeTrackerTaskContainer');
+      const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
+      const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
+
+      if (activity === 'task') {
+        taskContainer.style.display = 'block';
+        customerContainer.style.display = 'block';
+        this.loadTasks();
+      } else {
+        taskContainer.style.display = 'none';
+        customerContainer.style.display = 'none';
+        contactContainer.style.display = 'none';
+        // Clear task selection
+        this.popover.querySelector('#timeTrackerTaskId').value = '';
+        this.popover.querySelector('#timeTrackerTaskSearch').value = '';
+        this.popover.querySelector('#timeTrackerCustomerId').value = '';
+        this.popover.querySelector('#timeTrackerCustomerSearch').value = '';
+        this.popover.querySelector('#timeTrackerContactId').value = '';
+        this.popover.querySelector('#timeTrackerContactSearch').value = '';
+      }
+    }
+
+    async loadTasks() {
+      try {
+        const response = await fetch(`/api/employees/${this.userId}/tasks?status=open,in_progress`, {
+          credentials: 'include'
+        });
+        const result = await response.json();
+        
+        if (result.ok && result.data) {
+          this.tasks = result.data.tasks || result.data || [];
+        }
+      } catch (error) {
+        console.error('[TimeTracker] Error loading tasks:', error);
+      }
+    }
+
+    async loadCustomers() {
+      try {
+        // Load customers from API
+        const response = await fetch(`/admin/api/customers/search?q=`, {
+          credentials: 'include'
+        });
+        const result = await response.json();
+        
+        if (result.success && result.customers) {
+          this.customers = result.customers || [];
+        }
+      } catch (error) {
+        console.error('[TimeTracker] Error loading customers:', error);
+      }
+    }
+
+    handleTaskSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
+      if (!query || query.length < 1) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = this.tasks.filter(task => 
+        task.title?.toLowerCase().includes(query.toLowerCase())
+      );
+
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen taken gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(task => `
+          <div 
+            class="task-option" 
+            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
+            onmouseover="this.style.background='#f9fafb'"
+            onmouseout="this.style.background='white'"
+            data-task-id="${task.id}"
+            data-task-title="${task.title || ''}"
+            data-customer-id="${task.customer_id || ''}"
+            data-customer-name="${task.customer?.company_name || task.customer?.first_name + ' ' + task.customer?.last_name || ''}"
+            data-contact-id="${task.contact_id || ''}"
+          >
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${task.title || 'Geen titel'}</div>
+            ${task.customer ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${task.customer.company_name || task.customer.first_name + ' ' + task.customer.last_name}</div>` : ''}
+          </div>
+        `).join('');
+
+        // Add click handlers
+        dropdown.querySelectorAll('.task-option').forEach(option => {
+          option.addEventListener('click', () => {
+            const taskId = option.getAttribute('data-task-id');
+            const taskTitle = option.getAttribute('data-task-title');
+            const customerId = option.getAttribute('data-customer-id');
+            const customerName = option.getAttribute('data-customer-name');
+            const contactId = option.getAttribute('data-contact-id');
+
+            this.popover.querySelector('#timeTrackerTaskId').value = taskId;
+            this.popover.querySelector('#timeTrackerTaskSearch').value = taskTitle;
+            this.popover.querySelector('#timeTrackerTaskDropdown').style.display = 'none';
+
+            if (customerId && customerName) {
+              this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
+              this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
+              this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
+              
+              // Load contacts for this customer
+              if (contactId) {
+                this.loadContactsForCustomer(customerId, contactId);
+              }
+            }
+          });
+        });
+      }
+
+      dropdown.style.display = 'block';
+    }
+
+    async loadContactsForCustomer(customerId, selectedContactId = null) {
+      try {
+        // Try to load contacts - endpoint may not exist yet
+        const response = await fetch(`/admin/api/customers/${customerId}/contacts`, {
+          credentials: 'include'
+        });
+        const result = await response.json();
+        
+        if (result.success && result.contacts) {
+          this.contacts = result.contacts || [];
+        } else if (result.ok && result.data) {
+          this.contacts = result.data || [];
+        } else {
+          this.contacts = [];
+        }
+        
+        const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
+        if (this.contacts.length > 0) {
+          contactContainer.style.display = 'block';
+          
+          if (selectedContactId) {
+            const contact = this.contacts.find(c => c.id === selectedContactId);
+            if (contact) {
+              const contactName = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || '';
+              this.popover.querySelector('#timeTrackerContactId').value = contact.id;
+              this.popover.querySelector('#timeTrackerContactSearch').value = contactName;
+            }
+          }
+        } else {
+          contactContainer.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('[TimeTracker] Error loading contacts:', error);
+        // Hide contact container if endpoint doesn't exist
+        const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
+        if (contactContainer) {
+          contactContainer.style.display = 'none';
+        }
+      }
+    }
+
+    handleCustomerSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerCustomerDropdown');
+      if (!query || query.length < 1) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = this.customers.filter(customer => 
+        (customer.company_name?.toLowerCase().includes(query.toLowerCase())) ||
+        (customer.first_name?.toLowerCase().includes(query.toLowerCase())) ||
+        (customer.last_name?.toLowerCase().includes(query.toLowerCase())) ||
+        (customer.email?.toLowerCase().includes(query.toLowerCase()))
+      );
+
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen klanten gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(customer => `
+          <div 
+            class="customer-option" 
+            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
+            onmouseover="this.style.background='#f9fafb'"
+            onmouseout="this.style.background='white'"
+            data-customer-id="${customer.id}"
+            data-customer-name="${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || ''}"
+          >
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || 'Onbekend'}</div>
+          </div>
+        `).join('');
+
+        dropdown.querySelectorAll('.customer-option').forEach(option => {
+          option.addEventListener('click', () => {
+            const customerId = option.getAttribute('data-customer-id');
+            const customerName = option.getAttribute('data-customer-name');
+
+            this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
+            this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
+            this.popover.querySelector('#timeTrackerCustomerDropdown').style.display = 'none';
+
+            // Load contacts for this customer
+            this.loadContactsForCustomer(customerId);
+          });
+        });
+      }
+
+      dropdown.style.display = 'block';
+    }
+
+    handleContactSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerContactDropdown');
+      if (!query || query.length < 1) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = this.contacts.filter(contact => 
+        (contact.first_name?.toLowerCase().includes(query.toLowerCase())) ||
+        (contact.last_name?.toLowerCase().includes(query.toLowerCase())) ||
+        (contact.email?.toLowerCase().includes(query.toLowerCase()))
+      );
+
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen contacten gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(contact => {
+          const contactName = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || 'Onbekend';
+          return `
+          <div 
+            class="contact-option" 
+            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
+            onmouseover="this.style.background='#f9fafb'"
+            onmouseout="this.style.background='white'"
+            data-contact-id="${contact.id}"
+            data-contact-name="${contactName}"
+          >
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${contactName}</div>
+            ${contact.email ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${contact.email}</div>` : ''}
+          </div>
+        `;
+        }).join('');
+
+        dropdown.querySelectorAll('.contact-option').forEach(option => {
+          option.addEventListener('click', () => {
+            const contactId = option.getAttribute('data-contact-id');
+            const contactName = option.getAttribute('data-contact-name');
+
+            this.popover.querySelector('#timeTrackerContactId').value = contactId;
+            this.popover.querySelector('#timeTrackerContactSearch').value = contactName;
+            this.popover.querySelector('#timeTrackerContactDropdown').style.display = 'none';
+          });
+        });
+      }
+
+      dropdown.style.display = 'block';
     }
 
     async loadCurrentEntry() {
@@ -374,21 +704,41 @@
     closePopover() {
       this.isOpen = false;
       this.popover.style.display = 'none';
+      // Close all dropdowns
+      this.popover.querySelectorAll('[id$="Dropdown"]').forEach(dropdown => {
+        dropdown.style.display = 'none';
+      });
     }
 
     async handleStart() {
       const activity = this.popover.querySelector('#timeTrackerActivity').value;
       const note = this.popover.querySelector('#timeTrackerNote').value.trim();
+      const taskId = this.popover.querySelector('#timeTrackerTaskId').value;
+      const customerId = this.popover.querySelector('#timeTrackerCustomerId').value;
+      const contactId = this.popover.querySelector('#timeTrackerContactId').value;
+
+      if (!note) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Titel is verplicht', 'error');
+        }
+        return;
+      }
 
       try {
+        const body = {
+          project_name: activity === 'task' ? 'Klantenwerk' : activity,
+          note: note
+        };
+
+        if (taskId) body.task_id = taskId;
+        if (customerId) body.customer_id = customerId;
+        if (contactId) body.contact_id = contactId;
+
         const response = await fetch(`/api/employees/${this.userId}/time-entries/clock-in`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            project_name: activity,
-            note: note || null
-          })
+          body: JSON.stringify(body)
         });
 
         const result = await response.json();
@@ -416,13 +766,20 @@
       const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
       const note = this.popover.querySelector('#timeTrackerSwitchNote').value.trim();
 
+      if (!note) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Titel is verplicht', 'error');
+        }
+        return;
+      }
+
       try {
         const response = await fetch(`/api/employees/${this.userId}/time-entries/switch-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            project_name: activity,
+            project_name: activity === 'task' ? 'Klantenwerk' : activity,
             note: note || null
           })
         });
