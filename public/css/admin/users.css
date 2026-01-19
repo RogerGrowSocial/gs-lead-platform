@@ -3275,6 +3275,16 @@ a:hover [data-slot="badge"].text-foreground {
   border-bottom: 1px solid #e5e7eb;
 }
 
+/* Spinner animation for refresh button */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .kpi-cards-grid {
   display: grid;
   grid-template-columns: 1fr;
