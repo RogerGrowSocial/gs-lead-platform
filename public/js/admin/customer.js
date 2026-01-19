@@ -345,10 +345,28 @@
     const summaryLoading = document.getElementById('customerAiSummaryLoading');
     if (summaryText && summaryLoading) {
       const currentText = summaryText.textContent.trim();
-      if (!currentText || currentText === 'AI samenvatting wordt gegenereerd...' || currentText.includes('Klik op')) {
+      // Check if summary exists (not placeholder)
+      const hasSummary = currentText && currentText.length > 20; // Real summary should be longer
+      
+      if (hasSummary) {
+        // Summary already exists, just make sure it's visible
+        summaryText.style.display = 'block';
+        summaryLoading.style.display = 'none';
+      } else {
+        // No summary exists - generate one automatically in background
+        // Show loading state while generating
         summaryText.style.display = 'none';
         summaryLoading.style.display = 'block';
-        refreshCustomerAiSummary().finally(() => {
+        
+        // Generate summary in background
+        refreshCustomerAiSummary().catch(err => {
+          console.error('Failed to generate AI summary:', err);
+          // Show error message if generation fails
+          if (summaryText) {
+            summaryText.textContent = 'AI samenvatting kon niet worden gegenereerd. Klik op "Hergenereer" om het opnieuw te proberen.';
+            summaryText.style.display = 'block';
+          }
+        }).finally(() => {
           summaryText.style.display = 'block';
           summaryLoading.style.display = 'none';
         });

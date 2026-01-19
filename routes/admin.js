@@ -9942,6 +9942,29 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
   try {
     const { id } = req.params;
 
+    // First check if we already have a cached summary
+    const { data: existingSummary } = await supabaseAdmin
+      .from('customer_ai_summaries')
+      .select('id, summary, model, prompt_version, updated_at, created_at, created_by')
+      .eq('customer_id', id)
+      .maybeSingle();
+
+    // If summary exists and is recent (less than 24 hours old), return it
+    if (existingSummary && existingSummary.summary) {
+      const summaryAge = new Date() - new Date(existingSummary.updated_at || existingSummary.created_at);
+      const hoursOld = summaryAge / (1000 * 60 * 60);
+      
+      if (hoursOld < 24) {
+        return res.json({
+          success: true,
+          summary: existingSummary.summary,
+          model: existingSummary.model,
+          cached: true,
+          aiSummary: existingSummary
+        });
+      }
+    }
+
     // Fetch core data (keep small-ish to control tokens)
     const [
       customerResult,
@@ -10021,6 +10044,7 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
       total_paid: totalRevenue - totalOutstanding
     };
 
+    // Generate summary (this will use fallback if OpenAI is not available)
     const { summary, model } = await aiCustomerSummaryService.generateCustomerSummary({
       customer,
       computed: enriched,
@@ -10031,6 +10055,15 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
       emails: emailsResult?.data || [],
       responsibleEmployees: responsibleEmployeesResult?.data || []
     });
+    
+    // Ensure we always have a summary (fallback is built into the service)
+    if (!summary || summary.trim().length === 0) {
+      // This should never happen, but just in case
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Kon geen samenvatting genereren' 
+      });
+    }
 
     const sourceSnapshot = {
       customer_id: id,
