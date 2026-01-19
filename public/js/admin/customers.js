@@ -729,65 +729,76 @@
   // Make showCustomerActions globally available
   window.showCustomerActions = showCustomerActions;
 
-  // Handle customer actions menu
-  const menu = document.getElementById('customerActionsMenu');
-  if (menu) {
-    menu.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.mail-action-item');
-      if (!btn || !currentCustomerId) return;
-      
-      const action = btn.getAttribute('data-action');
-      menu.style.display = 'none';
-      
-      if (action === 'view') {
-        window.location.href = `/admin/customers/${currentCustomerId}`;
-      } else if (action === 'tickets') {
-        window.location.href = `/admin/tickets?customer_id=${currentCustomerId}`;
-      } else if (action === 'emails') {
-        window.location.href = `/admin/mail?customer_id=${currentCustomerId}`;
-      } else if (action === 'edit') {
-        window.location.href = `/admin/customers/${currentCustomerId}?action=edit`;
-      } else if (action === 'delete') {
-        if (confirm('Weet je zeker dat je deze klant wilt verwijderen?')) {
-          try {
-            const res = await fetch(`/admin/api/customers/${currentCustomerId}`, {
-              method: 'DELETE'
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-              if (window.showNotification) {
-                window.showNotification('Klant verwijderd', 'success', 3000);
+  // Initialize customer actions menu handler
+  function initCustomerActionsMenu() {
+    const menu = document.getElementById('customerActionsMenu');
+    if (menu) {
+      menu.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.mail-action-item');
+        if (!btn || !currentCustomerId) return;
+        
+        const action = btn.getAttribute('data-action');
+        menu.style.display = 'none';
+        
+        if (action === 'view') {
+          window.location.href = `/admin/customers/${currentCustomerId}`;
+        } else if (action === 'tickets') {
+          window.location.href = `/admin/tickets?customer_id=${currentCustomerId}`;
+        } else if (action === 'emails') {
+          window.location.href = `/admin/mail?customer_id=${currentCustomerId}`;
+        } else if (action === 'edit') {
+          window.location.href = `/admin/customers/${currentCustomerId}?action=edit`;
+        } else if (action === 'delete') {
+          if (confirm('Weet je zeker dat je deze klant wilt verwijderen?')) {
+            try {
+              const res = await fetch(`/admin/api/customers/${currentCustomerId}`, {
+                method: 'DELETE'
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                if (window.showNotification) {
+                  window.showNotification('Klant verwijderd', 'success', 3000);
+                }
+                location.reload();
+              } else {
+                throw new Error(data.error || 'Kon klant niet verwijderen');
               }
-              location.reload();
-            } else {
-              throw new Error(data.error || 'Kon klant niet verwijderen');
-            }
-          } catch (err) {
-            if (window.showNotification) {
-              window.showNotification('Fout: ' + err.message, 'error', 5000);
+            } catch (err) {
+              if (window.showNotification) {
+                window.showNotification('Fout: ' + err.message, 'error', 5000);
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
   }
 
   // Initialize on DOMContentLoaded (first page load)
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       // Small delay to ensure all elements are rendered
-      setTimeout(initCustomersPage, 50);
+      setTimeout(() => {
+        initCustomersPage();
+        initCustomerActionsMenu();
+      }, 50);
     });
   } else {
     // DOM already loaded, initialize with small delay to ensure elements exist
-    setTimeout(initCustomersPage, 50);
+    setTimeout(() => {
+      initCustomersPage();
+      initCustomerActionsMenu();
+    }, 50);
   }
 
   // Also initialize when page is loaded via client-router
   window.addEventListener('page:loaded', function(e) {
     if (window.location.pathname.includes('/admin/customers')) {
       // Longer delay for client-router to ensure DOM is fully ready
-      setTimeout(initCustomersPage, 150);
+      setTimeout(() => {
+        initCustomersPage();
+        initCustomerActionsMenu();
+      }, 150);
     }
   });
 })();
