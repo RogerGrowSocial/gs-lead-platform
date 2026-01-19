@@ -163,73 +163,6 @@
           </div>
         </div>
 
-        <!-- KPI Cards - Always Visible -->
-        <div class="kpi-cards-container">
-          <div class="kpi-cards-grid">
-            <!-- Open Taken Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Open taken</p>
-                <p class="kpi-value">${(stats.open_tasks || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list">
-                  <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                  <path d="M12 11h4"></path>
-                  <path d="M12 16h4"></path>
-                  <path d="M8 11h.01"></path>
-                  <path d="M8 16h.01"></path>
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Open Tickets Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Open tickets</p>
-                <p class="kpi-value">${(stats.open_tickets || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9z"></path>
-                  <path d="M8 9v6"></path>
-                  <path d="M16 9v6"></path>
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Openstaand Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Openstaand</p>
-                <p class="kpi-value">${formatCurrency(stats.total_outstanding || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" x2="12" y1="8" y2="12"></line>
-                  <line x1="12" x2="12.01" y1="16" y2="16"></line>
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Totaal Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Totaal</p>
-                <p class="kpi-value">${formatCurrency(stats.total_revenue || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
-                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
-                  <polyline points="16 7 22 7 22 13"></polyline>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Main Content Tabs -->
         <div class="customer-main-tabs-container">
           <div class="customer-main-tabs-header">
@@ -280,6 +213,72 @@
 
           <!-- Overview Tab Content -->
           <div class="customer-main-tab-content customer-main-tab-content-active" id="main-tab-overview">
+            <!-- KPI Cards - Only visible in Overview tab -->
+            <div class="kpi-cards-container kpi-cards-sticky">
+              <div class="kpi-cards-grid">
+                <!-- Open Taken Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Open taken</p>
+                    <p class="kpi-value">${(stats.open_tasks || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list">
+                      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                      <path d="M12 11h4"></path>
+                      <path d="M12 16h4"></path>
+                      <path d="M8 11h.01"></path>
+                      <path d="M8 16h.01"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Open Tickets Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Open tickets</p>
+                    <p class="kpi-value">${(stats.open_tickets || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9z"></path>
+                      <path d="M8 9v6"></path>
+                      <path d="M16 9v6"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Openstaand Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Openstaand</p>
+                    <p class="kpi-value">${formatCurrency(stats.total_outstanding || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" x2="12" y1="8" y2="12"></line>
+                      <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Totaal Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Totaal</p>
+                    <p class="kpi-value">${formatCurrency(stats.total_revenue || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                      <polyline points="16 7 22 7 22 13"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
             <!-- Overview content can be added here if needed -->
           </div>
 
