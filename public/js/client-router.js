@@ -560,7 +560,10 @@
     let prefetchTimeout = null;
     
     document.addEventListener('mouseenter', (e) => {
-      const link = e.target.closest('a');
+      // e.target might be a text node, so we need to check if it's an element
+      const target = e.target.nodeType === Node.TEXT_NODE ? e.target.parentElement : e.target;
+      if (!target || typeof target.closest !== 'function') return;
+      const link = target.closest('a');
       if (!link) return;
       
       const href = link.getAttribute('href');

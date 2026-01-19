@@ -8425,14 +8425,16 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
     } else if (sortColumn === 'status') {
       customerQuery = customerQuery.order('status', { ascending })
     } else if (sortColumn === 'priority') {
-      customerQuery = customerQuery.order('priority', { ascending })
+      // Priority sorting will be done client-side to maintain hierarchy: VIP → HOOG → NORMAAL → LAAG
+      // Order by name first as temporary sort, will be re-sorted client-side
+      customerQuery = customerQuery.order('name', { ascending: true })
     } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
       // For activity sorting, use updated_at as fallback
       customerQuery = customerQuery.order('updated_at', { ascending })
     }
     
-    // Secondary sort by name for consistent ordering
-    if (sortColumn !== 'name') {
+    // Secondary sort by name for consistent ordering (except for priority which will be fully client-side sorted)
+    if (sortColumn !== 'name' && sortColumn !== 'priority') {
       customerQuery = customerQuery.order('name', { ascending: true })
     }
     
@@ -8672,25 +8674,41 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
         }
       });
       
-      // Re-sort by branch name if sorting by branch (client-side for alphabetical sorting)
-      // Note: Other columns are already sorted by database, so we only need client-side sorting for branch
-      if (customers.length > 0 && sortColumn === 'branch') {
+      // Client-side sorting for branch and priority
+      if (customers.length > 0 && (sortColumn === 'branch' || sortColumn === 'priority')) {
         const sortStart = Date.now();
         customers.sort((a, b) => {
-          const aBranch = (a.branch_name || '').toLowerCase();
-          const bBranch = (b.branch_name || '').toLowerCase();
-          if (aBranch === bBranch) {
-            // Secondary sort by name
-            return (a.name || '').localeCompare(b.name || '');
+          if (sortColumn === 'branch') {
+            // Sort by branch name (alphabetical)
+            const aBranch = (a.branch_name || '').toLowerCase();
+            const bBranch = (b.branch_name || '').toLowerCase();
+            if (aBranch === bBranch) {
+              return (a.name || '').localeCompare(b.name || '');
+            }
+            if (!aBranch) return 1; // nulls last
+            if (!bBranch) return -1; // nulls last
+            const comparison = aBranch.localeCompare(bBranch);
+            return ascending ? comparison : -comparison;
+          } else if (sortColumn === 'priority') {
+            // Priority hierarchy: VIP (4) → HOOG (3) → NORMAAL (2) → LAAG (1)
+            const priorityOrder = { 'vip': 4, 'high': 3, 'normal': 2, 'low': 1 };
+            const aPriority = priorityOrder[a.priority] || 0;
+            const bPriority = priorityOrder[b.priority] || 0;
+            
+            if (aPriority === bPriority) {
+              // Secondary sort by name
+              return (a.name || '').localeCompare(b.name || '');
+            }
+            
+            // Always sort VIP → HOOG → NORMAAL → LAAG (descending order)
+            // If ascending is false, reverse the order
+            return ascending ? (bPriority - aPriority) : (aPriority - bPriority);
           }
-          if (!aBranch) return 1; // nulls last
-          if (!bBranch) return -1; // nulls last
-          const comparison = aBranch.localeCompare(bBranch);
-          return ascending ? comparison : -comparison;
+          return 0;
         });
         timings['client_sort'] = Date.now() - sortStart;
         if (timings['client_sort'] > 0) {
-          console.error(`  ✅ client-side branch sort: ${timings['client_sort']}ms`);
+          console.error(`  ✅ client-side ${sortColumn} sort: ${timings['client_sort']}ms`);
         }
       }
     }
@@ -9198,13 +9216,15 @@ router.get('/api/customers/table', requireAuth, isEmployeeOrAdmin, async (req, r
     } else if (sortColumn === 'status') {
       customerQuery = customerQuery.order('status', { ascending })
     } else if (sortColumn === 'priority') {
-      customerQuery = customerQuery.order('priority', { ascending })
+      // Priority sorting will be done client-side to maintain hierarchy: VIP → HOOG → NORMAAL → LAAG
+      // Order by name first as temporary sort, will be re-sorted client-side
+      customerQuery = customerQuery.order('name', { ascending: true })
     } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
       customerQuery = customerQuery.order('updated_at', { ascending })
     }
     
-    // Secondary sort by name for consistent ordering
-    if (sortColumn !== 'name') {
+    // Secondary sort by name for consistent ordering (except for priority which will be fully client-side sorted)
+    if (sortColumn !== 'name' && sortColumn !== 'priority') {
       customerQuery = customerQuery.order('name', { ascending: true })
     }
     
@@ -9245,18 +9265,36 @@ router.get('/api/customers/table', requireAuth, isEmployeeOrAdmin, async (req, r
         }
       })
       
-      // Client-side sort for branch if needed
-      if (sortColumn === 'branch') {
+      // Client-side sorting for branch and priority
+      if (sortColumn === 'branch' || sortColumn === 'priority') {
         customers.sort((a, b) => {
-          const aBranch = (a.branch_name || '').toLowerCase()
-          const bBranch = (b.branch_name || '').toLowerCase()
-          if (aBranch === bBranch) {
-            return (a.name || '').localeCompare(b.name || '')
+          if (sortColumn === 'branch') {
+            // Sort by branch name (alphabetical)
+            const aBranch = (a.branch_name || '').toLowerCase()
+            const bBranch = (b.branch_name || '').toLowerCase()
+            if (aBranch === bBranch) {
+              return (a.name || '').localeCompare(b.name || '')
+            }
+            if (!aBranch) return 1
+            if (!bBranch) return -1
+            const comparison = aBranch.localeCompare(bBranch)
+            return ascending ? comparison : -comparison
+          } else if (sortColumn === 'priority') {
+            // Priority hierarchy: VIP (4) → HOOG (3) → NORMAAL (2) → LAAG (1)
+            const priorityOrder = { 'vip': 4, 'high': 3, 'normal': 2, 'low': 1 }
+            const aPriority = priorityOrder[a.priority] || 0
+            const bPriority = priorityOrder[b.priority] || 0
+            
+            if (aPriority === bPriority) {
+              // Secondary sort by name
+              return (a.name || '').localeCompare(b.name || '')
+            }
+            
+            // Always sort VIP → HOOG → NORMAAL → LAAG (descending order)
+            // If ascending is false, reverse the order
+            return ascending ? (bPriority - aPriority) : (aPriority - bPriority)
           }
-          if (!aBranch) return 1
-          if (!bBranch) return -1
-          const comparison = aBranch.localeCompare(bBranch)
-          return ascending ? comparison : -comparison
+          return 0
         })
       }
     }

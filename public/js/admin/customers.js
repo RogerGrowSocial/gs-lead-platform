@@ -1,74 +1,66 @@
 // Customers page JavaScript
 
-document.addEventListener('DOMContentLoaded', () => {
-  const searchInput = document.getElementById('searchInput');
-  const statusSelect = document.getElementById('statusSelect');
-  const prioritySelect = document.getElementById('prioritySelect');
-  const createCustomerBtn = document.getElementById('createCustomerBtn');
-  const customersTableBody = document.getElementById('customersTableBody');
+(function() {
+  'use strict';
 
-  // Initialize sorting
-  initSorting();
+  // Store sorting state outside function to persist between clicks
+  // Initialize from URL on first load
+  let currentSortBy = null;
+  let currentSortOrder = null;
 
-  // Filter customers
-  function applyFilters() {
-    const search = searchInput?.value.toLowerCase() || '';
+  // Initialize from URL immediately
+  (function() {
+    const url = new URL(window.location.href);
+    currentSortBy = url.searchParams.get('sortBy') || 'name';
+    currentSortOrder = url.searchParams.get('sortOrder') || 'asc';
+  })();
+
+  function initCustomersPage() {
+    const searchInput = document.getElementById('searchInput');
+    const statusSelect = document.getElementById('statusSelect');
+    const prioritySelect = document.getElementById('prioritySelect');
+    const createCustomerBtn = document.getElementById('createCustomerBtn');
+    const customersTableBody = document.getElementById('customersTableBody');
+
+    // Skip if page elements don't exist (wrong page)
+    if (!customersTableBody) return;
+
+    // Initialize sorting
+    initSorting();
+
+  // Filter customers - reload page with filters in URL (server-side filtering)
+  function applyFiltersAndReload() {
+    const search = searchInput?.value.trim() || '';
     const status = statusSelect?.value || 'all';
     const priority = prioritySelect?.value || 'all';
-
-    // Status mapping (Dutch labels to values)
-    const statusMapping = {
-      'actief': 'active',
-      'inactief': 'inactive',
-      'lead': 'lead',
-      'prospect': 'prospect'
-    };
-
-    // Priority mapping (Dutch labels to values)
-    const priorityMapping = {
-      'laag': 'low',
-      'normaal': 'normal',
-      'hoog': 'high',
-      'vip': 'vip'
-    };
-
-    const rows = customersTableBody?.querySelectorAll('.table-body-row') || [];
-    rows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      
-      // Get status badge and map to value
-      const statusBadge = row.querySelector('.status-badge');
-      const rowStatusText = statusBadge?.textContent.toLowerCase() || '';
-      const rowStatus = statusMapping[rowStatusText] || rowStatusText;
-      
-      // Get priority badge and map to value
-      const priorityBadges = Array.from(row.querySelectorAll('.status-badge'));
-      const priorityBadge = priorityBadges.find(b => {
-        const text = b.textContent.toLowerCase();
-        return text.includes('laag') || text.includes('normaal') || 
-               text.includes('hoog') || text.includes('vip');
-      });
-      const rowPriorityText = priorityBadge?.textContent.toLowerCase() || '';
-      const rowPriority = priorityMapping[rowPriorityText] || rowPriorityText;
-
-      const matchesSearch = !search || text.includes(search);
-      const matchesStatus = status === 'all' || rowStatus === status;
-      const matchesPriority = priority === 'all' || rowPriority === priority;
-
-      row.style.display = (matchesSearch && matchesStatus && matchesPriority) ? '' : 'none';
-    });
-
-    // Update results count
-    const visibleCount = Array.from(rows).filter(r => r.style.display !== 'none').length;
-    const info = document.getElementById('paginationInfo');
-    if (info) {
-      info.textContent = `Toont ${visibleCount} klanten`;
+    
+    // Build URL with filters
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', '1'); // Reset to page 1 when filtering
+    url.searchParams.set('status', status);
+    url.searchParams.set('priority', priority);
+    if (search) {
+      url.searchParams.set('search', search);
+    } else {
+      url.searchParams.delete('search');
     }
+    
+    // Reload page with filters
+    window.location.href = url.toString();
   }
 
-  if (searchInput) searchInput.addEventListener('input', applyFilters);
-  if (statusSelect) statusSelect.addEventListener('change', applyFilters);
-  if (prioritySelect) prioritySelect.addEventListener('change', applyFilters);
+  if (searchInput) {
+    // Debounce search input
+    let searchTimeout;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        applyFiltersAndReload();
+      }, 500); // Wait 500ms after user stops typing
+    });
+  }
+  if (statusSelect) statusSelect.addEventListener('change', applyFiltersAndReload);
+  if (prioritySelect) prioritySelect.addEventListener('change', applyFiltersAndReload);
 
   // Make table rows clickable - navigate to customer detail page
   const customerRows = document.querySelectorAll('.table-body-row[data-customer-id]');
@@ -310,29 +302,88 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize sorting functionality
   function initSorting() {
     const sortableHeaders = document.querySelectorAll('.table-header-cell.sortable');
-    const currentUrl = new URL(window.location.href);
-    const currentSortBy = currentUrl.searchParams.get('sortBy') || 'name';
-    const currentSortOrder = currentUrl.searchParams.get('sortOrder') || 'asc';
+    if (sortableHeaders.length === 0) {
+      console.warn('[Customers] No sortable headers found, retrying in 100ms...');
+      // Retry after a short delay in case DOM isn't ready yet
+      setTimeout(() => {
+        const retryHeaders = document.querySelectorAll('.table-header-cell.sortable');
+        if (retryHeaders.length > 0) {
+          console.log('[Customers] Retry successful: Found', retryHeaders.length, 'headers, initializing sorting');
+          initSorting();
+        } else {
+          console.error('[Customers] Retry failed: Still no headers found');
+        }
+      }, 100);
+      return;
+    }
+    
+    console.log('[Customers] Initializing sorting with', sortableHeaders.length, 'headers. Current sort:', currentSortBy, currentSortOrder);
 
-    // Update active header styling
+    // Read current sort state from URL (sync with URL on each init)
+    const currentUrl = new URL(window.location.href);
+    const urlSortBy = currentUrl.searchParams.get('sortBy');
+    const urlSortOrder = currentUrl.searchParams.get('sortOrder');
+    
+    // Update from URL if present (for page refresh or direct navigation)
+    if (urlSortBy) {
+      currentSortBy = urlSortBy;
+    } else if (!currentSortBy) {
+      currentSortBy = 'name';
+    }
+    
+    if (urlSortOrder) {
+      currentSortOrder = urlSortOrder;
+    } else if (!currentSortOrder) {
+      currentSortOrder = 'asc';
+    }
+
+    // Remove old event listeners by cloning headers (prevents duplicate listeners)
     sortableHeaders.forEach(header => {
+      const newHeader = header.cloneNode(true);
+      header.parentNode.replaceChild(newHeader, header);
+    });
+
+    // Re-select headers after cloning
+    const freshHeaders = document.querySelectorAll('.table-header-cell.sortable');
+
+    // Update active header styling and add click handlers
+    freshHeaders.forEach(header => {
       const sortValue = header.getAttribute('data-sort');
       if (sortValue === currentSortBy) {
         header.classList.add('active', currentSortOrder);
       }
 
-      // Add click handler
-      header.addEventListener('click', function(e) {
+      // Add click handler - use arrow function to ensure correct closure
+      header.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
-        const sortBy = this.getAttribute('data-sort');
-        let newSortOrder = 'asc';
+        // Get sort value from clicked header (use currentTarget to ensure we get the header, not child element)
+        const clickedHeader = e.currentTarget;
+        const sortBy = clickedHeader.getAttribute('data-sort');
         
-        // Toggle sort order if clicking the same column
+        // Determine new sort order
+        let newSortOrder = 'asc';
         if (sortBy === currentSortBy) {
+          // Same column: toggle order
           newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+          // Different column: start with asc
+          newSortOrder = 'asc';
         }
+        
+        // Debug logging
+        console.log('[Customers Sorting] Click:', {
+          clicked: sortBy,
+          currentSortBy: currentSortBy,
+          currentSortOrder: currentSortOrder,
+          newSortOrder: newSortOrder,
+          willToggle: sortBy === currentSortBy
+        });
+        
+        // Update current values immediately (before AJAX call)
+        currentSortBy = sortBy;
+        currentSortOrder = newSortOrder;
         
         // Update sorting via AJAX (no page reload)
         updateTableSorting(sortBy, newSortOrder);
@@ -853,5 +904,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-});
+
+  // Initialize on DOMContentLoaded (first page load)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      // Small delay to ensure all elements are rendered
+      setTimeout(initCustomersPage, 50);
+    });
+  } else {
+    // DOM already loaded, initialize with small delay to ensure elements exist
+    setTimeout(initCustomersPage, 50);
+  }
+
+  // Also initialize when page is loaded via client-router
+  window.addEventListener('page:loaded', function(e) {
+    if (window.location.pathname.includes('/admin/customers')) {
+      // Longer delay for client-router to ensure DOM is fully ready
+      setTimeout(initCustomersPage, 150);
+    }
+  });
+})();
 
