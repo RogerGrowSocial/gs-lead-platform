@@ -468,10 +468,10 @@
               </button>
             </div>
             <div id="customerAiSummaryBox" style="margin-bottom: 20px;">
-              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6; min-height: 60px;">
-                ${(customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : '')}
+              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6; min-height: 60px; display: <%= (customer.aiSummary && customer.aiSummary.summary && customer.aiSummary.summary.trim().length > 20) ? 'block' : 'none' %>;">
+                <%= (customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : '') %>
               </div>
-              <div id="customerAiSummaryLoading" style="display: none; text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
+              <div id="customerAiSummaryLoading" style="display: <%= (customer.aiSummary && customer.aiSummary.summary && customer.aiSummary.summary.trim().length > 20) ? 'none' : 'block' %>; text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
                 <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
                 AI samenvatting wordt gegenereerd...
               </div>
