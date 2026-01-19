@@ -9190,6 +9190,33 @@ router.get('/api/contacts/search', requireAuth, isAdmin, async (req, res) => {
   }
 });
 
+// GET /admin/api/customers/:id/contacts - Get contacts for a customer
+router.get('/api/customers/:id/contacts', requireAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data: contacts, error } = await supabaseAdmin
+      .from('contacts')
+      .select('id, name, first_name, last_name, email, customer_id')
+      .eq('customer_id', id)
+      .order('first_name', { ascending: true })
+      .order('last_name', { ascending: true });
+    
+    if (error) throw error;
+    
+    res.json({ 
+      success: true, 
+      contacts: contacts || [] 
+    });
+  } catch (err) {
+    console.error('Error fetching customer contacts:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || 'Fout bij ophalen contactpersonen' 
+    });
+  }
+});
+
 // Search companies via KVK API
 // CRITICAL: This route MUST come BEFORE /customers/:id to prevent Express from matching "search-kvk" as an ID
 router.get('/customers/search-kvk', requireAuth, isAdmin, async (req, res) => {
