@@ -15,6 +15,14 @@
     currentSortOrder = url.searchParams.get('sortOrder') || 'asc';
   })();
 
+  // Drag and drop state variables (must be outside functions to persist)
+  let draggedRow = null;
+  let draggedCustomerId = null;
+  let dragStartHandle = null;
+  let scrollPosition = { x: 0, y: 0 };
+  let tableContainer = null;
+  let tableScroll = null;
+
   function initCustomersPage() {
     const searchInput = document.getElementById('searchInput');
     const statusSelect = document.getElementById('statusSelect');
@@ -62,213 +70,16 @@
   if (statusSelect) statusSelect.addEventListener('change', applyFiltersAndReload);
   if (prioritySelect) prioritySelect.addEventListener('change', applyFiltersAndReload);
 
-  // Make table rows clickable - navigate to customer detail page
-  const customerRows = document.querySelectorAll('.table-body-row[data-customer-id]');
-  customerRows.forEach(row => {
-    row.addEventListener('click', function(e) {
-      // Don't navigate if clicking on the actions button or drag handle
-      if (e.target.closest('.actions-button') || e.target.closest('.customer-drag-handle') || e.target.closest('td[onclick]')) {
-        return;
-      }
-      
-      const customerId = this.getAttribute('data-customer-id');
-      if (customerId) {
-        window.location.href = `/admin/customers/${customerId}`;
-      }
-    });
-  });
-  
-  // Drag and drop for sort order (Apple-style)
-  let draggedRow = null;
-  let draggedCustomerId = null;
-  let dragStartHandle = null;
-  let scrollPosition = { x: 0, y: 0 };
-  let tableContainer = null;
-  
-  // Get table container once
+  // Get table container and scroll once
   tableContainer = document.querySelector('.table-container');
-  const tableScroll = document.querySelector('.table-scroll');
+  tableScroll = document.querySelector('.table-scroll');
   
-  // Make rows draggable
-  customerRows.forEach(row => {
-    row.setAttribute('draggable', 'false'); // Start disabled, enable on handle mousedown
-    
-    row.addEventListener('dragstart', function(e) {
-      // Only allow drag if started from drag handle
-      if (!dragStartHandle) {
-        e.preventDefault();
-        return false;
-      }
-      
-      // Save scroll position to prevent layout shift
-      if (tableScroll) {
-        scrollPosition.x = tableScroll.scrollLeft || 0;
-        scrollPosition.y = tableScroll.scrollTop || 0;
-      }
-      
-      // Lock table container to prevent scrolling
-      if (tableContainer) {
-        tableContainer.classList.add('dragging-active');
-        tableContainer.style.overflowX = 'hidden';
-      }
-      
-      draggedRow = this;
-      draggedCustomerId = this.getAttribute('data-customer-id');
-      this.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', draggedCustomerId);
-      
-      // Prevent default drag image
-      const dragImage = document.createElement('div');
-      dragImage.style.position = 'absolute';
-      dragImage.style.top = '-9999px';
-      dragImage.style.width = '1px';
-      dragImage.style.height = '1px';
-      document.body.appendChild(dragImage);
-      e.dataTransfer.setDragImage(dragImage, 0, 0);
-      setTimeout(() => document.body.removeChild(dragImage), 0);
-    });
-    
-    row.addEventListener('dragend', function(e) {
-      resetDragState();
-    });
-    
-    row.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = 'move';
-      
-      // Force maintain scroll position
-      if (tableScroll && scrollPosition) {
-        if (tableScroll.scrollLeft !== scrollPosition.x) {
-          tableScroll.scrollLeft = scrollPosition.x;
-        }
-        if (tableScroll.scrollTop !== scrollPosition.y) {
-          tableScroll.scrollTop = scrollPosition.y;
-        }
-      }
-      
-      // Prevent any horizontal scrolling
-      if (tableContainer) {
-        tableContainer.style.overflowX = 'hidden';
-      }
-      
-      if (draggedRow && draggedRow !== this) {
-        // Remove drag-over from all rows
-        document.querySelectorAll('.table-body-row').forEach(r => {
-          r.classList.remove('drag-over');
-        });
-        
-        // Add drag-over to this row (shows blue line above)
-        this.classList.add('drag-over');
-      }
-    });
-    
-    row.addEventListener('dragleave', function(e) {
-      // Only remove if we're actually leaving the row (not just moving to a child)
-      const rect = this.getBoundingClientRect();
-      const y = e.clientY;
-      if (y < rect.top || y > rect.bottom) {
-        this.classList.remove('drag-over');
-      }
-    });
-    
-    row.addEventListener('drop', async function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      this.classList.remove('drag-over');
-      
-      if (!draggedRow || !draggedCustomerId) {
-        resetDragState();
-        return;
-      }
-      
-      const targetCustomerId = this.getAttribute('data-customer-id');
-      if (!targetCustomerId || targetCustomerId === draggedCustomerId) {
-        resetDragState();
-        return;
-      }
-      
-      // Get all visible rows (respecting filters)
-      const allRows = Array.from(document.querySelectorAll('.table-body-row[data-customer-id]'))
-        .filter(row => row.style.display !== 'none');
-      const draggedIndex = allRows.indexOf(draggedRow);
-      const targetIndex = allRows.indexOf(this);
-      
-      // If same position, do nothing
-      if (draggedIndex === targetIndex) {
-        resetDragState();
-        return;
-      }
-      
-      // Show loading state
-      if (window.showNotification) {
-        window.showNotification('Volgorde bijwerken...', 'info', 1000);
-      }
-      
-      // Move the customer directly to target position (much faster!)
-      try {
-        const response = await fetch(`/admin/api/customers/${draggedCustomerId}/move`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify({ targetIndex })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          // Reload page to show new order
-          location.reload();
-        } else {
-          throw new Error(data.error || 'Kon volgorde niet wijzigen');
-        }
-      } catch (error) {
-        console.error('Error moving customer:', error);
-        if (window.showNotification) {
-          window.showNotification('Fout: ' + error.message, 'error', 5000);
-        }
-        resetDragState();
-      }
-    });
-  });
-  
-  // Make drag handle trigger drag
-  const dragHandles = document.querySelectorAll('.customer-drag-handle');
-  dragHandles.forEach(handle => {
-    handle.addEventListener('mousedown', function(e) {
-      e.stopPropagation();
-      const row = this.closest('.table-body-row[data-customer-id]');
-      if (!row) return;
-      
-      // Mark that drag started from handle
-      dragStartHandle = this;
-      
-      // Enable dragging on the row
-      row.setAttribute('draggable', 'true');
-      
-      // Prevent text selection
-      document.body.style.userSelect = 'none';
-    });
-    
-    handle.addEventListener('mouseup', function() {
-      // Reset after a short delay to allow drag to start
-      setTimeout(() => {
-        if (!draggedRow) {
-          dragStartHandle = null;
-          const row = this.closest('.table-body-row[data-customer-id]');
-          if (row) {
-            row.setAttribute('draggable', 'false');
-          }
-          document.body.style.userSelect = '';
-        }
-      }, 100);
-    });
-  });
-  
-  // Reset drag state
+  // Initialize row click handlers and drag handlers
+  initRowClickHandlers();
+  initDragHandlers();
+  }
+
+  // Reset drag state function (used by drag handlers)
   function resetDragState() {
     dragStartHandle = null;
     if (draggedRow) {
@@ -704,7 +515,16 @@
   // Re-initialize drag handlers after AJAX update
   function initDragHandlers() {
     const customerRows = document.querySelectorAll('.table-body-row[data-customer-id]');
-    const tableScroll = document.querySelector('.table-scroll');
+    
+    // Ensure tableScroll is set
+    if (!tableScroll) {
+      tableScroll = document.querySelector('.table-scroll');
+    }
+    if (!tableContainer) {
+      tableContainer = document.querySelector('.table-container');
+    }
+    
+    console.log('[Customers] Initializing drag handlers for', customerRows.length, 'rows');
     
     // Re-initialize drag handlers for rows
     customerRows.forEach(row => {
