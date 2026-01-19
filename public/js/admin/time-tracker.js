@@ -8,7 +8,6 @@
 
   // Activity types for the dropdown
   const ACTIVITY_TYPES = [
-    { value: 'task', label: 'Taken' }, // Special value for task selection
     { value: 'klantenwerk', label: 'Klantenwerk' },
     { value: 'platform', label: 'Platform' },
     { value: 'sales', label: 'Sales' },
@@ -166,7 +165,7 @@
                 Waar werk je aan?
               </label>
               <select id="timeTrackerActivity" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
-                ${ACTIVITY_TYPES.map(type => `<option value="${type.value}">${type.label}</option>`).join('')}
+                ${ACTIVITY_TYPES.map(type => `<option value="${type.value}" ${type.value === 'klantenwerk' ? 'selected' : ''}>${type.label}</option>`).join('')}
               </select>
             </div>
 
@@ -294,6 +293,10 @@
       const activitySelect = this.popover.querySelector('#timeTrackerActivity');
       if (activitySelect) {
         activitySelect.addEventListener('change', () => this.handleActivityChange());
+        // Initialize with default (klantenwerk) - show task and customer fields
+        if (activitySelect.value === 'klantenwerk') {
+          this.handleActivityChange();
+        }
       }
 
       // Task search handler
@@ -348,10 +351,11 @@
       const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
       const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
 
-      if (activity === 'task') {
+      if (activity === 'klantenwerk') {
         taskContainer.style.display = 'block';
         customerContainer.style.display = 'block';
         this.loadTasks();
+        this.loadCustomers();
       } else {
         taskContainer.style.display = 'none';
         customerContainer.style.display = 'none';
@@ -724,6 +728,12 @@
     openPopover() {
       this.isOpen = true;
       this.popover.style.display = 'block';
+      
+      // Initialize activity fields if klantenwerk is selected (default)
+      const activitySelect = this.popover.querySelector('#timeTrackerActivity');
+      if (activitySelect && activitySelect.value === 'klantenwerk') {
+        this.handleActivityChange();
+      }
     }
 
     closePopover() {
@@ -751,7 +761,7 @@
 
       try {
         const body = {
-          project_name: activity === 'task' ? 'Klantenwerk' : activity,
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : activity,
           note: note
         };
 
@@ -804,7 +814,7 @@
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            project_name: activity === 'task' ? 'Klantenwerk' : activity,
+            project_name: activity === 'klantenwerk' ? 'Klantenwerk' : activity,
             note: note || null
           })
         });
