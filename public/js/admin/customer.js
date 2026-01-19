@@ -530,6 +530,11 @@
     }
   }
 
+  // Render computed panel ASAP (and again on DOM ready for safety)
+  try { renderComputedPanel(); } catch (e) { /* ignore */ }
+  document.addEventListener('DOMContentLoaded', () => {
+    try { renderComputedPanel(); } catch (e) { /* ignore */ }
+
     // Try to initialize immediately, then retry if needed
     setTimeout(initAiSummary, 100);
     // Also retry after longer delays in case script tags load slowly
