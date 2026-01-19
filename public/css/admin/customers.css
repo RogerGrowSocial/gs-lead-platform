@@ -125,47 +125,58 @@
   box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Set appropriate column widths for better alignment */
+/* Set fixed column widths for consistent layout - prevents stretching */
+.payments-table {
+  table-layout: fixed;
+}
+
 .payments-table th:nth-child(1),
 .payments-table td:nth-child(1) {
-  width: 22%; /* Klant - needs more space for name + logo */
-  min-width: 200px;
+  width: 25%; /* Klant - needs more space for name + logo */
+  min-width: 220px;
+  max-width: 25%;
 }
 
 .payments-table th:nth-child(2),
 .payments-table td:nth-child(2) {
-  width: 18%; /* Contact - email + phone */
+  width: 20%; /* Contact - email + phone */
   min-width: 180px;
+  max-width: 20%;
 }
 
 .payments-table th:nth-child(3),
 .payments-table td:nth-child(3) {
-  width: 18%; /* Domein */
-  min-width: 160px;
+  width: 15%; /* Branche */
+  min-width: 140px;
+  max-width: 15%;
 }
 
 .payments-table th:nth-child(4),
 .payments-table td:nth-child(4) {
   width: 12%; /* Status */
   min-width: 110px;
+  max-width: 12%;
 }
 
 .payments-table th:nth-child(5),
 .payments-table td:nth-child(5) {
   width: 12%; /* Prioriteit */
   min-width: 110px;
+  max-width: 12%;
 }
 
 .payments-table th:nth-child(6),
 .payments-table td:nth-child(6) {
-  width: 15%; /* Laatste activiteit */
+  width: 13%; /* Laatste activiteit */
   min-width: 150px;
+  max-width: 13%;
 }
 
 .payments-table th:nth-child(7),
 .payments-table td:nth-child(7) {
-  width: 5%; /* Acties - drag handle + menu */
-  min-width: 90px;
+  width: 3%; /* Acties - drag handle + menu */
+  min-width: 80px;
+  max-width: 3%;
   text-align: center;
 }
 

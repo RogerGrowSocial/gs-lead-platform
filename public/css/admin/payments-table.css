@@ -197,6 +197,7 @@
   width: 100%;
   border-collapse: collapse;
   background: white;
+  table-layout: fixed; /* Ensure consistent column widths */
 }
 
 /* ============================================

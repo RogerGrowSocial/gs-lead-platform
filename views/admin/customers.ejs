@@ -316,6 +316,28 @@
       .table-header-cell.sortable.active.desc .sort-icon path:last-child {
         stroke: #ea5d0d;
       }
+
+      /* Prevent layout shifts during sorting */
+      .table-container {
+        transition: min-height 0.2s ease;
+      }
+
+      #customersTableBody {
+        transition: opacity 0.2s ease;
+      }
+
+      /* Prevent button layout shift */
+      .page-header {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #createCustomerBtn {
+        flex-shrink: 0;
+        min-width: 140px;
+      }
     </style>
     <script src="/js/admin/customersDrawer.js" defer></script>
     <!-- Right drawer (off-canvas) for creating a customer -->

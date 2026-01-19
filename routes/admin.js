@@ -9154,6 +9154,136 @@ router.get('/customers/kvk-profile/:kvkNumber', requireAuth, isAdmin, async (req
   }
 });
 
+// Get customers table data (for AJAX sorting/filtering)
+router.get('/api/customers/table', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { status, priority, search, page = 1, limit = 15, sortBy = 'name', sortOrder = 'asc' } = req.query
+    const pageNum = parseInt(page) || 1
+    const limitNum = parseInt(limit) || 15
+    const offset = (pageNum - 1) * limitNum
+    const ascending = sortOrder === 'asc' || sortOrder === 'ascending'
+    
+    // Build query - same as main customers route
+    let customerQuery = supabaseAdmin
+      .from('customers')
+      .select(`
+        *,
+        customer_branch:customer_branches!customers_customer_branch_id_fkey(id, name)
+      `, { count: 'exact' })
+    
+    // Apply filters
+    if (status && status !== 'all') {
+      customerQuery = customerQuery.eq('status', status)
+    }
+    if (priority && priority !== 'all') {
+      customerQuery = customerQuery.eq('priority', priority)
+    }
+    if (search && search.trim()) {
+      customerQuery = customerQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%,domain.ilike.%${search}%,company_name.ilike.%${search}%`)
+    }
+    
+    // Apply sorting
+    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'last_ticket_activity', 'last_email_activity']
+    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'name'
+    
+    // Handle special sorting cases
+    if (sortColumn === 'name') {
+      customerQuery = customerQuery.order('name', { ascending })
+    } else if (sortColumn === 'email') {
+      customerQuery = customerQuery.order('email', { ascending })
+    } else if (sortColumn === 'phone') {
+      customerQuery = customerQuery.order('phone', { ascending })
+    } else if (sortColumn === 'branch') {
+      customerQuery = customerQuery.order('customer_branch_id', { ascending, nullsFirst: false })
+    } else if (sortColumn === 'status') {
+      customerQuery = customerQuery.order('status', { ascending })
+    } else if (sortColumn === 'priority') {
+      customerQuery = customerQuery.order('priority', { ascending })
+    } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
+      customerQuery = customerQuery.order('updated_at', { ascending })
+    }
+    
+    // Secondary sort by name for consistent ordering
+    if (sortColumn !== 'name') {
+      customerQuery = customerQuery.order('name', { ascending: true })
+    }
+    
+    // Execute query
+    const { data: customers, error, count } = await customerQuery
+      .range(offset, offset + limitNum - 1)
+    
+    if (error) throw error
+    
+    // Process customers data
+    if (customers && customers.length > 0) {
+      const customerIds = customers.map(c => c.id)
+      
+      // Get logo_urls and sort_order
+      const { data: customersWithExtras } = await supabaseAdmin
+        .from('customers')
+        .select('id, logo_url, sort_order')
+        .in('id', customerIds)
+      
+      const logoMap = {}
+      const sortOrderMap = {}
+      if (customersWithExtras) {
+        customersWithExtras.forEach(c => {
+          if (c.logo_url) logoMap[c.id] = c.logo_url
+          sortOrderMap[c.id] = c.sort_order || 0
+        })
+      }
+      
+      // Merge data
+      customers.forEach(customer => {
+        customer.logo_url = logoMap[customer.id] || null
+        customer.sort_order = sortOrderMap[customer.id] || 0
+        // Extract branch name from joined relation
+        if (customer.customer_branch && customer.customer_branch.name) {
+          customer.branch_name = customer.customer_branch.name
+        } else {
+          customer.branch_name = null
+        }
+      })
+      
+      // Client-side sort for branch if needed
+      if (sortColumn === 'branch') {
+        customers.sort((a, b) => {
+          const aBranch = (a.branch_name || '').toLowerCase()
+          const bBranch = (b.branch_name || '').toLowerCase()
+          if (aBranch === bBranch) {
+            return (a.name || '').localeCompare(b.name || '')
+          }
+          if (!aBranch) return 1
+          if (!bBranch) return -1
+          const comparison = aBranch.localeCompare(bBranch)
+          return ascending ? comparison : -comparison
+        })
+      }
+    }
+    
+    const totalPages = Math.ceil((count || 0) / limitNum)
+    
+    res.json({
+      success: true,
+      customers: customers || [],
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalItems: count || 0,
+        totalPages: totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
+      }
+    })
+  } catch (err) {
+    console.error('Error fetching customers table:', err)
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Fout bij ophalen klanten'
+    })
+  }
+})
+
 // Search customers for autocomplete
 router.get('/api/customers/search', requireAuth, isAdmin, async (req, res) => {
   try {
