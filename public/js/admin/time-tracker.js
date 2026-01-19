@@ -859,6 +859,295 @@
         }
       }
     }
+
+    showAddTaskModal(prefilledTitle = '') {
+      // Remove existing modal if present
+      const existingModal = document.getElementById('timeTrackerAddTaskModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      // Create modal overlay
+      const modal = document.createElement('div');
+      modal.id = 'timeTrackerAddTaskModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 8px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+          <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">Nieuwe taak toevoegen</h3>
+              <button id="timeTrackerAddTaskModalClose" style="background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Sluiten">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <form id="timeTrackerAddTaskForm" style="padding: 20px;">
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Titel <span style="color: #ef4444;">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="timeTrackerAddTaskTitle" 
+                required 
+                value="${prefilledTitle}"
+                placeholder="Bijv. Bugfix login pagina" 
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+              />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Beschrijving
+              </label>
+              <textarea 
+                id="timeTrackerAddTaskDescription" 
+                rows="3"
+                placeholder="Optionele beschrijving van de taak..." 
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; resize: vertical; font-family: inherit;"
+              ></textarea>
+            </div>
+
+            <div style="margin-bottom: 16px; position: relative;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Klant <span style="color: #ef4444;">*</span>
+              </label>
+              <input 
+                type="text" 
+                id="timeTrackerAddTaskCustomerSearch" 
+                placeholder="Zoek klant..." 
+                autocomplete="off"
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+              />
+              <div id="timeTrackerAddTaskCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 460px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 2001;"></div>
+              <input type="hidden" id="timeTrackerAddTaskCustomerId" />
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                Prioriteit
+              </label>
+              <select 
+                id="timeTrackerAddTaskPriority" 
+                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; background: white;"
+              >
+                <option value="low">Laag</option>
+                <option value="medium" selected>Normaal</option>
+                <option value="high">Hoog</option>
+              </select>
+            </div>
+
+            <div id="timeTrackerAddTaskError" style="display: none; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; font-size: 14px; margin-bottom: 16px;"></div>
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button 
+                type="button" 
+                id="timeTrackerAddTaskCancel" 
+                style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
+                onmouseover="this.style.background='#e5e7eb'"
+                onmouseout="this.style.background='#f3f4f6'"
+              >
+                Annuleren
+              </button>
+              <button 
+                type="submit" 
+                id="timeTrackerAddTaskSubmit" 
+                style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
+                onmouseover="this.style.background='#2563eb'"
+                onmouseout="this.style.background='#3b82f6'"
+              >
+                Taak aanmaken
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Setup event listeners
+      const closeBtn = modal.querySelector('#timeTrackerAddTaskModalClose');
+      const cancelBtn = modal.querySelector('#timeTrackerAddTaskCancel');
+      const form = modal.querySelector('#timeTrackerAddTaskForm');
+      const customerSearch = modal.querySelector('#timeTrackerAddTaskCustomerSearch');
+      const customerDropdown = modal.querySelector('#timeTrackerAddTaskCustomerDropdown');
+
+      const closeModal = () => {
+        modal.remove();
+      };
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      // Customer search
+      customerSearch.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        if (query.length < 1) {
+          customerDropdown.style.display = 'none';
+          return;
+        }
+
+        const filtered = this.customers.filter(customer => 
+          (customer.company_name?.toLowerCase().includes(query.toLowerCase())) ||
+          (customer.first_name?.toLowerCase().includes(query.toLowerCase())) ||
+          (customer.last_name?.toLowerCase().includes(query.toLowerCase())) ||
+          (customer.email?.toLowerCase().includes(query.toLowerCase()))
+        );
+
+        if (filtered.length === 0) {
+          customerDropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen klanten gevonden</div>';
+        } else {
+          customerDropdown.innerHTML = filtered.map(customer => `
+            <div 
+              class="customer-option" 
+              style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
+              onmouseover="this.style.background='#f9fafb'"
+              onmouseout="this.style.background='white'"
+              data-customer-id="${customer.id}"
+              data-customer-name="${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || ''}"
+            >
+              <div style="font-weight: 500; color: #111827; font-size: 14px;">${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || 'Onbekend'}</div>
+            </div>
+          `).join('');
+
+          customerDropdown.querySelectorAll('.customer-option').forEach(option => {
+            option.addEventListener('click', () => {
+              const customerId = option.getAttribute('data-customer-id');
+              const customerName = option.getAttribute('data-customer-name');
+
+              modal.querySelector('#timeTrackerAddTaskCustomerId').value = customerId;
+              customerSearch.value = customerName;
+              customerDropdown.style.display = 'none';
+            });
+          });
+        }
+
+        customerDropdown.style.display = 'block';
+      });
+
+      // Load customers if not already loaded
+      if (this.customers.length === 0) {
+        this.loadCustomers();
+      }
+
+      // Form submission
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const title = modal.querySelector('#timeTrackerAddTaskTitle').value.trim();
+        const description = modal.querySelector('#timeTrackerAddTaskDescription').value.trim();
+        const customerId = modal.querySelector('#timeTrackerAddTaskCustomerId').value;
+        const priority = modal.querySelector('#timeTrackerAddTaskPriority').value;
+        const errorEl = modal.querySelector('#timeTrackerAddTaskError');
+        const submitBtn = modal.querySelector('#timeTrackerAddTaskSubmit');
+
+        if (!title) {
+          errorEl.textContent = 'Titel is verplicht';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        if (!customerId) {
+          errorEl.textContent = 'Selecteer een klant';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Aanmaken...';
+        errorEl.style.display = 'none';
+
+        try {
+          const response = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              employee_id: this.userId,
+              customer_id: customerId,
+              title: title,
+              description: description || null,
+              priority: priority
+            })
+          });
+
+          const result = await response.json();
+
+          if (!response.ok || !result.ok) {
+            throw new Error(result.error || 'Fout bij aanmaken taak');
+          }
+
+          // Success - reload tasks and select the new task
+          await this.loadTasks();
+          
+          // Find the new task and select it
+          const newTask = this.tasks.find(t => t.id === result.data.id);
+          if (newTask) {
+            const taskSearch = this.popover.querySelector('#timeTrackerTaskSearch');
+            const taskIdInput = this.popover.querySelector('#timeTrackerTaskId');
+            
+            if (taskSearch) {
+              taskSearch.value = newTask.title;
+            }
+            if (taskIdInput) {
+              taskIdInput.value = newTask.id;
+            }
+
+            // Auto-populate customer if task has one
+            if (newTask.customer_id) {
+              const customer = this.customers.find(c => c.id === newTask.customer_id);
+              if (customer) {
+                this.popover.querySelector('#timeTrackerCustomerId').value = customer.id;
+                this.popover.querySelector('#timeTrackerCustomerSearch').value = customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || '';
+                this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
+              }
+            }
+          }
+
+          // Close modal and dropdown
+          closeModal();
+          this.popover.querySelector('#timeTrackerTaskDropdown').style.display = 'none';
+
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Taak succesvol aangemaakt', 'success');
+          }
+        } catch (error) {
+          console.error('[TimeTracker] Error creating task:', error);
+          errorEl.textContent = error.message || 'Er is een fout opgetreden bij het aanmaken van de taak';
+          errorEl.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Taak aanmaken';
+        }
+      });
+
+      // Focus on title input
+      setTimeout(() => {
+        modal.querySelector('#timeTrackerAddTaskTitle').focus();
+      }, 100);
+    }
   }
 
   // Initialize when DOM is ready
