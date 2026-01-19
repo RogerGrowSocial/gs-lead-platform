@@ -10025,7 +10025,7 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
       customer,
       computed: enriched,
       stats,
-      invoices,
+      invoices: invoices || [],
       tickets: ticketsResult?.data || [],
       tasks: tasksResult?.data || [],
       emails: emailsResult?.data || [],

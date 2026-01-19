@@ -116,38 +116,153 @@ OUTPUT STRUCTUUR (plain text):
     const c = input?.customer || {};
     const computed = input?.computed || {};
     const stats = input?.stats || {};
+    const invoices = input?.invoices || [];
+    const tickets = input?.tickets || [];
+    const tasks = input?.tasks || [];
+    const emails = input?.emails || [];
+    const responsibleEmployees = input?.responsibleEmployees || [];
 
     const name = computed.company_display_name || c.company_name || c.name || 'Onbekend';
     const owner = c.hubspot_owner || 'Onbekend';
     const domain = computed.normalized_domain || c.domain || c.website || 'Onbekend';
+    const phone = computed.normalized_phone || c.phone || 'Onbekend';
+    const city = c.city || '';
+    const postalCode = c.postal_code || '';
+    const address = c.address || '';
+    const status = c.status || 'Onbekend';
+    const priority = c.priority || 'normaal';
+    const industry = c.hubspot_industry || c.industry || 'Onbekend';
+    
     const last = computed.days_since_last_interaction ?? null;
     const overdue = computed.has_overdue_next_activity ? 'Ja' : 'Nee';
     const quality = computed.data_quality_score ?? null;
 
+    const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+    const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+    const unreadEmails = emails.filter(e => !e.read_at).length;
+    
+    const responsibleNames = responsibleEmployees
+      .map(re => {
+        const emp = re.employee;
+        if (!emp) return null;
+        return emp.first_name && emp.last_name 
+          ? `${emp.first_name} ${emp.last_name}` 
+          : emp.email || 'Onbekend';
+      })
+      .filter(Boolean);
+
     const lines = [];
     lines.push(`1) Korte conclusie`);
-    lines.push(`- ${name} (owner: ${owner}).`);
+    lines.push(`${name} is een ${status === 'active' ? 'actieve' : status === 'inactive' ? 'inactieve' : status} klant met ${priority === 'high' ? 'hoge' : priority === 'low' ? 'lage' : 'normale'} prioriteit.`);
+    if (owner && owner !== 'Onbekend') {
+      lines.push(`Eigenaar: ${owner}.`);
+    }
     lines.push('');
+    
     lines.push(`2) Belangrijkste context`);
-    lines.push(`- Domein/website: ${domain}`);
-    if (last !== null) lines.push(`- Laatste interactie: ${last} dagen geleden`);
-    lines.push(`- Overdue next activity: ${overdue}`);
-    if (typeof stats.total_revenue !== 'undefined') lines.push(`- Omzet (totaal): €${stats.total_revenue}`);
+    if (domain && domain !== 'Onbekend') {
+      lines.push(`• Website: ${domain}`);
+    }
+    if (phone && phone !== 'Onbekend') {
+      lines.push(`• Telefoon: ${phone}`);
+    }
+    if (address || city || postalCode) {
+      const location = [address, postalCode, city].filter(Boolean).join(', ');
+      if (location) lines.push(`• Locatie: ${location}`);
+    }
+    if (industry && industry !== 'Onbekend') {
+      lines.push(`• Branche: ${industry}`);
+    }
+    if (last !== null) {
+      lines.push(`• Laatste interactie: ${last === 0 ? 'Vandaag' : last === 1 ? 'Gisteren' : `${last} dagen geleden`}`);
+    }
+    if (typeof stats.total_revenue !== 'undefined' && stats.total_revenue > 0) {
+      lines.push(`• Totale omzet: €${stats.total_revenue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    }
+    if (typeof stats.total_outstanding !== 'undefined' && stats.total_outstanding > 0) {
+      lines.push(`• Openstaand bedrag: €${stats.total_outstanding.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    }
+    if (responsibleNames.length > 0) {
+      lines.push(`• Verantwoordelijke(n): ${responsibleNames.join(', ')}`);
+    }
     lines.push('');
-    lines.push(`3) Risico's / aandachtspunten`);
-    if (computed.is_duplicate_candidate) lines.push(`- Mogelijk duplicaat (check dedupe keys).`);
-    if (!computed.is_contactable) lines.push(`- Niet contacteerbaar (mist telefoon/website/contact).`);
-    if (quality !== null && quality < 50) lines.push(`- Lage data quality score (${quality}).`);
+    
+    lines.push(`3) Actuele status`);
+    if (openTickets > 0) {
+      lines.push(`• ${openTickets} open ticket(s)`);
+    }
+    if (openTasks > 0) {
+      lines.push(`• ${openTasks} open taak/taken`);
+    }
+    if (unreadEmails > 0) {
+      lines.push(`• ${unreadEmails} ongelezen e-mail(s)`);
+    }
+    if (invoices.length > 0) {
+      const paidCount = invoices.filter(i => i.status === 'paid').length;
+      const overdueCount = invoices.filter(i => i.status === 'overdue').length;
+      lines.push(`• ${invoices.length} factuur/facturen (${paidCount} betaald${overdueCount > 0 ? `, ${overdueCount} achterstallig` : ''})`);
+    }
+    if (openTickets === 0 && openTasks === 0 && unreadEmails === 0 && invoices.length === 0) {
+      lines.push(`• Geen openstaande items`);
+    }
     lines.push('');
-    lines.push(`4) Volgende acties`);
-    lines.push(`- Plan/confirm volgende activiteit.`);
-    lines.push(`- Verrijk contactgegevens (telefoon/website/adres).`);
-    if (computed.is_duplicate_candidate) lines.push(`- Merge/cleanup duplicaten.`);
+    
+    lines.push(`4) Risico's / aandachtspunten`);
+    if (computed.is_duplicate_candidate) {
+      lines.push(`• Mogelijk duplicaat - controleer dedupe keys`);
+    }
+    if (!computed.is_contactable) {
+      lines.push(`• Niet volledig contacteerbaar - mist telefoon of website`);
+    }
+    if (quality !== null && quality < 50) {
+      lines.push(`• Lage data kwaliteit score (${quality}/100) - verrijk gegevens`);
+    }
+    if (overdue === 'Ja') {
+      lines.push(`• Overdue volgende activiteit - actie vereist`);
+    }
+    if (last !== null && last > 90) {
+      lines.push(`• Geen interactie in ${last} dagen - mogelijk inactief`);
+    }
+    if (!computed.is_duplicate_candidate && computed.is_contactable && (quality === null || quality >= 50) && overdue === 'Nee' && (last === null || last <= 90)) {
+      lines.push(`• Geen specifieke risico's geïdentificeerd`);
+    }
     lines.push('');
-    lines.push(`5) Data-kwaliteit & dedupe`);
-    lines.push(`- Data quality: ${quality ?? 'Onbekend'}`);
-    lines.push(`- Dedupe primary: ${computed.dedupe_key_primary || 'Onbekend'}`);
-    lines.push(`- Dedupe secondary: ${computed.dedupe_key_secondary || 'Onbekend'}`);
+    
+    lines.push(`5) Volgende acties`);
+    if (openTickets > 0) {
+      lines.push(`• Behandel openstaande tickets`);
+    }
+    if (openTasks > 0) {
+      lines.push(`• Werk openstaande taken af`);
+    }
+    if (unreadEmails > 0) {
+      lines.push(`• Beantwoord ongelezen e-mails`);
+    }
+    if (overdue === 'Ja') {
+      lines.push(`• Plan/bevestig volgende activiteit`);
+    }
+    if (!computed.is_contactable) {
+      lines.push(`• Verrijk contactgegevens (telefoon/website/adres)`);
+    }
+    if (quality !== null && quality < 50) {
+      lines.push(`• Verbeter data kwaliteit`);
+    }
+    if (computed.is_duplicate_candidate) {
+      lines.push(`• Controleer en merge eventuele duplicaten`);
+    }
+    if (openTickets === 0 && openTasks === 0 && unreadEmails === 0 && overdue === 'Nee' && computed.is_contactable && (quality === null || quality >= 50) && !computed.is_duplicate_candidate) {
+      lines.push(`• Geen specifieke acties vereist - klant is up-to-date`);
+    }
+    lines.push('');
+    
+    lines.push(`6) Data-kwaliteit & technisch`);
+    lines.push(`• Data quality score: ${quality !== null ? `${quality}/100` : 'Onbekend'}`);
+    if (computed.dedupe_key_primary) {
+      lines.push(`• Dedupe key (primary): ${computed.dedupe_key_primary}`);
+    }
+    if (computed.dedupe_key_secondary) {
+      lines.push(`• Dedupe key (secondary): ${computed.dedupe_key_secondary}`);
+    }
 
     return lines.join('\n');
   }
