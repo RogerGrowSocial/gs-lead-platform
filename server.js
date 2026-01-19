@@ -1764,7 +1764,17 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message)
   console.error(err.stack)
-  // Try to render error page, but don't crash if it fails
+  
+  // For API routes, always return JSON
+  if (req.path && req.path.startsWith('/api/')) {
+    return res.status(500).json({ 
+      success: false,
+      error: 'Internal Server Error',
+      message: err.message 
+    })
+  }
+  
+  // For non-API routes, try to render error page
   try {
     res.status(500).render("errors/500", { layout: false })
   } catch (renderError) {

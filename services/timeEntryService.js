@@ -150,6 +150,7 @@ class TimeEntryService {
           employee_id: entryData.employee_id,
           task_id: entryData.task_id || null,
           customer_id: entryData.customer_id || null,
+          contact_id: entryData.contact_id || null,
           project_name: entryData.project_name || null,
           start_at: entryData.start_at,
           end_at: entryData.end_at || null,

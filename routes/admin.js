@@ -12836,7 +12836,22 @@ const uploadLogo = multer({
   }
 })
 
-router.post('/api/customers/:id/logo', requireAuth, isAdmin, uploadLogo.single('logo'), async (req, res) => {
+router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) => {
+  uploadLogo.single('logo')(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, error: 'Bestand is te groot (max 5MB)' })
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ success: false, error: 'Onverwacht bestand. Gebruik het veld "logo".' })
+      }
+      // Handle file filter errors and other multer errors
+      return res.status(400).json({ success: false, error: err.message || 'Upload fout: ' + (err.code || 'Onbekende fout') })
+    }
+    next()
+  })
+}, async (req, res) => {
   try {
     const { id } = req.params
     
@@ -12859,8 +12874,12 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, uploadLogo.single('
     
     if (updateError) {
       // Delete uploaded file if database update fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path)
+      if (req.file && req.file.path) {
+        try {
+          fs.unlinkSync(req.file.path)
+        } catch (unlinkError) {
+          console.error('Error deleting uploaded file:', unlinkError)
+        }
       }
       return res.status(500).json({ success: false, error: 'Fout bij bijwerken klant: ' + updateError.message })
     }
@@ -12868,9 +12887,14 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, uploadLogo.single('
     res.json({ success: true, logo_url: logoUrl, customer })
   } catch (error) {
     console.error('Logo upload error:', error)
+    console.error('Error stack:', error.stack)
     // Clean up file if error occurs
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path)
+      } catch (unlinkError) {
+        console.error('Error deleting uploaded file:', unlinkError)
+      }
     }
     res.status(500).json({ success: false, error: error.message || 'Fout bij uploaden logo' })
   }
