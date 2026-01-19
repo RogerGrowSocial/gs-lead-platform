@@ -532,8 +532,9 @@
 
     // Try to initialize immediately, then retry if needed
     setTimeout(initAiSummary, 100);
-    // Also retry after a longer delay in case script tags load slowly
+    // Also retry after longer delays in case script tags load slowly
     setTimeout(initAiSummary, 500);
+    setTimeout(initAiSummary, 1000);
 
     // AI Chat form handler
     const chatForm = document.getElementById('customerAiChatForm');
