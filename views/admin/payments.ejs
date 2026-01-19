@@ -1,14 +1,4 @@
-<%- include('../partials/header') %>
-
-<!-- Add custom CSS for payments page -->
-<link rel="stylesheet" href="/css/admin/adminPayments.css">
-<link rel="stylesheet" href="/css/components/custom-select.css">
-  <link rel="stylesheet" href="/css/admin/revenue-chart.css">
-  <link rel="stylesheet" href="/css/admin/monthly-growth.css">
-  <link rel="stylesheet" href="/css/admin/payments-table.css">
-
-<!-- Chart.js Library -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- CSS and scripts are loaded via the admin layout -->
 
 <%
   // Server-side helpers for EJS rendering only
@@ -385,6 +375,14 @@
   activeMenu: 'payments',
   user: user,
   body: paymentsContent,
+  stylesheets: [
+    '/css/admin/adminPayments.css',
+    '/css/components/custom-select.css',
+    '/css/admin/revenue-chart.css',
+    '/css/admin/monthly-growth.css',
+    '/css/admin/payments-table.css'
+  ],
+  extraHead: '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>',
   scripts: ['/js/admin/dashboard.js', '/js/admin/payments.js', '/js/components/custom-select.js', '/js/admin/revenue-chart.js', '/js/admin/monthly-growth.js', '/js/admin/payments-table.js']
 }) %>
 
