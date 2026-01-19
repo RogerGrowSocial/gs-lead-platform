@@ -187,6 +187,17 @@
   text-align: center;
 }
 
+/* Nieuwe Klant button styling */
+#createCustomerBtn.btn-primary {
+  background-color: #3b81f7 !important;
+  border-color: #3b81f7 !important;
+}
+
+#createCustomerBtn.btn-primary:hover {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
 .table-scroll {
   overflow-x: auto;
   overflow-y: visible;
