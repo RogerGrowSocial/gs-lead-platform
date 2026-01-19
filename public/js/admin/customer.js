@@ -227,15 +227,16 @@
         body: JSON.stringify({})
       });
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         throw new Error(data.error || 'Fout bij genereren AI samenvatting');
       }
 
-      // Update UI
+      // Update UI - handle both success and ok response formats
       const summaryText = document.getElementById('customerAiSummaryText');
       const summaryLoading = document.getElementById('customerAiSummaryLoading');
       if (summaryText) {
-        summaryText.textContent = data.summary || 'Geen samenvatting ontvangen';
+        const summary = data.summary || data.aiSummary?.summary || '';
+        summaryText.textContent = summary || 'Geen samenvatting ontvangen';
         summaryText.style.display = 'block';
       }
       if (summaryLoading) {
@@ -278,6 +279,40 @@
         if (targetContent) {
           targetContent.classList.add('customer-main-tab-content-active');
           targetContent.style.display = 'block';
+          
+          // Load invoices when Administratie tab is opened
+          if (targetTab === 'administration') {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+              const container = document.getElementById('invoicesTableContainer');
+              if (container && container.innerHTML.trim() === '') {
+                // Container is empty, load invoices
+                if (typeof window.loadInvoices === 'function') {
+                  window.loadInvoices();
+                } else {
+                  // Fallback: load invoices directly
+                  fetch(`/admin/api/customers/${customerId}/invoices`)
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.success && container) {
+                        // Use the renderInvoicesTable function if available
+                        if (typeof window.renderInvoicesTable === 'function') {
+                          window.renderInvoicesTable(data.invoices || []);
+                        } else {
+                          container.innerHTML = '<p style="padding: 20px; text-align: center; color: #6b7280;">Facturen worden geladen...</p>';
+                        }
+                      }
+                    })
+                    .catch(err => {
+                      console.error('Error loading invoices:', err);
+                      if (container) {
+                        container.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Fout bij laden facturen</p>';
+                      }
+                    });
+                }
+              }
+            }, 100);
+          }
         }
       });
     });
@@ -363,7 +398,7 @@
           console.error('Failed to generate AI summary:', err);
           // Show error message if generation fails
           if (summaryText) {
-            summaryText.textContent = 'AI samenvatting kon niet worden gegenereerd. Klik op "Hergenereer" om het opnieuw te proberen.';
+            summaryText.textContent = 'AI samenvatting kon niet worden gegenereerd. Klik op het hergenereren icoon om het opnieuw te proberen.';
             summaryText.style.display = 'block';
           }
         }).finally(() => {
@@ -1556,6 +1591,9 @@
     // Render invoices table
     function renderInvoicesTable(invoices = []) {
       if (!invoicesTableContainer) return;
+      
+      // Make function available globally
+      window.renderInvoicesTable = renderInvoicesTable;
 
       if (invoices.length === 0) {
         invoicesTableContainer.innerHTML = `
