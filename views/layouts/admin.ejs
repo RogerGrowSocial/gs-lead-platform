@@ -1429,8 +1429,36 @@
         localStorage.setItem('adminSidebarExpanded', sidebar.classList.contains('expanded'));
       });
       
+      // Helper function to close all expanded submenus
+      function closeAllSubmenus(exceptThisOne = null) {
+        document.querySelectorAll('[data-submenu-toggle]').forEach(toggle => {
+          if (toggle !== exceptThisOne && toggle.classList.contains('expanded')) {
+            toggle.classList.remove('expanded');
+          }
+        });
+      }
+      
       // Submenu toggle functionality - make it reusable
       function initSubmenus() {
+        // First, add click handlers to ALL menu items (with or without submenu)
+        const allMenuItems = document.querySelectorAll('.menu-item');
+        allMenuItems.forEach(menuItem => {
+          // Skip if this is already a submenu toggle (we'll handle it separately)
+          if (menuItem.hasAttribute('data-submenu-toggle')) {
+            return;
+          }
+          
+          // Add click handler to close all submenus when clicking a main menu item without submenu
+          menuItem.addEventListener('click', (e) => {
+            // Don't interfere with navigation
+            if (e.target.closest('a')) {
+              // Close all submenus when navigating to a main menu item
+              closeAllSubmenus();
+            }
+          });
+        });
+        
+        // Then handle submenu toggles
         const submenuToggles = document.querySelectorAll('[data-submenu-toggle]');
         submenuToggles.forEach(toggle => {
           // Remove old listeners by cloning (clean slate)
@@ -1449,8 +1477,10 @@
           
           // Toggle submenu when clicking anywhere on the menu item (not just chevron)
           newToggle.addEventListener('click', (e) => {
-            // If clicking a submenu item link, allow navigation
+            // If clicking a submenu item link, allow navigation but close other submenus
             if (e.target.closest('.submenu-item')) {
+              // Close all other submenus when navigating to a submenu item
+              closeAllSubmenus(newToggle);
               return; // Allow normal navigation
             }
             
@@ -1463,14 +1493,8 @@
               e.stopPropagation();
               
               if (submenu && submenu.classList.contains('submenu')) {
-                const isExpanded = newToggle.classList.contains('expanded');
-                
                 // Close all other expanded submenus first
-                document.querySelectorAll('[data-submenu-toggle]').forEach(otherToggle => {
-                  if (otherToggle !== newToggle && otherToggle.classList.contains('expanded')) {
-                    otherToggle.classList.remove('expanded');
-                  }
-                });
+                closeAllSubmenus(newToggle);
                 
                 // Toggle this submenu
                 newToggle.classList.toggle('expanded');

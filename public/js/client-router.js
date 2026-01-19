@@ -456,6 +456,11 @@
       item.classList.remove('active');
     });
     
+    // Close all submenus first, then expand only the active one
+    document.querySelectorAll('[data-submenu-toggle]').forEach(toggle => {
+      toggle.classList.remove('expanded');
+    });
+    
     // First, check submenu items (they take priority)
     let hasActiveSubmenu = false;
     document.querySelectorAll('.submenu-item').forEach(item => {
