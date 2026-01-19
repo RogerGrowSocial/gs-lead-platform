@@ -12806,25 +12806,9 @@ router.post('/api/customers', requireAuth, isAdmin, async (req, res) => {
   }
 })
 
-// Logo upload endpoint
-const logoStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'customer-logos')
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-    cb(null, uploadDir)
-  },
-  filename: function (req, file, cb) {
-    const { id } = req.params
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    const ext = path.extname(file.originalname)
-    cb(null, `customer-logo-${id}-${uniqueSuffix}${ext}`)
-  }
-})
-
+// Logo upload endpoint - using memory storage for Supabase Storage upload
 const uploadLogo = multer({ 
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: function (req, file, cb) {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -12859,13 +12843,46 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
       return res.status(400).json({ success: false, error: 'Geen bestand geüpload' })
     }
     
-    const logoUrl = '/uploads/customer-logos/' + req.file.filename
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    const ext = path.extname(req.file.originalname) || '.png'
+    const fileName = `customer-logos/customer-logo-${id}-${uniqueSuffix}${ext}`
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from('uploads')
+      .upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      })
+    
+    if (uploadError) {
+      console.error('Supabase Storage upload error:', uploadError)
+      // If bucket doesn't exist, try to create it or fall back to error
+      if (uploadError.statusCode === '404' || uploadError.message?.includes('not found')) {
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Storage bucket niet gevonden. Neem contact op met de beheerder.' 
+        })
+      }
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Fout bij uploaden naar storage: ' + uploadError.message 
+      })
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = supabaseAdmin
+      .storage
+      .from('uploads')
+      .getPublicUrl(fileName)
     
     // Update customer with logo URL
     const { data: customer, error: updateError } = await supabaseAdmin
       .from('customers')
       .update({
-        logo_url: logoUrl,
+        logo_url: publicUrl,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -12873,29 +12890,19 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
       .single()
     
     if (updateError) {
-      // Delete uploaded file if database update fails
-      if (req.file && req.file.path) {
-        try {
-          fs.unlinkSync(req.file.path)
-        } catch (unlinkError) {
-          console.error('Error deleting uploaded file:', unlinkError)
-        }
+      // Try to delete uploaded file from storage if database update fails
+      try {
+        await supabaseAdmin.storage.from('uploads').remove([fileName])
+      } catch (deleteError) {
+        console.error('Error deleting uploaded file from storage:', deleteError)
       }
       return res.status(500).json({ success: false, error: 'Fout bij bijwerken klant: ' + updateError.message })
     }
     
-    res.json({ success: true, logo_url: logoUrl, customer })
+    res.json({ success: true, logo_url: publicUrl, customer })
   } catch (error) {
     console.error('Logo upload error:', error)
     console.error('Error stack:', error.stack)
-    // Clean up file if error occurs
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path)
-      } catch (unlinkError) {
-        console.error('Error deleting uploaded file:', unlinkError)
-      }
-    }
     res.status(500).json({ success: false, error: error.message || 'Fout bij uploaden logo' })
   }
 })
