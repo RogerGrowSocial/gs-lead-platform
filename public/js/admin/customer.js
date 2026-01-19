@@ -279,6 +279,34 @@
     });
   }
 
+  function initMainTabs() {
+    const mainTabButtons = document.querySelectorAll('.customer-main-tab-btn');
+    const mainTabContents = document.querySelectorAll('.customer-main-tab-content');
+
+    mainTabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const targetTab = button.getAttribute('data-main-tab');
+
+        // Remove active class from all buttons and contents
+        mainTabButtons.forEach(btn => btn.classList.remove('customer-main-tab-active'));
+        mainTabContents.forEach(content => {
+          content.classList.remove('customer-main-tab-content-active');
+          content.style.display = 'none';
+        });
+
+        // Add active class to clicked button
+        button.classList.add('customer-main-tab-active');
+
+        // Show corresponding content
+        const targetContent = document.getElementById(`main-tab-${targetTab}`);
+        if (targetContent) {
+          targetContent.classList.add('customer-main-tab-content-active');
+          targetContent.style.display = 'block';
+        }
+      });
+    });
+  }
+
   // ------------------------------------------------------------
   // AI Chat (Customer)
   // ------------------------------------------------------------
@@ -1516,6 +1544,7 @@
   function init() {
     console.log('[customer.js] Initializing customer detail page');
     initTabs();
+    initMainTabs();
     initEmployeeManagement();
     initEditMode();
   }

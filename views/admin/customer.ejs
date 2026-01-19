@@ -163,68 +163,222 @@
           </div>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="kpi-cards-container">
-          <div class="kpi-cards-grid">
-            <!-- Open Taken Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Open taken</p>
-                <p class="kpi-value">${(stats.open_tasks || 0)}</p>
+        <!-- Main Content Tabs -->
+        <div class="customer-main-tabs-container">
+          <div class="customer-main-tabs-header">
+            <button class="customer-main-tab-btn customer-main-tab-active" data-main-tab="overview">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M9 21V9"></path>
+              </svg>
+              Overzicht
+            </button>
+            <button class="customer-main-tab-btn" data-main-tab="tasks">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <path d="M12 11h4"></path>
+                <path d="M12 16h4"></path>
+                <path d="M8 11h.01"></path>
+                <path d="M8 16h.01"></path>
+              </svg>
+              Taken
+            </button>
+            <button class="customer-main-tab-btn" data-main-tab="administration">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              Administratie
+            </button>
+            <button class="customer-main-tab-btn" data-main-tab="communication">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 1 1 8.5-8.5M22 12.5a10 10 0 1 1-8.5 8.5"></path>
+              </svg>
+              Communicatie
+            </button>
+          </div>
+
+          <!-- Overview Tab Content -->
+          <div class="customer-main-tab-content customer-main-tab-content-active" id="main-tab-overview">
+            <!-- KPI Cards -->
+            <div class="kpi-cards-container">
+              <div class="kpi-cards-grid">
+                <!-- Open Taken Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Open taken</p>
+                    <p class="kpi-value">${(stats.open_tasks || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list">
+                      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                      <path d="M12 11h4"></path>
+                      <path d="M12 16h4"></path>
+                      <path d="M8 11h.01"></path>
+                      <path d="M8 16h.01"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Open Tickets Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Open tickets</p>
+                    <p class="kpi-value">${(stats.open_tickets || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ticket">
+                      <path d="M2 5a2 2 0 0 1 2-2h.5a2 2 0 0 0 2-2h1a2 2 0 0 0 2 2h.5a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-.5a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2V5Z"></path>
+                      <path d="M2 9h20"></path>
+                      <path d="M2 15h20"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Openstaand Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Openstaand</p>
+                    <p class="kpi-value">${formatCurrency(stats.total_outstanding || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" x2="12" y1="8" y2="12"></line>
+                      <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Totaal Card -->
+                <div class="kpi-card">
+                  <div class="kpi-content">
+                    <p class="kpi-title">Totaal</p>
+                    <p class="kpi-value">${formatCurrency(stats.total_revenue || 0)}</p>
+                  </div>
+                  <div class="kpi-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                      <polyline points="16 7 22 7 22 13"></polyline>
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list">
-                  <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
-                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                  <path d="M12 11h4"></path>
-                  <path d="M12 16h4"></path>
-                  <path d="M8 11h.01"></path>
-                  <path d="M8 16h.01"></path>
-                </svg>
+            </div>
+          </div>
+
+          <!-- Tasks Tab Content -->
+          <div class="customer-main-tab-content" id="main-tab-tasks" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Taken</h3>
+                  <a href="/admin/tasks?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-plus"></i> Nieuwe Taak
+                  </a>
+                </div>
+                ${(tasks.length > 0 ? '<div class="user-activity-list">' + tasks.map(function(task) {
+                      var taskStatus = task.status || 'open'
+                      var taskPriority = task.priority || 'medium'
+                      var statusColors = {
+                        'open': '#3b82f6',
+                        'in_progress': '#f59e0b',
+                        'in_review': '#8b5cf6',
+                        'done': '#10b981',
+                        'rejected': '#ef4444'
+                      }
+                      var statusLabels = {
+                        'open': 'Open',
+                        'in_progress': 'In Uitvoering',
+                        'in_review': 'In Review',
+                        'done': 'Afgerond',
+                        'rejected': 'Afgewezen'
+                      }
+                      var statusColor = statusColors[taskStatus] || '#6b7280'
+                      var priorityColor = priorityColors[taskPriority] || '#6b7280'
+                      var employeeName = task.employee ? (task.employee.first_name && task.employee.last_name ? task.employee.first_name + ' ' + task.employee.last_name : task.employee.email) : 'Niet toegewezen'
+                      
+                      var employeeHtml = task.employee ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-user" style="margin-right: 4px;"></i><a href="/admin/employees/' + task.employee.id + '" style="color: #3b82f6; text-decoration: none;" onclick="event.stopPropagation();">' + employeeName + '</a></span>' : ''
+                      var dueHtml = task.due_at ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-calendar" style="margin-right: 4px;"></i>' + formatDate(task.due_at) + '</span>' : ''
+                      var valueHtml = task.value_cents > 0 ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-euro-sign" style="margin-right: 4px;"></i>' + formatCurrency(task.value_cents) + '</span>' : ''
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/tasks/' + task.id + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-tasks" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + (task.title || 'Geen titel') + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;"><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + (statusLabels[taskStatus] || taskStatus) + '</span><span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; font-size: 11px; padding: 2px 8px;">' + (priorityLabels[taskPriority] || taskPriority) + '</span>' + employeeHtml + dueHtml + valueHtml + '</div></div></div>'
+                    }).join('') + '</div><a href="/admin/tasks?customer_id=' + customer.id + '" class="user-activity-view-all">Bekijk alle taken ></a>' : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text" style="margin-bottom: 1.5rem;">Geen taken gevonden.</p><a href="/admin/tasks?customer_id=' + customer.id + '" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; font-size: 14px; text-decoration: none; border-radius: 8px;"><i class="fas fa-plus"></i> Eerste taak aanmaken</a></div>')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Administration Tab Content -->
+          <div class="customer-main-tab-content" id="main-tab-administration" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Facturen</h3>
+                  <div style="display: flex; gap: 8px;">
+                    <label for="invoiceImportFile" class="btn-primary" style="padding: 8px 16px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; border: none;">
+                      <i class="fas fa-upload"></i> Importeer CSV
+                    </label>
+                    <input type="file" id="invoiceImportFile" accept=".csv" style="display: none;" />
+                    <a href="/admin/customers/${customer.id}/invoices/new" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-plus"></i> Nieuwe Factuur
+                    </a>
+                  </div>
+                </div>
+                <div id="invoicesTableContainer">
+                  <!-- Invoices table will be rendered here by JavaScript -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Communication Tab Content -->
+          <div class="customer-main-tab-content" id="main-tab-communication" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">E-mails</h3>
+                  <a href="/admin/mail?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-envelope"></i> Bekijk alle e-mails
+                  </a>
+                </div>
+                ${(emails.length > 0 ? '<div class="user-activity-list">' + emails.map(function(email) {
+                      var isUnread = !email.read_at
+                      var unreadBg = isUnread ? '#3b82f620' : '#6b728020'
+                      var unreadColor = isUnread ? '#3b82f6' : '#6b7280'
+                      var unreadWeight = isUnread ? '600' : '400'
+                      var unreadBadge = isUnread ? '<span style="color: #3b82f6; margin-left: 8px; font-size: 10px;">(Ongelezen)</span>' : ''
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/mail/' + email.id + '\'"><div class="user-activity-icon" style="background-color: ' + unreadBg + ';"><i class="fas fa-envelope" style="color: ' + unreadColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title" style="font-weight: ' + unreadWeight + ';">' + (email.subject || 'Geen onderwerp') + unreadBadge + '</p><p class="user-activity-date">' + formatDateTime(email.created_at) + '</p></div></div>'
+                    }).join('') + '</div><a href="/admin/mail?customer_id=' + customer.id + '" class="user-activity-view-all">Bekijk alle e-mails ></a>' : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text">Geen e-mails gevonden.</p></div>')}
               </div>
             </div>
             
-            <!-- Open Tickets Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Open tickets</p>
-                <p class="kpi-value">${(stats.open_tickets || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ticket">
-                  <path d="M2 5a2 2 0 0 1 2-2h.5a2 2 0 0 0 2-2h1a2 2 0 0 0 2 2h.5a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-.5a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2V5Z"></path>
-                  <path d="M2 9h20"></path>
-                  <path d="M2 15h20"></path>
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Openstaand Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Openstaand</p>
-                <p class="kpi-value">${formatCurrency(stats.total_outstanding || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" x2="12" y1="8" y2="12"></line>
-                  <line x1="12" x2="12.01" y1="16" y2="16"></line>
-                </svg>
-              </div>
-            </div>
-            
-            <!-- Totaal Card -->
-            <div class="kpi-card">
-              <div class="kpi-content">
-                <p class="kpi-title">Totaal</p>
-                <p class="kpi-value">${formatCurrency(stats.total_revenue || 0)}</p>
-              </div>
-              <div class="kpi-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
-                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
-                  <polyline points="16 7 22 7 22 13"></polyline>
-                </svg>
+            <!-- Quick Actions -->
+            <div class="user-card" style="margin-top: 1.5rem;">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Snelle acties</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <button type="button" class="btn-primary" onclick="window.location.href='/admin/mail?customer_id=${customer.id}&action=compose'" style="padding: 12px 16px; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 12px; border: none; cursor: pointer; border-radius: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 2 11 13"></path>
+                      <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                    </svg>
+                    E-mail sturen
+                  </button>
+                  <button type="button" class="btn-primary" onclick="alert('Meeting plannen functionaliteit komt binnenkort')" style="padding: 12px 16px; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 12px; border: none; cursor: pointer; border-radius: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Meeting plannen
+                  </button>
+                </div>
               </div>
             </div>
           </div>

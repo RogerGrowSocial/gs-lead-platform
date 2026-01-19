@@ -3163,6 +3163,83 @@ a:hover [data-slot="badge"].text-foreground {
   text-decoration: underline;
 }
 
+/* Customer Main Tabs - Clean 2026 Style */
+.customer-main-tabs-container {
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.customer-main-tabs-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-start;
+  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  gap: 0;
+  margin-bottom: 1.5rem;
+}
+
+.customer-main-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  min-width: fit-content;
+  width: auto;
+  flex-shrink: 0;
+  position: relative;
+  margin-bottom: -1px;
+}
+
+.customer-main-tab-btn svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.customer-main-tab-btn:hover {
+  color: #111827;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.customer-main-tab-btn:hover svg {
+  opacity: 1;
+}
+
+.customer-main-tab-btn.customer-main-tab-active {
+  color: #111827;
+  border-bottom-color: #111827;
+  font-weight: 600;
+}
+
+.customer-main-tab-btn.customer-main-tab-active svg {
+  opacity: 1;
+}
+
+.customer-main-tab-btn.customer-main-tab-active:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.customer-main-tab-content {
+  display: none;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.customer-main-tab-content.customer-main-tab-content-active {
+  display: block;
+}
+
 /* Stats List New */
 .user-stats-list-new {
   display: flex;
