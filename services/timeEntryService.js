@@ -479,12 +479,30 @@ class TimeEntryService {
    */
   static async getActiveTimer(employeeId) {
     try {
-      const { data, error } = await supabaseAdmin
+      // First try with full joins, but handle errors gracefully
+      let query = supabaseAdmin
         .from('time_entries')
         .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:profiles!time_entries_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email)')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
+
+      let { data, error } = await query
+
+      // If foreign key joins fail, try without them
+      if (error && (error.message?.includes('relation') || error.message?.includes('foreign key') || error.code === 'PGRST116')) {
+        console.warn('Foreign key joins failed, trying without joins:', error.message)
+        const simpleQuery = supabaseAdmin
+          .from('time_entries')
+          .select('*')
+          .eq('employee_id', employeeId)
+          .eq('is_active_timer', true)
+          .maybeSingle()
+        
+        const result = await simpleQuery
+        data = result.data
+        error = result.error
+      }
 
       if (error) throw error
       return data
