@@ -434,44 +434,47 @@
     }
   }
 
-  // Render computed panel ASAP (and again on DOM ready for safety)
-  try { renderComputedPanel(); } catch (e) { /* ignore */ }
-  document.addEventListener('DOMContentLoaded', () => {
-    try { renderComputedPanel(); } catch (e) { /* ignore */ }
+  // Function to get customerId from multiple sources
+  function getCustomerId() {
+    // Try to extract from URL first (most reliable)
+    const urlMatch = window.location.pathname.match(/\/admin\/customers\/([a-f0-9-]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      return urlMatch[1];
+    }
+    // Try multiple window sources
+    if (window.customerEmployeesData?.customerId) {
+      return window.customerEmployeesData.customerId;
+    }
+    if (window.customerInvoicesData?.customerId) {
+      return window.customerInvoicesData.customerId;
+    }
+    if (window.customerData?.id) {
+      return window.customerData.id;
+    }
+    // Fallback to const at top
+    return customerId;
+  }
 
-    // Function to get customerId from multiple sources
-    function getCustomerId() {
-      // Try multiple sources
-      if (window.customerEmployeesData?.customerId) {
-        return window.customerEmployeesData.customerId;
+  // Function to initialize AI summary
+  function initAiSummary() {
+    const currentCustomerId = getCustomerId();
+    
+    if (!currentCustomerId) {
+      console.warn('[AI Summary] No customerId available, retrying...');
+      // Retry after a short delay (max 3 retries)
+      if (!initAiSummary.retryCount) {
+        initAiSummary.retryCount = 0;
       }
-      if (window.customerInvoicesData?.customerId) {
-        return window.customerInvoicesData.customerId;
+      if (initAiSummary.retryCount < 5) {
+        initAiSummary.retryCount++;
+        setTimeout(initAiSummary, 300);
+      } else {
+        console.error('[AI Summary] Failed to get customerId after multiple retries');
       }
-      if (window.customerData?.id) {
-        return window.customerData.id;
-      }
-      // Try to extract from URL as fallback
-      const urlMatch = window.location.pathname.match(/\/admin\/customers\/([a-f0-9-]+)/i);
-      if (urlMatch && urlMatch[1]) {
-        return urlMatch[1];
-      }
-      // Fallback to const at top
-      return customerId;
+      return;
     }
 
-    // Function to initialize AI summary
-    function initAiSummary() {
-      const currentCustomerId = getCustomerId();
-      
-      if (!currentCustomerId) {
-        console.warn('[AI Summary] No customerId available, retrying...');
-        // Retry after a short delay
-        setTimeout(initAiSummary, 200);
-        return;
-      }
-
-      console.log('[AI Summary] Using customerId:', currentCustomerId);
+    console.log('[AI Summary] Using customerId:', currentCustomerId);
 
       // Auto-generate AI summary if it doesn't exist
       const summaryText = document.getElementById('customerAiSummaryText');
