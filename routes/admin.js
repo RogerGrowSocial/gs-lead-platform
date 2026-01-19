@@ -10438,7 +10438,7 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
       supabaseAdmin.from('tickets').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('employee_tasks').select('*, employee:profiles!employee_tasks_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('customer_emails').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('customer_employee_assignments').select('*, employee:profiles!customer_employee_assignments_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id)
+      supabaseAdmin.from('customer_responsible_employees').select('*, employee:profiles!customer_responsible_employees_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id)
     ]);
 
     if (customerResult.error || !customerResult.data) {
