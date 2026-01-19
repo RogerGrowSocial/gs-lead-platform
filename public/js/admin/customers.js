@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const createCustomerBtn = document.getElementById('createCustomerBtn');
   const customersTableBody = document.getElementById('customersTableBody');
 
+  // Initialize sorting
+  initSorting();
+
   // Filter customers
   function applyFilters() {
     const search = searchInput?.value.toLowerCase() || '';
@@ -303,6 +306,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Create customer button - handled by customersDrawer.js
   // The drawer will open automatically when the button is clicked
+
+  // Initialize sorting functionality
+  function initSorting() {
+    const sortableHeaders = document.querySelectorAll('.table-header-cell.sortable');
+    const currentUrl = new URL(window.location.href);
+    const currentSortBy = currentUrl.searchParams.get('sortBy') || 'name';
+    const currentSortOrder = currentUrl.searchParams.get('sortOrder') || 'asc';
+
+    // Update active header styling
+    sortableHeaders.forEach(header => {
+      const sortValue = header.getAttribute('data-sort');
+      if (sortValue === currentSortBy) {
+        header.classList.add('active', currentSortOrder);
+      }
+
+      // Add click handler
+      header.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const sortBy = this.getAttribute('data-sort');
+        let newSortOrder = 'asc';
+        
+        // Toggle sort order if clicking the same column
+        if (sortBy === currentSortBy) {
+          newSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        }
+        
+        // Update URL parameters
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('sortBy', sortBy);
+        newUrl.searchParams.set('sortOrder', newSortOrder);
+        
+        // Navigate to new URL
+        window.location.href = newUrl.toString();
+      });
+    });
+  }
 });
 
 let currentCustomerId = null;

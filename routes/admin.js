@@ -8381,16 +8381,21 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   try {
-    const { status, priority, search, page = 1, limit = 15 } = req.query
+    const { status, priority, search, page = 1, limit = 15, sortBy = 'name', sortOrder = 'asc' } = req.query
     const pageNum = parseInt(page) || 1
     const limitNum = parseInt(limit) || 15
     const offset = (pageNum - 1) * limitNum
+    const ascending = sortOrder === 'asc' || sortOrder === 'ascending'
     
     // Build query - use customers table directly for accurate counts
     // Note: customer_stats view may have caching issues, so we query customers directly
+    // Join with customer_branches to get branch name
     let customerQuery = supabaseAdmin
       .from('customers')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        customer_branch:customer_branches!customers_customer_branch_id_fkey(id, name)
+      `, { count: 'exact' })
     
     // Apply filters
     if (status && status !== 'all') {
@@ -8401,6 +8406,34 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
     }
     if (search && search.trim()) {
       customerQuery = customerQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%,domain.ilike.%${search}%,company_name.ilike.%${search}%`)
+    }
+    
+    // Apply sorting
+    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'last_ticket_activity', 'last_email_activity']
+    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'name'
+    
+    // Handle special sorting cases
+    if (sortColumn === 'name') {
+      customerQuery = customerQuery.order('name', { ascending })
+    } else if (sortColumn === 'email') {
+      customerQuery = customerQuery.order('email', { ascending })
+    } else if (sortColumn === 'phone') {
+      customerQuery = customerQuery.order('phone', { ascending })
+    } else if (sortColumn === 'branch') {
+      // Sort by customer_branch_id (will be sorted by branch name in client-side if needed)
+      customerQuery = customerQuery.order('customer_branch_id', { ascending, nullsFirst: false })
+    } else if (sortColumn === 'status') {
+      customerQuery = customerQuery.order('status', { ascending })
+    } else if (sortColumn === 'priority') {
+      customerQuery = customerQuery.order('priority', { ascending })
+    } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
+      // For activity sorting, use updated_at as fallback
+      customerQuery = customerQuery.order('updated_at', { ascending })
+    }
+    
+    // Secondary sort by name for consistent ordering
+    if (sortColumn !== 'name') {
+      customerQuery = customerQuery.order('name', { ascending: true })
     }
     
     // Execute all queries in parallel for maximum performance
@@ -8631,21 +8664,33 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
         customer.logo_url = logoMap[customer.id] || null;
         customer.sort_order = sortOrderMap[customer.id] || 0;
         customer.total_revenue = revenueMap[customer.id] || 0;
+        // Extract branch name from joined relation
+        if (customer.customer_branch && customer.customer_branch.name) {
+          customer.branch_name = customer.customer_branch.name;
+        } else {
+          customer.branch_name = null;
+        }
       });
       
-      // Re-sort by sort_order if needed (only for current page - fast!)
-      if (customers.length > 0) {
+      // Re-sort by branch name if sorting by branch (client-side for alphabetical sorting)
+      // Note: Other columns are already sorted by database, so we only need client-side sorting for branch
+      if (customers.length > 0 && sortColumn === 'branch') {
         const sortStart = Date.now();
         customers.sort((a, b) => {
-          if (a.sort_order !== b.sort_order) {
-            return (a.sort_order || 0) - (b.sort_order || 0);
+          const aBranch = (a.branch_name || '').toLowerCase();
+          const bBranch = (b.branch_name || '').toLowerCase();
+          if (aBranch === bBranch) {
+            // Secondary sort by name
+            return (a.name || '').localeCompare(b.name || '');
           }
-          // Keep database order if sort_order is same
-          return 0;
+          if (!aBranch) return 1; // nulls last
+          if (!bBranch) return -1; // nulls last
+          const comparison = aBranch.localeCompare(bBranch);
+          return ascending ? comparison : -comparison;
         });
         timings['client_sort'] = Date.now() - sortStart;
         if (timings['client_sort'] > 0) {
-          console.error(`  ✅ client-side sort: ${timings['client_sort']}ms`);
+          console.error(`  ✅ client-side branch sort: ${timings['client_sort']}ms`);
         }
       }
     }
@@ -8711,6 +8756,10 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
         status: status || 'all',
         priority: priority || 'all',
         search: search || ''
+      },
+      sorting: {
+        sortBy: sortColumn,
+        sortOrder: ascending ? 'asc' : 'desc'
       },
       pagination: {
         page: currentPage,

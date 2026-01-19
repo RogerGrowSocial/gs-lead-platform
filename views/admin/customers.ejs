@@ -286,6 +286,36 @@
         display: flex;
         align-items: center;
       }
+
+      /* Sortable table headers */
+      .table-header-cell.sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .table-header-cell.sortable:hover {
+        background-color: #f9fafb;
+      }
+
+      .table-header-cell.sortable .sort-icon {
+        transition: opacity 0.2s;
+      }
+
+      .table-header-cell.sortable:hover .sort-icon {
+        opacity: 0.6 !important;
+      }
+
+      .table-header-cell.sortable.active .sort-icon {
+        opacity: 1 !important;
+      }
+
+      .table-header-cell.sortable.active.asc .sort-icon path:first-child {
+        stroke: #ea5d0d;
+      }
+
+      .table-header-cell.sortable.active.desc .sort-icon path:last-child {
+        stroke: #ea5d0d;
+      }
     </style>
     <script src="/js/admin/customersDrawer.js" defer></script>
     <!-- Right drawer (off-canvas) for creating a customer -->
@@ -536,12 +566,60 @@
           <table class="payments-table">
             <thead>
               <tr class="table-header-row">
-                <th class="table-header-cell">Klant</th>
-                <th class="table-header-cell">Contact</th>
-                <th class="table-header-cell">Domein</th>
-                <th class="table-header-cell">Status</th>
-                <th class="table-header-cell">Prioriteit</th>
-                <th class="table-header-cell">Laatste activiteit</th>
+                <th class="table-header-cell sortable" data-sort="name">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Klant</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="email">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Contact</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="branch">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Branche</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="status">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Status</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="priority">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Prioriteit</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="updated_at">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Laatste activiteit</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
                 <th class="table-header-cell"></th>
               </tr>
             </thead>
@@ -635,7 +713,7 @@
                         </div>
                       </td>
                       <td class="table-cell">
-                        <span class="cell-text">${c.domain || '-'}</span>
+                        <span class="cell-text">${c.branch_name || '-'}</span>
                       </td>
                       <td class="table-cell">
                         <span class="status-badge ${statusStyles[c.status] || 'status-pending'}">${statusLabels[c.status] || c.status}</span>
@@ -683,7 +761,7 @@
               ${
                 (!customers || customers.length === 0) ? `
                   <tr class="table-body-row">
-                    <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+                    <td colspan="7" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
                       Geen klanten gevonden. Klik op "Nieuwe Klant" om er een toe te voegen.
                     </td>
                   </tr>
@@ -725,6 +803,10 @@
             if (filters.status && filters.status !== 'all') params.set('status', filters.status);
             if (filters.priority && filters.priority !== 'all') params.set('priority', filters.priority);
             if (filters.search) params.set('search', filters.search);
+          }
+          if (typeof sorting !== 'undefined') {
+            if (sorting.sortBy) params.set('sortBy', sorting.sortBy);
+            if (sorting.sortOrder) params.set('sortOrder', sorting.sortOrder);
           }
           params.set('page', newPage);
           if (newLimit !== 15) params.set('limit', newLimit);
@@ -806,6 +888,10 @@
                   if ('${filters.status || 'all'}' !== 'all') params.set('status', '${filters.status || 'all'}');
                   if ('${filters.priority || 'all'}' !== 'all') params.set('priority', '${filters.priority || 'all'}');
                   if ('${filters.search || ''}') params.set('search', '${filters.search || ''}');
+                ` : ''}
+                ${typeof sorting !== 'undefined' ? `
+                  if ('${sorting.sortBy || 'name'}') params.set('sortBy', '${sorting.sortBy || 'name'}');
+                  if ('${sorting.sortOrder || 'asc'}') params.set('sortOrder', '${sorting.sortOrder || 'asc'}');
                 ` : ''}
                 params.set('page', newPage);
                 if (newLimit !== 15) params.set('limit', newLimit);
