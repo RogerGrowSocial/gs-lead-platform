@@ -10197,12 +10197,13 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
       .eq('customer_id', id)
       .maybeSingle();
 
-    // If summary exists and is recent (less than 24 hours old), return it
+    // If summary exists and is recent (less than 1 hour old), return it
+    // Reduced cache time to ensure fresh data when new items are added
     if (existingSummary && existingSummary.summary) {
       const summaryAge = new Date() - new Date(existingSummary.updated_at || existingSummary.created_at);
       const hoursOld = summaryAge / (1000 * 60 * 60);
       
-      if (hoursOld < 24) {
+      if (hoursOld < 1) {
         return res.json({
           success: true,
           summary: existingSummary.summary,
@@ -10213,42 +10214,47 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
       }
     }
 
-    // Fetch core data (keep small-ish to control tokens)
+    // Fetch ALL data (no limits) for complete AI context
     const [
       customerResult,
       enrichedResult,
+      statsResult,
       invoicesResult,
       ticketsResult,
       tasksResult,
       emailsResult,
-      responsibleEmployeesResult
+      responsibleEmployeesResult,
+      timeEntriesResult
     ] = await Promise.all([
       supabaseAdmin.from('customers').select('*').eq('id', id).single(),
       supabaseAdmin.from('customer_enriched').select('*').eq('id', id).maybeSingle(),
+      supabaseAdmin.from('customer_stats').select('*').eq('id', id).maybeSingle(),
+      // Get ALL invoices (no limit)
       supabaseAdmin
         .from('customer_invoices')
         .select('invoice_number, amount, outstanding_amount, status, invoice_date, due_date, external_system')
         .eq('customer_id', id)
-        .order('invoice_date', { ascending: false })
-        .limit(10),
+        .order('invoice_date', { ascending: false }),
+      // Get ALL tickets (no limit)
       supabaseAdmin
         .from('tickets')
-        .select('id, title, status, priority, created_at, updated_at')
+        .select('id, title, status, priority, created_at, updated_at, description')
         .eq('customer_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10),
+        .order('created_at', { ascending: false }),
+      // Get ALL tasks (no limit)
       supabaseAdmin
         .from('employee_tasks')
-        .select('id, title, status, value_cents, created_at')
+        .select('id, title, status, value_cents, created_at, description, priority')
         .eq('customer_id', id)
-        .order('created_at', { ascending: false })
-        .limit(10),
+        .order('created_at', { ascending: false }),
+      // Get recent emails (limit to 50 for summary)
       supabaseAdmin
         .from('mail_inbox')
         .select('id, subject, from_email, created_at, read_at')
         .eq('customer_id', id)
         .order('created_at', { ascending: false })
-        .limit(5),
+        .limit(50),
+      // Get ALL responsible employees (no limit)
       supabaseAdmin
         .from('customer_responsible_employees')
         .select(`
@@ -10257,8 +10263,14 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
           assigned_by_user:profiles!customer_responsible_employees_assigned_by_fkey(id, first_name, last_name, email)
         `)
         .eq('customer_id', id)
-        .order('assigned_at', { ascending: false })
-        .limit(10)
+        .order('assigned_at', { ascending: false }),
+      // Get recent time entries for context
+      supabaseAdmin
+        .from('time_entries')
+        .select('duration_minutes, start_at, employee:profiles!time_entries_employee_id_fkey(id, first_name, last_name), task:employee_tasks!time_entries_task_id_fkey(id, title)')
+        .eq('customer_id', id)
+        .order('start_at', { ascending: false })
+        .limit(50)
     ]);
 
     if (customerResult.error || !customerResult.data) {
@@ -10420,7 +10432,7 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
       .order('created_at', { ascending: true })
       .limit(20); // Last 20 messages for context
 
-    // Get customer data (similar to summary endpoint)
+    // Get ALL customer data (no limits) for complete AI context
     const [
       customerResult,
       enrichedResult,
@@ -10429,16 +10441,23 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
       ticketsResult,
       tasksResult,
       emailsResult,
-      responsibleEmployeesResult
+      responsibleEmployeesResult,
+      timeEntriesResult
     ] = await Promise.all([
       supabaseAdmin.from('customers').select('*').eq('id', id).single(),
       supabaseAdmin.from('customer_enriched').select('*').eq('id', id).maybeSingle(),
       supabaseAdmin.from('customer_stats').select('*').eq('id', id).maybeSingle(),
-      supabaseAdmin.from('customer_invoices').select('*').eq('customer_id', id).order('invoice_date', { ascending: false }).limit(10),
-      supabaseAdmin.from('tickets').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('employee_tasks').select('*, employee:profiles!employee_tasks_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('customer_emails').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
-      supabaseAdmin.from('customer_responsible_employees').select('*, employee:profiles!customer_responsible_employees_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id)
+      // Get ALL invoices (no limit)
+      supabaseAdmin.from('customer_invoices').select('*').eq('customer_id', id).order('invoice_date', { ascending: false }),
+      // Get ALL tickets (no limit)
+      supabaseAdmin.from('tickets').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+      // Get ALL tasks (no limit)
+      supabaseAdmin.from('employee_tasks').select('*, employee:profiles!employee_tasks_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id).order('created_at', { ascending: false }),
+      // Get ALL emails (no limit)
+      supabaseAdmin.from('customer_emails').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+      supabaseAdmin.from('customer_responsible_employees').select('*, employee:profiles!customer_responsible_employees_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id),
+      // Get recent time entries for context
+      supabaseAdmin.from('time_entries').select('*, employee:profiles!time_entries_employee_id_fkey(id, first_name, last_name, email), task:employee_tasks!time_entries_task_id_fkey(id, title)').eq('customer_id', id).order('start_at', { ascending: false }).limit(50)
     ]);
 
     if (customerResult.error || !customerResult.data) {
@@ -10453,8 +10472,9 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
     const tasks = tasksResult?.data || [];
     const emails = emailsResult?.data || [];
     const responsibleEmployees = responsibleEmployeesResult?.data || [];
+    const timeEntries = timeEntriesResult?.data || [];
 
-    // Build context for AI
+    // Build comprehensive context for AI with ALL data
     const context = {
       customer: {
         name: customer.company_name || customer.name,
@@ -10462,20 +10482,73 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
         phone: customer.phone,
         city: customer.city,
         status: customer.status,
-        priority: customer.priority
+        priority: customer.priority,
+        website: customer.website,
+        domain: customer.domain,
+        address: customer.address,
+        postal_code: customer.postal_code,
+        industry: customer.hubspot_industry || customer.industry
       },
       stats: {
         total_invoices: invoices.length,
         total_tickets: tickets.length,
         total_tasks: tasks.length,
+        total_emails: emails.length,
         total_revenue: stats.total_revenue || 0,
-        total_outstanding: stats.total_outstanding || 0
+        total_outstanding: stats.total_outstanding || 0,
+        open_tickets: tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length,
+        open_tasks: tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length,
+        overdue_invoices: invoices.filter(i => i.status === 'overdue').length
       },
-      recent_activity: {
-        tickets: tickets.slice(0, 3).map(t => ({ subject: t.subject, status: t.status })),
-        tasks: tasks.slice(0, 3).map(t => ({ title: t.title, status: t.status })),
-        invoices: invoices.slice(0, 3).map(i => ({ invoice_number: i.invoice_number, amount: i.amount, status: i.status }))
-      }
+      // ALL invoices (not just recent)
+      all_invoices: invoices.map(i => ({
+        invoice_number: i.invoice_number,
+        amount: i.amount,
+        outstanding_amount: i.outstanding_amount,
+        status: i.status,
+        invoice_date: i.invoice_date,
+        due_date: i.due_date
+      })),
+      // ALL tickets (not just recent)
+      all_tickets: tickets.map(t => ({
+        id: t.id,
+        title: t.title || t.subject,
+        status: t.status,
+        priority: t.priority,
+        created_at: t.created_at,
+        updated_at: t.updated_at,
+        description: t.description
+      })),
+      // ALL tasks (not just recent)
+      all_tasks: tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        value_cents: t.value_cents,
+        created_at: t.created_at,
+        employee: t.employee ? `${t.employee.first_name} ${t.employee.last_name}` : null,
+        description: t.description
+      })),
+      // Recent emails
+      recent_emails: emails.slice(0, 20).map(e => ({
+        subject: e.subject,
+        from_email: e.from_email,
+        created_at: e.created_at,
+        read_at: e.read_at
+      })),
+      // Time entries
+      time_entries: timeEntries.map(te => ({
+        duration_minutes: te.duration_minutes,
+        start_at: te.start_at,
+        employee: te.employee ? `${te.employee.first_name} ${te.employee.last_name}` : null,
+        task_title: te.task?.title || null
+      })),
+      responsible_employees: responsibleEmployees.map(re => ({
+        name: re.employee ? `${re.employee.first_name} ${re.employee.last_name}` : null,
+        email: re.employee?.email || null,
+        assigned_at: re.assigned_at
+      }))
     };
 
     // Generate AI response
@@ -10484,24 +10557,60 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
       return res.status(503).json({ success: false, error: 'AI service niet beschikbaar' });
     }
 
-    const systemPrompt = `Je bent een CRM assistent die helpt met vragen over klanten. Je hebt toegang tot klantgegevens, statistieken en recente activiteit. Antwoord beknopt, professioneel en actiegericht. Gebruik alleen de beschikbare informatie.`;
+    const systemPrompt = `Je bent een CRM assistent die helpt met vragen over klanten. Je hebt toegang tot ALLE klantgegevens inclusief alle facturen, tickets, taken, e-mails en tijdregistraties. Gebruik deze volledige informatie om accurate en actuele antwoorden te geven. Antwoord beknopt, professioneel en actiegericht.`;
 
     // Build conversation history for AI
     const conversationMessages = [
       { role: 'system', content: systemPrompt }
     ];
 
-    // Add customer context as first user message
-    conversationMessages.push({
-      role: 'user',
-      content: `Klant: ${context.customer.name}
+    // Build comprehensive context message with ALL data
+    const safeJson = (obj) => {
+      try { return JSON.stringify(obj, null, 2); } catch { return '{}'; }
+    };
+
+    const contextMessage = `KLANTGEGEVENS:
+Naam: ${context.customer.name}
 Status: ${context.customer.status}
 Prioriteit: ${context.customer.priority}
+E-mail: ${context.customer.email || 'Onbekend'}
+Telefoon: ${context.customer.phone || 'Onbekend'}
+Website: ${context.customer.website || context.customer.domain || 'Onbekend'}
+Locatie: ${[context.customer.address, context.customer.postal_code, context.customer.city].filter(Boolean).join(', ') || 'Onbekend'}
+Branche: ${context.customer.industry || 'Onbekend'}
+
+STATISTIEKEN:
 Totaal facturen: ${context.stats.total_invoices}
 Totaal tickets: ${context.stats.total_tickets}
 Totaal taken: ${context.stats.total_tasks}
-Omzet: €${context.stats.total_revenue.toFixed(2)}
-Openstaand: €${context.stats.total_outstanding.toFixed(2)}`
+Totaal e-mails: ${context.stats.total_emails}
+Openstaande tickets: ${context.stats.open_tickets}
+Openstaande taken: ${context.stats.open_tasks}
+Achterstallige facturen: ${context.stats.overdue_invoices}
+Totale omzet: €${context.stats.total_revenue.toFixed(2)}
+Openstaand bedrag: €${context.stats.total_outstanding.toFixed(2)}
+
+ALLE FACTUREN (${context.all_invoices.length}):
+${safeJson(context.all_invoices)}
+
+ALLE TICKETS (${context.all_tickets.length}):
+${safeJson(context.all_tickets)}
+
+ALLE TAKEN (${context.all_tasks.length}):
+${safeJson(context.all_tasks)}
+
+RECENTE E-MAILS (${context.recent_emails.length}):
+${safeJson(context.recent_emails)}
+
+TIJDREGISTRATIES (${context.time_entries.length}):
+${safeJson(context.time_entries)}
+
+VERANTWOORDELIJKE MEDEWERKERS:
+${safeJson(context.responsible_employees)}`;
+
+    conversationMessages.push({
+      role: 'user',
+      content: contextMessage
     });
 
     // Add chat history (last 10 messages for context)
@@ -10527,7 +10636,7 @@ Openstaand: €${context.stats.total_outstanding.toFixed(2)}`
       model: 'gpt-4o-mini',
       messages: conversationMessages,
       temperature: 0.7,
-      max_tokens: 500
+      max_tokens: 1000 // Increased for more detailed responses
     });
 
     const response = completion.choices?.[0]?.message?.content?.trim() || 'Geen antwoord ontvangen van AI.';
