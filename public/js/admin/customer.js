@@ -253,31 +253,7 @@
     }
   }
 
-  function initTabs() {
-    const tabButtons = document.querySelectorAll('.user-tab-btn');
-    const tabContents = document.querySelectorAll('.user-tab-content');
-
-    tabButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const targetTab = button.getAttribute('data-tab');
-
-        // Remove active class from all buttons and contents
-        tabButtons.forEach(btn => btn.classList.remove('user-tab-active'));
-        tabContents.forEach(content => {
-          content.style.display = 'none';
-        });
-
-        // Add active class to clicked button
-        button.classList.add('user-tab-active');
-
-        // Show corresponding content
-        const targetContent = document.getElementById(`tab-${targetTab}`);
-        if (targetContent) {
-          targetContent.style.display = 'block';
-        }
-      });
-    });
-  }
+  // Old tabs removed - using new main tabs instead
 
   function initMainTabs() {
     const mainTabButtons = document.querySelectorAll('.customer-main-tab-btn');
@@ -1543,7 +1519,6 @@
 
   function init() {
     console.log('[customer.js] Initializing customer detail page');
-    initTabs();
     initMainTabs();
     initEmployeeManagement();
     initEditMode();
