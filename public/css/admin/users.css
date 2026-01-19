@@ -3166,7 +3166,8 @@ a:hover [data-slot="badge"].text-foreground {
 /* Customer Main Tabs - Clean 2026 Style */
 .customer-main-tabs-container {
   width: 100%;
-  margin-top: 2rem;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .customer-main-tabs-header {
@@ -3178,6 +3179,10 @@ a:hover [data-slot="badge"].text-foreground {
   background: transparent;
   gap: 0;
   margin-bottom: 1.5rem;
+  margin-top: 0;
+  padding-top: 0;
+  margin-left: 0;
+  padding-left: 0;
 }
 
 .customer-main-tab-btn {
@@ -3200,6 +3205,10 @@ a:hover [data-slot="badge"].text-foreground {
   flex-shrink: 0;
   position: relative;
   margin-bottom: -1px;
+}
+
+.customer-main-tab-btn:first-child {
+  padding-left: 0;
 }
 
 .customer-main-tab-btn svg {
@@ -3238,6 +3247,103 @@ a:hover [data-slot="badge"].text-foreground {
 
 .customer-main-tab-content.customer-main-tab-content-active {
   display: block;
+}
+
+/* KPI Cards Styles */
+.kpi-cards-container {
+  margin-bottom: 16px;
+}
+
+.kpi-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 16px;
+}
+
+/* Mobile: 1 column (stacked vertically) */
+@media (min-width: 768px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: 4 columns (horizontal row) */
+@media (min-width: 1024px) {
+  .kpi-cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.kpi-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 120px;
+  box-shadow: none;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-content {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.kpi-icon {
+  height: 3rem;
+  width: 3rem;
+  background-color: #f3f4f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-icon svg {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: #6b7280;
+}
+
+.kpi-title {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+  font-weight: 400;
+  line-height: 1rem;
+}
+
+.kpi-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* KPI Cards - Directly under customer info card */
+.user-detail-main-new .kpi-cards-container {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+}
+
+.user-detail-main-new .kpi-cards-grid {
+  margin-top: 0;
 }
 
 /* Stats List New */
