@@ -535,6 +535,7 @@
     // Also retry after longer delays in case script tags load slowly
     setTimeout(initAiSummary, 500);
     setTimeout(initAiSummary, 1000);
+  });
 
     // AI Chat form handler
     const chatForm = document.getElementById('customerAiChatForm');
