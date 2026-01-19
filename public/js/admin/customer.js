@@ -439,18 +439,39 @@
   document.addEventListener('DOMContentLoaded', () => {
     try { renderComputedPanel(); } catch (e) { /* ignore */ }
 
-    // Wait a bit for window.customerEmployeesData to be set by the template
-    setTimeout(() => {
-      // Get customerId - try multiple sources
-      const currentCustomerId = window.customerEmployeesData?.customerId || 
-                                window.customerInvoicesData?.customerId ||
-                                (window.customerData && window.customerData.id) ||
-                                customerId; // fallback to const at top
+    // Function to get customerId from multiple sources
+    function getCustomerId() {
+      // Try multiple sources
+      if (window.customerEmployeesData?.customerId) {
+        return window.customerEmployeesData.customerId;
+      }
+      if (window.customerInvoicesData?.customerId) {
+        return window.customerInvoicesData.customerId;
+      }
+      if (window.customerData?.id) {
+        return window.customerData.id;
+      }
+      // Try to extract from URL as fallback
+      const urlMatch = window.location.pathname.match(/\/admin\/customers\/([a-f0-9-]+)/i);
+      if (urlMatch && urlMatch[1]) {
+        return urlMatch[1];
+      }
+      // Fallback to const at top
+      return customerId;
+    }
+
+    // Function to initialize AI summary
+    function initAiSummary() {
+      const currentCustomerId = getCustomerId();
       
       if (!currentCustomerId) {
-        console.warn('[AI Summary] No customerId available after DOM ready');
+        console.warn('[AI Summary] No customerId available, retrying...');
+        // Retry after a short delay
+        setTimeout(initAiSummary, 200);
         return;
       }
+
+      console.log('[AI Summary] Using customerId:', currentCustomerId);
 
       // Auto-generate AI summary if it doesn't exist
       const summaryText = document.getElementById('customerAiSummaryText');
@@ -494,12 +515,22 @@
           e.preventDefault();
           e.stopPropagation();
           console.log('[AI Summary] Refresh button clicked');
-          refreshCustomerAiSummaryWithId(currentCustomerId);
+          const btnCustomerId = getCustomerId();
+          if (btnCustomerId) {
+            refreshCustomerAiSummaryWithId(btnCustomerId);
+          } else {
+            console.error('[AI Summary] No customerId available for refresh');
+          }
         });
       } else {
         console.warn('[AI Summary] Refresh button not found');
       }
-    }, 100);
+    }
+
+    // Try to initialize immediately, then retry if needed
+    setTimeout(initAiSummary, 100);
+    // Also retry after a longer delay in case script tags load slowly
+    setTimeout(initAiSummary, 500);
 
     // AI Chat form handler
     const chatForm = document.getElementById('customerAiChatForm');
