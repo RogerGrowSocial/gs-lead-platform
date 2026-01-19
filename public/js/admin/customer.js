@@ -476,66 +476,65 @@
 
     console.log('[AI Summary] Using customerId:', currentCustomerId);
 
-      // Auto-generate AI summary if it doesn't exist
-      const summaryText = document.getElementById('customerAiSummaryText');
-      const summaryLoading = document.getElementById('customerAiSummaryLoading');
+    // Auto-generate AI summary if it doesn't exist
+    const summaryText = document.getElementById('customerAiSummaryText');
+    const summaryLoading = document.getElementById('customerAiSummaryLoading');
+    
+    if (summaryText) {
+      const currentText = summaryText.textContent.trim();
+      // Check if summary exists (not placeholder or empty)
+      const hasSummary = currentText && currentText.length > 20; // Real summary should be longer
       
-      if (summaryText) {
-        const currentText = summaryText.textContent.trim();
-        // Check if summary exists (not placeholder or empty)
-        const hasSummary = currentText && currentText.length > 20; // Real summary should be longer
-        
-        if (hasSummary) {
-          // Summary already exists, just make sure it's visible
-          summaryText.style.display = 'block';
-          if (summaryLoading) {
-            summaryLoading.style.display = 'none';
-          }
-        } else {
-          // No summary exists - generate one automatically in background
-          // Show loading state while generating
-          summaryText.style.display = 'none';
-          if (summaryLoading) {
-            summaryLoading.style.display = 'block';
-          }
-          
-          // Generate summary in background (use currentCustomerId)
-          refreshCustomerAiSummaryWithId(currentCustomerId).catch(err => {
-            console.error('[AI Summary] Failed to generate on page load:', err);
-            // Error handling is done in refreshCustomerAiSummaryWithId
-          });
+      if (hasSummary) {
+        // Summary already exists, just make sure it's visible
+        summaryText.style.display = 'block';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'none';
         }
-      }
-
-      // Setup refresh button
-      const refreshBtn = document.getElementById('refreshCustomerAiSummaryBtn');
-      if (refreshBtn) {
-        // Remove any existing listeners to prevent duplicates
-        const newRefreshBtn = refreshBtn.cloneNode(true);
-        refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
-        
-        newRefreshBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('[AI Summary] Refresh button clicked');
-          const btnCustomerId = getCustomerId();
-          if (btnCustomerId) {
-            refreshCustomerAiSummaryWithId(btnCustomerId);
-          } else {
-            console.error('[AI Summary] No customerId available for refresh');
-          }
-        });
       } else {
-        console.warn('[AI Summary] Refresh button not found');
+        // No summary exists - generate one automatically in background
+        // Show loading state while generating
+        summaryText.style.display = 'none';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'block';
+        }
+        
+        // Generate summary in background (use currentCustomerId)
+        refreshCustomerAiSummaryWithId(currentCustomerId).catch(err => {
+          console.error('[AI Summary] Failed to generate on page load:', err);
+          // Error handling is done in refreshCustomerAiSummaryWithId
+        });
       }
     }
+
+    // Setup refresh button
+    const refreshBtn = document.getElementById('refreshCustomerAiSummaryBtn');
+    if (refreshBtn) {
+      // Remove any existing listeners to prevent duplicates
+      const newRefreshBtn = refreshBtn.cloneNode(true);
+      refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
+      
+      newRefreshBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[AI Summary] Refresh button clicked');
+        const btnCustomerId = getCustomerId();
+        if (btnCustomerId) {
+          refreshCustomerAiSummaryWithId(btnCustomerId);
+        } else {
+          console.error('[AI Summary] No customerId available for refresh');
+        }
+      });
+    } else {
+      console.warn('[AI Summary] Refresh button not found');
+    }
+  }
 
     // Try to initialize immediately, then retry if needed
     setTimeout(initAiSummary, 100);
     // Also retry after longer delays in case script tags load slowly
     setTimeout(initAiSummary, 500);
     setTimeout(initAiSummary, 1000);
-  });
 
     // AI Chat form handler
     const chatForm = document.getElementById('customerAiChatForm');
