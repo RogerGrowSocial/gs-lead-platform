@@ -1696,11 +1696,22 @@
         const data = await response.json();
         if (data.success) {
           renderInvoicesTable(data.invoices || []);
+        } else {
+          console.error('Failed to load invoices:', data.error);
+          if (invoicesTableContainer) {
+            invoicesTableContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Fout bij laden facturen: ' + (data.error || 'Onbekende fout') + '</p>';
+          }
         }
       } catch (error) {
         console.error('Error loading invoices:', error);
+        if (invoicesTableContainer) {
+          invoicesTableContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Fout bij laden facturen: ' + error.message + '</p>';
+        }
       }
     }
+    
+    // Make loadInvoices available globally
+    window.loadInvoices = loadInvoices;
 
     // Import CSV
     async function importCSV(file) {
