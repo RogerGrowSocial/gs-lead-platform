@@ -409,7 +409,32 @@
       );
 
       if (filtered.length === 0) {
-        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen taken gevonden</div>';
+        dropdown.innerHTML = `
+          <div style="padding: 12px; color: #6b7280; text-align: center;">
+            <div style="margin-bottom: 8px;">Geen taken gevonden</div>
+            <button 
+              id="addTaskFromSearchBtn" 
+              style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
+              onmouseover="this.style.background='#2563eb'"
+              onmouseout="this.style.background='#3b82f6'"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Taak toevoegen
+            </button>
+          </div>
+        `;
+        
+        // Add click handler for add task button
+        const addTaskBtn = dropdown.querySelector('#addTaskFromSearchBtn');
+        if (addTaskBtn) {
+          addTaskBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showAddTaskModal(query);
+          });
+        }
       } else {
         dropdown.innerHTML = filtered.map(task => `
           <div 
