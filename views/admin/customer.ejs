@@ -252,6 +252,14 @@
               </svg>
               Taken
             </button>
+            <button class="customer-main-tab-btn" data-main-tab="tickets">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9z"></path>
+                <path d="M8 9v6"></path>
+                <path d="M16 9v6"></path>
+              </svg>
+              Tickets
+            </button>
             <button class="customer-main-tab-btn" data-main-tab="administration">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -311,6 +319,55 @@
                       var valueHtml = task.value_cents > 0 ? '<span style="font-size: 11px; color: #6b7280;"><i class="fas fa-euro-sign" style="margin-right: 4px;"></i>' + formatCurrency(task.value_cents) + '</span>' : ''
                       return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/tasks/' + task.id + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-tasks" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + (task.title || 'Geen titel') + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;"><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + (statusLabels[taskStatus] || taskStatus) + '</span><span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; font-size: 11px; padding: 2px 8px;">' + (priorityLabels[taskPriority] || taskPriority) + '</span>' + employeeHtml + dueHtml + valueHtml + '</div></div></div>'
                     }).join('') + '</div><a href="/admin/tasks?customer_id=' + customer.id + '" class="user-activity-view-all">Bekijk alle taken ></a>' : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text" style="margin-bottom: 1.5rem;">Geen taken gevonden.</p><a href="/admin/tasks?customer_id=' + customer.id + '" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; font-size: 14px; text-decoration: none; border-radius: 8px;"><i class="fas fa-plus"></i> Eerste taak aanmaken</a></div>')}
+              </div>
+            </div>
+          </div>
+
+          <!-- Tickets Tab Content -->
+          <div class="customer-main-tab-content" id="main-tab-tickets" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Tickets</h3>
+                  <a href="/admin/tickets?customer_id=${customer.id}" class="btn-primary" style="padding: 8px 16px; font-size: 14px; text-decoration: none;">
+                    <i class="fas fa-plus"></i> Nieuw Ticket
+                  </a>
+                </div>
+                ${(tickets.length > 0 ? '<div class="user-activity-list">' + tickets.map(function(ticket) {
+                      var ticketStatus = ticket.status || 'new'
+                      var ticketPriority = ticket.priority || 'normal'
+                      var statusColors = {
+                        'new': '#3b82f6',
+                        'open': '#3b82f6',
+                        'waiting_on_customer': '#f59e0b',
+                        'waiting_on_internal': '#8b5cf6',
+                        'resolved': '#10b981',
+                        'closed': '#6b7280'
+                      }
+                      var statusLabels = {
+                        'new': 'Nieuw',
+                        'open': 'Open',
+                        'waiting_on_customer': 'Wachten op klant',
+                        'waiting_on_internal': 'Wachten intern',
+                        'resolved': 'Opgelost',
+                        'closed': 'Gesloten'
+                      }
+                      var priorityColors = {
+                        'low': '#6b7280',
+                        'normal': '#3b82f6',
+                        'high': '#f59e0b',
+                        'urgent': '#ef4444'
+                      }
+                      var priorityLabels = {
+                        'low': 'Laag',
+                        'normal': 'Normaal',
+                        'high': 'Hoog',
+                        'urgent': 'Urgent'
+                      }
+                      var statusColor = statusColors[ticketStatus] || '#6b7280'
+                      var priorityColor = priorityColors[ticketPriority] || '#6b7280'
+                      return '<div class="user-activity-item" style="cursor: pointer;" onclick="window.location.href=\'/admin/tickets/' + ticket.id + '\'"><div class="user-activity-icon" style="background-color: ' + statusColor + '20;"><i class="fas fa-ticket-alt" style="color: ' + statusColor + ';"></i></div><div class="user-activity-content" style="flex: 1;"><p class="user-activity-title">' + (ticket.title || 'Geen titel') + '</p><div style="display: flex; gap: 12px; align-items: center; margin-top: 4px; flex-wrap: wrap;"><span class="status-badge" style="background-color: ' + statusColor + '20; color: ' + statusColor + '; font-size: 11px; padding: 2px 8px;">' + (statusLabels[ticketStatus] || ticketStatus) + '</span><span class="status-badge" style="background-color: ' + priorityColor + '20; color: ' + priorityColor + '; font-size: 11px; padding: 2px 8px;">' + (priorityLabels[ticketPriority] || ticketPriority) + '</span><span style="font-size: 11px; color: #6b7280;"><i class="fas fa-clock" style="margin-right: 4px;"></i>' + formatRelativeTime(ticket.updated_at || ticket.created_at) + '</span></div></div></div>'
+                    }).join('') + '</div><a href="/admin/tickets?customer_id=' + customer.id + '" class="user-activity-view-all">Bekijk alle tickets ></a>' : '<div style="text-align: center; padding: 3rem 1rem;"><p class="user-empty-text" style="margin-bottom: 1.5rem;">Geen tickets gevonden.</p><a href="/admin/tickets?customer_id=' + customer.id + '" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 20px; font-size: 14px; text-decoration: none; border-radius: 8px;"><i class="fas fa-plus"></i> Eerste ticket aanmaken</a></div>')}
               </div>
             </div>
           </div>
