@@ -162,29 +162,29 @@
       headersToUse = document.querySelectorAll('.table-header-cell.sortable');
     }
 
-    // Update active header styling and add click handlers
-    headersToUse.forEach((header, index) => {
-      // Remove existing click listeners by cloning just this header if skipClone is true
-      let headerToUse = header;
-      if (skipClone) {
-        // Remove all existing click listeners by replacing the header
+    // If skipClone is true, clone all headers first, then re-select
+    if (skipClone) {
+      // Clone all headers to remove old event listeners
+      sortableHeaders.forEach(header => {
         const newHeader = header.cloneNode(true);
         header.parentNode.replaceChild(newHeader, header);
-        headerToUse = newHeader; // Use the new header
-        // Update headersToUse array reference for next iteration
-        headersToUse[index] = newHeader;
-      }
-      
-      const sortValue = headerToUse.getAttribute('data-sort');
+      });
+      // Re-select headers after cloning
+      headersToUse = document.querySelectorAll('.table-header-cell.sortable');
+    }
+
+    // Update active header styling and add click handlers
+    headersToUse.forEach((header) => {
+      const sortValue = header.getAttribute('data-sort');
       
       // Update styling
-      headerToUse.classList.remove('active', 'asc', 'desc');
+      header.classList.remove('active', 'asc', 'desc');
       if (sortValue === currentSortBy) {
-        headerToUse.classList.add('active', currentSortOrder);
+        header.classList.add('active', currentSortOrder);
       }
 
       // Add click handler - use arrow function to ensure correct closure
-      headerToUse.addEventListener('click', (e) => {
+      header.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
