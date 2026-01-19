@@ -72,9 +72,9 @@
         border: none;
         cursor: pointer;
         padding: 8px;
-        color: #6b7280;
+        color: #bdbec9;
         transition: color 0.2s;
-        margin-right: 12px;
+        margin-right: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -82,17 +82,26 @@
       `;
       clockButton.addEventListener('mouseenter', () => {
         if (!this.currentEntry) {
-          clockButton.style.color = '#374151';
+          clockButton.style.color = '#9ca3af';
         }
       });
       clockButton.addEventListener('mouseleave', () => {
         if (!this.currentEntry) {
-          clockButton.style.color = '#6b7280';
+          clockButton.style.color = '#bdbec9';
         }
       });
 
-      // Insert before user dropdown
-      headerRight.insertBefore(clockButton, headerRight.firstChild);
+      // Insert before user dropdown, but align to center with user-name
+      // Find user dropdown to insert before it
+      const userDropdown = headerRight.querySelector('.user-dropdown');
+      if (userDropdown) {
+        headerRight.insertBefore(clockButton, userDropdown);
+      } else {
+        headerRight.insertBefore(clockButton, headerRight.firstChild);
+      }
+      
+      // Ensure button is vertically centered with user-name
+      // The header-right already uses flexbox with align-items: center
 
       this.clockButton = clockButton;
       this.createPopover(headerRight);
@@ -286,7 +295,7 @@
 
       if (this.currentEntry) {
         // Running state
-        this.clockButton.style.color = '#10b981'; // Green
+        this.clockButton.style.color = '#10b981'; // Green when running
         form.style.display = 'none';
         running.style.display = 'block';
         
@@ -304,7 +313,7 @@
         this.updateElapsedTime();
       } else {
         // Idle state
-        this.clockButton.style.color = '#6b7280';
+        this.clockButton.style.color = '#bdbec9';
         form.style.display = 'block';
         running.style.display = 'none';
         if (elapsedEl) elapsedEl.textContent = 'Niet ingeklokt';

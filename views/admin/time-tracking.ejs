@@ -274,10 +274,25 @@
           <h3 class="activity-form-title">Wat ben je aan het doen?</h3>
           <div class="activity-form-grid">
             <div class="activity-form-field">
-              <label for="activeProject" data-slot="label">Project</label>
-              <input type="text" id="activeProject" class="activity-input" data-slot="input" placeholder="Bijv. Website redesign" onchange="updateActiveTimer()" onblur="updateActiveTimer()">
+              <label for="activeWorkType" data-slot="label">Waar werk je aan? *</label>
+              <select id="activeWorkType" class="activity-input activity-select" data-slot="input" required onchange="handleWorkTypeChange()">
+                <option value="">Selecteer...</option>
+                <option value="klantenwerk">Klantenwerk</option>
+                <option value="platform">Platform</option>
+                <option value="sales">Sales</option>
+              </select>
             </div>
-            <div class="activity-form-field">
+            <div class="activity-form-field" id="taskFieldContainer" style="display: none;">
+              <label for="activeTask" data-slot="label">Taken *</label>
+              <input type="text" id="taskSearchInput" class="activity-input" placeholder="Zoek taak..." style="margin-bottom: 8px;" oninput="filterTaskOptions(this.value)">
+              <select id="activeTask" class="activity-input activity-select" data-slot="input" onchange="handleTaskChange()">
+                <option value="">Selecteer taak...</option>
+                ${(tasks || []).map(t => `
+                  <option value="${t.id}" data-customer-id="${t.customer_id || ''}" data-contact-id="${t.contact_id || ''}" data-task-title="${(t.title || '').toLowerCase()}">${t.title}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="activity-form-field" id="customerFieldContainer" style="display: none;">
               <label for="activeCustomer" data-slot="label">Klant</label>
               <select id="activeCustomer" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
                 <option value="">Selecteer klant</option>
@@ -286,19 +301,19 @@
                 `).join('')}
               </select>
             </div>
-            <div class="activity-form-field">
-              <label for="activeTask" data-slot="label">Taak</label>
-              <select id="activeTask" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
-                <option value="">Selecteer taak</option>
-                ${(tasks || []).map(t => `
-                  <option value="${t.id}">${t.title}</option>
+            <div class="activity-form-field" id="contactFieldContainer" style="display: none;">
+              <label for="activeContact" data-slot="label">Contact</label>
+              <select id="activeContact" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
+                <option value="">Selecteer contact</option>
+                ${(contacts || []).map(c => `
+                  <option value="${c.id}" data-customer-id="${c.customer_id || ''}">${(c.first_name || '') + ' ' + (c.last_name || '')}${c.email ? ' (' + c.email + ')' : ''}</option>
                 `).join('')}
               </select>
             </div>
           </div>
           <div class="activity-form-field-full">
-            <label for="activeNote" data-slot="label">Beschrijving</label>
-            <textarea id="activeNote" class="activity-input activity-textarea" data-slot="textarea" placeholder="Beschrijf waar je aan werkt..." onchange="updateActiveTimer()" onblur="updateActiveTimer()"></textarea>
+            <label for="activeNote" data-slot="label">Titel *</label>
+            <input type="text" id="activeNote" class="activity-input" data-slot="input" placeholder="Geef een titel op voor deze registratie" required onchange="updateActiveTimer()" onblur="updateActiveTimer()">
           </div>
         </div>
       </div>

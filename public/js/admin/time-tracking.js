@@ -164,17 +164,28 @@
       }
       
       // Set form values
+      const workTypeField = document.getElementById('activeWorkType');
+      const taskField = document.getElementById('activeTask');
+      const customerField = document.getElementById('activeCustomer');
+      const contactField = document.getElementById('activeContact');
+      const noteField = document.getElementById('activeNote');
+      
       if (activeTimer.project_name) {
-        document.getElementById('activeProject').value = activeTimer.project_name;
+        workTypeField.value = activeTimer.project_name;
+        handleWorkTypeChange(); // Trigger to show/hide fields
       }
-      if (activeTimer.customer_id) {
-        document.getElementById('activeCustomer').value = activeTimer.customer_id;
+      if (activeTimer.customer_id && customerField) {
+        customerField.value = activeTimer.customer_id;
       }
-      if (activeTimer.task_id) {
-        document.getElementById('activeTask').value = activeTimer.task_id;
+      if (activeTimer.contact_id && contactField) {
+        contactField.value = activeTimer.contact_id;
       }
-      if (activeTimer.note) {
-        document.getElementById('activeNote').value = activeTimer.note;
+      if (activeTimer.task_id && taskField) {
+        taskField.value = activeTimer.task_id;
+        handleTaskChange(); // Trigger to auto-populate customer/contact
+      }
+      if (activeTimer.note && noteField) {
+        noteField.value = activeTimer.note;
       }
 
       // Start timer
@@ -183,7 +194,7 @@
       updateActivityDisplay(); // Show current activity
       
       // Auto-open form if no activity is set
-      const hasActivity = activeTimer.project_name || activeTimer.customer_id || activeTimer.task_id || activeTimer.note;
+      const hasActivity = activeTimer.project_name || activeTimer.customer_id || activeTimer.contact_id || activeTimer.task_id || activeTimer.note;
       if (!hasActivity) {
         setTimeout(() => {
           toggleActivityForm();
@@ -301,11 +312,18 @@
   window.clockOut = async function() {
     try {
       // Get current form values
+      const workType = document.getElementById('activeWorkType').value;
+      const taskId = document.getElementById('activeTask').value;
+      const customerId = document.getElementById('activeCustomer').value;
+      const contactId = document.getElementById('activeContact').value;
+      const note = document.getElementById('activeNote').value;
+      
       const updateData = {
-        project_name: document.getElementById('activeProject').value || null,
-        customer_id: document.getElementById('activeCustomer').value || null,
-        task_id: document.getElementById('activeTask').value || null,
-        note: document.getElementById('activeNote').value || null
+        project_name: workType || null,
+        customer_id: customerId || null,
+        contact_id: contactId || null,
+        task_id: taskId || null,
+        note: note || null
       };
 
       const res = await fetch(`/api/employees/${employeeId}/time-entries/clock-out`, {
@@ -341,16 +359,137 @@
     }
   };
 
+  // Handle work type change
+  window.handleWorkTypeChange = function() {
+    const workType = document.getElementById('activeWorkType').value;
+    const taskFieldContainer = document.getElementById('taskFieldContainer');
+    const customerFieldContainer = document.getElementById('customerFieldContainer');
+    const contactFieldContainer = document.getElementById('contactFieldContainer');
+    const taskField = document.getElementById('activeTask');
+    const taskSearchInput = document.getElementById('taskSearchInput');
+    const customerField = document.getElementById('activeCustomer');
+    const contactField = document.getElementById('activeContact');
+    
+    if (workType === 'klantenwerk') {
+      // Show task field, customer and contact fields will be shown when task is selected
+      taskFieldContainer.style.display = 'block';
+      taskField.required = true;
+      customerFieldContainer.style.display = 'none';
+      contactFieldContainer.style.display = 'none';
+      // Clear customer and contact when switching
+      customerField.value = '';
+      contactField.value = '';
+      taskField.value = '';
+      if (taskSearchInput) {
+        taskSearchInput.value = '';
+        filterTaskOptions('');
+      }
+    } else {
+      // Hide task field and related fields for other work types
+      taskFieldContainer.style.display = 'none';
+      customerFieldContainer.style.display = 'none';
+      contactFieldContainer.style.display = 'none';
+      taskField.required = false;
+      taskField.value = '';
+      customerField.value = '';
+      contactField.value = '';
+      if (taskSearchInput) {
+        taskSearchInput.value = '';
+      }
+    }
+    
+    updateActiveTimer();
+  };
+
+  // Filter task options based on search input
+  window.filterTaskOptions = function(searchTerm) {
+    const taskSelect = document.getElementById('activeTask');
+    const options = taskSelect.querySelectorAll('option');
+    const searchLower = (searchTerm || '').toLowerCase();
+    
+    options.forEach(option => {
+      if (option.value === '') {
+        // Always show the placeholder option
+        option.style.display = '';
+        return;
+      }
+      
+      const taskTitle = option.getAttribute('data-task-title') || '';
+      if (taskTitle.includes(searchLower)) {
+        option.style.display = '';
+      } else {
+        option.style.display = 'none';
+      }
+    });
+  };
+
+  // Handle task change - auto-populate customer and contact
+  window.handleTaskChange = function() {
+    const taskId = document.getElementById('activeTask').value;
+    const customerField = document.getElementById('activeCustomer');
+    const contactField = document.getElementById('activeContact');
+    const customerFieldContainer = document.getElementById('customerFieldContainer');
+    const contactFieldContainer = document.getElementById('contactFieldContainer');
+    const taskSearchInput = document.getElementById('taskSearchInput');
+    
+    if (taskId) {
+      const taskOption = document.querySelector(`#activeTask option[value="${taskId}"]`);
+      if (taskOption) {
+        const customerId = taskOption.getAttribute('data-customer-id');
+        const contactId = taskOption.getAttribute('data-contact-id');
+        
+        // Set search input to selected task title
+        if (taskSearchInput) {
+          taskSearchInput.value = taskOption.textContent;
+        }
+        
+        // Show customer field
+        customerFieldContainer.style.display = 'block';
+        if (customerId) {
+          customerField.value = customerId;
+        } else {
+          customerField.value = '';
+        }
+        
+        // Show contact field
+        contactFieldContainer.style.display = 'block';
+        if (contactId) {
+          contactField.value = contactId;
+        } else {
+          contactField.value = '';
+        }
+      }
+    } else {
+      // Hide fields if no task selected
+      customerFieldContainer.style.display = 'none';
+      contactFieldContainer.style.display = 'none';
+      customerField.value = '';
+      contactField.value = '';
+      if (taskSearchInput) {
+        taskSearchInput.value = '';
+      }
+    }
+    
+    updateActiveTimer();
+  };
+
   // Update active timer
   window.updateActiveTimer = async function() {
     if (!activeTimer) return;
 
     try {
+      const workType = document.getElementById('activeWorkType').value;
+      const taskId = document.getElementById('activeTask').value;
+      const customerId = document.getElementById('activeCustomer').value;
+      const contactId = document.getElementById('activeContact').value;
+      const note = document.getElementById('activeNote').value;
+      
       const updateData = {
-        project_name: document.getElementById('activeProject').value || null,
-        customer_id: document.getElementById('activeCustomer').value || null,
-        task_id: document.getElementById('activeTask').value || null,
-        note: document.getElementById('activeNote').value || null
+        project_name: workType || null,
+        customer_id: customerId || null,
+        contact_id: contactId || null,
+        task_id: taskId || null,
+        note: note || null
       };
 
       const res = await fetch(`/api/employees/${employeeId}/time-entries/active-timer`, {
@@ -379,9 +518,18 @@
     if (!activeTimer || !activityDisplay) return;
 
     const parts = [];
-    if (activeTimer.project_name) parts.push(activeTimer.project_name);
+    if (activeTimer.project_name) {
+      // Map work type to display name
+      const workTypeMap = {
+        'klantenwerk': 'Klantenwerk',
+        'platform': 'Platform',
+        'sales': 'Sales'
+      };
+      parts.push(workTypeMap[activeTimer.project_name] || activeTimer.project_name);
+    }
     if (activeTimer.customer?.company_name) parts.push(activeTimer.customer.company_name);
     if (activeTimer.task?.title) parts.push(activeTimer.task.title);
+    if (activeTimer.note) parts.push(activeTimer.note);
     
     if (parts.length > 0) {
       activityText.textContent = parts.join(' • ');

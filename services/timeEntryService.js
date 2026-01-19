@@ -404,6 +404,7 @@ class TimeEntryService {
           employee_id: employeeId,
           task_id: entryData.task_id || null,
           customer_id: entryData.customer_id || null,
+          contact_id: entryData.contact_id || null,
           project_name: entryData.project_name || null,
           start_at: now.toISOString(),
           end_at: null,
@@ -480,7 +481,7 @@ class TimeEntryService {
     try {
       const { data, error } = await supabaseAdmin
         .from('time_entries')
-        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:profiles!time_entries_customer_id_fkey(id, first_name, last_name, company_name, email)')
+        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:profiles!time_entries_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email)')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()

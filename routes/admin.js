@@ -8007,10 +8007,24 @@ router.get('/time-entries', requireAuth, async (req, res) => {
       .or('role_id.is.null,role_id.not.is.null') // Get all profiles that could be customers
       .order('company_name, first_name');
 
-    // Get tasks for this employee
+    // Get contacts (for dropdowns)
+    const { data: contacts } = await supabaseAdmin
+      .from('contacts')
+      .select('id, first_name, last_name, email, customer_id')
+      .order('first_name, last_name');
+
+    // Get tasks for this employee with customer and contact info
     const { data: tasks } = await supabaseAdmin
       .from('employee_tasks')
-      .select('id, title, status')
+      .select(`
+        id, 
+        title, 
+        status,
+        customer_id,
+        contact_id,
+        customer:profiles!employee_tasks_customer_id_fkey(id, company_name, first_name, last_name, email),
+        contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email, customer_id)
+      `)
       .eq('employee_id', viewingEmployeeId)
       .in('status', ['open', 'in_progress', 'in_review'])
       .order('title');
@@ -8051,6 +8065,7 @@ router.get('/time-entries', requireAuth, async (req, res) => {
       canViewAll: canViewAll,
       employee_id: viewingEmployeeId,
       customers: customers || [],
+      contacts: contacts || [],
       tasks: tasks || [],
       employees: employees
     });
