@@ -3196,10 +3196,10 @@ a:hover [data-slot="badge"].text-foreground {
   font-weight: 500;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: #9ca3af;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
   min-width: fit-content;
   width: auto;
   flex-shrink: 0;
@@ -3213,17 +3213,17 @@ a:hover [data-slot="badge"].text-foreground {
 
 .customer-main-tab-btn svg {
   flex-shrink: 0;
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+  color: #9ca3af;
+  transition: color 0.2s ease;
 }
 
 .customer-main-tab-btn:hover {
-  color: #111827;
-  background: rgba(0, 0, 0, 0.02);
+  color: #6b7280;
+  background: transparent;
 }
 
 .customer-main-tab-btn:hover svg {
-  opacity: 1;
+  color: #6b7280;
 }
 
 .customer-main-tab-btn.customer-main-tab-active {
@@ -3233,11 +3233,16 @@ a:hover [data-slot="badge"].text-foreground {
 }
 
 .customer-main-tab-btn.customer-main-tab-active svg {
-  opacity: 1;
+  color: #111827;
 }
 
 .customer-main-tab-btn.customer-main-tab-active:hover {
-  background: rgba(0, 0, 0, 0.02);
+  color: #111827;
+  background: transparent;
+}
+
+.customer-main-tab-btn.customer-main-tab-active:hover svg {
+  color: #111827;
 }
 
 .customer-main-tab-content {
