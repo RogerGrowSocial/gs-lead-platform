@@ -590,6 +590,68 @@
     }
   }
 
+  // Initialize AI Chat
+  function initAiChat() {
+    const chatForm = document.getElementById('customerAiChatForm');
+    const chatInput = document.getElementById('customerAiChatInput');
+    const chatSubmitBtn = document.getElementById('customerAiChatSubmit');
+    const chatToggle = document.getElementById('customerAiChatToggle');
+    const chatContainer = document.getElementById('customerAiChatContainer');
+    const chatToggleIcon = document.getElementById('customerAiChatToggleIcon');
+    
+    // Load chat history
+    loadChatHistory();
+    
+    // Chat collapse/expand functionality
+    if (chatToggle && chatContainer && chatToggleIcon) {
+      let isCollapsed = false;
+      chatToggle.addEventListener('click', () => {
+        isCollapsed = !isCollapsed;
+        if (isCollapsed) {
+          chatContainer.style.maxHeight = '0';
+          chatContainer.style.overflow = 'hidden';
+          chatToggleIcon.style.transform = 'rotate(180deg)';
+        } else {
+          chatContainer.style.maxHeight = '400px';
+          chatContainer.style.overflow = 'visible';
+          chatToggleIcon.style.transform = 'rotate(0deg)';
+          // Scroll to bottom when expanding
+          setTimeout(() => scrollChatToBottom(), 100);
+        }
+      });
+    }
+    
+    if (chatForm && chatInput && chatSubmitBtn) {
+      // Update submit button color when typing
+      chatInput.addEventListener('input', (e) => {
+        const hasText = e.target.value.trim().length > 0;
+        if (hasText) {
+          chatSubmitBtn.style.background = '#ea5d0d';
+          chatSubmitBtn.style.color = '#ffffff';
+        } else {
+          chatSubmitBtn.style.background = '#f3f4f6';
+          chatSubmitBtn.style.color = '#6b7280';
+        }
+      });
+      
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (message) {
+          await sendAiChatMessage(message);
+        }
+      });
+      
+      // Allow Enter to submit
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(new Event('submit'));
+        }
+      });
+    }
+  }
+
   // Function to get customerId from multiple sources
   function getCustomerId() {
     // Try to extract from URL first (most reliable)
@@ -701,40 +763,8 @@
     // Initialize AI summary once (with retry logic inside)
     initAiSummary();
 
-    // AI Chat form handler
-    const chatForm = document.getElementById('customerAiChatForm');
-    const chatInput = document.getElementById('customerAiChatInput');
-    const chatSubmitBtn = document.getElementById('customerAiChatSubmit');
-    
-    if (chatForm && chatInput && chatSubmitBtn) {
-      // Update submit button color when typing
-      chatInput.addEventListener('input', (e) => {
-        const hasText = e.target.value.trim().length > 0;
-        if (hasText) {
-          chatSubmitBtn.style.background = '#ea5d0d';
-          chatSubmitBtn.style.color = '#ffffff';
-        } else {
-          chatSubmitBtn.style.background = '#f3f4f6';
-          chatSubmitBtn.style.color = '#6b7280';
-        }
-      });
-      
-      chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const message = chatInput.value.trim();
-        if (message) {
-          await sendAiChatMessage(message);
-        }
-      });
-      
-      // Allow Enter to submit
-      chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          chatForm.dispatchEvent(new Event('submit'));
-        }
-      });
-    }
+    // Initialize AI Chat
+    initAiChat();
   });
 
   function initEmployeeManagement() {
