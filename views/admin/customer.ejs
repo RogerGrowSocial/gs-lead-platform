@@ -115,6 +115,9 @@
   var timeEntries = customer.timeEntries || []
   var timeTotalsByEmployee = customer.timeTotalsByEmployee || {}
 
+  // Check if AI summary exists
+  var hasSummary = customer.aiSummary && customer.aiSummary.summary && customer.aiSummary.summary.length > 20
+
   // Prepare include options
   var pageTitle = customerName + ' - Klanten | GrowSocial Admin'
 %>
@@ -468,13 +471,10 @@
               </button>
             </div>
             <div id="customerAiSummaryBox" style="margin-bottom: 20px;">
-              <% 
-                var hasSummary = customer.aiSummary && customer.aiSummary.summary && customer.aiSummary.summary.length > 20;
-              %>
-              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6; min-height: 60px; display: <%= hasSummary ? 'block' : 'none' %>;">
-                <%= (customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : '') %>
+              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6; min-height: 60px; display: ${hasSummary ? 'block' : 'none'};">
+                ${(customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : '')}
               </div>
-              <div id="customerAiSummaryLoading" style="display: <%= hasSummary ? 'none' : 'block' %>; text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
+              <div id="customerAiSummaryLoading" style="display: ${hasSummary ? 'none' : 'block'}; text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
                 <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
                 AI samenvatting wordt gegenereerd...
               </div>
