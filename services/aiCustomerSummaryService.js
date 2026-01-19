@@ -30,11 +30,13 @@ class AICustomerSummaryService {
     return `Maak een korte, actiegerichte CRM-samenvatting in het Nederlands voor een interne medewerker.
 
 REGELS:
-- Schrijf compact en concreet.
-- Gebruik bullets en korte kopjes.
+- Schrijf als vloeiende, natuurlijke tekst (geen genummerde lijsten zoals "1) ...", "2) ...").
+- Schrijf compact en concreet in lopende zinnen.
+- Gebruik GEEN bullets, nummers of lijstjes - alleen vloeiende tekst.
 - Geen gevoelige data die niet nodig is.
 - Als data ontbreekt: zeg "Onbekend" of laat weg.
 - Antwoord ALS PLAIN TEXT (geen markdown fences).
+- Schrijf alsof je een collega informeert: natuurlijk en vloeiend.
 
 GEGEVENS (customer):
 ${safeJson({
@@ -104,12 +106,8 @@ ${safeJson(responsibleEmployees.slice(0, 10).map(re => ({
   assigned_at: re.assigned_at
 })))}
 
-OUTPUT STRUCTUUR (plain text):
-1) Korte conclusie (1-2 zinnen)
-2) Belangrijkste context (bullets)
-3) Risico's / aandachtspunten (bullets)
-4) Volgende acties (max 5 bullets, concreet)
-5) Data-kwaliteit & dedupe (1-2 bullets)`;
+OUTPUT STRUCTUUR (vloeiende tekst, GEEN genummerde lijsten):
+Begin met een korte conclusie over de klant (1-2 zinnen). Beschrijf daarna de belangrijkste context, risico's en aandachtspunten, en volgende acties - alles in vloeiende, natuurlijke tekst zonder nummers of bullets. Eindig met eventuele data-kwaliteit opmerkingen indien relevant.`;
   }
 
   buildFallbackSummary(input) {
@@ -151,120 +149,128 @@ OUTPUT STRUCTUUR (plain text):
       })
       .filter(Boolean);
 
-    const lines = [];
-    lines.push(`1) Korte conclusie`);
-    lines.push(`${name} is een ${status === 'active' ? 'actieve' : status === 'inactive' ? 'inactieve' : status} klant met ${priority === 'high' ? 'hoge' : priority === 'low' ? 'lage' : 'normale'} prioriteit.`);
-    if (owner && owner !== 'Onbekend') {
-      lines.push(`Eigenaar: ${owner}.`);
-    }
-    lines.push('');
+    const parts = [];
     
-    lines.push(`2) Belangrijkste context`);
+    // Start met conclusie
+    let conclusion = `${name} is een ${status === 'active' ? 'actieve' : status === 'inactive' ? 'inactieve' : status} klant met ${priority === 'high' ? 'hoge' : priority === 'low' ? 'lage' : 'normale'} prioriteit.`;
+    if (owner && owner !== 'Onbekend') {
+      conclusion += ` De eigenaar is ${owner}.`;
+    }
+    parts.push(conclusion);
+    
+    // Belangrijkste context
+    const contextParts = [];
     if (domain && domain !== 'Onbekend') {
-      lines.push(`• Website: ${domain}`);
+      contextParts.push(`website ${domain}`);
     }
     if (phone && phone !== 'Onbekend') {
-      lines.push(`• Telefoon: ${phone}`);
+      contextParts.push(`telefoonnummer ${phone}`);
     }
     if (address || city || postalCode) {
       const location = [address, postalCode, city].filter(Boolean).join(', ');
-      if (location) lines.push(`• Locatie: ${location}`);
+      if (location) contextParts.push(`locatie ${location}`);
     }
     if (industry && industry !== 'Onbekend') {
-      lines.push(`• Branche: ${industry}`);
+      contextParts.push(`branche ${industry}`);
     }
+    if (contextParts.length > 0) {
+      parts.push(`De klant heeft ${contextParts.join(', ')}.`);
+    }
+    
     if (last !== null) {
-      lines.push(`• Laatste interactie: ${last === 0 ? 'Vandaag' : last === 1 ? 'Gisteren' : `${last} dagen geleden`}`);
+      parts.push(`De laatste interactie was ${last === 0 ? 'vandaag' : last === 1 ? 'gisteren' : `${last} dagen geleden`}.`);
     }
+    
     if (typeof stats.total_revenue !== 'undefined' && stats.total_revenue > 0) {
-      lines.push(`• Totale omzet: €${stats.total_revenue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      parts.push(`De totale omzet bedraagt €${stats.total_revenue.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
     }
     if (typeof stats.total_outstanding !== 'undefined' && stats.total_outstanding > 0) {
-      lines.push(`• Openstaand bedrag: €${stats.total_outstanding.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      parts.push(`Er staat nog €${stats.total_outstanding.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} open.`);
     }
-    if (responsibleNames.length > 0) {
-      lines.push(`• Verantwoordelijke(n): ${responsibleNames.join(', ')}`);
-    }
-    lines.push('');
     
-    lines.push(`3) Actuele status`);
+    // Actuele status
+    const statusParts = [];
     if (openTickets > 0) {
-      lines.push(`• ${openTickets} open ticket(s)`);
+      statusParts.push(`${openTickets} open ${openTickets === 1 ? 'ticket' : 'tickets'}`);
     }
     if (openTasks > 0) {
-      lines.push(`• ${openTasks} open taak/taken`);
+      statusParts.push(`${openTasks} open ${openTasks === 1 ? 'taak' : 'taken'}`);
     }
     if (unreadEmails > 0) {
-      lines.push(`• ${unreadEmails} ongelezen e-mail(s)`);
+      statusParts.push(`${unreadEmails} ongelezen ${unreadEmails === 1 ? 'e-mail' : 'e-mails'}`);
     }
     if (invoices.length > 0) {
       const paidCount = invoices.filter(i => i.status === 'paid').length;
       const overdueCount = invoices.filter(i => i.status === 'overdue').length;
-      lines.push(`• ${invoices.length} factuur/facturen (${paidCount} betaald${overdueCount > 0 ? `, ${overdueCount} achterstallig` : ''})`);
+      let invoiceText = `${invoices.length} factuur${invoices.length === 1 ? '' : 'en'}`;
+      if (paidCount > 0 || overdueCount > 0) {
+        const details = [];
+        if (paidCount > 0) details.push(`${paidCount} betaald`);
+        if (overdueCount > 0) details.push(`${overdueCount} achterstallig`);
+        invoiceText += ` (${details.join(', ')})`;
+      }
+      statusParts.push(invoiceText);
     }
-    if (openTickets === 0 && openTasks === 0 && unreadEmails === 0 && invoices.length === 0) {
-      lines.push(`• Geen openstaande items`);
+    if (statusParts.length > 0) {
+      parts.push(`Er ${statusParts.length === 1 ? 'is' : 'zijn'} ${statusParts.join(', ')}.`);
+    } else {
+      parts.push('Er zijn geen openstaande items.');
     }
-    lines.push('');
     
-    lines.push(`4) Risico's / aandachtspunten`);
+    // Risico's en aandachtspunten
+    const riskParts = [];
     if (computed.is_duplicate_candidate) {
-      lines.push(`• Mogelijk duplicaat - controleer dedupe keys`);
+      riskParts.push('mogelijk een duplicaat');
     }
     if (!computed.is_contactable) {
-      lines.push(`• Niet volledig contacteerbaar - mist telefoon of website`);
+      riskParts.push('niet volledig contacteerbaar');
     }
     if (quality !== null && quality < 50) {
-      lines.push(`• Lage data kwaliteit score (${quality}/100) - verrijk gegevens`);
+      riskParts.push(`lage data kwaliteit (${quality}/100)`);
     }
     if (overdue === 'Ja') {
-      lines.push(`• Overdue volgende activiteit - actie vereist`);
+      riskParts.push('een overdue volgende activiteit');
     }
     if (last !== null && last > 90) {
-      lines.push(`• Geen interactie in ${last} dagen - mogelijk inactief`);
+      riskParts.push(`geen interactie in ${last} dagen`);
     }
-    if (!computed.is_duplicate_candidate && computed.is_contactable && (quality === null || quality >= 50) && overdue === 'Nee' && (last === null || last <= 90)) {
-      lines.push(`• Geen specifieke risico's geïdentificeerd`);
+    if (riskParts.length > 0) {
+      parts.push(`Aandachtspunten: ${riskParts.join(', ')}.`);
     }
-    lines.push('');
     
-    lines.push(`5) Volgende acties`);
+    // Volgende acties
+    const actionParts = [];
     if (openTickets > 0) {
-      lines.push(`• Behandel openstaande tickets`);
+      actionParts.push('openstaande tickets behandelen');
     }
     if (openTasks > 0) {
-      lines.push(`• Werk openstaande taken af`);
+      actionParts.push('openstaande taken afwerken');
     }
     if (unreadEmails > 0) {
-      lines.push(`• Beantwoord ongelezen e-mails`);
+      actionParts.push('ongelezen e-mails beantwoorden');
     }
     if (overdue === 'Ja') {
-      lines.push(`• Plan/bevestig volgende activiteit`);
+      actionParts.push('volgende activiteit plannen of bevestigen');
     }
     if (!computed.is_contactable) {
-      lines.push(`• Verrijk contactgegevens (telefoon/website/adres)`);
+      actionParts.push('contactgegevens verrijken');
     }
     if (quality !== null && quality < 50) {
-      lines.push(`• Verbeter data kwaliteit`);
+      actionParts.push('data kwaliteit verbeteren');
     }
     if (computed.is_duplicate_candidate) {
-      lines.push(`• Controleer en merge eventuele duplicaten`);
+      actionParts.push('eventuele duplicaten controleren en mergen');
     }
-    if (openTickets === 0 && openTasks === 0 && unreadEmails === 0 && overdue === 'Nee' && computed.is_contactable && (quality === null || quality >= 50) && !computed.is_duplicate_candidate) {
-      lines.push(`• Geen specifieke acties vereist - klant is up-to-date`);
+    if (actionParts.length > 0) {
+      parts.push(`Volgende acties: ${actionParts.join(', ')}.`);
     }
-    lines.push('');
     
-    lines.push(`6) Data-kwaliteit & technisch`);
-    lines.push(`• Data quality score: ${quality !== null ? `${quality}/100` : 'Onbekend'}`);
-    if (computed.dedupe_key_primary) {
-      lines.push(`• Dedupe key (primary): ${computed.dedupe_key_primary}`);
-    }
-    if (computed.dedupe_key_secondary) {
-      lines.push(`• Dedupe key (secondary): ${computed.dedupe_key_secondary}`);
+    // Data kwaliteit (alleen als relevant)
+    if (quality !== null && quality < 50) {
+      parts.push(`De data kwaliteit score is ${quality}/100.`);
     }
 
-    return lines.join('\n');
+    return parts.join(' ');
   }
 
   async generateCustomerSummary(input) {
@@ -279,7 +285,7 @@ OUTPUT STRUCTUUR (plain text):
       messages: [
         {
           role: 'system',
-          content: 'Je bent een CRM assistent. Schrijf compact, professioneel en actiegericht. Antwoord als plain text.'
+          content: 'Je bent een CRM assistent. Schrijf compact, professioneel en actiegericht als vloeiende tekst. Gebruik GEEN genummerde lijsten (zoals "1)", "2)") of bullets - schrijf alles in natuurlijke, lopende zinnen.'
         },
         { role: 'user', content: prompt }
       ],
