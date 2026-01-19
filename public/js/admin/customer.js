@@ -732,7 +732,12 @@
   }
 
   function initEditMode() {
-    if (!customerId) return;
+    // Get customerId from multiple sources
+    const currentCustomerId = getCustomerId();
+    if (!currentCustomerId) {
+      console.warn('[Edit Mode] No customerId available');
+      return;
+    }
 
     let isEditMode = false;
     let saveTimeout = null;
@@ -1421,7 +1426,7 @@
       }
       
       try {
-        const response = await fetch(`/admin/api/customers/${customerId}`, {
+        const response = await fetch(`/admin/api/customers/${currentCustomerId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -1630,7 +1635,7 @@
         formData.append('logo', file);
         
         try {
-          const response = await fetch(`/admin/api/customers/${customerId}/logo`, {
+          const response = await fetch(`/admin/api/customers/${currentCustomerId}/logo`, {
             method: 'POST',
             credentials: 'same-origin',
             body: formData
