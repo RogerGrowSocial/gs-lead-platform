@@ -3243,10 +3243,14 @@ a:hover [data-slot="badge"].text-foreground {
 .customer-main-tab-content {
   display: none;
   animation: fadeIn 0.2s ease-in;
+  min-height: 200px; /* Prevent layout shift */
+  opacity: 0;
+  transition: opacity 0.2s ease-in;
 }
 
 .customer-main-tab-content.customer-main-tab-content-active {
   display: block;
+  opacity: 1;
 }
 
 /* KPI Cards Styles */

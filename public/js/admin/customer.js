@@ -282,45 +282,48 @@
         // Add active class to clicked button
         button.classList.add('customer-main-tab-active');
 
-        // Show corresponding content
+        // Show corresponding content with smooth transition
         const targetContent = document.getElementById(`main-tab-${targetTab}`);
         if (targetContent) {
-          targetContent.classList.add('customer-main-tab-content-active');
-          targetContent.style.display = 'block';
-          
-          // Load invoices when Administratie tab is opened
-          if (targetTab === 'administration') {
-            // Small delay to ensure DOM is ready
-            setTimeout(() => {
-              const container = document.getElementById('invoicesTableContainer');
-              if (container && container.innerHTML.trim() === '') {
-                // Container is empty, load invoices
-                if (typeof window.loadInvoices === 'function') {
-                  window.loadInvoices();
-                } else {
-                  // Fallback: load invoices directly
-                  fetch(`/admin/api/customers/${customerId}/invoices`)
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.success && container) {
-                        // Use the renderInvoicesTable function if available
-                        if (typeof window.renderInvoicesTable === 'function') {
-                          window.renderInvoicesTable(data.invoices || []);
-                        } else {
-                          container.innerHTML = '<p style="padding: 20px; text-align: center; color: #6b7280;">Facturen worden geladen...</p>';
+          // Use requestAnimationFrame to prevent layout shift
+          requestAnimationFrame(() => {
+            targetContent.classList.add('customer-main-tab-content-active');
+            targetContent.style.display = 'block';
+            
+            // Load invoices when Administratie tab is opened
+            if (targetTab === 'administration') {
+              // Small delay to ensure DOM is ready
+              setTimeout(() => {
+                const container = document.getElementById('invoicesTableContainer');
+                if (container && container.innerHTML.trim() === '') {
+                  // Container is empty, load invoices
+                  if (typeof window.loadInvoices === 'function') {
+                    window.loadInvoices();
+                  } else {
+                    // Fallback: load invoices directly
+                    fetch(`/admin/api/customers/${customerId}/invoices`)
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.success && container) {
+                          // Use the renderInvoicesTable function if available
+                          if (typeof window.renderInvoicesTable === 'function') {
+                            window.renderInvoicesTable(data.invoices || []);
+                          } else {
+                            container.innerHTML = '<p style="padding: 20px; text-align: center; color: #6b7280;">Facturen worden geladen...</p>';
+                          }
                         }
-                      }
-                    })
-                    .catch(err => {
-                      console.error('Error loading invoices:', err);
-                      if (container) {
-                        container.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Fout bij laden facturen</p>';
-                      }
-                    });
+                      })
+                      .catch(err => {
+                        console.error('Error loading invoices:', err);
+                        if (container) {
+                          container.innerHTML = '<p style="padding: 20px; text-align: center; color: #ef4444;">Fout bij laden facturen</p>';
+                        }
+                      });
+                  }
                 }
-              }
-            }, 100);
-          }
+              }, 100);
+            }
+          });
         }
       });
     });
