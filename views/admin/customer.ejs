@@ -834,8 +834,8 @@
     // Make employees data available to JavaScript
     window.customerEmployeesData = {
       customerId: '${(customer && customer.id ? customer.id : '')}',
-      responsibleEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : [])},
-      allEmployees: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : [])}
+      responsibleEmployees: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.responsibleEmployees ? customerData.responsibleEmployees : [])},
+      allEmployees: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.allEmployees ? customerData.allEmployees : [])}
     };
     
     // Make labels available for edit mode
@@ -844,10 +844,10 @@
     window.currentStatus = '${status}';
     window.currentPriority = '${priority}';
     window.canEditCustomer = ${(typeof canEditCustomer !== 'undefined' ? canEditCustomer : false)};
-    window.customerData = " + JSON.stringify(customer || {})};
+    window.customerData = ${JSON.stringify(customer || {})};
     window.customerInvoicesData = {
       customerId: '${(customer && customer.id ? customer.id : '')}',
-      invoices: " + JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : [])}
+      invoices: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : [])}
     };
   </script>
   `;

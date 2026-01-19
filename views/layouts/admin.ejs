@@ -30,7 +30,8 @@
   <% if (typeof extraHead !== 'undefined' && extraHead) { %>
     <%- extraHead %>
   <% } %>
-  <!-- Tailwind CSS CDN (voor utility classes) -->
+  <!-- Tailwind CSS CDN (alleen in development) -->
+  <% if (process.env.NODE_ENV !== 'production') { %>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // Wait for tailwind to load
@@ -47,6 +48,7 @@
       });
     }
   </script>
+  <% } %>
   
   <script>
     // Prevent FOUC - Mark CSS as loaded when stylesheets are ready
@@ -2034,6 +2036,9 @@
         script.src = 'https://cdn.vercel-analytics.com/v1/script.js';
         script.async = true;
         script.defer = true;
+        script.onerror = function() {
+          // Silently handle analytics script loading errors
+        };
         document.head.appendChild(script);
       })();
     }
