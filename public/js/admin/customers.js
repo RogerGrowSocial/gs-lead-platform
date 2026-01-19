@@ -300,7 +300,7 @@
   // The drawer will open automatically when the button is clicked
 
   // Initialize sorting functionality
-  function initSorting() {
+  function initSorting(skipClone = false) {
     const sortableHeaders = document.querySelectorAll('.table-header-cell.sortable');
     if (sortableHeaders.length === 0) {
       console.warn('[Customers] No sortable headers found, retrying in 100ms...');
@@ -309,7 +309,7 @@
         const retryHeaders = document.querySelectorAll('.table-header-cell.sortable');
         if (retryHeaders.length > 0) {
           console.log('[Customers] Retry successful: Found', retryHeaders.length, 'headers, initializing sorting');
-          initSorting();
+          initSorting(skipClone);
         } else {
           console.error('[Customers] Retry failed: Still no headers found');
         }
@@ -317,7 +317,7 @@
       return;
     }
     
-    console.log('[Customers] Initializing sorting with', sortableHeaders.length, 'headers. Current sort:', currentSortBy, currentSortOrder);
+    console.log('[Customers] Initializing sorting with', sortableHeaders.length, 'headers. Current sort:', currentSortBy, currentSortOrder, 'skipClone:', skipClone);
 
     // Read current sort state from URL (sync with URL on each init)
     const currentUrl = new URL(window.location.href);
@@ -337,24 +337,43 @@
       currentSortOrder = 'asc';
     }
 
-    // Remove old event listeners by cloning headers (prevents duplicate listeners)
-    sortableHeaders.forEach(header => {
-      const newHeader = header.cloneNode(true);
-      header.parentNode.replaceChild(newHeader, header);
-    });
+    let headersToUse = sortableHeaders;
+    
+    // Only clone headers if not skipping (prevents duplicate listeners when called after AJAX)
+    if (!skipClone) {
+      // Remove old event listeners by cloning headers (prevents duplicate listeners)
+      sortableHeaders.forEach(header => {
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+      });
 
-    // Re-select headers after cloning
-    const freshHeaders = document.querySelectorAll('.table-header-cell.sortable');
+      // Re-select headers after cloning
+      headersToUse = document.querySelectorAll('.table-header-cell.sortable');
+    }
 
     // Update active header styling and add click handlers
-    freshHeaders.forEach(header => {
-      const sortValue = header.getAttribute('data-sort');
+    headersToUse.forEach((header, index) => {
+      // Remove existing click listeners by cloning just this header if skipClone is true
+      let headerToUse = header;
+      if (skipClone) {
+        // Remove all existing click listeners by replacing the header
+        const newHeader = header.cloneNode(true);
+        header.parentNode.replaceChild(newHeader, header);
+        headerToUse = newHeader; // Use the new header
+        // Update headersToUse array reference for next iteration
+        headersToUse[index] = newHeader;
+      }
+      
+      const sortValue = headerToUse.getAttribute('data-sort');
+      
+      // Update styling
+      headerToUse.classList.remove('active', 'asc', 'desc');
       if (sortValue === currentSortBy) {
-        header.classList.add('active', currentSortOrder);
+        headerToUse.classList.add('active', currentSortOrder);
       }
 
       // Add click handler - use arrow function to ensure correct closure
-      header.addEventListener('click', (e) => {
+      headerToUse.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         
@@ -472,15 +491,10 @@
       currentSortOrder = sortOrder;
 
       // Re-initialize sorting to update header styling and ensure event listeners work
-      // Don't clone headers, just update styling and ensure listeners are attached
-      const sortableHeaders = document.querySelectorAll('.table-header-cell.sortable');
-      sortableHeaders.forEach(header => {
-        header.classList.remove('active', 'asc', 'desc');
-        const headerSort = header.getAttribute('data-sort');
-        if (headerSort === sortBy) {
-          header.classList.add('active', sortOrder);
-        }
-      });
+      // Pass skipClone=true to avoid cloning all headers (we'll clone individual headers inside initSorting)
+      setTimeout(() => {
+        initSorting(true);
+      }, 10);
 
       // Re-initialize row click handlers and drag handlers
       initRowClickHandlers();
@@ -663,15 +677,24 @@
   function initRowClickHandlers() {
     const customerRows = document.querySelectorAll('.table-body-row[data-customer-id]');
     
+    console.log('[Customers] Initializing row click handlers for', customerRows.length, 'rows');
+    
     // Re-initialize click handlers for rows
     customerRows.forEach(row => {
-      row.addEventListener('click', function(e) {
+      // Remove existing click listeners by cloning the row
+      const newRow = row.cloneNode(true);
+      row.parentNode.replaceChild(newRow, row);
+      
+      // Add click handler to the new row
+      newRow.addEventListener('click', function(e) {
+        // Don't navigate if clicking on action buttons, drag handle, or action menu
         if (e.target.closest('.actions-button') || e.target.closest('.customer-drag-handle') || e.target.closest('td[onclick]')) {
           return;
         }
         
         const customerId = this.getAttribute('data-customer-id');
         if (customerId) {
+          console.log('[Customers] Navigating to customer:', customerId);
           window.location.href = `/admin/customers/${customerId}`;
         }
       });
