@@ -467,6 +467,21 @@
       newUrl.searchParams.set('sortOrder', sortOrder);
       window.history.pushState({}, '', newUrl.toString());
 
+      // Update sorting state variables to match URL
+      currentSortBy = sortBy;
+      currentSortOrder = sortOrder;
+
+      // Re-initialize sorting to update header styling and ensure event listeners work
+      // Don't clone headers, just update styling and ensure listeners are attached
+      const sortableHeaders = document.querySelectorAll('.table-header-cell.sortable');
+      sortableHeaders.forEach(header => {
+        header.classList.remove('active', 'asc', 'desc');
+        const headerSort = header.getAttribute('data-sort');
+        if (headerSort === sortBy) {
+          header.classList.add('active', sortOrder);
+        }
+      });
+
       // Re-initialize row click handlers and drag handlers
       initRowClickHandlers();
       initDragHandlers();
@@ -496,7 +511,7 @@
     if (!customers || customers.length === 0) {
       return `
         <tr class="table-body-row">
-          <td colspan="7" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+          <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
             Geen klanten gevonden. Klik op "Nieuwe Klant" om er een toe te voegen.
           </td>
         </tr>
@@ -603,6 +618,13 @@
           </td>
           <td class="table-cell">
             <span class="cell-text">${lastActivityDate}</span>
+          </td>
+          <td class="table-cell">
+            <span class="cell-text">${c.created_at ? new Date(c.created_at).toLocaleDateString('nl-NL', { 
+              day: '2-digit', 
+              month: 'short',
+              year: 'numeric'
+            }) : '-'}</span>
           </td>
           <td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">
             <div style="display: flex; align-items: center; gap: 12px;">

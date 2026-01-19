@@ -642,6 +642,15 @@
                     </svg>
                   </div>
                 </th>
+                <th class="table-header-cell sortable" data-sort="created_at">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Klant sinds</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
                 <th class="table-header-cell"></th>
               </tr>
             </thead>
@@ -747,6 +756,13 @@
                       </td>
                       <td class="table-cell">
                         <span class="cell-text">${lastActivityDate}</span>
+                      </td>
+                      <td class="table-cell">
+                        <span class="cell-text">${c.created_at ? new Date(c.created_at).toLocaleDateString('nl-NL', { 
+                          day: '2-digit', 
+                          month: 'short',
+                          year: 'numeric'
+                        }) : '-'}</span>
                       </td>
                       <td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">
                         <div style="display: flex; align-items: center; gap: 12px;">

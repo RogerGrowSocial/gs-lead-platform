@@ -8409,7 +8409,7 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
     }
     
     // Apply sorting
-    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'last_ticket_activity', 'last_email_activity']
+    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'created_at', 'last_ticket_activity', 'last_email_activity']
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'name'
     
     // Handle special sorting cases
@@ -8428,6 +8428,8 @@ router.get("/customers", requireAuth, isEmployeeOrAdmin, async (req, res) => {
       // Priority sorting will be done client-side to maintain hierarchy: VIP → HOOG → NORMAAL → LAAG
       // Order by name first as temporary sort, will be re-sorted client-side
       customerQuery = customerQuery.order('name', { ascending: true })
+    } else if (sortColumn === 'created_at') {
+      customerQuery = customerQuery.order('created_at', { ascending })
     } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
       // For activity sorting, use updated_at as fallback
       customerQuery = customerQuery.order('updated_at', { ascending })
@@ -9201,7 +9203,7 @@ router.get('/api/customers/table', requireAuth, isEmployeeOrAdmin, async (req, r
     }
     
     // Apply sorting
-    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'last_ticket_activity', 'last_email_activity']
+    const validSortColumns = ['name', 'email', 'phone', 'branch', 'status', 'priority', 'updated_at', 'created_at', 'last_ticket_activity', 'last_email_activity']
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'name'
     
     // Handle special sorting cases
@@ -9219,6 +9221,8 @@ router.get('/api/customers/table', requireAuth, isEmployeeOrAdmin, async (req, r
       // Priority sorting will be done client-side to maintain hierarchy: VIP → HOOG → NORMAAL → LAAG
       // Order by name first as temporary sort, will be re-sorted client-side
       customerQuery = customerQuery.order('name', { ascending: true })
+    } else if (sortColumn === 'created_at') {
+      customerQuery = customerQuery.order('created_at', { ascending })
     } else if (sortColumn === 'updated_at' || sortColumn === 'last_ticket_activity' || sortColumn === 'last_email_activity') {
       customerQuery = customerQuery.order('updated_at', { ascending })
     }
