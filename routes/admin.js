@@ -10079,6 +10079,117 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
   }
 });
 
+// POST /admin/api/customers/:id/ai-chat - Chat with AI about customer
+router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ success: false, error: 'Bericht is verplicht' });
+    }
+
+    // Get customer data (similar to summary endpoint)
+    const [
+      customerResult,
+      enrichedResult,
+      statsResult,
+      invoicesResult,
+      ticketsResult,
+      tasksResult,
+      emailsResult,
+      responsibleEmployeesResult
+    ] = await Promise.all([
+      supabaseAdmin.from('customers').select('*').eq('id', id).single(),
+      supabaseAdmin.from('customer_enriched').select('*').eq('id', id).maybeSingle(),
+      supabaseAdmin.from('customer_stats').select('*').eq('id', id).maybeSingle(),
+      supabaseAdmin.from('customer_invoices').select('*').eq('customer_id', id).order('invoice_date', { ascending: false }).limit(10),
+      supabaseAdmin.from('tickets').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
+      supabaseAdmin.from('employee_tasks').select('*, employee:profiles!employee_tasks_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
+      supabaseAdmin.from('customer_emails').select('*').eq('customer_id', id).order('created_at', { ascending: false }).limit(10),
+      supabaseAdmin.from('customer_employee_assignments').select('*, employee:profiles!customer_employee_assignments_employee_id_fkey(id, first_name, last_name, email)').eq('customer_id', id)
+    ]);
+
+    if (customerResult.error || !customerResult.data) {
+      return res.status(404).json({ success: false, error: 'Klant niet gevonden' });
+    }
+
+    const customer = customerResult.data;
+    const enriched = enrichedResult?.data || {};
+    const stats = statsResult?.data || {};
+    const invoices = invoicesResult?.data || [];
+    const tickets = ticketsResult?.data || [];
+    const tasks = tasksResult?.data || [];
+    const emails = emailsResult?.data || [];
+    const responsibleEmployees = responsibleEmployeesResult?.data || [];
+
+    // Build context for AI
+    const context = {
+      customer: {
+        name: customer.company_name || customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        city: customer.city,
+        status: customer.status,
+        priority: customer.priority
+      },
+      stats: {
+        total_invoices: invoices.length,
+        total_tickets: tickets.length,
+        total_tasks: tasks.length,
+        total_revenue: stats.total_revenue || 0,
+        total_outstanding: stats.total_outstanding || 0
+      },
+      recent_activity: {
+        tickets: tickets.slice(0, 3).map(t => ({ subject: t.subject, status: t.status })),
+        tasks: tasks.slice(0, 3).map(t => ({ title: t.title, status: t.status })),
+        invoices: invoices.slice(0, 3).map(i => ({ invoice_number: i.invoice_number, amount: i.amount, status: i.status }))
+      }
+    };
+
+    // Generate AI response
+    const openai = aiCustomerSummaryService.getClient();
+    if (!openai) {
+      return res.status(503).json({ success: false, error: 'AI service niet beschikbaar' });
+    }
+
+    const systemPrompt = `Je bent een CRM assistent die helpt met vragen over klanten. Je hebt toegang tot klantgegevens, statistieken en recente activiteit. Antwoord beknopt, professioneel en actiegericht. Gebruik alleen de beschikbare informatie.`;
+
+    const userPrompt = `Klant: ${context.customer.name}
+Status: ${context.customer.status}
+Prioriteit: ${context.customer.priority}
+Totaal facturen: ${context.stats.total_invoices}
+Totaal tickets: ${context.stats.total_tickets}
+Totaal taken: ${context.stats.total_tasks}
+Omzet: €${context.stats.total_revenue.toFixed(2)}
+Openstaand: €${context.stats.total_outstanding.toFixed(2)}
+
+Vraag van gebruiker: ${message.trim()}
+
+Geef een beknopt en nuttig antwoord op basis van deze informatie.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 500
+    });
+
+    const response = completion.choices?.[0]?.message?.content?.trim() || 'Geen antwoord ontvangen van AI.';
+
+    return res.json({
+      success: true,
+      response
+    });
+  } catch (err) {
+    console.error('Error in AI chat:', err);
+    return res.status(500).json({ success: false, error: 'Fout bij verzenden bericht' });
+  }
+});
+
 // ===== CONTACT SINGLE PAGE =====
 router.get("/contacts/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {

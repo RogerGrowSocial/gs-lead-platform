@@ -232,11 +232,14 @@
       }
 
       // Update UI
-      box.textContent = data.summary || 'Geen samenvatting ontvangen';
-      if (meta) {
-        meta.textContent = data.aiSummary?.updated_at
-          ? `Laatst bijgewerkt: ${new Date(data.aiSummary.updated_at).toLocaleString('nl-NL')}`
-          : 'Samenvatting gegenereerd';
+      const summaryText = document.getElementById('customerAiSummaryText');
+      const summaryLoading = document.getElementById('customerAiSummaryLoading');
+      if (summaryText) {
+        summaryText.textContent = data.summary || 'Geen samenvatting ontvangen';
+        summaryText.style.display = 'block';
+      }
+      if (summaryLoading) {
+        summaryLoading.style.display = 'none';
       }
 
       window.showNotification?.('AI samenvatting bijgewerkt', 'success');
@@ -276,16 +279,111 @@
     });
   }
 
+  // ------------------------------------------------------------
+  // AI Chat (Customer)
+  // ------------------------------------------------------------
+  async function sendAiChatMessage(message) {
+    if (!customerId || !message || !message.trim()) return;
+    
+    const input = document.getElementById('customerAiChatInput');
+    const submitBtn = document.getElementById('customerAiChatSubmit');
+    const responseDiv = document.getElementById('customerAiChatResponse');
+    
+    if (!input || !submitBtn || !responseDiv) return;
+    
+    // Disable input and show loading
+    input.disabled = true;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    responseDiv.style.display = 'block';
+    responseDiv.textContent = 'AI denkt na...';
+    
+    try {
+      const res = await fetch(`/admin/api/customers/${customerId}/ai-chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ message: message.trim() })
+      });
+      
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Fout bij verzenden bericht');
+      }
+      
+      responseDiv.textContent = data.response || 'Geen antwoord ontvangen';
+    } catch (err) {
+      console.error('AI chat error:', err);
+      responseDiv.textContent = 'Fout: ' + (err.message || 'Kon bericht niet verzenden');
+      responseDiv.style.color = '#ef4444';
+    } finally {
+      input.disabled = false;
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m22 2-7 20-4-9-9-4Z"></path>
+          <path d="M22 2 11 13"></path>
+        </svg>
+        Verzend
+      `;
+      input.value = '';
+      input.focus();
+    }
+  }
+
   // Render computed panel ASAP (and again on DOM ready for safety)
   try { renderComputedPanel(); } catch (e) { /* ignore */ }
   document.addEventListener('DOMContentLoaded', () => {
     try { renderComputedPanel(); } catch (e) { /* ignore */ }
 
+    // Auto-generate AI summary if it doesn't exist
+    const summaryText = document.getElementById('customerAiSummaryText');
+    const summaryLoading = document.getElementById('customerAiSummaryLoading');
+    if (summaryText && summaryLoading) {
+      const currentText = summaryText.textContent.trim();
+      if (!currentText || currentText === 'AI samenvatting wordt gegenereerd...' || currentText.includes('Klik op')) {
+        summaryText.style.display = 'none';
+        summaryLoading.style.display = 'block';
+        refreshCustomerAiSummary().finally(() => {
+          summaryText.style.display = 'block';
+          summaryLoading.style.display = 'none';
+        });
+      }
+    }
+
     const refreshBtn = document.getElementById('refreshCustomerAiSummaryBtn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        refreshCustomerAiSummary();
+        const summaryText = document.getElementById('customerAiSummaryText');
+        const summaryLoading = document.getElementById('customerAiSummaryLoading');
+        if (summaryText) summaryText.style.display = 'none';
+        if (summaryLoading) summaryLoading.style.display = 'block';
+        refreshCustomerAiSummary().finally(() => {
+          if (summaryText) summaryText.style.display = 'block';
+          if (summaryLoading) summaryLoading.style.display = 'none';
+        });
+      });
+    }
+
+    // AI Chat form handler
+    const chatForm = document.getElementById('customerAiChatForm');
+    const chatInput = document.getElementById('customerAiChatInput');
+    if (chatForm && chatInput) {
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (message) {
+          await sendAiChatMessage(message);
+        }
+      });
+      
+      // Allow Enter to submit
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(new Event('submit'));
+        }
       });
     }
   });

@@ -149,12 +149,6 @@
                   ${(typeof canEditCustomer !== 'undefined' && canEditCustomer ? '<button type="button" id="editCustomerBtn" class="edit-customer-btn" style="background: none; border: none; cursor: pointer; padding: 4px; color: #9ca3af; transition: color 0.2s; margin-left: auto;" onmouseover="this.style.color=\'#6b7280\'" onmouseout="this.style.color=\'#9ca3af\'"><i class="fas fa-pencil-alt" style="font-size: 18px;"></i></button>' : '')}
                 </div>
                 <div class="user-info-badges-container" id="badgesContainer">
-                  <span class="status-badge" id="statusBadge" data-field="status" data-edit-type="select" data-options='${JSON.stringify(Object.keys(statusLabels))}' style="background-color: ${(status === 'active' ? '#10b98120' : '#6b728020')}; color: ${(status === 'active' ? '#10b981' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                    ${(statusLabels[status] || status)}
-                  </span>
-                  <span class="status-badge" id="priorityBadge" data-field="priority" data-edit-type="select" data-options='${JSON.stringify(Object.keys(priorityLabels))}' style="background-color: ${(priority === 'high' ? '#ef444420' : priority === 'urgent' ? '#dc262620' : priority === 'low' ? '#6b728020' : '#3b82f620')}; color: ${(priority === 'high' ? '#ef4444' : priority === 'urgent' ? '#dc2626' : priority === 'low' ? '#6b7280' : '#3b82f6')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                    ${(priorityLabels[priority] || priority)}
-                  </span>
                   ${(userAccount ? '<span class="user-role-badge-new is-user"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Heeft account</span>' : '')}
                 </div>
               </div>
@@ -169,160 +163,68 @@
           </div>
         </div>
 
-        <!-- Stats Cards -->
-        <div class="user-card">
-          <div class="user-card-content">
-            <h3 class="user-card-title-small">Statistieken</h3>
-            <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;">
-              <!-- Tickets -->
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Totaal Tickets</p>
-                <p class="user-stat-value-new">${(stats.total_tickets || 0)}</p>
+        <!-- KPI Cards -->
+        <div class="kpi-cards-container">
+          <div class="kpi-cards-grid">
+            <!-- Open Taken Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Open taken</p>
+                <p class="kpi-value">${(stats.open_tasks || 0)}</p>
               </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Open Tickets</p>
-                <p class="user-stat-value-new" style="color: #ef4444;">${(stats.open_tickets || 0)}</p>
-              </div>
-              ${(stats.high_priority_tickets > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Hoge Prioriteit</p><p class="user-stat-value-new" style="color: #f59e0b;">' + stats.high_priority_tickets + '</p></div>' : '')}
-              
-              <!-- Emails -->
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Totaal E-mails</p>
-                <p class="user-stat-value-new">${(stats.total_emails || 0)}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Ongelezen</p>
-                <p class="user-stat-value-new" style="color: #3b82f6;">${(stats.unread_emails || 0)}</p>
-              </div>
-              
-              <!-- Tasks -->
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Totaal Taken</p>
-                <p class="user-stat-value-new">${(stats.total_tasks || 0)}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Open Taken</p>
-                <p class="user-stat-value-new" style="color: #f59e0b;">${(stats.open_tasks || 0)}</p>
-              </div>
-              ${(stats.in_progress_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">In Uitvoering</p><p class="user-stat-value-new" style="color: #8b5cf6;">' + stats.in_progress_tasks + '</p></div>' : '')}
-              ${(stats.done_tasks > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Afgerond</p><p class="user-stat-value-new" style="color: #10b981;">' + stats.done_tasks + '</p></div>' : '')}
-              
-              <!-- Time Tracking -->
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Totaal Uren</p>
-                <p class="user-stat-value-new" style="color: #3b82f6;">
-                  ${(stats.total_hours || 0)}u ${(stats.total_minutes || 0)}min
-                </p>
-              </div>
-              ${(stats.total_time_entries > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Tijdregistraties</p><p class="user-stat-value-new">' + stats.total_time_entries + '</p></div>' : '')}
-              
-              <!-- Employees -->
-              ${(stats.responsible_employees > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Werknemers</p><p class="user-stat-value-new" style="color: #ea5d0d;">' + stats.responsible_employees + '</p></div>' : '')}
-              
-              <!-- Task Value -->
-              ${(stats.task_value_total > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Waarde Taken</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.task_value_total) + '</p></div>' : '')}
-              
-              <!-- Revenue -->
-              ${(stats.total_revenue > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Omzet</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_revenue) + '</p></div>' : '')}
-              
-              <!-- Paid Revenue -->
-              ${(stats.total_paid > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Betaald</p><p class="user-stat-value-new" style="color: #10b981;">' + formatCurrency(stats.total_paid) + '</p></div>' : '')}
-              
-              <!-- Outstanding -->
-              ${(stats.total_outstanding > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Openstaand</p><p class="user-stat-value-new" style="color: #f59e0b;">' + formatCurrency(stats.total_outstanding) + '</p></div>' : '')}
-              
-              <!-- Total Invoices -->
-              ${(stats.total_invoices > 0 ? '<div class="user-stat-item-new"><p class="user-stat-label-new">Totaal Facturen</p><p class="user-stat-value-new">' + stats.total_invoices + '</p></div>' : '')}
-            </div>
-          </div>
-        </div>
-
-        <!-- CRM Computed Fields -->
-        <div class="user-card">
-          <div class="user-card-content">
-            <h3 class="user-card-title-small">CRM (computed)</h3>
-            <div class="user-stats-list-new" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Company display</p>
-                <p class="user-stat-value-new" id="computedCompanyDisplayName">${(customer.company_display_name || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Normalized domain</p>
-                <p class="user-stat-value-new" id="computedNormalizedDomain">${(customer.normalized_domain || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Normalized website</p>
-                <p class="user-stat-value-new" id="computedNormalizedWebsiteUrl">${(customer.normalized_website_url || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Normalized phone</p>
-                <p class="user-stat-value-new" id="computedNormalizedPhone">${(customer.normalized_phone || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Dedupe key (primary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeyPrimary">${(customer.dedupe_key_primary || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Dedupe key (secondary)</p>
-                <p class="user-stat-value-new" id="computedDedupeKeySecondary">${(customer.dedupe_key_secondary || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Days since last interaction</p>
-                <p class="user-stat-value-new" id="computedDaysSinceLastInteraction">${((customer.days_since_last_interaction === 0 || customer.days_since_last_interaction) ? customer.days_since_last_interaction : '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Overdue next activity</p>
-                <p class="user-stat-value-new" id="computedHasOverdueNextActivity">${(customer.has_overdue_next_activity ? 'Ja' : 'Nee')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Activity bucket</p>
-                <p class="user-stat-value-new" id="computedActivityBucket">${(customer.activity_bucket || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Contact pressure</p>
-                <p class="user-stat-value-new" id="computedContactPressure">${((customer.contact_pressure === 0 || customer.contact_pressure) ? customer.contact_pressure : '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Is contactable</p>
-                <p class="user-stat-value-new" id="computedIsContactable">${(customer.is_contactable ? 'Ja' : 'Nee')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Data quality</p>
-                <p class="user-stat-value-new" id="computedDataQualityScore">${((customer.data_quality_score === 0 || customer.data_quality_score) ? customer.data_quality_score : '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Full address</p>
-                <p class="user-stat-value-new" id="computedFullAddress">${(customer.full_address || '-')}</p>
-              </div>
-              <div class="user-stat-item-new">
-                <p class="user-stat-label-new">Duplicate candidate</p>
-                <p class="user-stat-value-new" id="computedIsDuplicateCandidate">${(customer.is_duplicate_candidate ? 'Ja' : 'Nee')}</p>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list">
+                  <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  <path d="M12 11h4"></path>
+                  <path d="M12 16h4"></path>
+                  <path d="M8 11h.01"></path>
+                  <path d="M8 16h.01"></path>
+                </svg>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- AI Summary -->
-        <div class="user-card">
-          <div class="user-card-content">
-            <div class="user-card-header-with-action">
-              <h3 class="user-card-title-small" style="display:flex;align-items:center;gap:8px;">
-                <i class="fas fa-sparkles" style="color:#ea5d0d;"></i>
-                AI Samenvatting
-              </h3>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <span id="customerAiSummaryMeta" style="font-size:12px;color:#6b7280;">
-                  ${(customer.aiSummary && customer.aiSummary.updated_at ? 'Laatst bijgewerkt: ' + formatDateTime(customer.aiSummary.updated_at) : 'Nog geen samenvatting')}
-                </span>
-                <button type="button" id="refreshCustomerAiSummaryBtn" class="btn-primary" style="padding: 8px 14px; font-size: 14px; display:flex; align-items:center; gap:8px;">
-                  <i class="fas fa-sparkles"></i>
-                  <span>Genereer</span>
-                </button>
+            
+            <!-- Open Tickets Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Open tickets</p>
+                <p class="kpi-value">${(stats.open_tickets || 0)}</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ticket">
+                  <path d="M2 5a2 2 0 0 1 2-2h.5a2 2 0 0 0 2-2h1a2 2 0 0 0 2 2h.5a2 2 0 0 1 2 2v1a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-.5a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2v.5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-1a2 2 0 0 1 2-2h.5a2 2 0 0 1 2 2V19a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2V5Z"></path>
+                  <path d="M2 9h20"></path>
+                  <path d="M2 15h20"></path>
+                </svg>
               </div>
             </div>
-            <div id="customerAiSummaryBox" style="margin-top: 12px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
-              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6;">
-                ${(customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : 'Klik op "Genereer" om een AI samenvatting te maken.')}
+            
+            <!-- Openstaand Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Openstaand</p>
+                <p class="kpi-value">${formatCurrency(stats.total_outstanding || 0)}</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-alert">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" x2="12" y1="8" y2="12"></line>
+                  <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Totaal Card -->
+            <div class="kpi-card">
+              <div class="kpi-content">
+                <p class="kpi-title">Totaal</p>
+                <p class="kpi-value">${formatCurrency(stats.total_revenue || 0)}</p>
+              </div>
+              <div class="kpi-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up">
+                  <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                  <polyline points="16 7 22 7 22 13"></polyline>
+                </svg>
               </div>
             </div>
           </div>
@@ -505,24 +407,73 @@
 
       <!-- Right Sidebar (1/3 width) -->
       <div class="user-detail-sidebar-new">
+        <!-- AI Summary Card -->
+        <div class="user-card" style="margin-bottom: 1rem;">
+          <div class="user-card-content">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <h3 class="user-card-title-small" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                  <path d="M20 3v4"></path>
+                  <path d="M22 5h-4"></path>
+                  <path d="M4 17v2"></path>
+                  <path d="M5 18H3"></path>
+                </svg>
+                AI Samenvatting
+              </h3>
+              <button type="button" id="refreshCustomerAiSummaryBtn" style="background: none; border: none; cursor: pointer; padding: 6px 10px; color: #6b7280; font-size: 13px; display: flex; align-items: center; gap: 6px; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#374151';" onmouseout="this.style.background='none'; this.style.color='#6b7280';">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path>
+                  <path d="M21 3v5h-5"></path>
+                </svg>
+                Hergenereer
+              </button>
+            </div>
+            <div id="customerAiSummaryBox" style="margin-bottom: 20px;">
+              <div id="customerAiSummaryText" style="white-space: pre-line; font-size: 14px; color: #111827; line-height: 1.6; min-height: 60px;">
+                ${(customer.aiSummary && customer.aiSummary.summary ? customer.aiSummary.summary : 'AI samenvatting wordt gegenereerd...')}
+              </div>
+              <div id="customerAiSummaryLoading" style="display: none; text-align: center; padding: 20px; color: #6b7280; font-size: 14px;">
+                <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                AI samenvatting wordt gegenereerd...
+              </div>
+            </div>
+            
+            <!-- AI Chat Interface -->
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px;">
+              <form id="customerAiChatForm" style="display: flex; gap: 8px;">
+                <input 
+                  type="text" 
+                  id="customerAiChatInput" 
+                  placeholder="Stel een vraag over deze klant..." 
+                  style="flex: 1; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s;"
+                  onfocus="this.style.borderColor='#9333ea'; this.style.boxShadow='0 0 0 3px rgba(147, 51, 234, 0.1)';"
+                  onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
+                />
+                <button 
+                  type="submit" 
+                  id="customerAiChatSubmit"
+                  style="padding: 10px 16px; background: #9333ea; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;"
+                  onmouseover="this.style.background='#7e22ce';"
+                  onmouseout="this.style.background='#9333ea';"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4Z"></path>
+                    <path d="M22 2 11 13"></path>
+                  </svg>
+                  Verzend
+                </button>
+              </form>
+              <div id="customerAiChatResponse" style="margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; font-size: 14px; color: #374151; line-height: 1.6; min-height: 40px; display: none; white-space: pre-line;"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Quick Stats Card -->
         <div class="user-card" style="margin-bottom: 1rem;">
           <div class="user-card-content">
             <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Overzicht</h3>
             <div class="user-stats-list-new" style="display: flex; flex-direction: column; gap: 0.75rem;">
-              <!-- Status & Priority -->
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                <span style="font-size: 0.875rem; color: #6b7280;">Status</span>
-                <span class="status-badge" style="background-color: ${(stats.status === 'active' ? '#10b98120' : '#6b728020')}; color: ${(stats.status === 'active' ? '#10b981' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                  ${(stats.status === 'active' ? 'Actief' : stats.status === 'inactive' ? 'Inactief' : stats.status)}
-                </span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                <span style="font-size: 0.875rem; color: #6b7280;">Prioriteit</span>
-                <span class="status-badge" style="background-color: ${(stats.priority === 'high' ? '#ef444420' : stats.priority === 'urgent' ? '#dc262620' : '#6b728020')}; color: ${(stats.priority === 'high' ? '#ef4444' : stats.priority === 'urgent' ? '#dc2626' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
-                  ${(stats.priority === 'high' ? 'Hoog' : stats.priority === 'urgent' ? 'Urgent' : stats.priority === 'low' ? 'Laag' : 'Normaal')}
-                </span>
-              </div>
               
               <!-- Key Metrics -->
               ${(stats.open_tickets > 0 ? '<div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><span style="font-size: 0.875rem; color: #6b7280;">Open Tickets</span><span style="font-weight: 600; color: #ef4444;">' + stats.open_tickets + '</span></div>' : '')}
@@ -541,6 +492,23 @@
             <h3 class="user-card-title-small" style="margin-bottom: 1rem;">Klant Informatie</h3>
             
             <div class="user-info-list">
+              <!-- Status & Priority -->
+              <div class="user-info-item">
+                <p class="user-info-label">Status</p>
+                <p class="user-info-value">
+                  <span class="status-badge" id="statusBadge" data-field="status" data-edit-type="select" data-options='${JSON.stringify(Object.keys(statusLabels))}' style="background-color: ${(status === 'active' ? '#10b98120' : '#6b728020')}; color: ${(status === 'active' ? '#10b981' : '#6b7280')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${(statusLabels[status] || status)}
+                  </span>
+                </p>
+              </div>
+              <div class="user-info-item">
+                <p class="user-info-label">Prioriteit</p>
+                <p class="user-info-value">
+                  <span class="status-badge" id="priorityBadge" data-field="priority" data-edit-type="select" data-options='${JSON.stringify(Object.keys(priorityLabels))}' style="background-color: ${(priority === 'high' ? '#ef444420' : priority === 'urgent' ? '#dc262620' : priority === 'low' ? '#6b728020' : '#3b82f620')}; color: ${(priority === 'high' ? '#ef4444' : priority === 'urgent' ? '#dc2626' : priority === 'low' ? '#6b7280' : '#3b82f6')}; font-size: 0.8125rem; padding: 4px 8px; border-radius: 4px;">
+                    ${(priorityLabels[priority] || priority)}
+                  </span>
+                </p>
+              </div>
               ${(customer.status === 'inactive' ? '<div class="user-info-item"><p class="user-info-label">Klant van</p><p class="user-info-value" data-field="inactive_from" data-edit-type="date" data-restricted="true">' + (customer.inactive_from ? formatDate(customer.inactive_from) : formatDate(customer.created_at)) + '</p></div><div class="user-info-item"><p class="user-info-label">Klant tot</p><p class="user-info-value" data-field="inactive_to" data-edit-type="date" data-restricted="true">' + (customer.inactive_to ? formatDate(customer.inactive_to) : 'Heden') + '</p></div><div class="user-info-item"><p class="user-info-label">Reden inactiviteit</p><p class="user-info-value" data-field="inactive_reason" data-edit-type="select" data-restricted="true" data-options=\'' + JSON.stringify(['temporary_pause', 'too_expensive', 'insufficient_results', 'not_matching_customer', 'no_capacity', 'switch', 'conflict', 'non_payment', 'other']) + '\'>' + (customer.inactive_reason ? (customer.inactive_reason === 'temporary_pause' ? 'Tijdelijke pauze' : customer.inactive_reason === 'too_expensive' ? 'Te duur / budget' : customer.inactive_reason === 'insufficient_results' ? 'Onvoldoende resultaat' : customer.inactive_reason === 'not_matching_customer' ? 'Niet passende klant' : customer.inactive_reason === 'no_capacity' ? 'Geen capaciteit bij klant' : customer.inactive_reason === 'switch' ? 'Overstap' : customer.inactive_reason === 'conflict' ? 'Conflict' : customer.inactive_reason === 'non_payment' ? 'Wanbetaling' : customer.inactive_reason === 'other' ? 'Anders (toelichten)' : customer.inactive_reason) : '-') + '</p></div>' + (customer.inactive_reason === 'other' ? '<div class="user-info-item" id="inactive-reason-other-item"><p class="user-info-label">Toelichting</p><p class="user-info-value" data-field="inactive_reason_other" data-edit-type="text" data-restricted="true">' + (customer.inactive_reason_other || '') + '</p></div>' : '') : '<div class="user-info-item"><p class="user-info-label">Klant sinds</p><p class="user-info-value" data-field="created_at" data-edit-type="date" data-restricted="true">' + formatDateTime(customer.created_at) + '</p></div>')}
               
               <div class="user-info-item">
@@ -568,11 +536,6 @@
         <!-- User Account Card (if exists) -->
         ${(userAccount ? '<div class="user-card" style="margin-bottom: 1rem;"><div class="user-card-content"><h3 class="user-card-title-small" style="margin-bottom: 1rem;">Gekoppeld Account</h3><div class="user-info-list"><div class="user-info-item"><p class="user-info-label">Account ID</p><p class="user-info-value user-info-mono">' + (userAccount.id ? userAccount.id.substring(0, 8) : '-') + '</p></div><div class="user-info-item"><p class="user-info-label">Status</p><p class="user-info-value">' + (userAccount.status || 'active') + '</p></div><div class="user-info-item"><p class="user-info-label">Laatste login</p><p class="user-info-value">' + (userAccount.last_login ? formatRelativeTime(userAccount.last_login) : 'Nog niet ingelogd') + '</p></div></div><a href="/admin/users/' + userAccount.id + '" class="btn-primary" style="display: block; text-align: center; margin-top: 16px; padding: 8px 16px; font-size: 14px; text-decoration: none;">Bekijk account ></a></div></div>' : '')}
 
-        <!-- Email Addresses Card -->
-        ${(customerEmails.length > 0 ? '<div class="user-card" style="margin-bottom: 1rem;"><div class="user-card-content"><h3 class="user-card-title-small" style="margin-bottom: 1rem;">E-mailadressen</h3><div class="user-info-list">' + customerEmails.map(function(email) {
-                  var primaryBadge = email.is_primary ? '<span style="color: #10b981; font-size: 11px; margin-left: 8px;">(Primair)</span>' : ''
-                  return '<div class="user-info-item"><p class="user-info-label">' + email.email + primaryBadge + '</p></div>'
-                }).join('') + '</div></div></div>' : '')}
 
         <!-- Team Card -->
         <div class="user-card" style="margin-bottom: 1rem;">
