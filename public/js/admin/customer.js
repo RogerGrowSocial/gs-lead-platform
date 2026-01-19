@@ -235,9 +235,17 @@
       const summaryText = document.getElementById('customerAiSummaryText');
       const summaryLoading = document.getElementById('customerAiSummaryLoading');
       if (summaryText) {
-        const summary = data.summary || data.aiSummary?.summary || '';
-        summaryText.textContent = summary || 'Geen samenvatting ontvangen';
-        summaryText.style.display = 'block';
+        // Try multiple possible response formats
+        const summary = data.summary || data.aiSummary?.summary || (data.data && data.data.summary) || '';
+        console.log('[AI Summary] Response data:', data);
+        if (summary && summary.length > 0) {
+          summaryText.textContent = summary;
+          summaryText.style.display = 'block';
+        } else {
+          console.warn('[AI Summary] No summary found in response:', data);
+          summaryText.textContent = 'Geen samenvatting ontvangen';
+          summaryText.style.display = 'block';
+        }
       }
       if (summaryLoading) {
         summaryLoading.style.display = 'none';
