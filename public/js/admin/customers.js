@@ -685,11 +685,11 @@
       });
     });
   }
-});
 
-let currentCustomerId = null;
+  // Customer actions menu state
+  let currentCustomerId = null;
 
-function showCustomerActions(customerId, event) {
+  function showCustomerActions(customerId, event) {
   event.stopPropagation();
   currentCustomerId = customerId;
   
@@ -724,10 +724,12 @@ function showCustomerActions(customerId, event) {
     };
     document.addEventListener('click', closeMenu);
   }, 10);
-}
+  }
 
-// Handle customer actions menu
-document.addEventListener('DOMContentLoaded', () => {
+  // Make showCustomerActions globally available
+  window.showCustomerActions = showCustomerActions;
+
+  // Handle customer actions menu
   const menu = document.getElementById('customerActionsMenu');
   if (menu) {
     menu.addEventListener('click', async (e) => {
