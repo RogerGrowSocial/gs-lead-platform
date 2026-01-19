@@ -10360,15 +10360,65 @@ router.post('/api/customers/:id/ai-summary', requireAuth, isAdmin, async (req, r
   }
 });
 
+// GET /admin/api/customers/:id/ai-chat - Get chat history
+router.get('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: messages, error } = await supabaseAdmin
+      .from('customer_ai_chat_messages')
+      .select('*')
+      .eq('customer_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching chat messages:', error);
+      return res.status(500).json({ success: false, error: 'Fout bij ophalen chat geschiedenis' });
+    }
+
+    return res.json({
+      success: true,
+      messages: messages || []
+    });
+  } catch (err) {
+    console.error('Error in AI chat history:', err);
+    return res.status(500).json({ success: false, error: 'Fout bij ophalen chat geschiedenis' });
+  }
+});
+
 // POST /admin/api/customers/:id/ai-chat - Chat with AI about customer
 router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { message } = req.body;
+    const userId = req.user.id;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ success: false, error: 'Bericht is verplicht' });
     }
+
+    // Save user message to database
+    const { error: userMessageError } = await supabaseAdmin
+      .from('customer_ai_chat_messages')
+      .insert({
+        customer_id: id,
+        user_id: userId,
+        role: 'user',
+        message: message.trim()
+      });
+
+    if (userMessageError) {
+      console.error('Error saving user message:', userMessageError);
+      // Continue anyway, don't fail the request
+    }
+
+    // Get chat history for context
+    const { data: chatHistory } = await supabaseAdmin
+      .from('customer_ai_chat_messages')
+      .select('role, message')
+      .eq('customer_id', id)
+      .order('created_at', { ascending: true })
+      .limit(20); // Last 20 messages for context
 
     // Get customer data (similar to summary endpoint)
     const [
@@ -10436,30 +10486,66 @@ router.post('/api/customers/:id/ai-chat', requireAuth, isAdmin, async (req, res)
 
     const systemPrompt = `Je bent een CRM assistent die helpt met vragen over klanten. Je hebt toegang tot klantgegevens, statistieken en recente activiteit. Antwoord beknopt, professioneel en actiegericht. Gebruik alleen de beschikbare informatie.`;
 
-    const userPrompt = `Klant: ${context.customer.name}
+    // Build conversation history for AI
+    const conversationMessages = [
+      { role: 'system', content: systemPrompt }
+    ];
+
+    // Add customer context as first user message
+    conversationMessages.push({
+      role: 'user',
+      content: `Klant: ${context.customer.name}
 Status: ${context.customer.status}
 Prioriteit: ${context.customer.priority}
 Totaal facturen: ${context.stats.total_invoices}
 Totaal tickets: ${context.stats.total_tickets}
 Totaal taken: ${context.stats.total_tasks}
 Omzet: €${context.stats.total_revenue.toFixed(2)}
-Openstaand: €${context.stats.total_outstanding.toFixed(2)}
+Openstaand: €${context.stats.total_outstanding.toFixed(2)}`
+    });
 
-Vraag van gebruiker: ${message.trim()}
+    // Add chat history (last 10 messages for context)
+    if (chatHistory && chatHistory.length > 0) {
+      const recentHistory = chatHistory.slice(-10);
+      recentHistory.forEach(msg => {
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          conversationMessages.push({
+            role: msg.role,
+            content: msg.message
+          });
+        }
+      });
+    }
 
-Geef een beknopt en nuttig antwoord op basis van deze informatie.`;
+    // Add current user message
+    conversationMessages.push({
+      role: 'user',
+      content: message.trim()
+    });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
+      messages: conversationMessages,
       temperature: 0.7,
       max_tokens: 500
     });
 
     const response = completion.choices?.[0]?.message?.content?.trim() || 'Geen antwoord ontvangen van AI.';
+
+    // Save AI response to database
+    const { error: aiMessageError } = await supabaseAdmin
+      .from('customer_ai_chat_messages')
+      .insert({
+        customer_id: id,
+        user_id: userId,
+        role: 'assistant',
+        message: response
+      });
+
+    if (aiMessageError) {
+      console.error('Error saving AI message:', aiMessageError);
+      // Continue anyway, don't fail the request
+    }
 
     return res.json({
       success: true,

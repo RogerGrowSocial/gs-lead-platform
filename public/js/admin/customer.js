@@ -391,6 +391,106 @@
   // ------------------------------------------------------------
   // AI Chat (Customer)
   // ------------------------------------------------------------
+  
+  // Load chat history
+  async function loadChatHistory() {
+    const currentCustomerId = getCustomerId();
+    if (!currentCustomerId) {
+      console.warn('[AI Chat] No customerId available');
+      return;
+    }
+
+    const messagesContainer = document.getElementById('customerAiChatMessages');
+    if (!messagesContainer) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/api/customers/${currentCustomerId}/ai-chat`, {
+        method: 'GET',
+        credentials: 'same-origin'
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.messages) {
+        // Clear existing messages
+        messagesContainer.innerHTML = '';
+        
+        // Render all messages
+        data.messages.forEach(msg => {
+          addChatMessage(msg.role, msg.message, msg.created_at, false);
+        });
+        
+        // Scroll to bottom
+        scrollChatToBottom();
+      }
+    } catch (err) {
+      console.error('[AI Chat] Error loading history:', err);
+    }
+  }
+
+  // Add a chat message to the UI
+  function addChatMessage(role, message, createdAt, scrollToBottom = true) {
+    const messagesContainer = document.getElementById('customerAiChatMessages');
+    if (!messagesContainer) {
+      return;
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.style.display = 'flex';
+    messageDiv.style.flexDirection = 'column';
+    messageDiv.style.gap = '4px';
+    messageDiv.style.alignItems = role === 'user' ? 'flex-end' : 'flex-start';
+
+    const bubble = document.createElement('div');
+    bubble.style.padding = '10px 14px';
+    bubble.style.borderRadius = '12px';
+    bubble.style.maxWidth = '85%';
+    bubble.style.wordWrap = 'break-word';
+    bubble.style.fontSize = '14px';
+    bubble.style.lineHeight = '1.5';
+    bubble.style.whiteSpace = 'pre-wrap';
+
+    if (role === 'user') {
+      bubble.style.background = '#ea5d0d';
+      bubble.style.color = '#ffffff';
+      bubble.style.borderBottomRightRadius = '4px';
+    } else {
+      bubble.style.background = '#f3f4f6';
+      bubble.style.color = '#111827';
+      bubble.style.borderBottomLeftRadius = '4px';
+    }
+
+    bubble.textContent = message;
+    messageDiv.appendChild(bubble);
+
+    // Add timestamp
+    if (createdAt) {
+      const timeDiv = document.createElement('div');
+      timeDiv.style.fontSize = '11px';
+      timeDiv.style.color = '#9ca3af';
+      timeDiv.style.padding = '0 4px';
+      const date = new Date(createdAt);
+      timeDiv.textContent = date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      messageDiv.appendChild(timeDiv);
+    }
+
+    messagesContainer.appendChild(messageDiv);
+
+    if (scrollToBottom) {
+      scrollChatToBottom();
+    }
+  }
+
+  // Scroll chat to bottom
+  function scrollChatToBottom() {
+    const messagesContainer = document.getElementById('customerAiChatMessages');
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  }
+
+  // Send AI chat message
   async function sendAiChatMessage(message) {
     const currentCustomerId = getCustomerId();
     if (!currentCustomerId || !message || !message.trim()) {
@@ -400,9 +500,8 @@
     
     const input = document.getElementById('customerAiChatInput');
     const submitBtn = document.getElementById('customerAiChatSubmit');
-    const responseDiv = document.getElementById('customerAiChatResponse');
     
-    if (!input || !submitBtn || !responseDiv) {
+    if (!input || !submitBtn) {
       console.warn('[AI Chat] Required elements not found');
       return;
     }
@@ -413,13 +512,39 @@
     }
     const originalBtnHtml = submitBtn.dataset.originalHtml;
     
+    // Add user message to chat immediately
+    addChatMessage('user', message.trim(), new Date().toISOString(), true);
+    
     // Disable input and show loading
     input.disabled = true;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    responseDiv.style.display = 'block';
-    responseDiv.textContent = 'AI denkt na...';
-    responseDiv.style.color = '#374151';
+    
+    // Add loading message
+    const loadingMessageId = 'loading-' + Date.now();
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = loadingMessageId;
+    loadingDiv.style.display = 'flex';
+    loadingDiv.style.flexDirection = 'column';
+    loadingDiv.style.gap = '4px';
+    loadingDiv.style.alignItems = 'flex-start';
+    
+    const loadingBubble = document.createElement('div');
+    loadingBubble.style.padding = '10px 14px';
+    loadingBubble.style.borderRadius = '12px';
+    loadingBubble.style.borderBottomLeftRadius = '4px';
+    loadingBubble.style.background = '#f3f4f6';
+    loadingBubble.style.color = '#6b7280';
+    loadingBubble.style.fontSize = '14px';
+    loadingBubble.style.fontStyle = 'italic';
+    loadingBubble.textContent = 'AI denkt na...';
+    loadingDiv.appendChild(loadingBubble);
+    
+    const messagesContainer = document.getElementById('customerAiChatMessages');
+    if (messagesContainer) {
+      messagesContainer.appendChild(loadingDiv);
+      scrollChatToBottom();
+    }
     
     try {
       const res = await fetch(`/admin/api/customers/${currentCustomerId}/ai-chat`, {
@@ -434,12 +559,25 @@
         throw new Error(data.error || 'Fout bij verzenden bericht');
       }
       
-      responseDiv.textContent = data.response || 'Geen antwoord ontvangen';
-      responseDiv.style.color = '#374151';
+      // Remove loading message
+      const loadingEl = document.getElementById(loadingMessageId);
+      if (loadingEl) {
+        loadingEl.remove();
+      }
+      
+      // Add AI response
+      addChatMessage('assistant', data.response || 'Geen antwoord ontvangen', new Date().toISOString(), true);
     } catch (err) {
       console.error('AI chat error:', err);
-      responseDiv.textContent = 'Fout: ' + (err.message || 'Kon bericht niet verzenden');
-      responseDiv.style.color = '#ef4444';
+      
+      // Remove loading message
+      const loadingEl = document.getElementById(loadingMessageId);
+      if (loadingEl) {
+        loadingEl.remove();
+      }
+      
+      // Add error message
+      addChatMessage('assistant', 'Fout: ' + (err.message || 'Kon bericht niet verzenden'), new Date().toISOString(), true);
     } finally {
       input.disabled = false;
       submitBtn.disabled = false;
