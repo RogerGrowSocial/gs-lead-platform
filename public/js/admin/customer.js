@@ -208,16 +208,31 @@
   // AI Summary (Customer)
   // ------------------------------------------------------------
   async function refreshCustomerAiSummary() {
-    if (!customerId) return;
+    if (!customerId) {
+      console.warn('[AI Summary] No customerId available');
+      return;
+    }
+    
     const btn = document.getElementById('refreshCustomerAiSummaryBtn');
-    const meta = document.getElementById('customerAiSummaryMeta');
-    const box = document.getElementById('customerAiSummaryText');
-    if (!btn || !box) return;
+    const summaryText = document.getElementById('customerAiSummaryText');
+    const summaryLoading = document.getElementById('customerAiSummaryLoading');
+    
+    if (!summaryText) {
+      console.warn('[AI Summary] Summary text element not found');
+      return;
+    }
 
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>Bezig...</span>`;
-    if (meta) meta.textContent = 'AI samenvatting wordt gegenereerd...';
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path><path d="M21 3v5h-5"></path></svg>`;
+    }
+
+    // Show loading state
+    summaryText.style.display = 'none';
+    if (summaryLoading) {
+      summaryLoading.style.display = 'block';
+    }
 
     try {
       const res = await fetch(`/admin/api/customers/${customerId}/ai-summary`, {
@@ -226,39 +241,62 @@
         credentials: 'same-origin',
         body: JSON.stringify({})
       });
-      const data = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || 'Fout bij genereren AI samenvatting');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}: Fout bij genereren AI samenvatting`);
       }
 
-      // Update UI - handle both success and ok response formats
-      const summaryText = document.getElementById('customerAiSummaryText');
-      const summaryLoading = document.getElementById('customerAiSummaryLoading');
-      if (summaryText) {
-        // Try multiple possible response formats
-        const summary = data.summary || data.aiSummary?.summary || (data.data && data.data.summary) || '';
-        console.log('[AI Summary] Response data:', data);
-        if (summary && summary.length > 0) {
-          summaryText.textContent = summary;
-          summaryText.style.display = 'block';
-        } else {
-          console.warn('[AI Summary] No summary found in response:', data);
-          summaryText.textContent = 'Geen samenvatting ontvangen';
-          summaryText.style.display = 'block';
+      const data = await res.json();
+      console.log('[AI Summary] Response data:', data);
+
+      // Handle different response formats
+      let summary = '';
+      if (data.summary) {
+        summary = data.summary;
+      } else if (data.aiSummary && data.aiSummary.summary) {
+        summary = data.aiSummary.summary;
+      } else if (data.data && data.data.summary) {
+        summary = data.data.summary;
+      } else if (typeof data === 'string') {
+        summary = data;
+      }
+
+      if (summary && summary.trim().length > 0) {
+        summaryText.textContent = summary.trim();
+        summaryText.style.display = 'block';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'none';
+        }
+        if (window.showNotification) {
+          window.showNotification('AI samenvatting bijgewerkt', 'success');
+        }
+      } else {
+        console.warn('[AI Summary] No summary found in response:', data);
+        summaryText.textContent = 'Geen samenvatting ontvangen. Probeer het opnieuw.';
+        summaryText.style.display = 'block';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'none';
+        }
+        if (window.showNotification) {
+          window.showNotification('Geen samenvatting ontvangen', 'error');
         }
       }
+    } catch (err) {
+      console.error('[AI Summary] Error:', err);
+      summaryText.textContent = `Fout bij genereren AI samenvatting: ${err.message || 'Onbekende fout'}. Probeer het opnieuw.`;
+      summaryText.style.display = 'block';
       if (summaryLoading) {
         summaryLoading.style.display = 'none';
       }
-
-      window.showNotification?.('AI samenvatting bijgewerkt', 'success');
-    } catch (err) {
-      console.error('AI summary error:', err);
-      if (meta) meta.textContent = 'Kon AI samenvatting niet genereren';
-      window.showNotification?.(err.message || 'Kon AI samenvatting niet genereren', 'error');
+      if (window.showNotification) {
+        window.showNotification(err.message || 'Kon AI samenvatting niet genereren', 'error');
+      }
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = originalHtml;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.7 2.7L21 8"></path><path d="M21 3v5h-5"></path></svg>`;
+      }
     }
   }
 
@@ -389,49 +427,49 @@
     // Auto-generate AI summary if it doesn't exist
     const summaryText = document.getElementById('customerAiSummaryText');
     const summaryLoading = document.getElementById('customerAiSummaryLoading');
-    if (summaryText && summaryLoading) {
+    
+    if (summaryText) {
       const currentText = summaryText.textContent.trim();
-      // Check if summary exists (not placeholder)
+      // Check if summary exists (not placeholder or empty)
       const hasSummary = currentText && currentText.length > 20; // Real summary should be longer
       
       if (hasSummary) {
         // Summary already exists, just make sure it's visible
         summaryText.style.display = 'block';
-        summaryLoading.style.display = 'none';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'none';
+        }
       } else {
         // No summary exists - generate one automatically in background
         // Show loading state while generating
         summaryText.style.display = 'none';
-        summaryLoading.style.display = 'block';
+        if (summaryLoading) {
+          summaryLoading.style.display = 'block';
+        }
         
         // Generate summary in background
         refreshCustomerAiSummary().catch(err => {
-          console.error('Failed to generate AI summary:', err);
-          // Show error message if generation fails
-          if (summaryText) {
-            summaryText.textContent = 'AI samenvatting kon niet worden gegenereerd. Klik op het hergenereren icoon om het opnieuw te proberen.';
-            summaryText.style.display = 'block';
-          }
-        }).finally(() => {
-          summaryText.style.display = 'block';
-          summaryLoading.style.display = 'none';
+          console.error('[AI Summary] Failed to generate on page load:', err);
+          // Error handling is done in refreshCustomerAiSummary
         });
       }
     }
 
+    // Setup refresh button
     const refreshBtn = document.getElementById('refreshCustomerAiSummaryBtn');
     if (refreshBtn) {
-      refreshBtn.addEventListener('click', (e) => {
+      // Remove any existing listeners to prevent duplicates
+      const newRefreshBtn = refreshBtn.cloneNode(true);
+      refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
+      
+      newRefreshBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        const summaryText = document.getElementById('customerAiSummaryText');
-        const summaryLoading = document.getElementById('customerAiSummaryLoading');
-        if (summaryText) summaryText.style.display = 'none';
-        if (summaryLoading) summaryLoading.style.display = 'block';
-        refreshCustomerAiSummary().finally(() => {
-          if (summaryText) summaryText.style.display = 'block';
-          if (summaryLoading) summaryLoading.style.display = 'none';
-        });
+        e.stopPropagation();
+        console.log('[AI Summary] Refresh button clicked');
+        refreshCustomerAiSummary();
       });
+    } else {
+      console.warn('[AI Summary] Refresh button not found');
     }
 
     // AI Chat form handler
