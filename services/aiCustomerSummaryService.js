@@ -82,17 +82,17 @@ ${safeJson({
 STATS:
 ${safeJson(stats || {})}
 
-RECENTE FACTUREN (max 10):
-${safeJson(invoices.slice(0, 10))}
+ALLE FACTUREN (${invoices.length} totaal):
+${safeJson(invoices)}
 
-RECENTE TICKETS (max 10):
-${safeJson(tickets.slice(0, 10))}
+ALLE TICKETS (${tickets.length} totaal):
+${safeJson(tickets)}
 
-RECENTE TAKEN (max 10):
-${safeJson(tasks.slice(0, 10))}
+ALLE TAKEN (${tasks.length} totaal):
+${safeJson(tasks)}
 
-RECENTE EMAILS (max 5):
-${safeJson(emails.slice(0, 5))}
+RECENTE EMAILS (${emails.length} totaal, laatste ${Math.min(emails.length, 20)}):
+${safeJson(emails.slice(0, 20))}
 
 VERANTWOORDELIJKE MEDEWERKERS:
 ${safeJson(responsibleEmployees.slice(0, 10).map(re => ({
