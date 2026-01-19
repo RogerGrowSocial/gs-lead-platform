@@ -8,6 +8,70 @@ const logger = require('../utils/logger')
 const UserRiskAssessmentService = require('../services/userRiskAssessmentService')
 const aiCustomerSummaryService = require('../services/aiCustomerSummaryService')
 
+/**
+ * Ensure a Supabase Storage bucket exists, create it if it doesn't
+ * @param {string} bucketName - Name of the bucket
+ * @param {boolean} publicBucket - Whether the bucket should be public (default: true)
+ * @returns {Promise<boolean>} - True if bucket exists or was created successfully
+ */
+async function ensureStorageBucket(bucketName, publicBucket = true) {
+  try {
+    // Check if bucket exists by trying to list it
+    const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets()
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError)
+      return false
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName)
+    
+    if (bucketExists) {
+      return true
+    }
+    
+    // Bucket doesn't exist, create it via REST API
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase credentials for bucket creation')
+      return false
+    }
+    
+    const response = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/json',
+        'apikey': supabaseServiceKey
+      },
+      body: JSON.stringify({
+        name: bucketName,
+        public: publicBucket,
+        file_size_limit: 52428800, // 50MB
+        allowed_mime_types: null // Allow all types
+      })
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`Failed to create bucket ${bucketName}:`, errorText)
+      // If bucket already exists (409), that's fine
+      if (response.status === 409) {
+        return true
+      }
+      return false
+    }
+    
+    console.log(`✅ Created storage bucket: ${bucketName}`)
+    return true
+  } catch (error) {
+    console.error(`Error ensuring bucket ${bucketName}:`, error)
+    return false
+  }
+}
+
 // Admin middleware - controleer of gebruiker admin of werknemer is (niet klant)
 router.use(requireAuth, isEmployeeOrAdmin)
 
@@ -12848,10 +12912,22 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
     const ext = path.extname(req.file.originalname) || '.png'
     const fileName = `customer-logos/customer-logo-${id}-${uniqueSuffix}${ext}`
     
+    // Ensure storage bucket exists before uploading
+    const bucketName = 'uploads'
+    const bucketExists = await ensureStorageBucket(bucketName, true)
+    
+    if (!bucketExists) {
+      console.error('Failed to ensure storage bucket exists')
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Kon storage bucket niet aanmaken. Neem contact op met de beheerder.' 
+      })
+    }
+    
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabaseAdmin
       .storage
-      .from('uploads')
+      .from(bucketName)
       .upload(fileName, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
@@ -12859,13 +12935,6 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
     
     if (uploadError) {
       console.error('Supabase Storage upload error:', uploadError)
-      // If bucket doesn't exist, try to create it or fall back to error
-      if (uploadError.statusCode === '404' || uploadError.message?.includes('not found')) {
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Storage bucket niet gevonden. Neem contact op met de beheerder.' 
-        })
-      }
       return res.status(500).json({ 
         success: false, 
         error: 'Fout bij uploaden naar storage: ' + uploadError.message 
@@ -12875,7 +12944,7 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
     // Get public URL
     const { data: { publicUrl } } = supabaseAdmin
       .storage
-      .from('uploads')
+      .from(bucketName)
       .getPublicUrl(fileName)
     
     // Update customer with logo URL
@@ -12892,7 +12961,7 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
     if (updateError) {
       // Try to delete uploaded file from storage if database update fails
       try {
-        await supabaseAdmin.storage.from('uploads').remove([fileName])
+        await supabaseAdmin.storage.from(bucketName).remove([fileName])
       } catch (deleteError) {
         console.error('Error deleting uploaded file from storage:', deleteError)
       }
