@@ -1291,6 +1291,13 @@
   
   // Monthly Growth Card
   async function loadLeadsMonthlyGrowthData() {
+    console.log('📈 Loading monthly growth data...');
+    const monthlyGrowthCard = document.getElementById('monthlyLeadsGrowth');
+    if (!monthlyGrowthCard) {
+      console.error('❌ Monthly growth card not found!');
+      return;
+    }
+    
     try {
       // For now, use mock data - you can replace this with a real API call
       const mockData = {
