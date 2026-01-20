@@ -58,14 +58,25 @@
   <link rel="shortcut icon" type="image/webp" href="/img/favicon-growsocial.webp">
   <link rel="apple-touch-icon" href="/img/favicon-growsocial.webp">
   
+  <!-- Preconnect to critical domains -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
   
-  <!-- Load fonts with swap - show fallback immediately, swap when loaded -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Preload critical CSS for faster rendering -->
+  <link rel="preload" href="/css/design-tokens.css" as="style">
+  <link rel="preload" href="/css/style.css" as="style">
+  
+  <!-- Load fonts async with swap - show fallback immediately, swap when loaded -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  
+  <!-- Load Font Awesome async -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   
   <style>
     /* Critical CSS: Match Inter font metrics exactly to prevent layout shifts */
@@ -148,16 +159,21 @@
     }
   </style>
   
-  <!-- Bootstrap CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">
-  <!-- Design System -->
+  <!-- Critical CSS - load synchronously -->
   <link rel="stylesheet" href="/css/design-tokens.css">
-  <link rel="stylesheet" href="/css/chart-theme.css">
-  <!-- Component Styles -->
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Non-critical CSS - load async -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"></noscript>
+  
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css"></noscript>
+  
+  <link rel="stylesheet" href="/css/chart-theme.css">
   <link rel="stylesheet" href="/css/leads.css">
   <link rel="stylesheet" href="/css/admin/notifications.css">
+  
   <!-- Preload logo image to prevent layout shifts -->
   <link rel="preload" href="/img/gs-logo-oranje.jpg" as="image">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>

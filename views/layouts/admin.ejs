@@ -10,16 +10,30 @@
   <link rel="shortcut icon" type="image/webp" href="/img/favicon-growsocial.webp">
   <link rel="apple-touch-icon" href="/img/favicon-growsocial.webp">
   
+  <!-- Preconnect to critical domains -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Design System -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+  
+  <!-- Preload critical CSS for instant rendering -->
+  <link rel="preload" href="/css/design-tokens.css" as="style">
+  <link rel="preload" href="/css/style.css" as="style">
+  
+  <!-- Critical CSS first - loads immediately -->
   <link rel="stylesheet" href="/css/design-tokens.css">
-  <link rel="stylesheet" href="/css/chart-theme.css">
-  <!-- Component Styles -->
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Load fonts async with swap - prevents render blocking -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+  
+  <!-- Load Font Awesome async -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+  
+  <!-- Secondary CSS -->
+  <link rel="stylesheet" href="/css/chart-theme.css">
   <link rel="stylesheet" href="/css/admin/notifications.css">
   <link rel="stylesheet" href="/css/admin/time-tracker.css">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
@@ -30,165 +44,40 @@
   <% if (typeof extraHead !== 'undefined' && extraHead) { %>
     <%- extraHead %>
   <% } %>
-  <!-- Tailwind CSS CDN (alleen in development) -->
+  <!-- Tailwind CSS CDN (alleen in development) - loaded async -->
   <% if (process.env.NODE_ENV !== 'production') { %>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com" defer></script>
   <script>
-    // Wait for tailwind to load
-    if (typeof window !== 'undefined') {
-      window.addEventListener('load', function() {
-        if (typeof tailwind !== 'undefined' && tailwind.config) {
-          tailwind.config = {
-            corePlugins: {
-              preflight: false, // Disable Tailwind's base styles to avoid conflicts
-            },
-            important: false // Don't add !important to all Tailwind classes
-          }
+    // Configure tailwind when it loads (non-blocking)
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof tailwind !== 'undefined' && tailwind.config) {
+        tailwind.config = {
+          corePlugins: {
+            preflight: false, // Disable Tailwind's base styles to avoid conflicts
+          },
+          important: false // Don't add !important to all Tailwind classes
         }
-      });
-    }
+      }
+    });
   </script>
   <% } %>
   
-  <script>
-    // Prevent FOUC - Mark CSS as loaded when stylesheets are ready
-    (function() {
-      'use strict';
-      
-      function markCSSLoaded() {
-        if (!document.documentElement.classList.contains('css-loaded')) {
-          document.documentElement.classList.add('css-loaded');
-        }
-      }
-      
-      function checkStylesheetLoaded(link) {
-        try {
-          // Check if stylesheet is loaded
-          if (link.sheet || link.styleSheet) {
-            return true;
-          }
-          // For cross-origin stylesheets, check if they're in the document
-          if (link.href && link.href.indexOf(window.location.origin) === -1) {
-            // Cross-origin, assume loaded after a delay
-            return false;
-          }
-        } catch(e) {
-          // Cross-origin error, assume loaded
-          return true;
-        }
-        return false;
-      }
-      
-      function checkAllStylesheets() {
-        const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
-        const totalStylesheets = stylesheets.length;
-        
-        if (totalStylesheets === 0) {
-          markCSSLoaded();
-          return true;
-        }
-        
-        let loadedCount = 0;
-        let pendingCount = 0;
-        
-        stylesheets.forEach(function(link) {
-          if (checkStylesheetLoaded(link)) {
-            loadedCount++;
-          } else {
-            pendingCount++;
-            // Set up load listeners
-            var loadHandler = function() {
-              loadedCount++;
-              pendingCount--;
-              if (loadedCount >= totalStylesheets) {
-                markCSSLoaded();
-              }
-              link.removeEventListener('load', loadHandler);
-              link.removeEventListener('error', errorHandler);
-            };
-            var errorHandler = function() {
-              loadedCount++;
-              pendingCount--;
-              if (loadedCount >= totalStylesheets) {
-                markCSSLoaded();
-              }
-              link.removeEventListener('load', loadHandler);
-              link.removeEventListener('error', errorHandler);
-            };
-            
-            link.addEventListener('load', loadHandler);
-            link.addEventListener('error', errorHandler);
-          }
-        });
-        
-        // If all already loaded
-        if (loadedCount >= totalStylesheets) {
-          markCSSLoaded();
-          return true;
-        }
-        
-        return false;
-      }
-      
-      // Multiple check strategies for reliability
-      var checksComplete = false;
-      
-      // Strategy 1: Check immediately
-      if (checkAllStylesheets()) {
-        checksComplete = true;
-      }
-      
-      // Strategy 2: Check on DOMContentLoaded
-      if (!checksComplete) {
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', function() {
-            if (!checksComplete) {
-              checkAllStylesheets();
-            }
-          });
-        }
-      }
-      
-      // Strategy 3: Check on next animation frame
-      if (!checksComplete) {
-        requestAnimationFrame(function() {
-          if (!checksComplete) {
-            if (checkAllStylesheets()) {
-              checksComplete = true;
-            }
-          }
-        });
-      }
-      
-      // Strategy 4: Check after a short delay
-      setTimeout(function() {
-        if (!checksComplete) {
-          if (checkAllStylesheets()) {
-            checksComplete = true;
-          }
-        }
-      }, 10);
-      
-      // Strategy 5: Fallback timeout - always show after 200ms max to prevent infinite hiding
-      setTimeout(function() {
-        if (!document.documentElement.classList.contains('css-loaded')) {
-          markCSSLoaded();
-        }
-      }, 200);
-    })();
-  </script>
   
   <style>
-    /* Prevent FOUC - Hide content until CSS is loaded */
-    html:not(.css-loaded) body {
-      visibility: hidden;
-      opacity: 0;
+    /* CRITICAL: Prevent FOUC without hiding content */
+    /* Use minimal transitions instead of hiding */
+    body {
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     
-    html.css-loaded body {
-      visibility: visible;
-      opacity: 1;
-      transition: opacity 0.05s ease-in;
+    /* Reserve space for common elements to prevent layout shift */
+    .sidebar {
+      min-width: 80px;
+    }
+    
+    .main-header {
+      min-height: 63px;
     }
     
     :root {

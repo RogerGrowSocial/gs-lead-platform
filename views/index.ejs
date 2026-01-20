@@ -10,8 +10,20 @@
   <link rel="shortcut icon" type="image/webp" href="/img/favicon-growsocial.webp">
   <link rel="apple-touch-icon" href="/img/favicon-growsocial.webp">
   
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Preconnect to CDN for faster loading -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+  
+  <!-- Preload critical CSS -->
+  <link rel="preload" href="/css/style.css" as="style">
+  
+  <!-- Critical CSS - load immediately -->
   <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Font Awesome - load async to prevent render blocking -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all';this.onload=null;">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+  
   <style>
     .hero {
       background-color: var(--primary-light);

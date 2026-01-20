@@ -509,7 +509,10 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   // Cache static assets (CSS, JS, images) for 1 year (immutable)
   if (req.path.match(/\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|webp)$/)) {
-    res.set('Cache-Control', 'public, max-age=31536000, immutable')
+    res.set({
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff' // Security header
+    })
   }
   // Cache API responses that don't change often (with shorter TTL)
   else if (req.path.startsWith('/api/') && req.method === 'GET') {
@@ -517,6 +520,10 @@ app.use((req, res, next) => {
     if (!req.path.includes('/dashboard') && !req.path.includes('/user') && !req.path.includes('/profile') && !req.path.includes('/admin')) {
       res.set('Cache-Control', 'public, max-age=60, s-maxage=300') // 1 min browser, 5 min CDN
     }
+  }
+  // For HTML pages, use stale-while-revalidate for better perceived performance
+  else if (req.path.endsWith('.html') || (!req.path.includes('.') && req.method === 'GET')) {
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate, stale-while-revalidate=60')
   }
   next()
 })
