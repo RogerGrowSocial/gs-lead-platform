@@ -172,13 +172,26 @@
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
                 Taak
               </label>
-              <input 
-                type="text" 
-                id="timeTrackerTaskSearch" 
-                placeholder="Zoek taak..." 
-                autocomplete="off"
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
-              />
+              <div style="position: relative;">
+                <input 
+                  type="text" 
+                  id="timeTrackerTaskSearch" 
+                  placeholder="Zoek taak..." 
+                  autocomplete="off"
+                  style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+                />
+                <button 
+                  type="button"
+                  id="timeTrackerTaskClear" 
+                  style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; transition: color 0.2s;"
+                  aria-label="Wis taak"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
               <div id="timeTrackerTaskDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
               <input type="hidden" id="timeTrackerTaskId" />
             </div>
@@ -188,13 +201,26 @@
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
                 Klant
               </label>
-              <input 
-                type="text" 
-                id="timeTrackerCustomerSearch" 
-                placeholder="Zoek klant..." 
-                autocomplete="off"
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
-              />
+              <div style="position: relative;">
+                <input 
+                  type="text" 
+                  id="timeTrackerCustomerSearch" 
+                  placeholder="Zoek klant..." 
+                  autocomplete="off"
+                  style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+                />
+                <button 
+                  type="button"
+                  id="timeTrackerCustomerClear" 
+                  style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; transition: color 0.2s;"
+                  aria-label="Wis klant"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
               <div id="timeTrackerCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
               <input type="hidden" id="timeTrackerCustomerId" />
             </div>
@@ -299,8 +325,12 @@
 
       // Task search handler
       const taskSearch = this.popover.querySelector('#timeTrackerTaskSearch');
+      const taskClearBtn = this.popover.querySelector('#timeTrackerTaskClear');
       if (taskSearch) {
-        taskSearch.addEventListener('input', (e) => this.handleTaskSearch(e.target.value));
+        taskSearch.addEventListener('input', (e) => {
+          this.handleTaskSearch(e.target.value);
+          this.updateTaskClearButton();
+        });
         taskSearch.addEventListener('focus', () => {
           this.loadTasks().then(() => {
             // Show all tasks when focused (if no query)
@@ -309,13 +339,45 @@
             }
           });
         });
+        // Update clear button visibility on change
+        taskSearch.addEventListener('change', () => this.updateTaskClearButton());
+      }
+      if (taskClearBtn) {
+        taskClearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.clearTaskSelection();
+        });
+        taskClearBtn.addEventListener('mouseenter', () => {
+          taskClearBtn.style.color = '#ef4444';
+        });
+        taskClearBtn.addEventListener('mouseleave', () => {
+          taskClearBtn.style.color = '#6b7280';
+        });
       }
 
       // Customer search handler
       const customerSearch = this.popover.querySelector('#timeTrackerCustomerSearch');
+      const customerClearBtn = this.popover.querySelector('#timeTrackerCustomerClear');
       if (customerSearch) {
-        customerSearch.addEventListener('input', (e) => this.handleCustomerSearch(e.target.value));
+        customerSearch.addEventListener('input', (e) => {
+          this.handleCustomerSearch(e.target.value);
+          this.updateCustomerClearButton();
+        });
         customerSearch.addEventListener('focus', () => this.loadCustomers());
+        // Update clear button visibility on change
+        customerSearch.addEventListener('change', () => this.updateCustomerClearButton());
+      }
+      if (customerClearBtn) {
+        customerClearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.clearCustomerSelection();
+        });
+        customerClearBtn.addEventListener('mouseenter', () => {
+          customerClearBtn.style.color = '#ef4444';
+        });
+        customerClearBtn.addEventListener('mouseleave', () => {
+          customerClearBtn.style.color = '#6b7280';
+        });
       }
 
       // Contact search handler
@@ -473,11 +535,18 @@
             this.popover.querySelector('#timeTrackerTaskId').value = taskId;
             this.popover.querySelector('#timeTrackerTaskSearch').value = taskTitle;
             this.popover.querySelector('#timeTrackerTaskDropdown').style.display = 'none';
+            this.updateTaskClearButton();
+
+            // Always show customer container when klantenwerk is selected
+            const activity = this.popover.querySelector('#timeTrackerActivity').value;
+            if (activity === 'klantenwerk') {
+              this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
+            }
 
             if (customerId && customerName) {
               this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
               this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
-              this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
+              this.updateCustomerClearButton();
               
               // Auto-fill title: "Taak: [taak titel] voor: [klant naam]"
               const noteInput = this.popover.querySelector('#timeTrackerNote');
@@ -582,6 +651,15 @@
             this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
             this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
             this.popover.querySelector('#timeTrackerCustomerDropdown').style.display = 'none';
+            this.updateCustomerClearButton();
+
+            // Update title if task is selected
+            const taskId = this.popover.querySelector('#timeTrackerTaskId').value;
+            const taskTitle = this.popover.querySelector('#timeTrackerTaskSearch').value;
+            const noteInput = this.popover.querySelector('#timeTrackerNote');
+            if (noteInput && taskId && taskTitle && customerName) {
+              noteInput.value = `Taak: ${taskTitle} voor: ${customerName}`;
+            }
 
             // Load contacts for this customer
             this.loadContactsForCustomer(customerId);
@@ -750,6 +828,10 @@
       if (activitySelect && activitySelect.value === 'klantenwerk') {
         this.handleActivityChange();
       }
+      
+      // Update clear button visibility
+      this.updateTaskClearButton();
+      this.updateCustomerClearButton();
     }
 
     closePopover() {
@@ -882,6 +964,71 @@
         console.error('[TimeTracker] Error stopping timer:', error);
         if (typeof window.showNotification === 'function') {
           window.showNotification(error.message || 'Fout bij stoppen timer', 'error');
+        }
+      }
+    }
+
+    updateTaskClearButton() {
+      const taskSearch = this.popover.querySelector('#timeTrackerTaskSearch');
+      const taskId = this.popover.querySelector('#timeTrackerTaskId');
+      const clearBtn = this.popover.querySelector('#timeTrackerTaskClear');
+      
+      if (clearBtn && taskSearch && taskId) {
+        const hasValue = taskId.value && taskId.value.length > 0;
+        clearBtn.style.display = hasValue ? 'block' : 'none';
+      }
+    }
+
+    updateCustomerClearButton() {
+      const customerSearch = this.popover.querySelector('#timeTrackerCustomerSearch');
+      const customerId = this.popover.querySelector('#timeTrackerCustomerId');
+      const clearBtn = this.popover.querySelector('#timeTrackerCustomerClear');
+      
+      if (clearBtn && customerSearch && customerId) {
+        const hasValue = customerId.value && customerId.value.length > 0;
+        clearBtn.style.display = hasValue ? 'block' : 'none';
+      }
+    }
+
+    clearTaskSelection() {
+      this.popover.querySelector('#timeTrackerTaskId').value = '';
+      this.popover.querySelector('#timeTrackerTaskSearch').value = '';
+      this.updateTaskClearButton();
+      
+      // Also clear customer if it was auto-filled from task
+      const customerId = this.popover.querySelector('#timeTrackerCustomerId').value;
+      if (customerId) {
+        // Only clear if customer container is visible (meaning it was shown for klantenwerk)
+        const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
+        if (customerContainer && customerContainer.style.display !== 'none') {
+          // Keep container visible but clear the value
+          this.popover.querySelector('#timeTrackerCustomerId').value = '';
+          this.popover.querySelector('#timeTrackerCustomerSearch').value = '';
+          this.updateCustomerClearButton();
+        }
+      }
+      
+      // Clear title if it starts with "Taak:"
+      const noteInput = this.popover.querySelector('#timeTrackerNote');
+      if (noteInput && noteInput.value.startsWith('Taak:')) {
+        noteInput.value = '';
+      }
+    }
+
+    clearCustomerSelection() {
+      this.popover.querySelector('#timeTrackerCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerCustomerSearch').value = '';
+      this.updateCustomerClearButton();
+      
+      // Update title if it contains customer name
+      const noteInput = this.popover.querySelector('#timeTrackerNote');
+      if (noteInput && noteInput.value.includes(' voor: ')) {
+        const taskId = this.popover.querySelector('#timeTrackerTaskId').value;
+        const taskTitle = this.popover.querySelector('#timeTrackerTaskSearch').value;
+        if (taskId && taskTitle) {
+          noteInput.value = `Taak: ${taskTitle}`;
+        } else {
+          noteInput.value = '';
         }
       }
     }
