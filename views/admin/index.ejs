@@ -1413,11 +1413,12 @@
       if (isLoading && !simulationActive) return;
       isLoading = true;
       
-      // Show loading state
-      const kpiCards = document.querySelectorAll('.kpi-card');
-      kpiCards.forEach(card => {
-        card.classList.add('kpi-loading');
-      });
+      // Don't show loading state - just update values smoothly
+      // Removing this prevents the cards from appearing empty during updates
+      // const kpiCards = document.querySelectorAll('.kpi-card');
+      // kpiCards.forEach(card => {
+      //   card.classList.add('kpi-loading');
+      // });
       
       try {
         // Check if simulation is active
@@ -1538,10 +1539,10 @@
           window.showNotification('Fout bij laden KPI data', 'error');
         }
       } finally {
-        // Remove loading state
-        kpiCards.forEach(card => {
-          card.classList.remove('kpi-loading');
-        });
+        // Remove loading state - commented out since we don't add it anymore
+        // kpiCards.forEach(card => {
+        //   card.classList.remove('kpi-loading');
+        // });
         isLoading = false;
       }
     }
@@ -1685,10 +1686,10 @@
       if (document.hidden) {
         stopLiveUpdates();
       } else {
+        // Resume updates when page becomes visible
         startLiveUpdates();
-        // Immediately refresh data when page becomes visible
-        const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
-        loadKPIData(period, true);
+        // Note: Don't reload data here, startLiveUpdates will handle it
+        // Reloading here causes race conditions and empty KPI cards
       }
     });
   }
