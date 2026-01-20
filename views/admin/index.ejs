@@ -1372,6 +1372,9 @@
     }
     
     console.log('✅ KPI Loading init: DOM ready');
+    console.log('🔍 [KPI] Checking DOM elements...');
+    const testEl = document.getElementById('kpi-total-users');
+    console.log('🔍 [KPI] kpi-total-users found?', !!testEl);
     let isLoading = false;
     let updateInterval = null;
     let simulationCheckInterval = null; // Store simulation check interval
@@ -1464,27 +1467,27 @@
     }
     
     async function loadKPIData(period, animate = true) {
+      console.log('🔵 [KPI] loadKPIData called', { period, animate, isLoading });
+      
       // Check if simulation is active - if so, allow updates even if loading
       const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
-      if (isLoading && !simulationActive) return;
+      if (isLoading && !simulationActive) {
+        console.log('⏸️ [KPI] Already loading, skipping');
+        return;
+      }
       isLoading = true;
-      
-      // Don't show loading state - just update values smoothly
-      // Removing this prevents the cards from appearing empty during updates
-      // const kpiCards = document.querySelectorAll('.kpi-card');
-      // kpiCards.forEach(card => {
-      //   card.classList.add('kpi-loading');
-      // });
       
       try {
         // Check if simulation is active
         const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+        console.log('📊 [KPI] Simulation active?', simulationActive);
         let data;
         
         if (simulationActive) {
           // Use simulated data
           const simData = localStorage.getItem('kpi_simulation_data');
           if (simData) {
+            console.log('🎭 [KPI] Using simulated data');
             const simStats = JSON.parse(simData);
             data = {
               success: true,
@@ -1497,27 +1500,31 @@
                 pendingGrowth: 0
               }
             };
-            // (debug removed)
           } else {
             // Fallback to real data if simulation data not available
+            console.log('🌐 [KPI] Fetching real data (simulation fallback)');
             const response = await fetch(`/admin/api/admin/dashboard-kpis?period=${period}`);
+            console.log('📡 [KPI] Response status:', response.status, response.statusText);
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
             data = await response.json();
+            console.log('✅ [KPI] Data received:', data);
           }
         } else {
           // Use real data
+          console.log('🌐 [KPI] Fetching real data from API');
           const response = await fetch(`/admin/api/admin/dashboard-kpis?period=${period}`);
+          console.log('📡 [KPI] Response status:', response.status, response.statusText);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           data = await response.json();
+          console.log('✅ [KPI] Data received:', data);
         }
         
-        // (debug removed)
-        
         if (data.success && data.stats) {
+          console.log('✅ [KPI] Data is valid, updating UI');
           const newStats = {
             totalUsers: data.stats.totalUsers || 0,
             totalLeads: data.stats.totalLeads || 0,
@@ -1530,6 +1537,13 @@
           const leadsEl = document.getElementById('kpi-total-leads');
           const revenueEl = document.getElementById('kpi-total-revenue');
           const pendingEl = document.getElementById('kpi-pending-leads');
+          
+          console.log('🎯 [KPI] DOM elements found:', {
+            usersEl: !!usersEl,
+            leadsEl: !!leadsEl,
+            revenueEl: !!revenueEl,
+            pendingEl: !!pendingEl
+          });
           
           // Animate counters
           if (usersEl) {
@@ -1585,14 +1599,16 @@
           
           // Update current stats
           currentStats = newStats;
+          console.log('✅ [KPI] Stats updated:', newStats);
         } else {
-          console.error('Error loading KPI data:', data.error);
+          console.error('❌ [KPI] Data invalid:', data);
           if (window.showNotification) {
             window.showNotification('Fout bij laden KPI data', 'error');
           }
         }
       } catch (error) {
-        console.error('Error fetching KPI data:', error);
+        console.error('❌ [KPI] ERROR fetching KPI data:', error);
+        console.error('❌ [KPI] Error stack:', error.stack);
         if (window.showNotification) {
           window.showNotification('Fout bij laden KPI data', 'error');
         }
@@ -1722,6 +1738,7 @@
       }
       
       const initialPeriod = periodSelect.value || 'lifetime';
+      console.log('🚀 [KPI] Starting initial load with period:', initialPeriod);
       // Only animate if simulation is not active (to avoid animating from 0 when simulation data exists)
       loadKPIData(initialPeriod, !simulationActive);
       
