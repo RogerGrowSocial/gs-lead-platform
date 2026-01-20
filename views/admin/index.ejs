@@ -1756,27 +1756,46 @@
     // Pause updates when page is hidden, resume when visible
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
+        console.log('⏸️ Tab hidden - pausing updates');
         stopLiveUpdates();
       } else {
-        // Resume intervals only, don't reload data
-        // Preserve current KPI values shown to user
-        if (updateInterval) {
-          clearInterval(updateInterval);
-        }
-        if (simulationCheckInterval) {
-          clearInterval(simulationCheckInterval);
+        console.log('▶️ Tab visible again - resuming updates and reloading data');
+        
+        // Reload all data immediately when tab becomes visible again
+        const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
+        
+        // 1. Reload KPI data
+        loadKPIData(period, false); // false = no animation on tab return
+        
+        // 2. Reload charts if they exist
+        const leadsCanvas = document.getElementById('leadsChart');
+        const revenueCanvas = document.getElementById('revenueChart');
+        
+        if (leadsCanvas) {
+          const leadsChartCard = leadsCanvas.closest('.chart-card');
+          if (leadsChartCard) {
+            console.log('📊 Reloading leads chart...');
+            loadChartData(period, leadsChartCard);
+          }
         }
         
-        // Restart intervals for future updates
-        const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
-        if (!simulationActive) {
-          // Only start regular updates if simulation is not active
-          updateInterval = setInterval(() => {
-            const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
-            loadKPIData(period, true);
-          }, 30000);
+        if (revenueCanvas) {
+          const revenueChartCard = revenueCanvas.closest('.chart-card');
+          if (revenueChartCard) {
+            console.log('📊 Reloading revenue chart...');
+            loadChartData(period, revenueChartCard);
+          }
         }
-        // Note: Simulation updates are handled by global script in admin layout
+        
+        // 3. Reload monthly growth if it exists
+        const monthlyGrowthCard = document.getElementById('monthlyLeadsGrowth');
+        if (monthlyGrowthCard) {
+          console.log('📈 Reloading monthly growth...');
+          loadLeadsMonthlyGrowthData();
+        }
+        
+        // 4. Restart the update intervals
+        startLiveUpdates();
       }
     });
   }
