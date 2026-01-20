@@ -1152,20 +1152,6 @@
     loadRecentUsers();
     loadRecentLeads();
     loadNotifications();
-    
-    // Initialize Leads Analytics Chart
-    initializeLeadsAnalyticsChart();
-    
-    // Initialize Monthly Growth Card
-    loadLeadsMonthlyGrowthData();
-  }
-  
-  // Initialize charts when DOM and Chart.js are ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCharts);
-  } else {
-    // DOM already loaded
-    initCharts();
   }
   
   // Leads Analytics Chart
@@ -1800,11 +1786,19 @@
     });
   }
   
-  // Initialize KPI loading when DOM is ready
+  // Initialize everything when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initKPILoading);
+    document.addEventListener('DOMContentLoaded', function() {
+      initCharts();
+      initializeLeadsAnalyticsChart();
+      loadLeadsMonthlyGrowthData();
+      initKPILoading();
+    });
   } else {
     // DOM already loaded, run immediately
+    initCharts();
+    initializeLeadsAnalyticsChart();
+    loadLeadsMonthlyGrowthData();
     initKPILoading();
   }
 </script>
