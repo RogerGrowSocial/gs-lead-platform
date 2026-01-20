@@ -481,9 +481,21 @@
               this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
               this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
               
+              // Auto-fill title: "Taak: [taak titel] voor: [klant naam]"
+              const noteInput = this.popover.querySelector('#timeTrackerNote');
+              if (noteInput && taskTitle && customerName) {
+                noteInput.value = `Taak: ${taskTitle} voor: ${customerName}`;
+              }
+              
               // Load contacts for this customer
               if (contactId) {
                 this.loadContactsForCustomer(customerId, contactId);
+              }
+            } else if (taskTitle) {
+              // Auto-fill title even if no customer: "Taak: [taak titel]"
+              const noteInput = this.popover.querySelector('#timeTrackerNote');
+              if (noteInput) {
+                noteInput.value = `Taak: ${taskTitle}`;
               }
             }
           });
