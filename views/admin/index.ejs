@@ -480,7 +480,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  // Wait for both DOM and Chart.js to be ready
+  function initCharts() {
+    // Check if Chart is available
+    if (typeof Chart === 'undefined') {
+      console.log('Chart.js not loaded yet, waiting...');
+      setTimeout(initCharts, 100);
+      return;
+    }
     // Huidige datum weergeven
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -1116,7 +1123,15 @@
     
     // Initialize Monthly Growth Card
     loadLeadsMonthlyGrowthData();
-  });
+  }
+  
+  // Initialize charts when DOM and Chart.js are ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCharts);
+  } else {
+    // DOM already loaded
+    initCharts();
+  }
   
   // Leads Analytics Chart
   let leadsAnalyticsChartInstance = null;
