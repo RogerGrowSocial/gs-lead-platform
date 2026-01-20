@@ -9,7 +9,6 @@
   // Activity types for the dropdown
   const ACTIVITY_TYPES = [
     { value: 'klantenwerk', label: 'Klantenwerk' },
-    { value: 'platform', label: 'Platform' },
     { value: 'sales', label: 'Sales' },
     { value: 'support', label: 'Support' },
     { value: 'overleg', label: 'Overleg' },
