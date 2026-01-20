@@ -485,9 +485,19 @@
     // Check if Chart is available
     if (typeof Chart === 'undefined') {
       console.log('Chart.js not loaded yet, waiting...');
-      setTimeout(initCharts, 100);
+      setTimeout(initCharts, 50);
       return;
     }
+    
+    // Check if DOM elements are available
+    const periodSelect = document.getElementById('kpiPeriodSelect');
+    if (!periodSelect) {
+      console.log('DOM not ready yet, waiting...');
+      setTimeout(initCharts, 50);
+      return;
+    }
+    
+    console.log('✅ Charts init: Chart.js loaded and DOM ready');
     // Huidige datum weergeven
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -1331,6 +1341,15 @@
   // Wrap in DOMContentLoaded to ensure DOM is ready
   function initKPILoading() {
     const periodSelect = document.getElementById('kpiPeriodSelect');
+    
+    // If period select doesn't exist yet, retry
+    if (!periodSelect) {
+      console.log('KPI elements not ready yet, waiting...');
+      setTimeout(initKPILoading, 50);
+      return;
+    }
+    
+    console.log('✅ KPI Loading init: DOM ready');
     let isLoading = false;
     let updateInterval = null;
     let simulationCheckInterval = null; // Store simulation check interval
