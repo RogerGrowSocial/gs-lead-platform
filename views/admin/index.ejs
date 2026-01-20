@@ -1686,10 +1686,25 @@
       if (document.hidden) {
         stopLiveUpdates();
       } else {
-        // Resume updates when page becomes visible
-        startLiveUpdates();
-        // Note: Don't reload data here, startLiveUpdates will handle it
-        // Reloading here causes race conditions and empty KPI cards
+        // Resume intervals only, don't reload data
+        // Preserve current KPI values shown to user
+        if (updateInterval) {
+          clearInterval(updateInterval);
+        }
+        if (simulationCheckInterval) {
+          clearInterval(simulationCheckInterval);
+        }
+        
+        // Restart intervals for future updates
+        const simulationActive = localStorage.getItem('kpi_simulation_active') === 'true';
+        if (!simulationActive) {
+          // Only start regular updates if simulation is not active
+          updateInterval = setInterval(() => {
+            const period = periodSelect ? periodSelect.value || 'lifetime' : 'lifetime';
+            loadKPIData(period, true);
+          }, 30000);
+        }
+        // Note: Simulation updates are handled by global script in admin layout
       }
     });
   }
