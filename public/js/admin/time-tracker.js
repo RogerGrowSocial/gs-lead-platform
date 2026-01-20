@@ -256,10 +256,10 @@
 
             <div style="display: flex; gap: 8px;">
               <button type="button" id="timeTrackerSwitch" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
-                Switch taak
+                Wissel taak
               </button>
               <button type="button" id="timeTrackerStop" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
-                Stop
+                Uitklokken
               </button>
             </div>
           </div>
