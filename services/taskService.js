@@ -19,7 +19,7 @@ class TaskService {
     try {
       let query = supabaseAdmin
         .from('employee_tasks')
-        .select('*, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email)', { count: 'exact' })
+        .select('*, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email)', { count: 'exact' })
         .eq('employee_id', employeeId)
         .order('created_at', { ascending: false })
 

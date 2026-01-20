@@ -14028,8 +14028,20 @@ router.get('/employees/:id/tasks', requireAuth, async (req, res) => {
       }
     }
 
+    // Parse status: can be comma-separated string like "open,in_progress"
+    let statusArray = undefined;
+    if (status) {
+      if (Array.isArray(status)) {
+        statusArray = status;
+      } else if (typeof status === 'string' && status.includes(',')) {
+        statusArray = status.split(',').map(s => s.trim());
+      } else {
+        statusArray = [status];
+      }
+    }
+
     const result = await TaskService.getTasks(id, {
-      status: status ? (Array.isArray(status) ? status : [status]) : undefined,
+      status: statusArray,
       priority,
       limit: limit ? parseInt(limit) : undefined,
       offset: offset ? parseInt(offset) : undefined

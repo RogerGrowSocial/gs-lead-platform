@@ -303,7 +303,14 @@
       const taskSearch = this.popover.querySelector('#timeTrackerTaskSearch');
       if (taskSearch) {
         taskSearch.addEventListener('input', (e) => this.handleTaskSearch(e.target.value));
-        taskSearch.addEventListener('focus', () => this.loadTasks());
+        taskSearch.addEventListener('focus', () => {
+          this.loadTasks().then(() => {
+            // Show all tasks when focused (if no query)
+            if (!taskSearch.value || taskSearch.value.length === 0) {
+              this.handleTaskSearch('');
+            }
+          });
+        });
       }
 
       // Customer search handler
@@ -403,14 +410,13 @@
 
     handleTaskSearch(query) {
       const dropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
-      if (!query || query.length < 1) {
-        dropdown.style.display = 'none';
-        return;
-      }
-
-      const filtered = this.tasks.filter(task => 
-        task.title?.toLowerCase().includes(query.toLowerCase())
-      );
+      
+      // If no query, show all tasks (up to 50)
+      const filtered = (!query || query.length < 1) 
+        ? this.tasks.slice(0, 50)
+        : this.tasks.filter(task => 
+            task.title?.toLowerCase().includes(query.toLowerCase())
+          );
 
       if (filtered.length === 0) {
         dropdown.innerHTML = `
@@ -436,7 +442,7 @@
         if (addTaskBtn) {
           addTaskBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.showAddTaskModal(query);
+            this.showAddTaskModal(query || '');
           });
         }
       } else {
