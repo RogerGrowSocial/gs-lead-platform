@@ -173,7 +173,7 @@
             <div class="kpi-card">
               <div class="kpi-content">
                 <p class="kpi-title">Gebruikers</p>
-                <p class="kpi-value" id="kpi-total-users">${dashboardStats.totalUsers}</p>
+                <p class="kpi-value kpi-skeleton" id="kpi-total-users">...</p>
                 <p class="kpi-subtitle" id="kpi-users-subtitle">Totaal geregistreerd</p>
               </div>
               <div class="kpi-icon">
@@ -190,7 +190,7 @@
             <div class="kpi-card">
               <div class="kpi-content">
                 <p class="kpi-title">Aanvragen</p>
-                <p class="kpi-value" id="kpi-total-leads">${dashboardStats.totalLeads}</p>
+                <p class="kpi-value kpi-skeleton" id="kpi-total-leads">...</p>
                 <p class="kpi-subtitle" id="kpi-leads-subtitle">Totaal leads</p>
               </div>
               <div class="kpi-icon">
@@ -206,7 +206,7 @@
             <div class="kpi-card">
               <div class="kpi-content">
                 <p class="kpi-title">Totale omzet</p>
-                <p class="kpi-value" id="kpi-total-revenue">${formatCurrency(dashboardStats.totalRevenue)}</p>
+                <p class="kpi-value kpi-skeleton" id="kpi-total-revenue">...</p>
                 <p class="kpi-subtitle" id="kpi-revenue-subtitle">Alle betaalde facturen</p>
               </div>
               <div class="kpi-icon">
@@ -221,7 +221,7 @@
             <div class="kpi-card">
               <div class="kpi-content">
                 <p class="kpi-title">Wachtende aanvragen</p>
-                <p class="kpi-value" id="kpi-pending-leads">${dashboardStats.pendingLeads}</p>
+                <p class="kpi-value kpi-skeleton" id="kpi-pending-leads">...</p>
                 <p class="kpi-subtitle" id="kpi-pending-subtitle">Nog te behandelen</p>
               </div>
               <div class="kpi-icon">
@@ -475,7 +475,25 @@
       '/css/admin/monthly-growth.css',
       '/css/admin/revenue-chart.css'
     ],
-    body: dashboardContent
+    body: dashboardContent,
+    extraHead: `
+<style>
+  /* Skeleton loader animation */
+  .kpi-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    color: transparent !important;
+    user-select: none;
+    border-radius: 4px;
+  }
+  
+  @keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style>
+    `
 }) %>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1511,6 +1529,8 @@
           
           // Animate counters
           if (usersEl) {
+            // Remove skeleton class
+            usersEl.classList.remove('kpi-skeleton');
             if (animate && currentStats.totalUsers !== newStats.totalUsers) {
               animateCounter(usersEl, currentStats.totalUsers, newStats.totalUsers, 800);
             } else {
@@ -1519,6 +1539,7 @@
           }
           
           if (leadsEl) {
+            leadsEl.classList.remove('kpi-skeleton');
             if (animate && currentStats.totalLeads !== newStats.totalLeads) {
               animateCounter(leadsEl, currentStats.totalLeads, newStats.totalLeads, 800);
             } else {
@@ -1527,17 +1548,16 @@
           }
           
           if (revenueEl) {
-            // (debug removed)
+            revenueEl.classList.remove('kpi-skeleton');
             if (animate && currentStats.totalRevenue !== newStats.totalRevenue) {
               animateCounter(revenueEl, currentStats.totalRevenue, newStats.totalRevenue, 800, formatCurrency);
             } else {
               revenueEl.textContent = formatCurrency(newStats.totalRevenue);
             }
-          } else {
-            console.error('Revenue element not found!');
           }
           
           if (pendingEl) {
+            pendingEl.classList.remove('kpi-skeleton');
             if (animate && currentStats.pendingLeads !== newStats.pendingLeads) {
               animateCounter(pendingEl, currentStats.pendingLeads, newStats.pendingLeads, 800);
             } else {

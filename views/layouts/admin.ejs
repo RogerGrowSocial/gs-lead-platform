@@ -1867,8 +1867,13 @@
       simulationCheckInterval = setInterval(checkSimulation, 1200);
       // (debug removed)
 
-      // Start producer if simulation is enabled (same tab)
-      startSimulationProducer();
+      // Only start producer if NOT localhost (production only)
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!isLocalhost) {
+        startSimulationProducer();
+      } else {
+        console.log('🚫 Simulation disabled on localhost');
+      }
     }
     
     // Stop checking
