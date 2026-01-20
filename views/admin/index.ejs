@@ -1313,7 +1313,8 @@
   }
   
   // KPI Data Loading with Live Updates and Smooth Animations
-  (function() {
+  // Wrap in DOMContentLoaded to ensure DOM is ready
+  function initKPILoading() {
     const periodSelect = document.getElementById('kpiPeriodSelect');
     let isLoading = false;
     let updateInterval = null;
@@ -1690,6 +1691,14 @@
         loadKPIData(period, true);
       }
     });
-  })();
+  }
+  
+  // Initialize KPI loading when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initKPILoading);
+  } else {
+    // DOM already loaded, run immediately
+    initKPILoading();
+  }
 </script>
 </script>
