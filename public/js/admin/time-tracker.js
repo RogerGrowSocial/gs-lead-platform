@@ -76,7 +76,6 @@
         padding: 8px;
         color: #bdbec9;
         transition: color 0.2s;
-        margin-right: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
