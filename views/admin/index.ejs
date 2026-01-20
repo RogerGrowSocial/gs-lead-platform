@@ -818,6 +818,13 @@
     const globalCompareSelect = document.getElementById('kpiCompareSelect');
     const initialChartsPeriod = globalPeriodSelect ? (globalPeriodSelect.value || 'lifetime') : 'lifetime';
     
+    console.log('📊 Charts init:', {
+      leadsCanvas: !!leadsCanvas,
+      revenueCanvas: !!revenueCanvas,
+      periodSelect: !!globalPeriodSelect,
+      compareSelect: !!globalCompareSelect
+    });
+    
     if (leadsCanvas) {
       const leadsChartCard = leadsCanvas.closest('.chart-card');
       if (leadsChartCard) {
@@ -1168,7 +1175,11 @@
   
   async function initializeLeadsAnalyticsChart() {
     const canvas = document.getElementById('leadsAnalyticsChart');
-    if (!canvas) return;
+    if (!canvas) {
+      console.error('❌ Leads Analytics chart canvas (#leadsAnalyticsChart) not found!');
+      return;
+    }
+    console.log('✅ Leads Analytics chart initializing...');
     
     const ctx = canvas.getContext('2d');
     
