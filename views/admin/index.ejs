@@ -1804,18 +1804,35 @@
   }
   
   // Initialize everything when DOM is ready
+  console.log('🚀 [INIT] Starting initialization, readyState:', document.readyState);
+  
   if (document.readyState === 'loading') {
+    console.log('⏳ [INIT] DOM still loading, waiting for DOMContentLoaded...');
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ [INIT] DOMContentLoaded fired, initializing...');
+      try {
+        initCharts();
+        initializeLeadsAnalyticsChart();
+        loadLeadsMonthlyGrowthData();
+        initKPILoading();
+        console.log('✅ [INIT] All functions called');
+      } catch (error) {
+        console.error('❌ [INIT] ERROR during initialization:', error);
+        console.error('❌ [INIT] Stack:', error.stack);
+      }
+    });
+  } else {
+    // DOM already loaded, run immediately
+    console.log('✅ [INIT] DOM already ready, initializing immediately...');
+    try {
       initCharts();
       initializeLeadsAnalyticsChart();
       loadLeadsMonthlyGrowthData();
       initKPILoading();
-    });
-  } else {
-    // DOM already loaded, run immediately
-    initCharts();
-    initializeLeadsAnalyticsChart();
-    loadLeadsMonthlyGrowthData();
-    initKPILoading();
+      console.log('✅ [INIT] All functions called');
+    } catch (error) {
+      console.error('❌ [INIT] ERROR during initialization:', error);
+      console.error('❌ [INIT] Stack:', error.stack);
+    }
   }
 </script>
