@@ -84,6 +84,11 @@
   font-weight: 500;                   /* Medium weight */
 }
 
+/* Active state for "Dag" uses blue instead of brand orange */
+.period-btn.active[data-period="dag"] {
+  background-color: #2563eb;
+}
+
 /* ============================================
    YEAR SELECT WRAPPER
    ============================================ */
