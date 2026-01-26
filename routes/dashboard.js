@@ -4,6 +4,8 @@ const { supabase, supabaseAdmin } = require('../config/supabase');
 const bcrypt = require('bcrypt');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
+const multer = require('multer');
+const path = require('path');
 const UserRiskAssessmentService = require('../services/userRiskAssessmentService');
 const ActivityService = require('../services/activityService');
 
@@ -1215,7 +1217,52 @@ async function getSettingsForUser(userId) {
   return finalSettings;
 }
 
-// Instellingen pagina (redirect to profile by default)
+// Content Generator routes
+router.get('/tools/content-generator', requireAuth, async (req, res) => {
+  try {
+    const user = await createUserForTemplate(req);
+    
+    // Get user's brands
+    const { data: brands, error: brandsError } = await supabaseAdmin
+      .from('brands')
+      .select('*, customers:customer_id(id, name, company_name)')
+      .eq('owner_user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (brandsError) {
+      console.error('Error fetching brands:', brandsError);
+    }
+    
+    // Get templates
+    const { data: templates, error: templatesError } = await supabaseAdmin
+      .from('content_templates')
+      .select('*')
+      .order('created_at', { ascending: true });
+    
+    if (templatesError) {
+      console.error('Error fetching templates:', templatesError);
+    }
+    
+    res.render('dashboard/content-generator', {
+      layout: 'dashboard',
+      title: 'Content generator',
+      pageClass: 'content-generator',
+      activeMenu: 'tools',
+      activeSubmenu: 'content-generator',
+      user,
+      brands: brands || [],
+      templates: templates || []
+    });
+  } catch (err) {
+    console.error('Content generator route error:', err);
+    res.status(500).render('error', {
+      layout: 'dashboard',
+      title: 'Fout',
+      error: 'Er is een fout opgetreden bij het laden van de content generator'
+    });
+  }
+});
+
 router.get('/settings', requireAuth, async (req, res) => {
   res.redirect('/dashboard/settings/profile');
 });
@@ -4227,6 +4274,524 @@ router.post('/api/leads/:id/send-feedback-request', requireAuth, async (req, res
       success: false,
       message: 'Er is een fout opgetreden bij het versturen van het review-verzoek'
     });
+  }
+});
+
+// =====================================================
+// CONTENT GENERATOR API ROUTES
+// =====================================================
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+// Helper function to ensure storage bucket exists
+async function ensureStorageBucket(bucketName, publicBucket = true) {
+  try {
+    const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (bucketExists) {
+      return true;
+    }
+    
+    // Bucket doesn't exist, create it via REST API
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase credentials for bucket creation');
+      return false;
+    }
+    
+    const response = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+        'Content-Type': 'application/json',
+        'apikey': supabaseServiceKey
+      },
+      body: JSON.stringify({
+        name: bucketName,
+        public: publicBucket,
+        file_size_limit: 52428800, // 50MB
+        allowed_mime_types: null
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to create bucket ${bucketName}:`, errorText);
+      if (response.status === 409) {
+        return true; // Already exists
+      }
+      return false;
+    }
+    
+    console.log(`✅ Created storage bucket: ${bucketName}`);
+    return true;
+  } catch (error) {
+    console.error(`Error ensuring bucket ${bucketName}:`, error);
+    return false;
+  }
+}
+
+// GET /dashboard/api/content-generator/customers - List customers for dropdown
+router.get('/api/content-generator/customers', requireAuth, async (req, res) => {
+  try {
+    const { data: customers, error } = await supabaseAdmin
+      .from('customers')
+      .select('id, name, company_name, email')
+      .order('company_name', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching customers:', error);
+      return res.status(500).json({ success: false, error: 'Error fetching customers' });
+    }
+    
+    res.json({ success: true, customers: customers || [] });
+  } catch (err) {
+    console.error('Customers API error:', err);
+    res.status(500).json({ success: false, error: 'Error fetching customers' });
+  }
+});
+
+// GET /dashboard/api/content-generator/brands - List user's brands
+router.get('/api/content-generator/brands', requireAuth, async (req, res) => {
+  try {
+    const { data: brands, error } = await supabaseAdmin
+      .from('brands')
+      .select('*, customers:customer_id(id, name, company_name)')
+      .eq('owner_user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching brands:', error);
+      return res.status(500).json({ success: false, error: 'Error fetching brands' });
+    }
+    
+    res.json({ success: true, brands: brands || [] });
+  } catch (err) {
+    console.error('Brands API error:', err);
+    res.status(500).json({ success: false, error: 'Error fetching brands' });
+  }
+});
+
+// GET /dashboard/api/content-generator/brands/:id - Get single brand
+router.get('/api/content-generator/brands/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('*')
+      .eq('id', id)
+      .eq('owner_user_id', req.user.id)
+      .single();
+    
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+    
+    res.json({ success: true, brand });
+  } catch (err) {
+    console.error('Brand API error:', err);
+    res.status(500).json({ success: false, error: 'Error fetching brand' });
+  }
+});
+
+// POST /dashboard/api/content-generator/brands - Create brand
+router.post('/api/content-generator/brands', requireAuth, upload.single('logo'), async (req, res) => {
+  try {
+    const { name, customer_id, industry, primary_color, secondary_color } = req.body;
+    
+    if (!name || !customer_id || !industry || !primary_color) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'Logo is required' });
+    }
+    
+    // Validate hex color
+    if (!/^#[0-9A-Fa-f]{6}$/.test(primary_color)) {
+      return res.status(400).json({ success: false, error: 'Invalid primary color format' });
+    }
+    
+    if (secondary_color && !/^#[0-9A-Fa-f]{6}$/.test(secondary_color)) {
+      return res.status(400).json({ success: false, error: 'Invalid secondary color format' });
+    }
+    
+    // Ensure storage bucket exists
+    const bucketName = 'brand-assets';
+    const bucketExists = await ensureStorageBucket(bucketName, true);
+    if (!bucketExists) {
+      return res.status(500).json({ success: false, error: 'Failed to initialize storage' });
+    }
+    
+    // Upload logo
+    const logoFileName = `${req.user.id}/${Date.now()}-${req.file.originalname}`;
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from(bucketName)
+      .upload(logoFileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error('Logo upload error:', uploadError);
+      return res.status(500).json({ success: false, error: 'Error uploading logo' });
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = supabaseAdmin
+      .storage
+      .from(bucketName)
+      .getPublicUrl(logoFileName);
+    
+    // Create brand
+    const { data: brand, error: createError } = await supabaseAdmin
+      .from('brands')
+      .insert({
+        owner_user_id: req.user.id,
+        customer_id,
+        name,
+        industry,
+        primary_color,
+        secondary_color: secondary_color || null,
+        logo_path: publicUrl
+      })
+      .select()
+      .single();
+    
+    if (createError) {
+      console.error('Error creating brand:', createError);
+      return res.status(500).json({ success: false, error: 'Error creating brand' });
+    }
+    
+    res.json({ success: true, brand });
+  } catch (err) {
+    console.error('Create brand API error:', err);
+    res.status(500).json({ success: false, error: 'Error creating brand' });
+  }
+});
+
+// PUT /dashboard/api/content-generator/brands/:id - Update brand
+router.put('/api/content-generator/brands/:id', requireAuth, upload.single('logo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, customer_id, industry, primary_color, secondary_color } = req.body;
+    
+    // Check ownership
+    const { data: existingBrand, error: checkError } = await supabaseAdmin
+      .from('brands')
+      .select('*')
+      .eq('id', id)
+      .eq('owner_user_id', req.user.id)
+      .single();
+    
+    if (checkError || !existingBrand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+    
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (customer_id) updateData.customer_id = customer_id;
+    if (industry) updateData.industry = industry;
+    if (primary_color) {
+      if (!/^#[0-9A-Fa-f]{6}$/.test(primary_color)) {
+        return res.status(400).json({ success: false, error: 'Invalid primary color format' });
+      }
+      updateData.primary_color = primary_color;
+    }
+    if (secondary_color !== undefined) {
+      if (secondary_color && !/^#[0-9A-Fa-f]{6}$/.test(secondary_color)) {
+        return res.status(400).json({ success: false, error: 'Invalid secondary color format' });
+      }
+      updateData.secondary_color = secondary_color || null;
+    }
+    
+    // Upload new logo if provided
+    if (req.file) {
+      const bucketName = 'brand-assets';
+      const bucketExists = await ensureStorageBucket(bucketName, true);
+      if (!bucketExists) {
+        return res.status(500).json({ success: false, error: 'Failed to initialize storage' });
+      }
+      
+      const logoFileName = `${req.user.id}/${Date.now()}-${req.file.originalname}`;
+      const { error: uploadError } = await supabaseAdmin
+        .storage
+        .from(bucketName)
+        .upload(logoFileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('Logo upload error:', uploadError);
+        return res.status(500).json({ success: false, error: 'Error uploading logo' });
+      }
+      
+      const { data: { publicUrl } } = supabaseAdmin
+        .storage
+        .from(bucketName)
+        .getPublicUrl(logoFileName);
+      
+      updateData.logo_path = publicUrl;
+    }
+    
+    const { data: brand, error: updateError } = await supabaseAdmin
+      .from('brands')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating brand:', updateError);
+      return res.status(500).json({ success: false, error: 'Error updating brand' });
+    }
+    
+    res.json({ success: true, brand });
+  } catch (err) {
+    console.error('Update brand API error:', err);
+    res.status(500).json({ success: false, error: 'Error updating brand' });
+  }
+});
+
+// DELETE /dashboard/api/content-generator/brands/:id - Delete brand
+router.delete('/api/content-generator/brands/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check ownership
+    const { data: brand, error: checkError } = await supabaseAdmin
+      .from('brands')
+      .select('*')
+      .eq('id', id)
+      .eq('owner_user_id', req.user.id)
+      .single();
+    
+    if (checkError || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+    
+    const { error: deleteError } = await supabaseAdmin
+      .from('brands')
+      .delete()
+      .eq('id', id);
+    
+    if (deleteError) {
+      console.error('Error deleting brand:', deleteError);
+      return res.status(500).json({ success: false, error: 'Error deleting brand' });
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete brand API error:', err);
+    res.status(500).json({ success: false, error: 'Error deleting brand' });
+  }
+});
+
+// Helper function to generate caption
+function generateCaption(brandIndustry, topic, cta, notes) {
+  const industryHints = {
+    'retail': 'winkels',
+    'services': 'diensten',
+    'technology': 'technologie',
+    'food': 'eten',
+    'health': 'gezondheid',
+    'beauty': 'schoonheid',
+    'fitness': 'fitness',
+    'education': 'onderwijs'
+  };
+  
+  const industryText = industryHints[brandIndustry?.toLowerCase()] || brandIndustry || 'onze diensten';
+  
+  let caption = '';
+  
+  if (topic) {
+    caption += `🎉 ${topic}\n\n`;
+  }
+  
+  caption += `Ontdek wat ${industryText} voor jou kunnen betekenen. `;
+  
+  if (cta) {
+    caption += `${cta}! `;
+  }
+  
+  caption += 'Neem vandaag nog contact met ons op voor meer informatie.';
+  
+  if (notes) {
+    caption += `\n\n${notes}`;
+  }
+  
+  caption += '\n\n#socialmedia #marketing #content';
+  
+  return caption;
+}
+
+// POST /dashboard/api/content-generator/generate - Generate content posts
+router.post('/api/content-generator/generate', requireAuth, upload.array('images', 10), async (req, res) => {
+  try {
+    const { brand_id, platform, format, template_key, topic, cta, notes } = req.body;
+    
+    if (!brand_id || !platform || !format || !template_key) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: 'At least one image is required' });
+    }
+    
+    // Get brand
+    const { data: brand, error: brandError } = await supabaseAdmin
+      .from('brands')
+      .select('*')
+      .eq('id', brand_id)
+      .eq('owner_user_id', req.user.id)
+      .single();
+    
+    if (brandError || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+    
+    // Get template
+    const { data: template, error: templateError } = await supabaseAdmin
+      .from('content_templates')
+      .select('*')
+      .eq('key', template_key)
+      .single();
+    
+    if (templateError || !template) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    
+    const variations = template.variations || [];
+    if (variations.length === 0) {
+      return res.status(400).json({ success: false, error: 'Template has no variations' });
+    }
+    
+    // Ensure storage bucket exists
+    const bucketName = 'content-images';
+    const bucketExists = await ensureStorageBucket(bucketName, true);
+    if (!bucketExists) {
+      return res.status(500).json({ success: false, error: 'Failed to initialize storage' });
+    }
+    
+    // Upload images and generate posts
+    const posts = [];
+    
+    for (let i = 0; i < req.files.length; i++) {
+      const file = req.files[i];
+      const variation = variations[i % variations.length];
+      
+      // Upload image
+      const imageFileName = `${req.user.id}/${brand_id}/${Date.now()}-${i}-${file.originalname}`;
+      const { error: uploadError } = await supabaseAdmin
+        .storage
+        .from(bucketName)
+        .upload(imageFileName, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('Image upload error:', uploadError);
+        continue; // Skip this image
+      }
+      
+      const { data: { publicUrl } } = supabaseAdmin
+        .storage
+        .from(bucketName)
+        .getPublicUrl(imageFileName);
+      
+      // Generate caption
+      const caption = generateCaption(brand.industry, topic, cta, notes);
+      const title = topic || `Post ${i + 1}`;
+      
+      // Create post
+      const { data: post, error: postError } = await supabaseAdmin
+        .from('content_posts')
+        .insert({
+          owner_user_id: req.user.id,
+          brand_id: brand.id,
+          customer_id: brand.customer_id,
+          platform,
+          format,
+          template_key,
+          template_variation: variation.key,
+          image_paths: [publicUrl],
+          title,
+          caption,
+          status: 'draft'
+        })
+        .select()
+        .single();
+      
+      if (postError) {
+        console.error('Error creating post:', postError);
+        continue; // Skip this post
+      }
+      
+      posts.push(post);
+    }
+    
+    res.json({ success: true, posts });
+  } catch (err) {
+    console.error('Generate content API error:', err);
+    res.status(500).json({ success: false, error: 'Error generating content' });
+  }
+});
+
+// PUT /dashboard/api/content-generator/posts/:id - Update post
+router.put('/api/content-generator/posts/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { caption, status } = req.body;
+    
+    // Check ownership
+    const { data: existingPost, error: checkError } = await supabaseAdmin
+      .from('content_posts')
+      .select('*')
+      .eq('id', id)
+      .eq('owner_user_id', req.user.id)
+      .single();
+    
+    if (checkError || !existingPost) {
+      return res.status(404).json({ success: false, error: 'Post not found' });
+    }
+    
+    const updateData = {};
+    if (caption !== undefined) updateData.caption = caption;
+    if (status !== undefined) updateData.status = status;
+    
+    const { data: post, error: updateError } = await supabaseAdmin
+      .from('content_posts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating post:', updateError);
+      return res.status(500).json({ success: false, error: 'Error updating post' });
+    }
+    
+    res.json({ success: true, post });
+  } catch (err) {
+    console.error('Update post API error:', err);
+    res.status(500).json({ success: false, error: 'Error updating post' });
   }
 });
 
