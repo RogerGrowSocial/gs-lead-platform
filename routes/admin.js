@@ -75,6 +75,48 @@ async function ensureStorageBucket(bucketName, publicBucket = true) {
 // Admin middleware - controleer of gebruiker admin of werknemer is (niet klant)
 router.use(requireAuth, isEmployeeOrAdmin)
 
+// ==== Notes API (must be before param routes like /api/mail/:id) ====
+router.get('/api/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data: notes, error } = await supabaseAdmin
+      .from('admin_notes')
+      .select('id, title, content, created_at, created_by')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    res.json({ success: true, notes: notes || [] })
+  } catch (err) {
+    console.error('Error listing notes:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { title, content } = req.body
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Titel is verplicht' })
+    }
+
+    const { data: note, error } = await supabaseAdmin
+      .from('admin_notes')
+      .insert({
+        title: title.trim(),
+        content: (content || '').trim(),
+        created_by: req.user.id
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    res.json({ success: true, note })
+  } catch (err) {
+    console.error('Error creating note:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 // POST route for creating new users
 router.post("/api/users", requireAuth, isAdmin, async (req, res) => {
   try {
@@ -15984,6 +16026,38 @@ router.get('/services/settings', requireAuth, isEmployeeOrAdmin, async (req, res
     });
   }
 });
+
+// GET /admin/notes - Notes page
+router.get('/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    let notes = []
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('admin_notes')
+        .select('id, title, content, created_at, created_by')
+        .order('created_at', { ascending: false })
+      if (!error && data) notes = data
+      else if (error) console.error('Error fetching notes (table may not exist yet):', error.message)
+    } catch (dbErr) {
+      console.error('Error fetching notes:', dbErr.message)
+    }
+
+    res.render('admin/notes', {
+      title: 'Notities',
+      activeMenu: 'tools',
+      activeSubmenu: 'notes',
+      user: req.user,
+      notes
+    })
+  } catch (err) {
+    console.error('Error loading notes page:', err)
+    res.status(500).render('error', {
+      message: 'Kon notities pagina niet laden',
+      error: {},
+      user: req.user
+    })
+  }
+})
 
 // GET /admin/scraper - Scraper page
 router.get('/scraper', requireAuth, isManagerOrAdmin, async (req, res) => {

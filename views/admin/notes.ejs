@@ -1,0 +1,287 @@
+<%
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+  const notesList = typeof notes !== 'undefined' ? notes : []
+%>
+<%- include('../layouts/admin', {
+  title: 'Notities',
+  activeMenu: 'tools',
+  activeSubmenu: 'notes',
+  user: user,
+  body: `
+  <div class="notes-container">
+    <div class="page-header">
+      <div>
+        <h1>Notities</h1>
+        <p class="text-muted">Beheer je notities</p>
+      </div>
+      <button type="button" id="newNoteBtn" class="btn-primary">
+        <i class="fas fa-plus"></i> Nieuwe notitie
+      </button>
+    </div>
+    
+    <!-- Create note form (collapsible) -->
+    <div id="noteFormCard" class="notes-form-card" style="display: none;">
+      <h3 style="margin: 0 0 16px 0; font-size: 1.125rem;">Nieuwe notitie</h3>
+      <form id="noteForm">
+        <div class="form-group">
+          <label for="noteTitle">Titel <span class="required">*</span></label>
+          <input type="text" id="noteTitle" name="title" required placeholder="Titel van de notitie" />
+        </div>
+        <div class="form-group">
+          <label for="noteContent">Inhoud</label>
+          <textarea id="noteContent" name="content" rows="4" placeholder="Schrijf je notitie hier..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="cancelNoteBtn" class="btn-secondary">Annuleren</button>
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i> Opslaan
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Notes list -->
+    <div class="notes-list">
+      ${notesList.length > 0 ? notesList.map(n => `
+        <div class="note-card" data-note-id="${n.id}">
+          <div class="note-card-header">
+            <h3 class="note-title">${(n.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h3>
+            <span class="note-date">${formatDate(n.created_at)}</span>
+          </div>
+          ${n.content ? `<div class="note-content">${(n.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(new RegExp('\\n', 'g'), '<br>')}</div>` : ''}
+        </div>
+      `).join('') : `
+        <div class="notes-empty" id="notesEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px; color: #9ca3af; margin-bottom: 16px;">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <p style="color: #6b7280; margin: 0;">Nog geen notities. Klik op "Nieuwe notitie" om te beginnen.</p>
+        </div>
+      `}
+    </div>
+  </div>
+  
+  <style>
+    .notes-container { padding: 0; }
+    
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    
+    .btn-primary {
+      padding: 10px 20px;
+      background: #ea5d0d;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover { background: #cf4a09; }
+    
+    .btn-secondary {
+      padding: 10px 20px;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #374151;
+      font-size: 14px;
+    }
+    .btn-secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+    
+    .notes-form-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 24px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #ea5d0d;
+      box-shadow: 0 0 0 2px rgba(234, 93, 13, 0.2);
+    }
+    .required { color: #ef4444; }
+    
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    
+    .notes-list {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .note-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      transition: box-shadow 0.2s;
+    }
+    .note-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .note-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    
+    .note-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    
+    .note-date {
+      font-size: 13px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    
+    .note-content {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.6;
+    }
+    
+    .notes-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      background: #f9fafb;
+      border: 2px dashed #e5e7eb;
+      border-radius: 12px;
+      text-align: center;
+    }
+  </style>
+  
+  <script>
+    (function() {
+      const formCard = document.getElementById('noteFormCard');
+      const form = document.getElementById('noteForm');
+      const newBtn = document.getElementById('newNoteBtn');
+      const cancelBtn = document.getElementById('cancelNoteBtn');
+      const notesEmpty = document.getElementById('notesEmpty');
+      
+      function showForm() {
+        formCard.style.display = 'block';
+        document.getElementById('noteTitle').focus();
+      }
+      
+      function hideForm() {
+        formCard.style.display = 'none';
+        form.reset();
+      }
+      
+      newBtn && newBtn.addEventListener('click', showForm);
+      cancelBtn && cancelBtn.addEventListener('click', hideForm);
+      
+      form && form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('noteTitle').value.trim();
+        const content = document.getElementById('noteContent').value.trim();
+        
+        if (!title) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Titel is verplicht', 'error', 3000, false);
+          } else {
+            alert('Titel is verplicht');
+          }
+          return;
+        }
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opslaan...';
+        
+        try {
+          const res = await fetch('/admin/api/notes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content }),
+            credentials: 'same-origin'
+          });
+          const contentType = res.headers.get('content-type');
+          const isJson = contentType && contentType.includes('application/json');
+          const data = isJson ? await res.json() : null;
+          
+          if (!res.ok) {
+            const msg = data && data.error ? data.error : (res.status === 404 ? 'API niet gevonden. Controleer of de migratie is uitgevoerd.' : 'Fout ' + res.status);
+            throw new Error(msg);
+          }
+          if (data && data.success) {
+            hideForm();
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Notitie opgeslagen', 'success', 3000, false);
+            }
+            window.location.reload();
+          } else {
+            throw new Error(data && data.error ? data.error : 'Fout bij opslaan');
+          }
+        } catch (err) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(err.message || 'Fout bij opslaan', 'error', 4000, false);
+          } else {
+            alert(err.message || 'Fout bij opslaan');
+          }
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+      });
+    })();
+  </script>
+  `
+}) %>
