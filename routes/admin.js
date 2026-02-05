@@ -80,7 +80,7 @@ router.get('/api/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     const { data: notes, error } = await supabaseAdmin
       .from('admin_notes')
-      .select('id, title, content, created_at, created_by')
+      .select('id, title, content, created_at, updated_at, created_by')
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -113,6 +113,50 @@ router.post('/api/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
     res.json({ success: true, note })
   } catch (err) {
     console.error('Error creating note:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.put('/api/notes/:id', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { title, content } = req.body
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, error: 'Titel is verplicht' })
+    }
+
+    const { data: note, error } = await supabaseAdmin
+      .from('admin_notes')
+      .update({
+        title: title.trim(),
+        content: (content || '').trim()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!note) return res.status(404).json({ success: false, error: 'Notitie niet gevonden' })
+    res.json({ success: true, note })
+  } catch (err) {
+    console.error('Error updating note:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.delete('/api/notes/:id', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { error } = await supabaseAdmin
+      .from('admin_notes')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error deleting note:', err)
     res.status(500).json({ success: false, error: err.message })
   }
 })
@@ -16034,7 +16078,7 @@ router.get('/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
     try {
       const { data, error } = await supabaseAdmin
         .from('admin_notes')
-        .select('id, title, content, created_at, created_by')
+        .select('id, title, content, created_at, updated_at, created_by')
         .order('created_at', { ascending: false })
       if (!error && data) notes = data
       else if (error) console.error('Error fetching notes (table may not exist yet):', error.message)

@@ -5,6 +5,7 @@
     return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
   const notesList = typeof notes !== 'undefined' ? notes : []
+  const notesB64 = Buffer.from(JSON.stringify(notesList)).toString('base64')
 %>
 <%- include('../layouts/admin', {
   title: 'Notities',
@@ -22,6 +23,24 @@
         <i class="fas fa-plus"></i> Nieuwe notitie
       </button>
     </div>
+    
+    <!-- Toolbar: search + sort -->
+    ${notesList.length > 0 ? `
+    <div class="notes-toolbar">
+      <div class="notes-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="notesSearchInput" placeholder="Zoeken in notities..." />
+      </div>
+      <div class="notes-sort">
+        <label for="notesSortSelect">Sorteren:</label>
+        <select id="notesSortSelect">
+          <option value="newest">Nieuwste eerst</option>
+          <option value="oldest">Oudste eerst</option>
+        </select>
+      </div>
+      <span class="notes-count" id="notesCount">${notesList.length} notitie${notesList.length !== 1 ? 's' : ''}</span>
+    </div>
+    ` : ''}
     
     <!-- Create note form (collapsible) -->
     <div id="noteFormCard" class="notes-form-card" style="display: none;">
@@ -45,16 +64,22 @@
     </div>
     
     <!-- Notes list -->
-    <div class="notes-list">
-      ${notesList.length > 0 ? notesList.map(n => `
-        <div class="note-card" data-note-id="${n.id}">
+    <div class="notes-list" id="notesListContainer">
+      ${notesList.length > 0 ? notesList.map(n => {
+        const isEdited = n.updated_at && n.created_at && Math.abs(new Date(n.updated_at).getTime() - new Date(n.created_at).getTime()) > 2000;
+        return `
+        <div class="note-card" data-note-id="${n.id}" data-note-title="${(n.title || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}" data-note-content="${(n.content || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(new RegExp('\\n','g'),'&#10;')}">
           <div class="note-card-header">
             <h3 class="note-title">${(n.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h3>
-            <span class="note-date">${formatDate(n.created_at)}</span>
+            <span class="note-date">${formatDate(n.created_at)}${isEdited ? ' · <span class="note-updated">bijgewerkt ' + formatDate(n.updated_at) + '</span>' : ''}</span>
           </div>
-          ${n.content ? `<div class="note-content">${(n.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(new RegExp('\\n', 'g'), '<br>')}</div>` : ''}
+          ${n.content ? `<div class="note-content">${(n.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(new RegExp('\\n', 'g'), '<br>')}</div>` : '<div class="note-content note-content-empty">Geen inhoud</div>'}
+          <div class="note-card-actions">
+            <button type="button" class="btn-note-edit" data-note-id="${n.id}" title="Bewerken"><i class="fas fa-pen"></i></button>
+            <button type="button" class="btn-note-delete" data-note-id="${n.id}" title="Verwijderen"><i class="fas fa-trash"></i></button>
+          </div>
         </div>
-      `).join('') : `
+      `}).join('') : `
         <div class="notes-empty" id="notesEmpty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px; color: #9ca3af; margin-bottom: 16px;">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -63,13 +88,97 @@
             <line x1="16" y1="17" x2="8" y2="17"></line>
           </svg>
           <p style="color: #6b7280; margin: 0;">Nog geen notities. Klik op "Nieuwe notitie" om te beginnen.</p>
+          <button type="button" id="emptyStateNewNoteBtn" class="btn-primary" style="margin-top: 20px;"><i class="fas fa-plus"></i> Eerste notitie aanmaken</button>
         </div>
       `}
+      <div class="notes-search-empty" id="notesSearchEmpty" style="display: none;">
+        <i class="fas fa-search" style="font-size: 32px; color: #9ca3af; margin-bottom: 12px;"></i>
+        <p style="margin: 0; color: #6b7280;">Geen notities gevonden voor "<span id="notesSearchQuery"></span>"</p>
+        <p style="margin: 8px 0 0 0; font-size: 13px; color: #9ca3af;">Probeer een andere zoekterm</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>window.__NOTES__=JSON.parse(atob("${notesB64}"));</script>
+  
+  <!-- Edit note modal -->
+  <div id="noteEditModal" class="note-modal" style="display: none;">
+    <div class="note-modal-backdrop"></div>
+    <div class="note-modal-content">
+      <div class="note-modal-header">
+        <h3>Notitie bewerken</h3>
+        <button type="button" class="note-modal-close" aria-label="Sluiten">&times;</button>
+      </div>
+      <form id="noteEditForm">
+        <input type="hidden" id="noteEditId" name="id" />
+        <div class="form-group">
+          <label for="noteEditTitle">Titel <span class="required">*</span></label>
+          <input type="text" id="noteEditTitle" name="title" required placeholder="Titel van de notitie" />
+        </div>
+        <div class="form-group">
+          <label for="noteEditContent">Inhoud</label>
+          <textarea id="noteEditContent" name="content" rows="6" placeholder="Schrijf je notitie hier..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="noteEditCancel" class="btn-secondary">Annuleren</button>
+          <button type="button" id="noteEditDelete" class="btn-danger"><i class="fas fa-trash"></i> Verwijderen</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Opslaan</button>
+        </div>
+      </form>
     </div>
   </div>
   
   <style>
     .notes-container { padding: 0; }
+    
+    .notes-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+    }
+    .notes-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .notes-search i { color: #9ca3af; font-size: 14px; }
+    .notes-search input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .notes-search input:focus { outline: none; border-color: #ea5d0d; }
+    .notes-sort { display: flex; align-items: center; gap: 8px; }
+    .notes-sort label { font-size: 13px; color: #6b7280; }
+    .notes-sort select {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .notes-count { font-size: 13px; color: #6b7280; margin-left: auto; }
+    .note-updated { font-size: 12px; color: #9ca3af; }
+    
+    .notes-search-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      background: #f9fafb;
+      border: 2px dashed #e5e7eb;
+      border-radius: 12px;
+      margin-top: 16px;
+    }
     
     .page-header {
       display: flex;
@@ -146,7 +255,9 @@
       display: flex;
       gap: 12px;
       margin-top: 20px;
+      flex-wrap: wrap;
     }
+    .note-modal .form-actions .btn-primary { margin-left: auto; }
     
     .notes-list {
       margin-top: 24px;
@@ -161,6 +272,7 @@
       border-radius: 12px;
       padding: 20px;
       transition: box-shadow 0.2s;
+      cursor: pointer;
     }
     .note-card:hover {
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
@@ -192,6 +304,84 @@
       color: #4b5563;
       line-height: 1.6;
     }
+    .note-content-empty { color: #9ca3af; font-style: italic; }
+    
+    .note-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .btn-note-edit, .btn-note-delete {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      background: #f3f4f6;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .btn-note-edit:hover { background: #e5e7eb; color: #374151; }
+    .btn-note-delete:hover { background: #fee2e2; color: #dc2626; }
+    
+    .btn-danger {
+      padding: 10px 20px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-danger:hover { background: #b91c1c; }
+    
+    .note-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .note-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+    .note-modal-content {
+      position: relative;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);
+    }
+    .note-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .note-modal-header h3 { margin: 0; font-size: 1.25rem; }
+    .note-modal-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+      color: #6b7280;
+      padding: 0;
+      width: 36px;
+      height: 36px;
+    }
+    .note-modal-close:hover { color: #111; }
     
     .notes-empty {
       display: flex;
@@ -204,10 +394,69 @@
       border-radius: 12px;
       text-align: center;
     }
+    @media (max-width: 640px) {
+      .notes-toolbar { flex-direction: column; align-items: stretch; }
+      .notes-search { min-width: 0; }
+      .notes-count { margin-left: 0; }
+    }
   </style>
   
   <script>
     (function() {
+      function formatDate(iso) {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+      function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      function escapeAttr(s) { return escapeHtml(s).replace(/\\n/g,'&#10;'); }
+      
+      function renderNoteCard(n) {
+        const isEdited = n.updated_at && n.created_at && Math.abs(new Date(n.updated_at).getTime() - new Date(n.created_at).getTime()) > 2000;
+        const content = n.content ? escapeHtml(n.content).replace(/\n/g,'<br>') : '<span class="note-content-empty">Geen inhoud</span>';
+        return '<div class="note-card" data-note-id="'+n.id+'" data-note-title="'+escapeAttr(n.title)+'" data-note-content="'+escapeAttr(n.content||'')+'">'+
+          '<div class="note-card-header"><h3 class="note-title">'+escapeHtml(n.title)+'</h3>'+
+          '<span class="note-date">'+formatDate(n.created_at)+(isEdited ? ' · <span class="note-updated">bijgewerkt '+formatDate(n.updated_at)+'</span>' : '')+'</span></div>'+
+          '<div class="note-content">'+content+'</div>'+
+          '<div class="note-card-actions">'+
+          '<button type="button" class="btn-note-edit" data-note-id="'+n.id+'" title="Bewerken"><i class="fas fa-pen"></i></button>'+
+          '<button type="button" class="btn-note-delete" data-note-id="'+n.id+'" title="Verwijderen"><i class="fas fa-trash"></i></button>'+
+          '</div></div>';
+      }
+      
+      function filterAndRender() {
+        const notes = window.__NOTES__ || [];
+        const q = (document.getElementById('notesSearchInput')?.value || '').trim().toLowerCase();
+        const sort = document.getElementById('notesSortSelect')?.value || 'newest';
+        let filtered = q ? notes.filter(n => 
+          (n.title||'').toLowerCase().includes(q) || (n.content||'').toLowerCase().includes(q)
+        ) : notes;
+        filtered = [...filtered].sort((a,b) => {
+          const da = new Date(a.created_at).getTime();
+          const db = new Date(b.created_at).getTime();
+          return sort === 'newest' ? db - da : da - db;
+        });
+        const container = document.getElementById('notesListContainer');
+        const searchEmpty = document.getElementById('notesSearchEmpty');
+        const countEl = document.getElementById('notesCount');
+        if (!container) return;
+        const emptyDiv = container.querySelector('.notes-empty');
+        if (notes.length === 0) return;
+        if (filtered.length === 0) {
+          container.querySelectorAll('.note-card').forEach(c => c.remove());
+          if (searchEmpty) {
+            searchEmpty.style.display = 'flex';
+            const queryEl = document.getElementById('notesSearchQuery');
+            if (queryEl) queryEl.textContent = q || '';
+          }
+        } else {
+          if (searchEmpty) searchEmpty.style.display = 'none';
+          container.querySelectorAll('.note-card').forEach(c => c.remove());
+          filtered.forEach(n => container.insertAdjacentHTML('beforeend', renderNoteCard(n)));
+        }
+        if (countEl) countEl.textContent = filtered.length + ' notitie' + (filtered.length !== 1 ? 's' : '') + (q ? ' (gefilterd)' : '');
+      }
+      
       const formCard = document.getElementById('noteFormCard');
       const form = document.getElementById('noteForm');
       const newBtn = document.getElementById('newNoteBtn');
@@ -225,7 +474,133 @@
       }
       
       newBtn && newBtn.addEventListener('click', showForm);
+      document.getElementById('emptyStateNewNoteBtn')?.addEventListener('click', showForm);
       cancelBtn && cancelBtn.addEventListener('click', hideForm);
+      
+      document.getElementById('notesSearchInput')?.addEventListener('input', filterAndRender);
+      document.getElementById('notesSearchInput')?.addEventListener('keyup', filterAndRender);
+      document.getElementById('notesSortSelect')?.addEventListener('change', filterAndRender);
+      
+      // Edit modal
+      const editModal = document.getElementById('noteEditModal');
+      const editForm = document.getElementById('noteEditForm');
+      const editCancelBtn = document.getElementById('noteEditCancel');
+      const editDeleteBtn = document.getElementById('noteEditDelete');
+      
+      function openEditModal(noteId, title, content) {
+        document.getElementById('noteEditId').value = noteId;
+        document.getElementById('noteEditTitle').value = title || '';
+        document.getElementById('noteEditContent').value = content || '';
+        if (editModal) editModal.style.display = 'flex';
+        document.getElementById('noteEditTitle').focus();
+      }
+      
+      function closeEditModal() {
+        if (editModal) editModal.style.display = 'none';
+      }
+      
+      editCancelBtn && editCancelBtn.addEventListener('click', closeEditModal);
+      editModal && editModal.querySelector('.note-modal-close') && editModal.querySelector('.note-modal-close').addEventListener('click', closeEditModal);
+      editModal && editModal.querySelector('.note-modal-backdrop') && editModal.querySelector('.note-modal-backdrop').addEventListener('click', closeEditModal);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && editModal && editModal.style.display === 'flex') closeEditModal(); });
+      
+      document.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.btn-note-edit');
+        const deleteBtn = e.target.closest('.btn-note-delete');
+        const card = e.target.closest('.note-card');
+        if (card && !editBtn && !deleteBtn) {
+          const id = card.dataset.noteId;
+          const title = card.dataset.noteTitle || '';
+          const content = card.dataset.noteContent || '';
+          openEditModal(id, title, content);
+        }
+        if (editBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const editCard = editBtn.closest('.note-card');
+          if (editCard) {
+            const id = editCard.dataset.noteId;
+            const title = editCard.dataset.noteTitle || '';
+            const content = editCard.dataset.noteContent || '';
+            openEditModal(id, title, content);
+          }
+        }
+        if (deleteBtn) {
+          e.preventDefault();
+          e.stopPropagation();
+          const delCard = deleteBtn.closest('.note-card');
+          if (delCard && confirm('Weet je zeker dat je deze notitie wilt verwijderen?')) {
+            const id = delCard.dataset.noteId;
+            fetch('/admin/api/notes/' + id, { method: 'DELETE', credentials: 'same-origin' })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  if (typeof window.showNotification === 'function') window.showNotification('Notitie verwijderd', 'success', 3000, false);
+                  window.location.reload();
+                } else throw new Error(data.error);
+              })
+              .catch(err => {
+                if (typeof window.showNotification === 'function') window.showNotification(err.message || 'Fout bij verwijderen', 'error', 4000, false);
+                else alert(err.message);
+              });
+          }
+        }
+      });
+      
+      editForm && editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('noteEditId').value;
+        const title = document.getElementById('noteEditTitle').value.trim();
+        const content = document.getElementById('noteEditContent').value.trim();
+        if (!title) {
+          if (typeof window.showNotification === 'function') window.showNotification('Titel is verplicht', 'error', 3000, false);
+          return;
+        }
+        const submitBtn = editForm.querySelector('button[type="submit"]');
+        const orig = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opslaan...';
+        try {
+          const res = await fetch('/admin/api/notes/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content }),
+            credentials: 'same-origin'
+          });
+          const data = res.headers.get('content-type')?.includes('application/json') ? await res.json() : null;
+          if (!res.ok) throw new Error(data?.error || 'Fout ' + res.status);
+          if (data?.success) {
+            closeEditModal();
+            if (typeof window.showNotification === 'function') window.showNotification('Notitie opgeslagen', 'success', 3000, false);
+            window.location.reload();
+          } else throw new Error(data?.error || 'Fout bij opslaan');
+        } catch (err) {
+          if (typeof window.showNotification === 'function') window.showNotification(err.message, 'error', 4000, false);
+          else alert(err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = orig;
+        }
+      });
+      
+      editDeleteBtn && editDeleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('noteEditId').value;
+        if (!id || !confirm('Weet je zeker dat je deze notitie wilt verwijderen?')) return;
+        fetch('/admin/api/notes/' + id, { method: 'DELETE', credentials: 'same-origin' })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              closeEditModal();
+              if (typeof window.showNotification === 'function') window.showNotification('Notitie verwijderd', 'success', 3000, false);
+              window.location.reload();
+            } else throw new Error(data.error);
+          })
+          .catch(err => {
+            if (typeof window.showNotification === 'function') window.showNotification(err.message, 'error', 4000, false);
+            else alert(err.message);
+          });
+      });
       
       form && form.addEventListener('submit', async (e) => {
         e.preventDefault();
