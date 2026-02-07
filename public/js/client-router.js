@@ -332,63 +332,80 @@
         document.title = newTitle.textContent;
       }
 
+      // Normalize URL for consistent comparison (parsed doc can have different base URL)
+      function resolveHref(link) {
+        const raw = link.getAttribute('href') || link.href || '';
+        if (!raw) return '';
+        try {
+          return new URL(raw, window.location.origin).href;
+        } catch {
+          return raw;
+        }
+      }
+
       // Load new stylesheets from head
       const newStylesheets = Array.from(fullDoc.head.querySelectorAll('link[rel="stylesheet"]'));
-      const existingStylesheets = new Set(
+      const existingHrefs = new Set(
         Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
-          .map(link => link.href)
+          .map(link => resolveHref(link))
       );
 
-      // Load new stylesheets that don't exist yet
-      newStylesheets.forEach(link => {
-        const href = link.href || link.getAttribute('href');
-        if (href && !existingStylesheets.has(href)) {
-          // Skip base stylesheets that are always loaded (design-tokens, style.css, etc)
-          const baseStylesheets = [
-            '/css/design-tokens.css',
-            '/css/chart-theme.css',
-            '/css/style.css',
-            '/css/admin/notifications.css',
-            'cdnjs.cloudflare.com',
-            'fonts.googleapis.com'
-          ];
-          
-          const isBaseStylesheet = baseStylesheets.some(base => href.includes(base));
-          
-          if (!isBaseStylesheet) {
-            const newLink = document.createElement('link');
-            newLink.rel = 'stylesheet';
-            newLink.href = href;
-            newLink.media = link.getAttribute('media') || 'all';
-            
-            // Add load/error handlers to ensure CSS is loaded
-            newLink.onload = function() {
-              console.log('[Client Router] ✅ Loaded stylesheet:', href);
-            };
-            newLink.onerror = function() {
-              console.error('[Client Router] ❌ Failed to load stylesheet:', href);
-            };
-            
-            document.head.appendChild(newLink);
-            
-            // Mark as page-specific for cleanup later
-            newLink.setAttribute('data-page-specific', 'true');
-          }
-        }
-      });
+      // Base stylesheets die altijd in de layout zitten - nooit opnieuw toevoegen
+      const basePatterns = [
+        '/css/design-tokens.css',
+        '/css/chart-theme.css',
+        '/css/style.css',
+        '/css/admin/notifications.css',
+        '/css/admin/time-tracker.css',
+        '/css/leads.css',
+        'cdnjs.cloudflare.com',
+        'fonts.googleapis.com',
+        'cdn.jsdelivr.net',
+        'cdn.datatables.net'
+      ];
 
-      // Remove old page-specific stylesheets (cleanup)
+      // 1. Verwijder oude page-specific stylesheets die de nieuwe pagina niet nodig heeft
+      const newPageHrefs = new Set(newStylesheets.map(link => resolveHref(link)));
       document.head.querySelectorAll('link[rel="stylesheet"][data-page-specific="true"]').forEach(link => {
-        const href = link.href;
-        const stillNeeded = newStylesheets.some(newLink => {
-          const newHref = newLink.href || newLink.getAttribute('href');
-          return newHref === href;
-        });
-        
-        if (!stillNeeded) {
+        const href = resolveHref(link);
+        if (!newPageHrefs.has(href)) {
           link.remove();
         }
       });
+
+      // 2. Rebuild existingHrefs na verwijdering (anders missen we nieuwe stylesheets)
+      existingHrefs.clear();
+      document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+        existingHrefs.add(resolveHref(link));
+      });
+
+      // 3. Voeg nieuwe page-specific stylesheets toe
+      const addedLinks = [];
+      newStylesheets.forEach(link => {
+        const href = resolveHref(link);
+        const rawHref = link.getAttribute('href') || link.href || '';
+        if (!href || !rawHref) return;
+        if (existingHrefs.has(href)) return;
+
+        const isBase = basePatterns.some(p => rawHref.includes(p));
+        if (isBase) return;
+
+        const newLink = document.createElement('link');
+        newLink.rel = 'stylesheet';
+        newLink.href = rawHref.startsWith('/') || rawHref.startsWith('http') ? rawHref : (window.location.origin + (rawHref.startsWith('/') ? '' : '/') + rawHref);
+        newLink.media = link.getAttribute('media') || 'all';
+        newLink.setAttribute('data-page-specific', 'true');
+        document.head.appendChild(newLink);
+        addedLinks.push(newLink);
+      });
+
+      // 4. Wacht tot nieuwe stylesheets geladen zijn (max 2s) om FOUC te voorkomen
+      if (addedLinks.length > 0) {
+        await Promise.race([
+          Promise.all(addedLinks.map(link => new Promise(r => { link.onload = r; link.onerror = r; }))),
+          new Promise(r => setTimeout(r, 2000))
+        ]);
+      }
 
       // Re-initialize scripts in nieuwe content (async for faster rendering)
       const scripts = container.querySelectorAll('script');

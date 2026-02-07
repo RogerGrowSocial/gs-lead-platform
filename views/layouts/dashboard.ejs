@@ -92,6 +92,7 @@
     /* Apply consistent font sizing from the start */
     html {
       font-size-adjust: 0.52;
+      overflow-y: scroll; /* Always show scrollbar to prevent layout shift */
     }
     
     body {
@@ -178,7 +179,7 @@
   <link rel="preload" href="/img/gs-logo-oranje.jpg" as="image">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
     <% stylesheets.forEach(function(stylesheet) { %>
-      <link rel="stylesheet" href="<%= stylesheet %>">
+      <link rel="stylesheet" href="<%= stylesheet %>" media="all" data-page-specific="true">
     <% }); %>
   <% } %>
   
@@ -851,7 +852,7 @@
       <!-- Logo Section -->
       <div class="logo-section">
         <div class="logo-container">
-          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial" class="logo-image">
+          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial" class="logo-image" width="40" height="40" loading="eager">
         </div>
         <span class="logo-text">GrowSocial</span>
       </div>
@@ -965,7 +966,7 @@
             <div class="user-dropdown-toggle">
               <div class="user-avatar">
                 <% if (user.profile_picture) { %>
-                  <img src="<%= user.profile_picture %>" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                  <img src="<%= user.profile_picture %>" alt="Profile" width="32" height="32" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" loading="eager">
                 <% } else { %>
                   <div class="avatar-placeholder">
                     <i class="fas fa-user"></i>
@@ -1267,6 +1268,20 @@
       
       // Refresh every 30 seconds
       setInterval(loadUnreadCount, 30000);
+    })();
+  </script>
+  
+  <!-- Global error handler - voorkomt dat uncaught errors de pagina breken -->
+  <script>
+    (function(){
+      window.onerror = function(msg, url, line, col, err) {
+        console.error('[GrowSocial] Uncaught error:', msg, url, line, col, err);
+        return true; // voorkom standaard error handling
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('[GrowSocial] Unhandled promise rejection:', e.reason);
+        e.preventDefault();
+      });
     })();
   </script>
   

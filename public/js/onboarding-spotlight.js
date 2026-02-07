@@ -576,9 +576,13 @@
           r = this.state.currentTarget.getBoundingClientRect();
         }
         if (!r) {
-          // Niks te highlighten -> alles verbergen
           this.state.highlightEl.hidden = true;
           this.state.tooltipEl.hidden = true;
+          if (this.state.isInitialRender) {
+            document.body.classList.remove("tour-loading", "tour-pre-dim", "gs-tour-pre-dim");
+            document.documentElement.classList.remove("tour-pre-dim");
+            this.state.isInitialRender = false;
+          }
           return;
         }
         rects = [r];
@@ -632,6 +636,11 @@
         if (!r || r.width <= 0 || r.height <= 0) {
           highlight.hidden = true;
           this.state.tooltipEl.hidden = true;
+          if (this.state.isInitialRender) {
+            document.body.classList.remove("tour-loading", "tour-pre-dim", "gs-tour-pre-dim");
+            document.documentElement.classList.remove("tour-pre-dim");
+            this.state.isInitialRender = false;
+          }
           return;
         }
 
@@ -667,17 +676,14 @@
         highlight.style.transition = "none";
         highlight.style.opacity = "1";
 
-        // 2) in de volgende frame: pre-overlay weg + normale transition weer aan
+        // 2) Double rAF: wacht tot browser heeft gepaint voordat we overlay verwijderen (voorkomt flicker)
         requestAnimationFrame(() => {
-          // haal ONLY hier de pre-dim / loading overlay weg
-          document.body.classList.remove("tour-loading", "tour-pre-dim", "gs-tour-pre-dim");
-          document.documentElement.classList.remove("tour-pre-dim");
-
-          // vanaf nu mag de opacity weer smooth zijn voor volgende stappen
-          if (highlight) {
-            highlight.style.transition = "opacity 0.18s ease-out";
-          }
-          this.state.isInitialRender = false;
+          requestAnimationFrame(() => {
+            document.body.classList.remove("tour-loading", "tour-pre-dim", "gs-tour-pre-dim");
+            document.documentElement.classList.remove("tour-pre-dim");
+            if (highlight) highlight.style.transition = "opacity 0.18s ease-out";
+            this.state.isInitialRender = false;
+          });
         });
       } else {
         // Bij volgende stappen op dezelfde pagina: normale transition

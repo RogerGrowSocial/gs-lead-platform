@@ -824,7 +824,7 @@
       <!-- Logo Section -->
       <div class="logo-section">
         <div class="logo-container">
-          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial Admin" class="logo-image">
+          <img src="/img/gs-logo-oranje.jpg" alt="GrowSocial Admin" class="logo-image" width="40" height="40" loading="eager">
         </div>
         <span class="logo-text">Admin</span>
       </div>
@@ -1239,7 +1239,7 @@
             <div class="user-dropdown-toggle">
               <div class="user-avatar">
                 <% if (user && user.profile_picture) { %>
-                  <img src="<%= user.profile_picture %>" alt="Profile" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                  <img src="<%= user.profile_picture %>" alt="Profile" width="32" height="32" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" loading="eager">
                 <% } else { %>
                   <div class="avatar-placeholder">
                     <i class="fas fa-user"></i>
@@ -1931,6 +1931,20 @@
     // Clean up on page unload
     window.addEventListener('beforeunload', stopSimulationCheck);
   })();
+  </script>
+  
+  <!-- Global error handler - voorkomt dat uncaught errors de pagina breken -->
+  <script>
+    (function(){
+      window.onerror = function(msg, url, line, col, err) {
+        console.error('[GrowSocial] Uncaught error:', msg, url, line, col, err);
+        return true;
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('[GrowSocial] Unhandled promise rejection:', e.reason);
+        e.preventDefault();
+      });
+    })();
   </script>
   
   <!-- Vercel Speed Insights -->
