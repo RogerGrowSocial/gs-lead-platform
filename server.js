@@ -669,12 +669,17 @@ app.get("/support", (req, res) => {
   })
 })
 
-// Homepage route
+// Homepage route (app.growsocialmedia.nl)
+// Niet ingelogd -> /login | Normale klant -> /dashboard | Admin -> /admin/dashboard
 app.get("/", (req, res) => {
-  if (req.user || req.session.user) {
-    return res.redirect("/dashboard")
+  if (!req.user && !req.session?.user) {
+    return res.redirect("/login")
   }
-  res.render("index", { layout: false })
+  const isAdmin = req.user?.is_admin === true || req.user?.user_metadata?.is_admin === true
+  if (isAdmin) {
+    return res.redirect("/admin/dashboard")
+  }
+  return res.redirect("/dashboard")
 })
 
 // API Routes
