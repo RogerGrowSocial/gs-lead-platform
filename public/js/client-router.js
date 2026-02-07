@@ -8,6 +8,8 @@
 
   // Config
   const CONFIG = {
+    // Force full page reload i.p.v. client-side nav (fix voor CSS/scripts niet laden bij tab switch)
+    forceFullReload: true,
     // Routes die client-side geladen moeten worden (alle admin en dashboard routes)
     clientRoutes: [
       '/dashboard',
@@ -46,6 +48,7 @@
    * Check of een route client-side geladen moet worden
    */
   function shouldHandleClientSide(href) {
+    if (CONFIG.forceFullReload) return false;
     // Skip externe links
     if (href.startsWith('http://') || href.startsWith('https://')) {
       return false;
@@ -364,22 +367,14 @@
         'cdn.datatables.net'
       ];
 
-      // 1. Verwijder oude page-specific stylesheets die de nieuwe pagina niet nodig heeft
-      const newPageHrefs = new Set(newStylesheets.map(link => resolveHref(link)));
-      document.head.querySelectorAll('link[rel="stylesheet"][data-page-specific="true"]').forEach(link => {
-        const href = resolveHref(link);
-        if (!newPageHrefs.has(href)) {
-          link.remove();
-        }
-      });
-
-      // 2. Rebuild existingHrefs na verwijdering (anders missen we nieuwe stylesheets)
+      // 1. VERWIJDER GEEN stylesheets - alleen toevoegen (voorkomt "geen CSS" bug bij tab switch)
+      // Oude page-specific verwijderen veroorzaakte ontbrekende CSS; accumulatie is acceptabel
       existingHrefs.clear();
       document.head.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
         existingHrefs.add(resolveHref(link));
       });
 
-      // 3. Voeg nieuwe page-specific stylesheets toe
+      // 2. Voeg nieuwe page-specific stylesheets toe
       const addedLinks = [];
       newStylesheets.forEach(link => {
         const href = resolveHref(link);
@@ -430,9 +425,7 @@
             
             oldScript.parentNode.replaceChild(newScript, oldScript);
           });
-        })).catch(() => {
-          // Continue even if some scripts fail
-        });
+        })).catch(() => {});
       }
 
       // Trigger custom event voor andere scripts
