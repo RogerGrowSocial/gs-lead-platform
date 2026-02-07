@@ -391,7 +391,7 @@ router.post("/api/users", requireAuth, isAdmin, async (req, res) => {
           type: 'recovery',
           email: email,
           options: {
-            redirectTo: `${process.env.SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+            redirectTo: `${process.env.SITE_URL || process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000'}/auth/reset-password`
           }
         });
         
@@ -5880,8 +5880,9 @@ router.get('/api/mail/signature', requireAuth, isAdmin, async (req, res) => {
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
+const _isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV
 
-const signatureStorage = multer.diskStorage({
+const signatureStorage = _isVercel ? multer.memoryStorage() : multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'signatures')
     if (!fs.existsSync(uploadDir)) {
@@ -5903,23 +5904,24 @@ router.post('/api/upload-signature-photo', requireAuth, isAdmin, uploadSignature
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Geen foto geüpload' })
     }
-    
-    const imageUrl = '/uploads/signatures/' + req.file.filename
-    
-    res.json({ 
-      success: true, 
-      url: imageUrl,
-      message: 'Foto succesvol geüpload' 
-    })
+    let imageUrl
+    if (_isVercel && req.file.buffer) {
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ success: false, message: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.png'
+      const fileName = `signatures/signature-${req.user.id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true })
+      if (uploadErr) return res.status(500).json({ success: false, message: 'Fout bij uploaden: ' + uploadErr.message })
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      imageUrl = publicUrl
+    } else {
+      imageUrl = '/uploads/signatures/' + req.file.filename
+    }
+    res.json({ success: true, url: imageUrl, message: 'Foto succesvol geüpload' })
   } catch (error) {
     console.error('Upload error:', error)
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
-    res.status(500).json({ 
-      success: false, 
-      message: 'Er is een fout opgetreden bij het uploaden' 
-    })
+    if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
+    res.status(500).json({ success: false, message: 'Er is een fout opgetreden bij het uploaden' })
   }
 })
 
@@ -11168,7 +11170,7 @@ router.post('/api/contacts/:id/convert-to-opportunity', requireAuth, isAdmin, as
 })
 
 // Contact photo upload endpoint
-const contactPhotoStorage = multer.diskStorage({
+const contactPhotoStorage = _isVercel ? multer.memoryStorage() : multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'contact-photos')
     if (!fs.existsSync(uploadDir)) {
@@ -11204,10 +11206,19 @@ router.post('/api/contacts/:id/photo', requireAuth, isAdmin, uploadContactPhoto.
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Geen bestand geüpload' })
     }
-    
-    const photoUrl = '/uploads/contact-photos/' + req.file.filename
-    
-    // Update contact with photo URL
+    let photoUrl
+    if (_isVercel && req.file.buffer) {
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ success: false, error: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.png'
+      const fileName = `contact-photos/contact-photo-${id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true })
+      if (uploadErr) return res.status(500).json({ success: false, error: 'Fout bij uploaden: ' + uploadErr.message })
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      photoUrl = publicUrl
+    } else {
+      photoUrl = '/uploads/contact-photos/' + req.file.filename
+    }
     const { data: contact, error: updateError } = await supabaseAdmin
       .from('contacts')
       .update({
@@ -11219,20 +11230,13 @@ router.post('/api/contacts/:id/photo', requireAuth, isAdmin, uploadContactPhoto.
       .single()
     
     if (updateError) {
-      // Delete uploaded file if database update fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path)
-      }
+      if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
       return res.status(500).json({ success: false, error: 'Fout bij bijwerken contactpersoon: ' + updateError.message })
     }
-    
     res.json({ success: true, photo_url: photoUrl, contact })
   } catch (error) {
     console.error('Contact photo upload error:', error)
-    // Clean up file if error occurs
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
+    if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
     res.status(500).json({ success: false, error: error.message || 'Fout bij uploaden foto' })
   }
 })
@@ -12900,7 +12904,7 @@ router.post('/api/customers', requireAuth, isAdmin, async (req, res) => {
                   type: 'recovery',
                   email: email,
                   options: {
-                    redirectTo: `${process.env.SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+                    redirectTo: `${process.env.SITE_URL || process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000'}/auth/reset-password`
                   }
                 });
                 
@@ -13063,7 +13067,7 @@ router.post('/api/customers/:id/logo', requireAuth, isAdmin, (req, res, next) =>
 })
 
 // Employee profile picture upload storage
-const employeeProfileStorage = multer.diskStorage({
+const employeeProfileStorage = _isVercel ? multer.memoryStorage() : multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'profiles')
     if (!fs.existsSync(uploadDir)) {
@@ -13099,10 +13103,19 @@ router.post('/api/employees/:id/profile-picture', requireAuth, isAdmin, uploadEm
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Geen bestand geüpload' })
     }
-    
-    const imageUrl = '/uploads/profiles/' + req.file.filename
-    
-    // Update employee profile with picture URL
+    let imageUrl
+    if (_isVercel && req.file.buffer) {
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ success: false, error: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.png'
+      const fileName = `profiles/employee-profile-${id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true })
+      if (uploadErr) return res.status(500).json({ success: false, error: 'Fout bij uploaden: ' + uploadErr.message })
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      imageUrl = publicUrl
+    } else {
+      imageUrl = '/uploads/profiles/' + req.file.filename
+    }
     const { data: employee, error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -13114,26 +13127,19 @@ router.post('/api/employees/:id/profile-picture', requireAuth, isAdmin, uploadEm
       .single()
     
     if (updateError) {
-      // Delete uploaded file if database update fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path)
-      }
+      if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
       return res.status(500).json({ success: false, error: 'Fout bij bijwerken werknemer: ' + updateError.message })
     }
-    
     res.json({ success: true, profile_picture: imageUrl, employee })
   } catch (error) {
     console.error('Profile picture upload error:', error)
-    // Clean up file if error occurs
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
+    if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
     res.status(500).json({ success: false, error: error.message || 'Fout bij uploaden profielfoto' })
   }
 })
 
 // Contract document upload storage for customers
-const customerContractStorage = multer.diskStorage({
+const customerContractStorage = _isVercel ? multer.memoryStorage() : multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'customer-contracts')
     if (!fs.existsSync(uploadDir)) {
@@ -13170,11 +13176,8 @@ router.post('/api/customers/:id/contract', requireAuth, isAdmin, uploadCustomerC
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'Geen bestand geüpload' })
     }
-    
-    const documentUrl = '/uploads/customer-contracts/' + req.file.filename
+    let documentUrl
     let originalFileName = req.file.originalname
-    
-    // Fix encoding issues
     if (typeof originalFileName === 'string') {
       try {
         if (originalFileName.includes('Ã') || originalFileName.includes('Ì')) {
@@ -13184,8 +13187,18 @@ router.post('/api/customers/:id/contract', requireAuth, isAdmin, uploadCustomerC
         console.warn('Could not normalize filename encoding:', e.message)
       }
     }
-    
-    // Update customer with contract URL
+    if (_isVercel && req.file.buffer) {
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ success: false, error: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.pdf'
+      const fileName = `customer-contracts/customer-contract-${id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true })
+      if (uploadErr) return res.status(500).json({ success: false, error: 'Fout bij uploaden: ' + uploadErr.message })
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      documentUrl = publicUrl
+    } else {
+      documentUrl = '/uploads/customer-contracts/' + req.file.filename
+    }
     const { data: customer, error: updateError } = await supabaseAdmin
       .from('customers')
       .update({
@@ -13198,18 +13211,13 @@ router.post('/api/customers/:id/contract', requireAuth, isAdmin, uploadCustomerC
       .single()
     
     if (updateError) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path)
-      }
+      if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
       return res.status(500).json({ success: false, error: 'Fout bij bijwerken klant: ' + updateError.message })
     }
-    
     res.json({ success: true, url: documentUrl, filename: originalFileName, customer })
   } catch (error) {
     console.error('Contract upload error:', error)
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
+    if (!_isVercel && req.file?.path) fs.unlinkSync(req.file.path)
     res.status(500).json({ success: false, error: error.message || 'Fout bij uploaden contract' })
   }
 })
@@ -13219,18 +13227,22 @@ router.delete('/api/customers/:id/contract', requireAuth, isAdmin, async (req, r
   try {
     const { id } = req.params
     
-    // Get current contract URL
     const { data: customer } = await supabaseAdmin
       .from('customers')
       .select('contract_document_url')
       .eq('id', id)
       .single()
     
-    // Delete file if exists
     if (customer?.contract_document_url) {
-      const filePath = path.join(__dirname, '..', 'public', customer.contract_document_url)
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
+      const url = customer.contract_document_url
+      if (url.startsWith('http') && url.includes('supabase') && url.includes('/storage/')) {
+        const match = url.match(/\/object\/public\/uploads\/(.+)$/)
+        if (match) {
+          await supabaseAdmin.storage.from('uploads').remove([match[1]])
+        }
+      } else {
+        const filePath = path.join(__dirname, '..', 'public', url)
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
       }
     }
     

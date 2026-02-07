@@ -139,7 +139,7 @@ class NotificationService {
         first_name: profile.first_name || 'Gebruiker',
         last_name: profile.last_name || '',
         company_name: profile.company_name || '',
-        dashboard_url: process.env.DASHBOARD_URL || `http://localhost:3000/dashboard`,
+        dashboard_url: process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard',
         email: profile.email
       };
 
@@ -274,7 +274,7 @@ class NotificationService {
       email: leadData.email,
       phone: leadData.phone,
       industry: leadData.industry,
-      lead_url: `${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/${leadData.lead_id}`
+      lead_url: `${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/${leadData.lead_id}`
     });
 
     // Also send WhatsApp notification if enabled

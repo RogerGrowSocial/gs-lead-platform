@@ -5,7 +5,13 @@ node_modules/
 .DS_Store
 *.log
 logs/
+
+# WordPress/PHP – niet van dit project
+public/img/*.php
 backups/
+
+# PHP files (niet gebruikt in Node project; per ongeluk gecommit)
+public/img/*.php
 *.sql
 *.sql.gz
 *.bundle

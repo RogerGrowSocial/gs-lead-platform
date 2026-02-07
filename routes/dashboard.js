@@ -1582,7 +1582,7 @@ router.post('/settings/test-notifications', requireAuth, async (req, res) => {
         phone: '+31 6 12345678',
         industry: 'IT & Software',
         lead_id: 'test-lead-id',
-        lead_url: `${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/test-lead-id`
+        lead_url: `${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/test-lead-id`
       }, { force: true, overrideEmail: recipientEmail, subjectSuffix: testSuffix });
       if (result) {
         sentNotifications.push('Nieuwe lead');
@@ -1639,7 +1639,7 @@ router.post('/settings/test-notifications', requireAuth, async (req, res) => {
         phone: '+31 6 12345678',
         industry: 'IT & Software',
         lead_id: 'test-lead-id-2',
-        lead_url: `${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/test-lead-id-2`
+        lead_url: `${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/test-lead-id-2`
       }, { force: true, overrideEmail: recipientEmail, subjectSuffix: testSuffix });
       if (result) {
         sentNotifications.push('Lead toegewezen');
@@ -1793,7 +1793,7 @@ router.post('/settings/test-whatsapp', requireAuth, async (req, res) => {
           company_name: 'Test Bedrijf B.V.',
           contact_name: 'Jan Janssen',
           email: 'jan@testbedrijf.nl',
-          dashboard_url: `${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/test-lead-id`
+          dashboard_url: `${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/test-lead-id`
         }
       });
     } else {
@@ -4055,7 +4055,8 @@ router.post('/api/leads/:id/message', requireAuth, async (req, res) => {
     }
 
     // ALWAYS send email AND WhatsApp notification to customer
-    const leadUrl = `${process.env.DASHBOARD_URL || 'http://localhost:3000'}/dashboard/leads/${leadId}`;
+    const dashboardBase = process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard';
+    const leadUrl = `${dashboardBase}/leads/${leadId}`;
     
     // Send email notification
     if (lead.email) {

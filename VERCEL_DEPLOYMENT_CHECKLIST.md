@@ -1,12 +1,28 @@
 # Vercel Deployment Checklist
 
-**Laatste update:** 2025-01-14
+**Laatste update:** 2026-02-07
 
 Deze checklist bevat alle fixes en verificaties die zijn toegepast voor Vercel deployment.
 
 ---
 
-## ✅ Toegepaste Fixes
+## ✅ Toegepaste Fixes (2026-02-07 Production Parity)
+
+### Session & Uploads
+- ✅ **cookie-session** op Vercel i.p.v. express-session MemoryStore (auth werkt nu serverless)
+- ✅ **trust proxy** voor cookies achter Vercel
+- ✅ **Alle uploads** (profile, signature, contact-photo, contracts) → Supabase Storage op Vercel
+- ✅ **DELETE handlers** voor contracten verwijderen ook uit Supabase Storage
+
+### Overige
+- ✅ Tailwind CDN in production (admin layout)
+- ✅ FontAwesome CDN in users.ejs
+- ✅ SITE_URL/DASHBOARD_URL fallback naar APP_URL
+- ✅ Node engines 18.x, .nvmrc
+
+---
+
+## ✅ Toegepaste Fixes (Eerder)
 
 ### 1. Serverless Function Configuration
 - ✅ `api/index.js` entrypoint aangemaakt
@@ -101,6 +117,11 @@ Na deployment, test de volgende functionaliteiten:
 - [ ] Database queries werken
 - [ ] RLS (Row Level Security) werkt correct
 
+### Uploads
+- [ ] Profile picture upload werkt
+- [ ] Contract upload (employee/customer) werkt
+- [ ] Contact photo upload werkt
+
 ### Integrations
 - [ ] Mollie betalingen (als geconfigureerd)
 - [ ] Google Ads API (als geconfigureerd)
@@ -117,15 +138,18 @@ Na deployment, test de volgende functionaliteiten:
 
 ### 2. File Writes
 **Probleem:** Vercel heeft read-only filesystem  
-**Oplossing:** Winston logger schrijft alleen naar console op Vercel
+**Oplossing:** Winston logger → console. Alle uploads → Supabase Storage (memoryStorage + .upload())
 
-### 3. Long-Running Processes
+### 3. Supabase Storage
+**Vereiste:** Bucket `uploads` moet bestaan in Supabase (Dashboard → Storage). Maak publiek voor profile/logo/photo URLs. Zie `docs/SUPABASE_STORAGE_SETUP.md`.
+
+### 4. Long-Running Processes
 **Probleem:** Serverless functions hebben max duration (30s in config)  
 **Oplossing:** Zware operaties moeten worden opgesplitst of naar background jobs
 
-### 4. Memory Limits
+### 5. Memory Limits
 **Probleem:** Serverless functions hebben memory limits  
-**Oplossing:** Memory is ingesteld op 1024MB in `vercel.json`
+**Oplossing:** Vercel Active CPU billing negeert memory setting; default limits gelden
 
 ---
 

@@ -44,8 +44,7 @@
   <% if (typeof extraHead !== 'undefined' && extraHead) { %>
     <%- extraHead %>
   <% } %>
-  <!-- Tailwind CSS CDN (alleen in development) - loaded async -->
-  <% if (process.env.NODE_ENV !== 'production') { %>
+  <!-- Tailwind CSS CDN - loaded async (prod parity: was only dev, caused layout regressions) -->
   <script src="https://cdn.tailwindcss.com" defer></script>
   <script>
     // Configure tailwind when it loads (non-blocking)
@@ -60,7 +59,6 @@
       }
     });
   </script>
-  <% } %>
   
   
   <style>

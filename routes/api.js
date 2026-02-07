@@ -1618,7 +1618,7 @@ router.put("/user/lead-pause", requireAuth, async (req, res) => {
           console.error('Error fetching profile for email:', profileErr)
         }
 
-        const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'
+        const dashboardUrl = process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'
         const reasonText = pause_reason || 'Onbekend'
         const otherText = pause_other_reason ? ` (${pause_other_reason})` : ''
         const expiresText = pause_expires_at ? new Date(pause_expires_at).toLocaleString('nl-NL') : 'Geen einddatum opgegeven'
@@ -15489,7 +15489,8 @@ router.delete('/payroll/scales/:id', requireAuth, async (req, res) => {
 })
 
 // Contract document upload storage
-const contractStorage = multer.diskStorage({
+const _isVercelApi = process.env.VERCEL === '1' || process.env.VERCEL_ENV
+const contractStorage = _isVercelApi ? multer.memoryStorage() : multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'contracts')
     if (!fs.existsSync(uploadDir)) {
@@ -15551,15 +15552,27 @@ router.post('/employees/:id/contract', requireAuth, (req, res, next) => {
     }
     
     if (!isUserAdmin && !isUserManager) {
-      if (req.file) fs.unlinkSync(req.file.path)
+      if (req.file && !_isVercelApi && req.file.path) fs.unlinkSync(req.file.path)
       return res.status(403).json({ ok: false, error: 'Alleen managers en admins kunnen contracten uploaden' })
     }
     
     if (!req.file) {
       return res.status(400).json({ ok: false, error: 'Geen bestand geüpload' })
     }
-    
-    const documentUrl = '/uploads/contracts/' + req.file.filename
+    let documentUrl
+    if (_isVercelApi && req.file.buffer) {
+      const { ensureStorageBucket } = require('../utils/storage')
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ ok: false, error: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.pdf'
+      const fileName = `contracts/contract-${id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, { contentType: req.file.mimetype, upsert: true })
+      if (uploadErr) return res.status(500).json({ ok: false, error: 'Fout bij uploaden: ' + uploadErr.message })
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      documentUrl = publicUrl
+    } else {
+      documentUrl = '/uploads/contracts/' + req.file.filename
+    }
     // Get original filename and ensure proper UTF-8 encoding
     let originalFileName = req.file.originalname
     
@@ -15589,8 +15602,7 @@ router.post('/employees/:id/contract', requireAuth, (req, res, next) => {
       .eq('id', id)
     
     if (updateError) {
-      // Delete uploaded file if database update fails
-      fs.unlinkSync(req.file.path)
+      if (!_isVercelApi && req.file?.path) fs.unlinkSync(req.file.path)
       throw updateError
     }
     
@@ -15602,9 +15614,7 @@ router.post('/employees/:id/contract', requireAuth, (req, res, next) => {
     })
   } catch (error) {
     console.error('Contract upload error:', error)
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
+    if (!_isVercelApi && req.file?.path) fs.unlinkSync(req.file.path)
     res.status(500).json({ 
       ok: false, 
       error: error.message || 'Er is een fout opgetreden bij het uploaden' 
@@ -15637,7 +15647,6 @@ router.delete('/employees/:id/contract', requireAuth, async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Alleen managers en admins kunnen contracten verwijderen' })
     }
     
-    // Get current contract URL
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('contract_document_url')
@@ -15646,11 +15655,16 @@ router.delete('/employees/:id/contract', requireAuth, async (req, res) => {
     
     if (profileError) throw profileError
     
-    // Delete file if exists
     if (profile?.contract_document_url) {
-      const filePath = path.join(__dirname, '..', 'public', profile.contract_document_url)
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
+      const url = profile.contract_document_url
+      if (url.startsWith('http') && url.includes('supabase') && url.includes('/storage/')) {
+        const match = url.match(/\/object\/public\/uploads\/(.+)$/)
+        if (match) {
+          await supabaseAdmin.storage.from('uploads').remove([match[1]])
+        }
+      } else {
+        const filePath = path.join(__dirname, '..', 'public', url)
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
       }
     }
     

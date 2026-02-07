@@ -140,25 +140,26 @@ const startRefresh = Date.now()
 const { refreshIfNeeded } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
 console.log(`✅ middleware/auth (refreshIfNeeded) loaded (${Date.now() - startRefresh}ms)`)
 
-// Multer configuration for profile picture uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'public', 'uploads', 'profiles')
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-    cb(null, uploadDir)
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    const ext = path.extname(file.originalname)
-    cb(null, 'profile-' + req.user.id + '-' + uniqueSuffix + ext)
-  }
-})
+// Multer: memoryStorage on Vercel (read-only FS); diskStorage locally
+const storage = isVercel
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, 'public', 'uploads', 'profiles')
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true })
+        }
+        cb(null, uploadDir)
+      },
+      filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+        const ext = path.extname(file.originalname)
+        cb(null, 'profile-' + req.user.id + '-' + uniqueSuffix + ext)
+      }
+    })
 
 const upload = multer({
-  storage: storage,
+  storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
   fileFilter: function (req, file, cb) {
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
@@ -306,26 +307,45 @@ const mailHtmlNoCache = (req, res, next) => {
 
 app.use('/admin/mail', mailHtmlNoCache)
 
-// Sessie configuratie
-// Determine cookie domain dynamically - don't set domain on Vercel
+// Trust proxy (required for cookies behind Vercel)
+app.set('trust proxy', 1)
+
+// Sessie: cookie-session op Vercel (geen MemoryStore); express-session lokaal
 const isVercelForCookies = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
 const sessionCookieDomain = isVercelForCookies ? undefined : (process.env.NODE_ENV === "production" ? '.growsocial.nl' : undefined);
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "gs-lead-platform-secret",
-    resave: false,
-    saveUninitialized: false,
+if (isVercelForCookies) {
+  const cookieSession = require('cookie-session')
+  app.use(cookieSession({
     name: 'gs.sid',
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24, // 1 dag
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? 'lax' : 'lax', // Changed from 'none' to 'lax' for better compatibility
-      domain: sessionCookieDomain
-    },
-  }),
-)
+    keys: [process.env.SESSION_SECRET || 'gs-lead-platform-secret'],
+    maxAge: 1000 * 60 * 60 * 24, // 1 dag
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: 'lax',
+    domain: sessionCookieDomain
+  }))
+  app.use((req, res, next) => {
+    if (!req.session.save) req.session.save = (cb) => { if (cb) cb(); return Promise.resolve() }
+    next()
+  })
+} else {
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "gs-lead-platform-secret",
+      resave: false,
+      saveUninitialized: false,
+      name: 'gs.sid',
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24, // 1 dag
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === "production" ? 'lax' : 'lax',
+        domain: sessionCookieDomain
+      },
+    }),
+  )
+}
 
 // Attach req.user if session valid or refreshable
 app.use(refreshIfNeeded)
@@ -694,13 +714,32 @@ app.post("/api/upload-profile-picture", requireAuth, upload.single('profilePictu
       })
     }
     
-    const imageUrl = '/uploads/profiles/' + req.file.filename
+    const { supabaseAdmin } = require('./config/supabase')
+    let imageUrl
+    
+    if (isVercel && req.file.buffer) {
+      const { ensureStorageBucket } = require('./utils/storage')
+      const bucketOk = await ensureStorageBucket('uploads', true)
+      if (!bucketOk) return res.status(500).json({ success: false, message: 'Storage niet beschikbaar' })
+      const ext = path.extname(req.file.originalname) || '.png'
+      const fileName = `profiles/profile-${req.user.id}-${Date.now()}${ext}`
+      const { error: uploadErr } = await supabaseAdmin.storage.from('uploads').upload(fileName, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true
+      })
+      if (uploadErr) {
+        console.error('Supabase Storage upload error:', uploadErr)
+        return res.status(500).json({ success: false, message: 'Fout bij uploaden: ' + uploadErr.message })
+      }
+      const { data: { publicUrl } } = supabaseAdmin.storage.from('uploads').getPublicUrl(fileName)
+      imageUrl = publicUrl
+    } else {
+      imageUrl = '/uploads/profiles/' + req.file.filename
+    }
     
     console.log('📸 Uploading profile picture for user:', req.user.id)
     console.log('📸 Image URL:', imageUrl)
     
-    // Update profile in database
-    const { supabaseAdmin } = require('./config/supabase')
     const { data, error } = await supabaseAdmin
       .from('profiles')
       .update({ profile_picture: imageUrl })
@@ -710,8 +749,7 @@ app.post("/api/upload-profile-picture", requireAuth, upload.single('profilePictu
     
     if (error) {
       console.error('❌ Database update error:', error)
-      // Delete uploaded file if database update fails
-      fs.unlinkSync(req.file.path)
+      if (!isVercel && req.file.path) fs.unlinkSync(req.file.path)
       return res.status(500).json({ 
         success: false, 
         message: 'Fout bij opslaan in database: ' + error.message 
@@ -727,10 +765,7 @@ app.post("/api/upload-profile-picture", requireAuth, upload.single('profilePictu
     })
   } catch (error) {
     console.error('Upload error:', error)
-    // Clean up file if error occurs
-    if (req.file) {
-      fs.unlinkSync(req.file.path)
-    }
+    if (!isVercel && req.file?.path) fs.unlinkSync(req.file.path)
     res.status(500).json({ 
       success: false, 
       message: 'Er is een fout opgetreden bij het uploaden' 

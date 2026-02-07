@@ -200,7 +200,7 @@ class WhatsAppService {
             company_name: leadData.company_name || 'Onbekend bedrijf',
             contact_name: leadData.contact_name || 'Onbekend',
             email: leadData.email || 'Geen e-mail',
-            dashboard_url: `${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/${leadData.lead_id}`
+            dashboard_url: `${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/${leadData.lead_id}`
           }
         });
       } else {
@@ -211,7 +211,7 @@ Bedrijf: ${leadData.company_name || 'Onbekend bedrijf'}
 Naam: ${leadData.contact_name || 'Onbekend'}
 E-mail: ${leadData.email || 'Geen e-mail'}
 
-Bekijk de details: ${process.env.DASHBOARD_URL || 'http://localhost:3000/dashboard'}/leads/${leadData.lead_id}
+Bekijk de details: ${process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard'}/leads/${leadData.lead_id}
 
 Met vriendelijke groet,
 GrowSocial Team`;
