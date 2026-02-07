@@ -1083,7 +1083,8 @@
   <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
   
   <!-- Client-side router voor snelle navigatie -->
-  <script src="/js/client-router.js?v=2"></script>
+  <!-- client-router UIT: client-side nav zorgt dat DOMContentLoaded niet opnieuw vuurt → tabs/UI/CSS kapot; eerst server-navigatie stabiliseren -->
+  <!-- <script src="/js/client-router.js?v=2"></script> -->
   <script src="/js/main.js"></script>
   <% if (typeof scripts !== 'undefined' && scripts) { %>
     <% scripts.forEach(function(script) { %>

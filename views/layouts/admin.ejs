@@ -1305,7 +1305,8 @@
   </div>
   
   <!-- Client-side router voor snelle navigatie -->
-  <script src="/js/client-router.js?v=2"></script>
+  <!-- client-router UIT: client-side nav zorgt dat DOMContentLoaded niet opnieuw vuurt → tabs/UI/CSS kapot; eerst server-navigatie stabiliseren -->
+  <!-- <script src="/js/client-router.js?v=2"></script> -->
   <script src="/js/main.js"></script>
   <script>
     // Make user ID available for time tracker
