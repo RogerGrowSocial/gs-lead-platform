@@ -271,6 +271,40 @@
               </select>
             </div>
 
+            <!-- Task (switch) - shown when Klantenwerk or Support -->
+            <div id="timeTrackerSwitchTaskContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Taak</label>
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerSwitchTaskSearch" placeholder="Zoek taak..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+                <button type="button" id="timeTrackerSwitchTaskClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis taak">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div id="timeTrackerSwitchTaskDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerSwitchTaskId" />
+            </div>
+
+            <!-- Klant (switch) - shown when Klantenwerk or Support -->
+            <div id="timeTrackerSwitchCustomerContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Klant <span style="color: #ef4444;">*</span></label>
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerSwitchCustomerSearch" placeholder="Zoek klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+                <button type="button" id="timeTrackerSwitchCustomerClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis klant">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div id="timeTrackerSwitchCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerSwitchCustomerId" />
+            </div>
+
+            <!-- Contact (switch) -->
+            <div id="timeTrackerSwitchContactContainer" style="margin-bottom: 12px; display: none;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Contact</label>
+              <input type="text" id="timeTrackerSwitchContactSearch" placeholder="Zoek contact..." autocomplete="off" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+              <div id="timeTrackerSwitchContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerSwitchContactId" />
+            </div>
+
             <div style="margin-bottom: 12px;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
                 Titel <span style="color: #ef4444;">*</span>
@@ -339,6 +373,13 @@
             }
           });
         });
+        // Close task dropdown when field loses focus (e.g. user clicked elsewhere)
+        taskSearch.addEventListener('blur', () => {
+          const taskDropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
+          if (!taskDropdown) return;
+          // Delay so clicking an option in the list still works (option click runs before this)
+          setTimeout(() => { taskDropdown.style.display = 'none'; }, 200);
+        });
         // Update clear button visibility on change
         taskSearch.addEventListener('change', () => this.updateTaskClearButton());
       }
@@ -386,6 +427,58 @@
         contactSearch.addEventListener('input', (e) => this.handleContactSearch(e.target.value));
       }
 
+      // Switch activity change (when timer is running)
+      const switchActivity = this.popover.querySelector('#timeTrackerSwitchActivity');
+      if (switchActivity) {
+        switchActivity.addEventListener('change', () => this.handleSwitchActivityChange());
+      }
+
+      // Switch task search
+      const switchTaskSearch = this.popover.querySelector('#timeTrackerSwitchTaskSearch');
+      if (switchTaskSearch) {
+        switchTaskSearch.addEventListener('input', (e) => this.handleSwitchTaskSearch(e.target.value));
+        switchTaskSearch.addEventListener('focus', () => {
+          this.loadTasks().then(() => {
+            if (!switchTaskSearch.value || switchTaskSearch.value.length === 0) this.handleSwitchTaskSearch('');
+          });
+        });
+      }
+      const switchTaskClear = this.popover.querySelector('#timeTrackerSwitchTaskClear');
+      if (switchTaskClear) {
+        switchTaskClear.addEventListener('click', (e) => { e.stopPropagation(); this.clearSwitchTaskSelection(); });
+      }
+
+      // Switch customer search
+      const switchCustomerSearch = this.popover.querySelector('#timeTrackerSwitchCustomerSearch');
+      if (switchCustomerSearch) {
+        switchCustomerSearch.addEventListener('input', (e) => this.handleSwitchCustomerSearch(e.target.value));
+        switchCustomerSearch.addEventListener('focus', () => this.loadCustomers());
+      }
+      const switchCustomerClear = this.popover.querySelector('#timeTrackerSwitchCustomerClear');
+      if (switchCustomerClear) {
+        switchCustomerClear.addEventListener('click', (e) => { e.stopPropagation(); this.clearSwitchCustomerSelection(); });
+      }
+
+      // Switch contact search
+      const switchContactSearch = this.popover.querySelector('#timeTrackerSwitchContactSearch');
+      if (switchContactSearch) {
+        switchContactSearch.addEventListener('input', (e) => this.handleSwitchContactSearch(e.target.value));
+      }
+
+      // Close switch dropdowns on mousedown outside
+      document.addEventListener('mousedown', (e) => {
+        const closeIfOutside = (dropdownId, containerId) => {
+          const dropdown = this.popover.querySelector(dropdownId);
+          const container = this.popover.querySelector(containerId);
+          if (dropdown && container && dropdown.style.display === 'block' && !container.contains(e.target)) {
+            dropdown.style.display = 'none';
+          }
+        };
+        closeIfOutside('#timeTrackerSwitchTaskDropdown', '#timeTrackerSwitchTaskContainer');
+        closeIfOutside('#timeTrackerSwitchCustomerDropdown', '#timeTrackerSwitchCustomerContainer');
+        closeIfOutside('#timeTrackerSwitchContactDropdown', '#timeTrackerSwitchContactContainer');
+      });
+
       // Start button
       const startBtn = this.popover.querySelector('#timeTrackerStart');
       if (startBtn) {
@@ -404,8 +497,8 @@
         stopBtn.addEventListener('click', () => this.handleStop());
       }
 
-      // Close task dropdown when clicking outside the task field
-      document.addEventListener('click', (e) => {
+      // Close task dropdown when clicking outside the task field (mousedown = before focus move, so more reliable)
+      document.addEventListener('mousedown', (e) => {
         const taskDropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
         const taskContainer = this.popover.querySelector('#timeTrackerTaskContainer');
         if (taskDropdown && taskContainer && taskDropdown.style.display === 'block') {
@@ -429,7 +522,7 @@
       const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
       const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
 
-      if (activity === 'klantenwerk') {
+      if (activity === 'klantenwerk' || activity === 'support') {
         taskContainer.style.display = 'block';
         customerContainer.style.display = 'block';
         this.loadTasks();
@@ -438,7 +531,6 @@
         taskContainer.style.display = 'none';
         customerContainer.style.display = 'none';
         contactContainer.style.display = 'none';
-        // Clear task selection
         this.popover.querySelector('#timeTrackerTaskId').value = '';
         this.popover.querySelector('#timeTrackerTaskSearch').value = '';
         this.popover.querySelector('#timeTrackerCustomerId').value = '';
@@ -446,6 +538,32 @@
         this.popover.querySelector('#timeTrackerContactId').value = '';
         this.popover.querySelector('#timeTrackerContactSearch').value = '';
       }
+    }
+
+    handleSwitchActivityChange() {
+      const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
+      const taskContainer = this.popover.querySelector('#timeTrackerSwitchTaskContainer');
+      const customerContainer = this.popover.querySelector('#timeTrackerSwitchCustomerContainer');
+      const contactContainer = this.popover.querySelector('#timeTrackerSwitchContactContainer');
+
+      if (activity === 'klantenwerk' || activity === 'support') {
+        taskContainer.style.display = 'block';
+        customerContainer.style.display = 'block';
+        this.loadTasks();
+        this.loadCustomers();
+      } else {
+        taskContainer.style.display = 'none';
+        customerContainer.style.display = 'none';
+        contactContainer.style.display = 'none';
+        this.popover.querySelector('#timeTrackerSwitchTaskId').value = '';
+        this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = '';
+        this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
+        this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
+        this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+        this.popover.querySelector('#timeTrackerSwitchContactSearch').value = '';
+      }
+      this.updateSwitchTaskClearButton();
+      this.updateSwitchCustomerClearButton();
     }
 
     async loadTasks() {
@@ -729,6 +847,162 @@
       dropdown.style.display = 'block';
     }
 
+    handleSwitchTaskSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchTaskDropdown');
+      const filtered = (!query || query.length < 1)
+        ? this.tasks.slice(0, 50)
+        : this.tasks.filter(task => task.title?.toLowerCase().includes(query.toLowerCase()));
+
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen taken gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(task => `
+          <div class="task-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
+            data-task-id="${task.id}" data-task-title="${task.title || ''}"
+            data-customer-id="${task.customer_id || ''}" data-customer-name="${task.customer?.company_name || task.customer?.first_name + ' ' + task.customer?.last_name || ''}"
+            data-contact-id="${task.contact_id || ''}">
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${task.title || 'Geen titel'}</div>
+            ${task.customer ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${task.customer.company_name || task.customer.first_name + ' ' + task.customer.last_name}</div>` : ''}
+          </div>
+        `).join('');
+
+        dropdown.querySelectorAll('.task-option').forEach(option => {
+          option.addEventListener('click', () => {
+            const taskId = option.getAttribute('data-task-id');
+            const taskTitle = option.getAttribute('data-task-title');
+            const customerId = option.getAttribute('data-customer-id');
+            const customerName = option.getAttribute('data-customer-name');
+            const contactId = option.getAttribute('data-contact-id');
+
+            this.popover.querySelector('#timeTrackerSwitchTaskId').value = taskId;
+            this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = taskTitle;
+            this.popover.querySelector('#timeTrackerSwitchTaskDropdown').style.display = 'none';
+            this.updateSwitchTaskClearButton();
+
+            if (customerId && customerName) {
+              this.popover.querySelector('#timeTrackerSwitchCustomerId').value = customerId;
+              this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = customerName;
+              this.updateSwitchCustomerClearButton();
+              const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
+              if (noteEl && taskTitle && customerName) noteEl.value = `Taak: ${taskTitle} voor: ${customerName}`;
+              if (contactId) this.loadContactsForCustomerSwitch(customerId, contactId);
+            } else if (taskTitle) {
+              const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
+              if (noteEl) noteEl.value = `Taak: ${taskTitle}`;
+            }
+          });
+        });
+      }
+      dropdown.style.display = 'block';
+    }
+
+    handleSwitchCustomerSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchCustomerDropdown');
+      if (!query || query.length < 1) { dropdown.style.display = 'none'; return; }
+      const filtered = this.customers.filter(c => (c.company_name?.toLowerCase().includes(query.toLowerCase())) || (c.first_name?.toLowerCase().includes(query.toLowerCase())) || (c.last_name?.toLowerCase().includes(query.toLowerCase())) || (c.email?.toLowerCase().includes(query.toLowerCase())));
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen klanten gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(c => `
+          <div class="customer-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
+            data-customer-id="${c.id}" data-customer-name="${c.company_name || c.first_name + ' ' + c.last_name || c.email || ''}">
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${c.company_name || c.first_name + ' ' + c.last_name || c.email || 'Onbekend'}</div>
+          </div>
+        `).join('');
+        dropdown.querySelectorAll('.customer-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const customerId = opt.getAttribute('data-customer-id');
+            const customerName = opt.getAttribute('data-customer-name');
+            this.popover.querySelector('#timeTrackerSwitchCustomerId').value = customerId;
+            this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = customerName;
+            this.popover.querySelector('#timeTrackerSwitchCustomerDropdown').style.display = 'none';
+            this.updateSwitchCustomerClearButton();
+            const taskTitle = this.popover.querySelector('#timeTrackerSwitchTaskSearch').value;
+            const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
+            if (noteEl && taskTitle && customerName) noteEl.value = `Taak: ${taskTitle} voor: ${customerName}`;
+            this.loadContactsForCustomerSwitch(customerId);
+          });
+        });
+      }
+      dropdown.style.display = 'block';
+    }
+
+    async loadContactsForCustomerSwitch(customerId, selectedContactId = null) {
+      try {
+        const response = await fetch(`/admin/api/customers/${customerId}/contacts`, { credentials: 'include' });
+        const result = await response.json();
+        this.contacts = result.success && result.contacts ? result.contacts : (result.ok && result.data ? result.data : []);
+        const contactContainer = this.popover.querySelector('#timeTrackerSwitchContactContainer');
+        if (this.contacts.length > 0) {
+          contactContainer.style.display = 'block';
+          if (selectedContactId) {
+            const contact = this.contacts.find(c => c.id === selectedContactId);
+            if (contact) {
+              const name = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || '';
+              this.popover.querySelector('#timeTrackerSwitchContactId').value = contact.id;
+              this.popover.querySelector('#timeTrackerSwitchContactSearch').value = name;
+            }
+          }
+        } else {
+          contactContainer.style.display = 'none';
+        }
+      } catch (e) {
+        this.popover.querySelector('#timeTrackerSwitchContactContainer').style.display = 'none';
+      }
+    }
+
+    handleSwitchContactSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchContactDropdown');
+      if (!query || query.length < 1) { dropdown.style.display = 'none'; return; }
+      const filtered = this.contacts.filter(c => (c.first_name?.toLowerCase().includes(query.toLowerCase())) || (c.last_name?.toLowerCase().includes(query.toLowerCase())) || (c.email?.toLowerCase().includes(query.toLowerCase())));
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen contacten gevonden</div>';
+      } else {
+        dropdown.innerHTML = filtered.map(c => {
+          const name = (c.first_name || '') + ' ' + (c.last_name || '') || c.email || 'Onbekend';
+          return `<div class="contact-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" data-contact-id="${c.id}" data-contact-name="${name}"><div style="font-weight: 500; font-size: 14px;">${name}</div></div>`;
+        }).join('');
+        dropdown.querySelectorAll('.contact-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            this.popover.querySelector('#timeTrackerSwitchContactId').value = opt.getAttribute('data-contact-id');
+            this.popover.querySelector('#timeTrackerSwitchContactSearch').value = opt.getAttribute('data-contact-name');
+            this.popover.querySelector('#timeTrackerSwitchContactDropdown').style.display = 'none';
+          });
+        });
+      }
+      dropdown.style.display = 'block';
+    }
+
+    clearSwitchTaskSelection() {
+      this.popover.querySelector('#timeTrackerSwitchTaskId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = '';
+      this.updateSwitchTaskClearButton();
+      const customerContainer = this.popover.querySelector('#timeTrackerSwitchCustomerContainer');
+      if (customerContainer && customerContainer.style.display !== 'none') {
+        this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
+        this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
+        this.updateSwitchCustomerClearButton();
+      }
+    }
+
+    clearSwitchCustomerSelection() {
+      this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
+      this.updateSwitchCustomerClearButton();
+    }
+
+    updateSwitchTaskClearButton() {
+      const clearBtn = this.popover.querySelector('#timeTrackerSwitchTaskClear');
+      const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId');
+      if (clearBtn && taskId) clearBtn.style.display = (taskId.value && taskId.value.length > 0) ? 'block' : 'none';
+    }
+
+    updateSwitchCustomerClearButton() {
+      const clearBtn = this.popover.querySelector('#timeTrackerSwitchCustomerClear');
+      const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId');
+      if (clearBtn && customerId) clearBtn.style.display = (customerId.value && customerId.value.length > 0) ? 'block' : 'none';
+    }
+
     async loadCurrentEntry() {
       try {
         const response = await fetch(`/api/employees/${this.userId}/time-entries/active-timer`, {
@@ -771,6 +1045,15 @@
         if (noteEl) {
           noteEl.textContent = this.currentEntry.note || '';
           noteEl.style.display = this.currentEntry.note ? 'block' : 'none';
+        }
+
+        // Sync switch activity dropdown and show task/customer when Klantenwerk or Support
+        const switchActivitySelect = this.popover.querySelector('#timeTrackerSwitchActivity');
+        if (switchActivitySelect) {
+          const pn = (this.currentEntry.project_name || '').toLowerCase();
+          const match = ACTIVITY_TYPES.find(a => a.value === pn);
+          if (match) switchActivitySelect.value = match.value;
+          this.handleSwitchActivityChange();
         }
 
         // Update elapsed time
@@ -867,6 +1150,14 @@
         }
         return;
       }
+      if (activity === 'klantenwerk' || activity === 'support') {
+        if (!customerId || customerId.length === 0) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Kies een klant bij Klantenwerk of Support', 'error');
+          }
+          return;
+        }
+      }
 
       try {
         const body = {
@@ -909,6 +1200,9 @@
     async handleSwitch() {
       const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
       const note = this.popover.querySelector('#timeTrackerSwitchNote').value.trim();
+      const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId').value;
+      const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
+      const contactId = this.popover.querySelector('#timeTrackerSwitchContactId').value;
 
       if (!note) {
         if (typeof window.showNotification === 'function') {
@@ -917,15 +1211,29 @@
         return;
       }
 
+      if (activity === 'klantenwerk' || activity === 'support') {
+        if (!customerId || customerId.length === 0) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Kies een klant bij Klantenwerk of Support', 'error');
+          }
+          return;
+        }
+      }
+
       try {
+        const body = {
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+          note: note || null
+        };
+        if (taskId) body.task_id = taskId;
+        if (customerId) body.customer_id = customerId;
+        if (contactId) body.contact_id = contactId;
+
         const response = await fetch(`/api/employees/${this.userId}/time-entries/switch-task`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({
-            project_name: activity === 'klantenwerk' ? 'Klantenwerk' : activity,
-            note: note || null
-          })
+          body: JSON.stringify(body)
         });
 
         const result = await response.json();

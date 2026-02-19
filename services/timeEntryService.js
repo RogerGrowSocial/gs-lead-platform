@@ -483,7 +483,7 @@ class TimeEntryService {
       // First try with full joins, but handle errors gracefully
       let query = supabaseAdmin
         .from('time_entries')
-        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:profiles!time_entries_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email)')
+        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:customers!time_entries_customer_id_fkey(id, name, company_name, email), contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email)')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -596,6 +596,7 @@ class TimeEntryService {
           employee_id: employeeId,
           task_id: newEntryData.task_id || null,
           customer_id: newEntryData.customer_id || null,
+          contact_id: newEntryData.contact_id || null,
           project_name: newEntryData.project_name || null,
           start_at: now.toISOString(),
           end_at: null,

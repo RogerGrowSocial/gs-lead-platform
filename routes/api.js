@@ -14612,7 +14612,7 @@ router.get('/time-entries/all', requireAuth, async (req, res) => {
       .select(`
         *,
         employee:profiles!time_entries_employee_id_fkey(id, first_name, last_name, email),
-        customer:profiles!time_entries_customer_id_fkey(id, company_name, first_name, last_name, email),
+        customer:customers!time_entries_customer_id_fkey(id, name, company_name, email),
         task:employee_tasks(id, title)
       `)
       .order('start_at', { ascending: false });
