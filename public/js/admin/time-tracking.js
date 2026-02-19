@@ -20,15 +20,12 @@
   let timerInterval = null;
   let currentView = 'list';
 
-  // Initialize
-  function init() {
-    console.log('Time Tracking: Initializing...', { employeeId, isOwnPage });
-    
+  // Initialize – load active timer first so clock shows live immediately, then rest
+  async function init() {
     if (isOwnPage) {
-      loadActiveTimer();
+      await loadActiveTimer();
       startTimerUpdate();
     }
-    
     loadWeekOverview();
     loadTimeEntries();
     setupEventListeners();
@@ -61,55 +58,33 @@
     return `${mins}min`;
   }
 
-  // Load active timer
+  // Load active timer (called first so clock shows live immediately when clocked in)
   async function loadActiveTimer() {
     try {
-      console.log('Loading active timer for employee:', employeeId);
       const res = await fetch(`/api/employees/${employeeId}/time-entries/active-timer`, {
         cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
+        headers: { 'Cache-Control': 'no-cache' }
       });
       const data = await res.json();
       
-      console.log('Active timer response:', data);
-      
       if (data.ok && data.data) {
         activeTimer = data.data;
-        console.log('Active timer found:', activeTimer);
-        console.log('Active timer start_at:', activeTimer.start_at);
-        console.log('Active timer is_active_timer:', activeTimer.is_active_timer);
-        
-        // Make sure activeTimer is set before updating UI
         if (!activeTimer) {
-          console.error('Active timer data is null or undefined');
           activeTimer = null;
           updateClockUI(false);
           return;
         }
-        
-        // Wait a tiny bit to ensure DOM is ready, then update everything
-        setTimeout(() => {
-          // Immediately update timer display BEFORE updating UI
-          if (activeTimer.start_at) {
-            const start = new Date(activeTimer.start_at);
-            const now = new Date();
-            const elapsed = Math.floor((now - start) / 1000);
-            const timerEl = document.getElementById('clockTimer');
-            if (timerEl) {
-              timerEl.textContent = formatTime(elapsed);
-              console.log('Timer updated to:', formatTime(elapsed), 'from start_at:', activeTimer.start_at, 'elapsed seconds:', elapsed);
-            }
-          }
-          
-          // Update UI (this will also start the timer)
-          console.log('Calling updateClockUI(true) with activeTimer:', activeTimer);
-          updateClockUI(true);
-          updateActivityDisplay(); // Update activity badge
-        }, 50);
+        // Update timer display immediately (live), then full UI
+        const timerEl = document.getElementById('clockTimer');
+        if (timerEl && activeTimer.start_at) {
+          const start = new Date(activeTimer.start_at);
+          const now = new Date();
+          const elapsed = Math.floor((now - start) / 1000);
+          timerEl.textContent = formatTime(elapsed);
+        }
+        updateClockUI(true);
+        updateActivityDisplay();
       } else {
-        console.log('No active timer found');
         activeTimer = null;
         updateClockUI(false);
       }
@@ -122,8 +97,6 @@
 
   // Update clock UI
   function updateClockUI(isClockedIn) {
-    console.log('updateClockUI called with:', { isClockedIn, activeTimer: !!activeTimer, activeTimerData: activeTimer });
-    
     const statusText = document.getElementById('clockStatusText');
     const statusBadge = document.getElementById('clockStatusBadge');
     const timerEl = document.getElementById('clockTimer');
@@ -133,21 +106,9 @@
     const clockOutBtn = document.getElementById('clockOutBtn');
     const clockSecondaryActions = document.getElementById('clockSecondaryActions');
 
-    if (!statusText || !statusBadge || !timerEl || !timerSubtitle || !clockInBtn || !clockOutBtn || !clockSecondaryActions) {
-      console.error('Required DOM elements not found for updateClockUI', {
-        statusText: !!statusText,
-        statusBadge: !!statusBadge,
-        timerEl: !!timerEl,
-        timerSubtitle: !!timerSubtitle,
-        clockInBtn: !!clockInBtn,
-        clockOutBtn: !!clockOutBtn,
-        clockSecondaryActions: !!clockSecondaryActions
-      });
-      return;
-    }
+    if (!statusText || !statusBadge || !timerEl || !timerSubtitle || !clockInBtn || !clockOutBtn || !clockSecondaryActions) return;
 
     if (isClockedIn && activeTimer) {
-      console.log('Setting UI to clocked in state');
       statusText.textContent = 'Ingeklokt';
       statusBadge.classList.add('active');
       statusBadge.setAttribute('data-slot', 'badge');
@@ -188,8 +149,6 @@
         noteField.value = activeTimer.note;
       }
 
-      // Start timer
-      console.log('Starting timer interval...');
       startTimer();
       updateActivityDisplay(); // Show current activity
       
@@ -201,7 +160,6 @@
         }, 300);
       }
     } else {
-      console.log('Setting UI to not clocked in state');
       statusText.textContent = 'Niet ingeklokt';
       statusBadge.classList.remove('active');
       if (statusBadge && statusBadge.hasAttribute('data-slot')) {
@@ -219,32 +177,21 @@
     }
   }
 
-  // Start timer update
+  // Start timer update (1s tick for live elapsed time)
   function startTimer() {
-    if (timerInterval) {
-      console.log('Timer interval already running, skipping start');
-      return;
-    }
-    
-    console.log('Starting timer interval with activeTimer:', activeTimer);
+    if (timerInterval) return;
     timerInterval = setInterval(() => {
       if (activeTimer && activeTimer.start_at) {
         const start = new Date(activeTimer.start_at);
         const now = new Date();
         const elapsed = Math.floor((now - start) / 1000);
         const timerEl = document.getElementById('clockTimer');
-        if (timerEl) {
-          timerEl.textContent = formatTime(elapsed);
-        } else {
-          console.error('Timer element not found, stopping interval');
-          stopTimer();
-        }
+        if (timerEl) timerEl.textContent = formatTime(elapsed);
+        else stopTimer();
       } else {
-        console.warn('Active timer or start_at missing in interval, stopping');
         stopTimer();
       }
     }, 1000);
-    console.log('Timer interval started');
   }
 
   // Stop timer
@@ -720,7 +667,6 @@
     // Ensure it's Monday
     currentWeekStart = getWeekStart(currentWeekStart);
     currentWeekStart.setHours(0, 0, 0, 0);
-    console.log('Changed week to:', currentWeekStart);
     loadWeekOverview();
     loadTimeEntries();
   };
@@ -899,42 +845,10 @@
     });
   }
 
-  // Initialize on load - wait for CSS to be loaded
-  function initializeWhenReady() {
-    // Check if CSS is loaded
-    const isCSSLoaded = document.documentElement.classList.contains('css-loaded');
-    
-    if (isCSSLoaded) {
-      console.log('CSS loaded, initializing...');
-      init();
-    } else {
-      // Wait for CSS to load
-      const checkCSS = setInterval(() => {
-        if (document.documentElement.classList.contains('css-loaded')) {
-          clearInterval(checkCSS);
-          console.log('CSS loaded, initializing...');
-          init();
-        }
-      }, 10);
-      
-      // Fallback: initialize after max 500ms
-      setTimeout(() => {
-        clearInterval(checkCSS);
-        if (!document.documentElement.classList.contains('css-loaded')) {
-          console.log('CSS load timeout, initializing anyway...');
-          init();
-        }
-      }, 500);
-    }
-  }
-
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initializeWhenReady();
-    });
+    document.addEventListener('DOMContentLoaded', () => init());
   } else {
-    // DOM already loaded
-    initializeWhenReady();
+    init();
   }
 })();
 
