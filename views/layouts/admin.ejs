@@ -814,7 +814,7 @@
     }
   </style>
 </head>
-<body>
+<body<%= typeof bodyClass !== 'undefined' && bodyClass ? ' class="' + bodyClass + '"' : '' %>>
   <!-- Notification Container -->
   <div class="notification-container"></div>
   
@@ -1211,17 +1211,6 @@
           </div>
           <span class="menu-label">Handleidingen</span>
         </a>
-        <% if (canAccessAllMenus) { %>
-        <a href="/admin/sops/editor" class="menu-item <%= (activeMenu === 'sops' && locals.activeSubmenu === 'editor') ? 'active' : '' %>">
-          <div class="icon-container">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </div>
-          <span class="menu-label">Handleidingen bewerken</span>
-        </a>
-        <% } %>
 
         <!-- 11. ⚙️ Instellingen -->
         <a href="/admin/settings" class="menu-item <%= activeMenu === 'settings' ? 'active' : '' %>">
