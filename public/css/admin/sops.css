@@ -1,5 +1,15 @@
 /* SOP / Handleidingen - 2026 modern UI */
-.sops-page,
+
+/* Geen extra padding rond .sops-page (main-container heeft 24px) */
+.main-container:has(.sops-page) {
+  padding: 0;
+}
+.sops-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+
 .sops-reader,
 .sops-quiz-page,
 .sops-editor-page {
@@ -7,9 +17,79 @@
   margin: 0 auto;
 }
 
+.sops-header.page-header,
 .sops-header .page-header,
 .sops-editor-page .page-header {
   margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sops-header .header-actions {
+  flex-shrink: 0;
+}
+
+/* Knop Handleidingen bewerken (in header en empty state) */
+.btn-sop-beheer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #fff;
+  color: var(--primary-color, #ea5d0d);
+  border: 2px solid var(--primary-color, #ea5d0d);
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-sop-beheer:hover {
+  background: var(--primary-light, rgba(234, 93, 13, 0.1));
+}
+.btn-sop-beheer-primary {
+  background: var(--primary-color, #ea5d0d);
+  color: #fff;
+  border-color: var(--primary-color, #ea5d0d);
+  padding: 12px 24px;
+  margin-top: 8px;
+}
+.btn-sop-beheer-primary:hover {
+  background: var(--primary-hover, #d44a0b);
+  color: #fff;
+  border-color: var(--primary-hover, #d44a0b);
+}
+
+/* Empty state */
+.sops-empty {
+  text-align: center;
+  padding: 48px 24px;
+  margin-top: 24px;
+}
+.sops-empty-icon {
+  color: var(--text-muted, #9ca3af);
+  margin-bottom: 16px;
+}
+.sops-empty-icon svg {
+  width: 56px;
+  height: 56px;
+}
+.sops-empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0 0 8px 0;
+}
+.sops-empty-desc {
+  color: var(--text-secondary, #4b5563);
+  margin: 0 0 16px 0;
+}
+.sops-empty-hint {
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.9rem;
+  margin: 16px 0 0 0;
 }
 
 .sops-alert {
