@@ -3228,7 +3228,13 @@ router.post("/sops/:id/quiz", requireAuth, isEmployeeOrAdmin, async (req, res) =
     const sopId = req.params.id;
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, error: "Niet ingelogd" });
-    const answers = req.body.answers || {};
+    let answers = req.body.answers || {};
+    if (typeof answers === 'object' && Object.keys(answers).length === 0) {
+      answers = {};
+      Object.keys(req.body).forEach(k => {
+        if (k.startsWith('q_')) answers[k.slice(2)] = req.body[k];
+      });
+    }
     const { data: questions } = await supabaseAdmin
       .from('sop_quiz_questions')
       .select('id, options')
@@ -3290,7 +3296,14 @@ router.post("/api/sops/categories", requireAuth, isManagerOrAdmin, async (req, r
 router.put("/api/sops/categories/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     const { title, slug, description, icon, image_url, sort_order } = req.body;
-    const { data, error } = await supabaseAdmin.from('sop_categories').update({ title, slug, description, icon, image_url, sort_order: sort_order != null ? parseInt(sort_order, 10) : undefined }).eq('id', req.params.id).select().single();
+    const updates = {};
+    if (title !== undefined) updates.title = title;
+    if (slug !== undefined) updates.slug = slug;
+    if (description !== undefined) updates.description = description;
+    if (icon !== undefined) updates.icon = icon;
+    if (image_url !== undefined) updates.image_url = image_url;
+    if (sort_order != null) updates.sort_order = parseInt(sort_order, 10);
+    const { data, error } = await supabaseAdmin.from('sop_categories').update(updates).eq('id', req.params.id).select().single();
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -3341,16 +3354,16 @@ router.post("/api/sops", requireAuth, isManagerOrAdmin, async (req, res) => {
 router.put("/api/sops/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     const { category_id, title, slug, content, excerpt, illustration_url, sort_order, published } = req.body;
-    const { data, error } = await supabaseAdmin.from('sops').update({
-      category_id,
-      title,
-      slug,
-      content,
-      excerpt,
-      illustration_url,
-      sort_order: sort_order != null ? parseInt(sort_order, 10) : undefined,
-      published
-    }).eq('id', req.params.id).select().single();
+    const updates = {};
+    if (category_id !== undefined) updates.category_id = category_id;
+    if (title !== undefined) updates.title = title;
+    if (slug !== undefined) updates.slug = slug;
+    if (content !== undefined) updates.content = content;
+    if (excerpt !== undefined) updates.excerpt = excerpt;
+    if (illustration_url !== undefined) updates.illustration_url = illustration_url;
+    if (sort_order != null) updates.sort_order = parseInt(sort_order, 10);
+    if (published !== undefined) updates.published = published;
+    const { data, error } = await supabaseAdmin.from('sops').update(updates).eq('id', req.params.id).select().single();
     if (error) throw error;
     res.json(data);
   } catch (err) {
