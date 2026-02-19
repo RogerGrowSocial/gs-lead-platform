@@ -7,15 +7,12 @@ window.showNotification = (message, type = "info", duration = 5000, playSound = 
     container = document.createElement('div');
     container.className = 'notification-container';
     document.body.appendChild(container);
-    // Positioneer de container direct na aanmaken
     positionNotificationContainer();
   }
 
-  // Maak de notificatie
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   
-  // Voeg de inhoud toe
   notification.innerHTML = `
     <div class="notification-content">
       <div class="notification-message">${message}</div>
@@ -26,403 +23,241 @@ window.showNotification = (message, type = "info", duration = 5000, playSound = 
     </div>
   `;
 
-  // Voeg de notificatie toe aan de container
   container.appendChild(notification);
-  
-  // Zorg dat de container correct gepositioneerd is
   positionNotificationContainer();
 
-  // Start de progress bar animatie
   const progressBar = notification.querySelector('.notification-progress-bar');
   if (progressBar) {
     progressBar.style.width = '100%';
     progressBar.style.transition = `width ${duration}ms linear`;
-    setTimeout(() => {
-      progressBar.style.width = '0%';
-    }, 100);
+    setTimeout(() => { progressBar.style.width = '0%'; }, 100);
   }
 
-  // Voeg event listener toe voor de close button
-  const closeButton = notification.querySelector('.notification-close');
-  closeButton.addEventListener('click', () => {
+  notification.querySelector('.notification-close').addEventListener('click', () => {
     notification.classList.add('hiding');
-    setTimeout(() => {
-      notification.remove();
-      // Behoud de container - verwijder deze niet, alleen de notificatie
-      // Dit zorgt ervoor dat de container behouden blijft zoals in de layout
-    }, 300);
+    setTimeout(() => notification.remove(), 300);
   });
 
-  // Speel geluid af als dit is ingeschakeld
   if (playSound && !isNotificationSoundMuted()) {
-    playNotificationSound(type)
+    playNotificationSound(type);
   }
 
-  // Voeg hover effect toe
   notification.addEventListener("mouseenter", () => {
-    // Pauzeer de progress bar animatie
-    const progressBar = notification.querySelector(".notification-progress")
-    if (progressBar && progressBar.style.animationPlayState) {
-      progressBar.style.animationPlayState = "paused"
-    }
-  })
-
+    const pb = notification.querySelector(".notification-progress");
+    if (pb && pb.style.animationPlayState) pb.style.animationPlayState = "paused";
+  });
   notification.addEventListener("mouseleave", () => {
-    // Hervat de progress bar animatie
-    const progressBar = notification.querySelector(".notification-progress")
-    if (progressBar && progressBar.style.animationPlayState) {
-      progressBar.style.animationPlayState = "running"
-    }
-  })
+    const pb = notification.querySelector(".notification-progress");
+    if (pb && pb.style.animationPlayState) pb.style.animationPlayState = "running";
+  });
 
-  // Voeg progress bar animatie toe
   if (duration > 0) {
-    const progressBar = notification.querySelector(".notification-progress")
-    if (progressBar) {
-      progressBar.style.animation = `progressShrink ${duration}ms linear forwards`
-
-      // Sluit de notificatie automatisch na de opgegeven tijd
-      setTimeout(() => {
-        closeNotification(notification)
-      }, duration)
+    const pb = notification.querySelector(".notification-progress");
+    if (pb) {
+      pb.style.animation = `progressShrink ${duration}ms linear forwards`;
+      setTimeout(() => closeNotification(notification), duration);
     }
   }
 
-  // Voeg een subtiel pop effect toe
   setTimeout(() => {
-    notification.style.transform = "scale(1.03)"
+    notification.style.transform = "scale(1.03)";
     setTimeout(() => {
-      notification.style.transform = "scale(1)"
-      notification.style.transition = "transform 0.2s ease"
-    }, 50)
-  }, 10)
+      notification.style.transform = "scale(1)";
+      notification.style.transition = "transform 0.2s ease";
+    }, 50);
+  }, 10);
 
-  // Beperk het aantal notificaties tot 3
-  const notifications = container.querySelectorAll(".notification")
-  if (notifications.length > 3) {
-    // Verwijder de oudste notificatie (eerste kind)
-    closeNotification(notifications[0])
-  }
+  const notifications = container.querySelectorAll(".notification");
+  if (notifications.length > 3) closeNotification(notifications[0]);
 
-  return notification
-}
+  return notification;
+};
 
-// Functie om een notificatie te sluiten
 function closeNotification(notification) {
-  // Voeg de 'closing' class toe voor de animatie
-  notification.classList.add("closing")
-
-  // Verwijder de notificatie na de animatie
+  notification.classList.add("closing");
   setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification)
-    }
-  }, 300) // 300ms is de duur van de slide-out animatie
+    if (notification.parentNode) notification.parentNode.removeChild(notification);
+  }, 300);
 }
 
-// Functie om te controleren of notificatiegeluiden zijn gedempt
 function isNotificationSoundMuted() {
-  return localStorage.getItem("notificationSoundMuted") === "true"
+  return localStorage.getItem("notificationSoundMuted") === "true";
 }
 
-// Functie om notificatiegeluiden te dempen/ontdempen
 window.toggleNotificationSound = (muted) => {
-  localStorage.setItem("notificationSoundMuted", muted.toString())
+  localStorage.setItem("notificationSoundMuted", muted.toString());
+  window.showNotification(
+    muted ? "Notificatiegeluiden zijn uitgeschakeld" : "Notificatiegeluiden zijn ingeschakeld",
+    "info", 3000, false
+  );
+  return muted;
+};
 
-  // Toon een bevestigingsnotificatie (zonder geluid)
-  const message = muted ? "Notificatiegeluiden zijn uitgeschakeld" : "Notificatiegeluiden zijn ingeschakeld"
-  window.showNotification(message, "info", 3000, false)
-
-  return muted
-}
-
-// Functie om notificatiegeluid af te spelen
 function playNotificationSound(type) {
-  // Als geluiden zijn gedempt, speel dan geen geluid af
-  if (isNotificationSoundMuted()) {
-    console.log("Notificatiegeluiden zijn gedempt, geluid wordt niet afgespeeld")
-    return
-  }
-
-  // Bepaal welk geluidsbestand moet worden afgespeeld op basis van het type
-  let soundFile = ""
-  switch (type) {
-    case "success":
-      soundFile = "/sounds/notification-success.mp3"
-      break
-    case "error":
-      soundFile = "/sounds/notification-error.mp3"
-      break
-    case "warning":
-      soundFile = "/sounds/notification-warning.mp3"
-      break
-    case "info":
-    default:
-      soundFile = "/sounds/notification-info.mp3"
-      break
-  }
-
-  // Maak een nieuw Audio object en speel het geluid af
-  const audio = new Audio(soundFile)
-  audio.volume = 0.5 // Stel het volume in op 50%
-
-  // Probeer het geluid af te spelen, maar vang eventuele fouten af
-  audio.play().catch((error) => {
-    console.log("Kon notificatiegeluid niet afspelen:", error)
-  })
+  if (isNotificationSoundMuted()) return;
+  const files = { success: "notification-success", error: "notification-error", warning: "notification-warning", info: "notification-info" };
+  const name = files[type] || files.info;
+  const audio = new Audio("/sounds/" + name + ".mp3");
+  audio.volume = 0.5;
+  audio.play().catch(() => {});
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // User dropdown - Updated to work with admin layout
-  const userDropdownToggle = document.querySelector(".user-dropdown-toggle")
-  const userDropdownMenu = document.querySelector(".user-dropdown-menu")
-
-  if (userDropdownToggle && userDropdownMenu) {
-    // Initialize user info from data attributes
-    const userAvatar = userDropdownToggle.querySelector(".user-avatar")
-    const userName = userDropdownToggle.querySelector(".user-name")
-    const userRole = userDropdownToggle.querySelector(".user-role")
-    const dropdownIcon = userDropdownToggle.querySelector(".fa-chevron-down")
-
-    // Set initial state
-    userDropdownMenu.style.opacity = '0'
-    userDropdownMenu.style.visibility = 'hidden'
-    userDropdownMenu.style.transform = 'translateY(-10px)'
-    userDropdownMenu.classList.remove("show")
-
-    userDropdownToggle.addEventListener("click", (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      
-      // Toggle dropdown visibility using opacity and visibility
-      const isVisible = userDropdownMenu.classList.contains("show")
-      if (isVisible) {
-        userDropdownMenu.style.opacity = '0'
-        userDropdownMenu.style.visibility = 'hidden'
-        userDropdownMenu.style.transform = 'translateY(-10px)'
-        userDropdownMenu.classList.remove("show")
-      } else {
-        userDropdownMenu.style.opacity = '1'
-        userDropdownMenu.style.visibility = 'visible'
-        userDropdownMenu.style.transform = 'translateY(0)'
-        userDropdownMenu.classList.add("show")
-      }
-      
-      // Rotate dropdown icon
-      if (dropdownIcon) {
-        dropdownIcon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)'
-        dropdownIcon.style.transition = 'transform 0.2s ease'
-      }
-    })
-
-    // Close dropdown when clicking outside
-    document.addEventListener("click", (event) => {
-      if (!userDropdownToggle.contains(event.target) && !userDropdownMenu.contains(event.target)) {
-        userDropdownMenu.style.opacity = '0'
-        userDropdownMenu.style.visibility = 'hidden'
-        userDropdownMenu.style.transform = 'translateY(-10px)'
-        userDropdownMenu.classList.remove("show")
-        if (dropdownIcon) {
-          dropdownIcon.style.transform = 'rotate(0deg)'
-        }
-      }
-    })
-
-    // Close dropdown when pressing Escape
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && userDropdownMenu.classList.contains("show")) {
-        userDropdownMenu.style.opacity = '0'
-        userDropdownMenu.style.visibility = 'hidden'
-        userDropdownMenu.style.transform = 'translateY(-10px)'
-        userDropdownMenu.classList.remove("show")
-        if (dropdownIcon) {
-          dropdownIcon.style.transform = 'rotate(0deg)'
-        }
-      }
-    })
-  }
-
-  // Alert dismissal
-  const alertCloseButtons = document.querySelectorAll(".alert .close")
-
-  alertCloseButtons.forEach((button) => {
-    button.addEventListener("click", function () {
-      const alert = this.closest(".alert")
-      if (alert) {
-        alert.style.display = "none"
-      }
-    })
-  })
-
-  // Form validation
-  const forms = document.querySelectorAll(".needs-validation")
-
-  forms.forEach((form) => {
-    form.addEventListener(
-      "submit",
-      (event) => {
-        if (!form.checkValidity()) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
-
-        form.classList.add("was-validated")
-      },
-      false,
-    )
-  })
-
-  // Tooltips
-  const tooltips = document.querySelectorAll('[data-toggle="tooltip"]')
-
-  tooltips.forEach((tooltip) => {
-    tooltip.addEventListener("mouseenter", function () {
-      const tooltipText = this.getAttribute("data-title")
-
-      if (tooltipText) {
-        const tooltipEl = document.createElement("div")
-        tooltipEl.className = "tooltip"
-        tooltipEl.textContent = tooltipText
-
-        document.body.appendChild(tooltipEl)
-
-        const rect = this.getBoundingClientRect()
-        const tooltipRect = tooltipEl.getBoundingClientRect()
-
-        tooltipEl.style.top = rect.top - tooltipRect.height - 10 + "px"
-        tooltipEl.style.left = rect.left + rect.width / 2 - tooltipRect.width / 2 + "px"
-        tooltipEl.style.opacity = "1"
-
-        this.addEventListener(
-          "mouseleave",
-          () => {
-            document.body.removeChild(tooltipEl)
-          },
-          { once: true },
-        )
-      }
-    })
-  })
-
-  // Verbeterde tabs implementatie
-  const tabLinks = document.querySelectorAll('[data-toggle="tab"]')
-
-  tabLinks.forEach((link) => {
-    link.addEventListener("click", function (event) {
-      event.preventDefault()
-
-      const targetId = this.getAttribute("href")
-      const targetTab = document.querySelector(targetId)
-
-      if (targetTab) {
-        // Preload de tab content voordat we deze tonen
-        targetTab.style.opacity = "0"
-        targetTab.classList.add("active")
-
-        // Deactiveer alle tab links
-        tabLinks.forEach((tabLink) => {
-          tabLink.classList.remove("active")
-        })
-
-        // Activeer de aangeklikte tab link
-        this.classList.add("active")
-
-        // Wacht een kort moment om de browser te laten renderen
-        setTimeout(() => {
-          // Verberg alle andere tabs
-          const tabContents = document.querySelectorAll(".tab-pane")
-          tabContents.forEach((tab) => {
-            if (tab !== targetTab) {
-              tab.classList.remove("active")
-            }
-          })
-
-          // Toon de nieuwe tab met een fade-in effect
-          targetTab.style.opacity = "1"
-          targetTab.style.transition = "opacity 150ms ease-in-out"
-        }, 50)
-      }
-    })
-  })
-
-  // Initialiseer eerste tab indien aanwezig
-  const firstTabLink = document.querySelector('[data-toggle="tab"]')
-  if (firstTabLink) {
-    firstTabLink.click()
-  }
-
-  // Controleer of we op de admin pagina zijn en of we de welkomstnotificatie moeten tonen
-  if (window.location.pathname.includes("/admin")) {
-    // Controleer of we de welkomstnotificatie al hebben getoond in deze sessie
-    const skipWelcome = sessionStorage.getItem("skipWelcomeNotification")
-
-    // Toon de welkomstnotificatie alleen als we deze nog niet hebben getoond
-    if (!skipWelcome) {
-      console.log("Admin pagina gedetecteerd, toon welkomstnotificatie...")
-      setTimeout(() => {
-        if (typeof window.showNotification === "function") {
-          window.showNotification("Welkom bij het GrowSocial Admin Dashboard", "info", 3000)
-
-          // Sla op dat we de welkomstnotificatie hebben getoond
-          sessionStorage.setItem("skipWelcomeNotification", "true")
-        }
-      }, 1000)
-    } else {
-      
-    }
-  }
-})
-
-// Voorkom dat notificaties opnieuw worden getoond bij navigatie tussen pagina's
-// Dit zorgt ervoor dat de browser geen oude pagina's uit de cache laadt
-window.addEventListener("pageshow", (event) => {
-  // Als de pagina uit de cache wordt geladen (bij navigatie terug/vooruit)
-  if (event.persisted) {
-    // Verwijder eventuele bestaande notificaties
-    const container = document.querySelector(".notification-container")
-    if (container) {
-      container.innerHTML = ""
-    }
-  }
-})
-
-// Voorkom dat de browser pagina's uit de cache laadt bij navigatie
-window.addEventListener("unload", () => {
-  // Dit is een lege functie, maar het zorgt ervoor dat de browser
-  // de pagina niet uit de cache laadt bij navigatie terug/vooruit
-})
-
-// Functie om de notificatie container correct te positioneren
 function positionNotificationContainer() {
   const container = document.querySelector('.notification-container');
   if (!container) return;
-  
-  // Zet inline styles - deze hebben voorrang boven CSS
-  // Detecteer header
   const header = document.querySelector('header') || document.querySelector('.header');
-  if (header) {
-    const headerHeight = header.offsetHeight;
-    container.style.top = `${headerHeight + 10}px`; // 10px extra ruimte
-  } else {
-    container.style.top = '20px';
-  }
-  
-  // Detecteer sidebar aan de rechterkant
-  const rightSidebar = document.querySelector('.sidebar.right-sidebar') || 
-                       document.querySelector('.right-sidebar');
-  if (rightSidebar && window.innerWidth > 768) { // Alleen op desktop
-    const sidebarRect = rightSidebar.getBoundingClientRect();
-    const rightOffset = window.innerWidth - sidebarRect.left;
-    container.style.right = `${rightOffset + 10}px`; // 10px extra ruimte
-  } else {
-    container.style.right = '20px';
-  }
-  
-  // Zorg dat position fixed is ingesteld en altijd boven alles ligt
+  container.style.top = header ? `${header.offsetHeight + 10}px` : '20px';
+  const rightSidebar = document.querySelector('.sidebar.right-sidebar') || document.querySelector('.right-sidebar');
+  container.style.right = (rightSidebar && window.innerWidth > 768) ? `${window.innerWidth - rightSidebar.getBoundingClientRect().left + 10}px` : '20px';
   container.style.position = 'fixed';
   container.style.zIndex = '100000';
 }
 
-// Voer uit bij laden en bij resize
-document.addEventListener('DOMContentLoaded', positionNotificationContainer);
-window.addEventListener('resize', positionNotificationContainer);
+// Idempotent UI init: dropdown, alerts, forms, tooltips, tabs. Safe to call on DOMContentLoaded, app:pagechange, pageshow.
+window.initUI = function(opts) {
+  opts = opts || {};
+  const isInitial = opts.initial !== false;
+
+  // User dropdown — bind once per element
+  const userDropdownToggle = document.querySelector(".user-dropdown-toggle");
+  const userDropdownMenu = document.querySelector(".user-dropdown-menu");
+  if (userDropdownToggle && userDropdownMenu && !userDropdownToggle.dataset.gsBound) {
+    userDropdownToggle.dataset.gsBound = "1";
+    userDropdownMenu.style.opacity = '0';
+    userDropdownMenu.style.visibility = 'hidden';
+    userDropdownMenu.style.transform = 'translateY(-10px)';
+    const dropdownIcon = userDropdownToggle.querySelector(".fa-chevron-down");
+    userDropdownToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isVisible = userDropdownMenu.classList.contains("show");
+      userDropdownMenu.style.opacity = isVisible ? '0' : '1';
+      userDropdownMenu.style.visibility = isVisible ? 'hidden' : 'visible';
+      userDropdownMenu.style.transform = isVisible ? 'translateY(-10px)' : 'translateY(0)';
+      userDropdownMenu.classList.toggle("show", !isVisible);
+      if (dropdownIcon) dropdownIcon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    });
+    document.addEventListener("click", (event) => {
+      if (!userDropdownToggle.contains(event.target) && !userDropdownMenu.contains(event.target)) {
+        userDropdownMenu.style.opacity = '0';
+        userDropdownMenu.style.visibility = 'hidden';
+        userDropdownMenu.style.transform = 'translateY(-10px)';
+        userDropdownMenu.classList.remove("show");
+        if (dropdownIcon) dropdownIcon.style.transform = 'rotate(0deg)';
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && userDropdownMenu.classList.contains("show")) {
+        userDropdownMenu.style.opacity = '0';
+        userDropdownMenu.style.visibility = 'hidden';
+        userDropdownMenu.style.transform = 'translateY(-10px)';
+        userDropdownMenu.classList.remove("show");
+        if (dropdownIcon) dropdownIcon.style.transform = 'rotate(0deg)';
+      }
+    });
+  }
+
+  // Alert close — bind once per button
+  document.querySelectorAll(".alert .close").forEach((button) => {
+    if (button.dataset.gsBound) return;
+    button.dataset.gsBound = "1";
+    button.addEventListener("click", function () {
+      const alert = this.closest(".alert");
+      if (alert) alert.style.display = "none";
+    });
+  });
+
+  // Form validation
+  document.querySelectorAll(".needs-validation").forEach((form) => {
+    if (form.dataset.gsBound) return;
+    form.dataset.gsBound = "1";
+    form.addEventListener("submit", (event) => {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add("was-validated");
+    }, false);
+  });
+
+  // Tooltips
+  document.querySelectorAll('[data-toggle="tooltip"]').forEach((tooltip) => {
+    if (tooltip.dataset.gsBound) return;
+    tooltip.dataset.gsBound = "1";
+    tooltip.addEventListener("mouseenter", function () {
+      const tooltipText = this.getAttribute("data-title");
+      if (tooltipText) {
+        const tooltipEl = document.createElement("div");
+        tooltipEl.className = "tooltip";
+        tooltipEl.textContent = tooltipText;
+        document.body.appendChild(tooltipEl);
+        const rect = this.getBoundingClientRect();
+        const tr = tooltipEl.getBoundingClientRect();
+        tooltipEl.style.top = rect.top - tr.height - 10 + "px";
+        tooltipEl.style.left = rect.left + rect.width / 2 - tr.width / 2 + "px";
+        tooltipEl.style.opacity = "1";
+        this.addEventListener("mouseleave", () => tooltipEl.remove(), { once: true });
+      }
+    });
+  });
+
+  // Tabs
+  const tabLinks = document.querySelectorAll('[data-toggle="tab"]');
+  tabLinks.forEach((link) => {
+    if (link.dataset.gsBound) return;
+    link.dataset.gsBound = "1";
+    link.addEventListener("click", function (event) {
+      event.preventDefault();
+      const targetId = this.getAttribute("href");
+      const targetTab = document.querySelector(targetId);
+      if (targetTab) {
+        targetTab.style.opacity = "0";
+        targetTab.classList.add("active");
+        tabLinks.forEach((l) => l.classList.remove("active"));
+        this.classList.add("active");
+        setTimeout(() => {
+          document.querySelectorAll(".tab-pane").forEach((tab) => {
+            if (tab !== targetTab) tab.classList.remove("active");
+          });
+          targetTab.style.opacity = "1";
+          targetTab.style.transition = "opacity 150ms ease-in-out";
+        }, 50);
+      }
+    });
+  });
+
+  // Activate first tab only once per "page" (initial load or after pagechange)
+  const firstTabLink = document.querySelector('[data-toggle="tab"]');
+  if (firstTabLink && isInitial && !firstTabLink.classList.contains("active")) {
+    firstTabLink.click();
+  }
+
+  // Welcome notification (admin, once per session)
+  if (isInitial && window.location.pathname.includes("/admin") && !sessionStorage.getItem("skipWelcomeNotification")) {
+    setTimeout(() => {
+      if (typeof window.showNotification === "function") {
+        window.showNotification("Welkom bij het GrowSocial Admin Dashboard", "info", 3000);
+        sessionStorage.setItem("skipWelcomeNotification", "true");
+      }
+    }, 1000);
+  }
+};
+
+// Initial load
+document.addEventListener("DOMContentLoaded", () => {
+  initUI({ initial: true });
+  positionNotificationContainer();
+});
+window.addEventListener("resize", positionNotificationContainer);
+
+// Re-run UI init after client-side page change (if client-router re-enabled later)
+window.addEventListener("app:pagechange", () => initUI({ initial: true }));
+
+// bfcache: re-init and clear stale notifications
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    const container = document.querySelector(".notification-container");
+    if (container) container.innerHTML = "";
+    initUI({ initial: true });
+  }
+});
