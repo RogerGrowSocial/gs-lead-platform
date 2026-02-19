@@ -396,16 +396,41 @@ function showTicketActions(ticketId, event) {
   const menu = document.getElementById('ticketActionsMenu');
   if (!menu) return;
 
-  // Position menu
-  const buttonRect = event.target.closest('button').getBoundingClientRect();
+  const button = event.target.closest('button');
+  const buttonRect = button.getBoundingClientRect();
+  const padding = 8;
+
+  // Show menu off-screen to measure
   menu.style.display = 'block';
-  menu.style.left = buttonRect.right + 5 + 'px';
-  menu.style.top = buttonRect.top + 'px';
+  menu.style.visibility = 'hidden';
+  const menuHeight = menu.offsetHeight;
+  const menuWidth = menu.offsetWidth;
+  menu.style.visibility = '';
+
+  const viewportH = window.innerHeight;
+  const viewportW = window.innerWidth;
+
+  // Horizontal: prefer right of button; if overflows right, show left of button
+  let left = buttonRect.right + 5;
+  if (left + menuWidth > viewportW - padding) {
+    left = buttonRect.left - menuWidth - 5;
+  }
+  if (left < padding) left = padding;
+
+  // Vertical: prefer below button; if overflows bottom, show above button
+  let top = buttonRect.top;
+  if (top + menuHeight > viewportH - padding) {
+    top = buttonRect.bottom - menuHeight;
+  }
+  if (top < padding) top = padding;
+
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
 
   // Close on outside click
   setTimeout(() => {
     const closeMenu = (e) => {
-      if (!menu.contains(e.target) && !event.target.contains(e.target)) {
+      if (!menu.contains(e.target) && !button.contains(e.target)) {
         menu.style.display = 'none';
         document.removeEventListener('click', closeMenu);
       }
