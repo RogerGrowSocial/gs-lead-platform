@@ -1500,7 +1500,7 @@ router.get("/", async (req, res) => {
     if (isUserAdmin) {
       // Admin: optional ?for=uuid to view as that employee
       const { getRoleMap } = require('../utils/roleCache');
-      const { roleMap } = await getRoleMap();
+      const { roleMap, roleDisplayMap } = await getRoleMap();
 
       const { data: allProfiles } = await supabaseAdmin
         .from('profiles')
@@ -1516,13 +1516,18 @@ router.get("/", async (req, res) => {
         return true;
       });
 
-      employees = employeeProfiles.map(p => ({
-        id: p.id,
-        first_name: p.first_name,
-        last_name: p.last_name,
-        email: p.email,
-        displayName: [p.first_name, p.last_name].filter(Boolean).join(' ') || p.company_name || p.email || p.id
-      }));
+      employees = employeeProfiles.map(p => {
+        const displayName = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.company_name || p.email || p.id;
+        const roleDisplayName = (roleDisplayMap && p.role_id && roleDisplayMap[String(p.role_id)]) ? roleDisplayMap[String(p.role_id)].trim() : null;
+        return {
+          id: p.id,
+          first_name: p.first_name,
+          last_name: p.last_name,
+          email: p.email,
+          displayName,
+          roleDisplayName: roleDisplayName || null
+        };
+      });
 
       const forId = (req.query.for || '').trim();
       if (forId && employees.some(e => e.id === forId)) {
@@ -3084,6 +3089,329 @@ router.get("/settings", requireAuth, isEmployeeOrAdmin, async (req, res) => {
     res.status(500).send("Er is een fout opgetreden bij het laden van de instellingen")
   }
 })
+
+// =====================================================
+// SOP / Handleidingen routes
+// =====================================================
+
+// GET /admin/sops - Overzicht (tegels)
+router.get("/sops", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { data: categories, error: catError } = await supabaseAdmin
+      .from('sop_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (catError) throw catError;
+    const { data: sopsList, error: sopsError } = await supabaseAdmin
+      .from('sops')
+      .select('*')
+      .eq('published', true)
+      .order('sort_order', { ascending: true });
+    if (sopsError) throw sopsError;
+    const categoriesWithSops = (categories || []).map(c => ({
+      ...c,
+      sops: (sopsList || []).filter(s => s.category_id === c.id)
+    }));
+    res.render("admin/sops/index", {
+      title: "Handleidingen",
+      activeMenu: "sops",
+      activeSubmenu: null,
+      user: req.user,
+      categories: categoriesWithSops,
+      isUserAdmin: req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+    });
+  } catch (err) {
+    console.error("SOP overview error:", err);
+    res.render("admin/sops/index", {
+      title: "Handleidingen",
+      activeMenu: "sops",
+      activeSubmenu: null,
+      user: req.user,
+      categories: [],
+      error: "Kon handleidingen niet laden.",
+      isUserAdmin: false
+    });
+  }
+});
+
+// GET /admin/sops/editor - Editor (admin)
+router.get("/sops/editor", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data: categories, error: catError } = await supabaseAdmin
+      .from('sop_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (catError) throw catError;
+    const { data: sopsList, error: sopsError } = await supabaseAdmin
+      .from('sops')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (sopsError) throw sopsError;
+    res.render("admin/sops/editor", {
+      title: "Handleidingen bewerken",
+      activeMenu: "sops",
+      activeSubmenu: "editor",
+      user: req.user,
+      categories: categories || [],
+      sops: sopsList || []
+    });
+  } catch (err) {
+    console.error("SOP editor error:", err);
+    res.redirect("/admin/sops?error=editor");
+  }
+});
+
+// GET /admin/sops/:id - SOP detail (reader)
+router.get("/sops/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { data: sop, error } = await supabaseAdmin
+      .from('sops')
+      .select('*, sop_categories(title, slug)')
+      .eq('id', id)
+      .eq('published', true)
+      .single();
+    if (error || !sop) return res.status(404).render('errors/404', { user: req.user });
+    const { data: questions } = await supabaseAdmin
+      .from('sop_quiz_questions')
+      .select('id')
+      .eq('sop_id', id);
+    const hasQuiz = (questions || []).length > 0;
+    res.render("admin/sops/detail", {
+      title: sop.title,
+      activeMenu: "sops",
+      activeSubmenu: null,
+      user: req.user,
+      sop,
+      hasQuiz
+    });
+  } catch (err) {
+    console.error("SOP detail error:", err);
+    res.status(500).send("Kon handleiding niet laden.");
+  }
+});
+
+// GET /admin/sops/:id/quiz - Quiz pagina
+router.get("/sops/:id/quiz", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { data: sop, error: sopError } = await supabaseAdmin
+      .from('sops')
+      .select('id, title')
+      .eq('id', id)
+      .eq('published', true)
+      .single();
+    if (sopError || !sop) return res.status(404).render('errors/404', { user: req.user });
+    const { data: questions, error: qError } = await supabaseAdmin
+      .from('sop_quiz_questions')
+      .select('*')
+      .eq('sop_id', id)
+      .order('sort_order', { ascending: true });
+    if (qError) throw qError;
+    res.render("admin/sops/quiz", {
+      title: `Quiz: ${sop.title}`,
+      activeMenu: "sops",
+      activeSubmenu: null,
+      user: req.user,
+      sop,
+      questions: questions || []
+    });
+  } catch (err) {
+    console.error("SOP quiz error:", err);
+    res.status(500).send("Kon quiz niet laden.");
+  }
+});
+
+// POST /admin/sops/:id/quiz - Quiz indienen
+router.post("/sops/:id/quiz", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const sopId = req.params.id;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, error: "Niet ingelogd" });
+    const answers = req.body.answers || {};
+    const { data: questions } = await supabaseAdmin
+      .from('sop_quiz_questions')
+      .select('id, options')
+      .eq('sop_id', sopId)
+      .order('sort_order', { ascending: true });
+    if (!questions || questions.length === 0) {
+      return res.status(400).json({ success: false, error: "Geen vragen" });
+    }
+    let correct = 0;
+    questions.forEach(q => {
+      const opt = Array.isArray(q.options) ? q.options : [];
+      const correctOpt = opt.find(o => o.correct);
+      const userVal = answers[q.id];
+      if (correctOpt && (userVal === correctOpt.id || userVal === correctOpt.value)) correct++;
+    });
+    const scorePercent = Math.round((correct / questions.length) * 100);
+    const passed = scorePercent >= 80;
+    await supabaseAdmin.from('sop_quiz_attempts').insert({
+      sop_id: sopId,
+      user_id: userId,
+      score_percent: scorePercent,
+      passed,
+      answers
+    });
+    await supabaseAdmin.from('sop_progress').upsert({
+      sop_id: sopId,
+      user_id: userId,
+      quiz_passed_at: passed ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'sop_id,user_id' });
+    res.json({ success: true, score_percent: scorePercent, passed });
+  } catch (err) {
+    console.error("SOP quiz submit error:", err);
+    res.status(500).json({ success: false, error: "Kon quiz niet opslaan." });
+  }
+});
+
+// API: CRUD categories (admin)
+router.get("/api/sops/categories", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('sop_categories').select('*').order('sort_order');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.post("/api/sops/categories", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { title, slug, description, icon, image_url, sort_order } = req.body;
+    const slugVal = slug || (title || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const { data, error } = await supabaseAdmin.from('sop_categories').insert({ title: title || 'Nieuwe categorie', slug: slugVal, description: description || null, icon: icon || null, image_url: image_url || null, sort_order: sort_order != null ? parseInt(sort_order, 10) : 0 }).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.put("/api/sops/categories/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { title, slug, description, icon, image_url, sort_order } = req.body;
+    const { data, error } = await supabaseAdmin.from('sop_categories').update({ title, slug, description, icon, image_url, sort_order: sort_order != null ? parseInt(sort_order, 10) : undefined }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.delete("/api/sops/categories/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.from('sop_categories').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: CRUD sops (admin)
+router.get("/api/sops/list", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('sops').select('*, sop_categories(title)').order('sort_order');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.post("/api/sops", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { category_id, title, slug, content, excerpt, illustration_url, sort_order, published } = req.body;
+    const slugVal = slug || (title || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const { data, error } = await supabaseAdmin.from('sops').insert({
+      category_id,
+      title: title || 'Nieuwe handleiding',
+      slug: slugVal,
+      content: content || '',
+      excerpt: excerpt || null,
+      illustration_url: illustration_url || null,
+      sort_order: sort_order != null ? parseInt(sort_order, 10) : 0,
+      published: published !== false,
+      created_by: req.user?.id || null
+    }).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.put("/api/sops/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { category_id, title, slug, content, excerpt, illustration_url, sort_order, published } = req.body;
+    const { data, error } = await supabaseAdmin.from('sops').update({
+      category_id,
+      title,
+      slug,
+      content,
+      excerpt,
+      illustration_url,
+      sort_order: sort_order != null ? parseInt(sort_order, 10) : undefined,
+      published
+    }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.delete("/api/sops/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.from('sops').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: Quiz questions (admin)
+router.get("/api/sops/:sopId/questions", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('sop_quiz_questions').select('*').eq('sop_id', req.params.sopId).order('sort_order');
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.post("/api/sops/:sopId/questions", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { question_text, type, options, sort_order } = req.body;
+    const { data, error } = await supabaseAdmin.from('sop_quiz_questions').insert({
+      sop_id: req.params.sopId,
+      question_text: question_text || '',
+      type: type || 'multiple_choice',
+      options: options || [],
+      sort_order: sort_order != null ? parseInt(sort_order, 10) : 0
+    }).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.put("/api/sops/questions/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { question_text, type, options, sort_order } = req.body;
+    const { data, error } = await supabaseAdmin.from('sop_quiz_questions').update({ question_text, type, options, sort_order }).eq('id', req.params.id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.delete("/api/sops/questions/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.from('sop_quiz_questions').delete().eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Billing Settings API
 router.get("/api/billing-settings", requireAuth, isAdmin, async (req, res) => {

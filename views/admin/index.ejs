@@ -143,18 +143,15 @@
   const ve = (typeof viewingEmployee !== 'undefined') ? viewingEmployee : null;
   const employeesList = Array.isArray(employees) ? employees : [];
 
+  // Option label voor weergave-dropdown: "Rol: Naam" of "Naam"
+  function weergaveOptionLabel(e) {
+    const name = String(e.displayName || e.first_name || e.email || e.id).replace(/</g, '&lt;');
+    return (e.roleDisplayName && e.roleDisplayName.trim()) ? (e.roleDisplayName.trim() + ': ' + name) : name;
+  }
+
   // Maak de inhoud van het dashboard (wrapper = kolom, niet row; layout heeft al sidebar+main)
   var dashboardContent = `
     <div class="dashboard-page-wrap">
-      ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
-      <div class="dashboard-view-selector" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
-        <label for="dashboardViewSelect" style="font-weight: 600; color: #374151;">Weergave:</label>
-        <select id="dashboardViewSelect" class="date-range-select" style="min-width: 220px;">
-          <option value="" ${dm === 'company' ? 'selected' : ''}>Heel bedrijf</option>
-          ${employeesList.map(e => `<option value="${e.id}" ${veId === e.id ? 'selected' : ''}>Als werknemer: ${String(e.displayName || e.first_name || e.email || e.id).replace(/</g, '&lt;')}</option>`).join('')}
-        </select>
-      </div>
-      ` : ''}
       <div id="dashboard-company" style="display: ${dm === 'company' ? 'block' : 'none'};">
       <!-- Main Content (bedrijfsdashboard) -->
       <div class="dashboard-content">
@@ -165,6 +162,12 @@
             <p class="text-muted" style="margin-bottom: 0;">Welkom terug, ${user.first_name || user.company_name}!</p>
           </div>
           <div class="header-actions">
+            ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
+            <select id="dashboardViewSelect" class="date-range-select" style="margin-bottom: 16px; margin-right: 10px;">
+              <option value="" ${dm === 'company' ? 'selected' : ''}>Heel bedrijf</option>
+              ${employeesList.map(e => `<option value="${e.id}" ${veId === e.id ? 'selected' : ''}>${weergaveOptionLabel(e)}</option>`).join('')}
+            </select>
+            ` : ''}
             <select id="kpiPeriodSelect" class="date-range-select" style="margin-bottom: 16px;">
               <option value="7d">Afgelopen 7 dagen</option>
               <option value="30d">Afgelopen 30 dagen</option>
@@ -486,6 +489,12 @@
               <p class="text-muted" style="margin: 0.25rem 0 0 0;">${ve ? (ve.displayName || (ve.first_name && ve.last_name ? ve.first_name + ' ' + ve.last_name : ve.email) || 'Werknemer') : 'Mijn werk'}</p>
             </div>
             <div class="header-actions">
+              ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
+              <select id="dashboardViewSelectEmployee" class="date-range-select" style="margin-bottom: 16px; margin-right: 10px;">
+                <option value="">Heel bedrijf</option>
+                ${employeesList.map(e => `<option value="${e.id}" ${veId === e.id ? 'selected' : ''}>${weergaveOptionLabel(e)}</option>`).join('')}
+              </select>
+              ` : ''}
               <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm" style="margin-right: 8px;">Tijdregistratie</a>
               <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm">Alle taken</a>
             </div>
@@ -555,13 +564,14 @@
 <script>
   // --- Adaptive dashboard: view selector + employee dashboard data ---
   (function() {
-    const viewSelect = document.getElementById('dashboardViewSelect');
-    if (viewSelect) {
-      viewSelect.addEventListener('change', function() {
-        const v = this.value;
-        window.location = v ? '/admin?for=' + encodeURIComponent(v) : '/admin';
-      });
+    function onDashboardViewChange() {
+      const v = this.value;
+      window.location = v ? '/admin?for=' + encodeURIComponent(v) : '/admin';
     }
+    const viewSelect = document.getElementById('dashboardViewSelect');
+    const viewSelectEmployee = document.getElementById('dashboardViewSelectEmployee');
+    if (viewSelect) viewSelect.addEventListener('change', onDashboardViewChange);
+    if (viewSelectEmployee) viewSelectEmployee.addEventListener('change', onDashboardViewChange);
 
     const employeeBlock = document.getElementById('dashboard-employee');
     const employeeId = employeeBlock?.getAttribute('data-employee-id');
