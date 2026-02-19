@@ -79,6 +79,18 @@ async function initializeTicketsPage() {
       }
     });
   }
+
+  // Delegated row click: navigate to ticket detail (works for server-rendered and API-rendered rows)
+  const ticketsTableBody = document.getElementById('ticketsTableBody');
+  if (ticketsTableBody) {
+    ticketsTableBody.addEventListener('click', (e) => {
+      const row = e.target.closest('.table-body-row[data-ticket-id]');
+      if (!row) return;
+      if (e.target.closest('.actions-button, button[onclick*="showTicketActions"]')) return;
+      const id = row.getAttribute('data-ticket-id');
+      if (id) window.location.href = `/admin/tickets/${id}`;
+    });
+  }
 }
 
 function updateSortUI() {
@@ -211,7 +223,7 @@ function renderTickets(tickets) {
     const lastActivity = ticket.last_activity_at ? formatRelativeTime(ticket.last_activity_at) : '-';
     
     return `
-      <tr class="table-body-row" data-ticket-id="${ticket.id}" style="cursor: pointer;" onclick="window.location.href='/admin/tickets/${ticket.id}'">
+      <tr class="table-body-row" data-ticket-id="${ticket.id}" style="cursor: pointer;">
         <td class="table-cell">
           <span class="customer-name" style="font-weight: 600; color: #111827; font-family: 'Courier New', monospace;">${ticket.ticket_number || ticket.id.substring(0, 8)}</span>
         </td>

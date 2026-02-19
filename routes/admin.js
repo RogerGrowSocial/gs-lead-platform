@@ -3112,13 +3112,20 @@ router.get("/sops", requireAuth, isEmployeeOrAdmin, async (req, res) => {
       ...c,
       sops: (sopsList || []).filter(s => s.category_id === c.id)
     }));
+    const isAdmin = req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true;
+    let isManager = false;
+    if (req.user?.role_id) {
+      const { data: role } = await supabaseAdmin.from('roles').select('name').eq('id', req.user.role_id).maybeSingle();
+      if (role?.name?.toLowerCase().includes('manager')) isManager = true;
+    }
+    const canEditSops = isAdmin || isManager;
     res.render("admin/sops/index", {
       title: "Handleidingen",
       activeMenu: "sops",
       activeSubmenu: null,
       user: req.user,
       categories: categoriesWithSops,
-      isUserAdmin: req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+      isUserAdmin: canEditSops
     });
   } catch (err) {
     console.error("SOP overview error:", err);
@@ -3134,8 +3141,8 @@ router.get("/sops", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   }
 });
 
-// GET /admin/sops/editor - Editor (admin)
-router.get("/sops/editor", requireAuth, isManagerOrAdmin, async (req, res) => {
+// GET /admin/sops/beheer - Editor/beheer (admin) – vaste path zodat :id geen "editor" vangt
+router.get("/sops/beheer", requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     const { data: categories, error: catError } = await supabaseAdmin
       .from('sop_categories')
@@ -3157,7 +3164,7 @@ router.get("/sops/editor", requireAuth, isManagerOrAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error("SOP editor error:", err);
-    res.redirect("/admin/sops?error=editor");
+    res.redirect("/admin/sops?error=beheer");
   }
 });
 
@@ -7572,12 +7579,12 @@ router.get("/tickets", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { status, priority, assigned_to, search } = req.query
     
-    // Build query
+    // Build query (customers: name, email only to avoid missing-column errors)
     let ticketQuery = supabaseAdmin
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(name, email, domain),
+        customers:customer_id(name, email),
         assignee:profiles!tickets_assignee_id_fkey(id, first_name, last_name, email)
       `)
       .order('created_at', { ascending: false })
@@ -7681,19 +7688,29 @@ router.get("/tickets", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 router.get("/tickets/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params
-    
-    // Get ticket with relations
+    if (!id || id === 'undefined') {
+      return res.status(404).render('error', {
+        message: 'Ticket niet gevonden',
+        error: {},
+        user: req.user
+      })
+    }
+
+    // Get ticket with relations (customers: id, name, email only to avoid missing-column errors)
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(id, name, email, domain),
+        customers:customer_id(id, name, email),
         assignee:assignee_id(id, first_name, last_name, email),
         creator:created_by(id, first_name, last_name, email)
       `)
       .eq('id', id)
       .single()
-    
+
+    if (ticketError) {
+      console.error('Admin ticket detail Supabase error:', ticketError.message, { id })
+    }
     if (ticketError || !ticket) {
       return res.status(404).render('error', {
         message: 'Ticket niet gevonden',
@@ -12459,7 +12476,7 @@ router.get('/api/admin/tickets', requireAuth, isEmployeeOrAdmin, async (req, res
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(name, email, domain),
+        customers:customer_id(name, email),
         assignee:assignee_id(id, first_name, last_name, email)
       `, { count: 'exact' })
     
@@ -12580,19 +12597,25 @@ router.get('/api/admin/tickets', requireAuth, isEmployeeOrAdmin, async (req, res
 router.get('/api/admin/tickets/:id', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params
-    
-    // Get ticket
+    if (!id || id === 'undefined') {
+      return res.status(404).json({ error: 'Ticket niet gevonden' })
+    }
+
+    // Get ticket (customers: id, name, email only to avoid missing-column errors)
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(id, name, email, domain),
+        customers:customer_id(id, name, email),
         assignee:assignee_id(id, first_name, last_name, email),
         creator:created_by(id, first_name, last_name, email)
       `)
       .eq('id', id)
       .single()
-    
+
+    if (ticketError) {
+      console.error('API ticket by id Supabase error:', ticketError.message, { id })
+    }
     if (ticketError || !ticket) {
       return res.status(404).json({ error: 'Ticket niet gevonden' })
     }
