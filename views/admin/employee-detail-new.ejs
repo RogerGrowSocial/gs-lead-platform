@@ -182,25 +182,25 @@
         </div>
 
         <!-- Werk Section (no tabs, direct section) -->
-        <div class="user-card" style="margin-bottom: 1.5rem;">
+        <div class="user-card user-card--spaced werk-section">
           <div class="user-card-content">
-            <h3 class="user-card-title-small" style="margin-bottom: 1.5rem;">
-              <i class="fas fa-briefcase"></i> Werk
+            <h3 class="werk-section__title">
+              <i class="fas fa-briefcase" aria-hidden="true"></i> Werk
             </h3>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button class="filter-btn active" data-filter="all" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: #2563eb; color: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Alle</button>
-                <button class="filter-btn" data-filter="open" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Open</button>
-                <button class="filter-btn" data-filter="in_progress" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">In uitvoering</button>
-                <button class="filter-btn" data-filter="in_review" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">In review</button>
-                <button class="filter-btn" data-filter="done" style="padding: 0.5rem 1rem; border: 1px solid #e5e7eb; background: white; border-radius: 8px; cursor: pointer; font-size: 0.875rem; transition: all 0.2s;">Afgerond</button>
+            <div class="werk-section__toolbar">
+              <div class="werk-section__filters" role="group" aria-label="Filter taken">
+                <button type="button" class="werk-section__filter-btn filter-btn active" data-filter="all">Alle</button>
+                <button type="button" class="werk-section__filter-btn filter-btn" data-filter="open">Open</button>
+                <button type="button" class="werk-section__filter-btn filter-btn" data-filter="in_progress">In uitvoering</button>
+                <button type="button" class="werk-section__filter-btn filter-btn" data-filter="in_review">In review</button>
+                <button type="button" class="werk-section__filter-btn filter-btn" data-filter="done">Afgerond</button>
               </div>
-              <button class="btn-primary" onclick="openCreateTaskModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 8px;">
-                <i class="fas fa-plus"></i> Nieuwe taak
+              <button type="button" class="btn-primary werk-section__btn-new" onclick="openCreateTaskModal()">
+                <i class="fas fa-plus" aria-hidden="true"></i> Nieuwe taak
               </button>
             </div>
-            <div id="tasksList">
-              <div style="text-align: center; padding: 2rem; color: #6b7280;">Taken laden...</div>
+            <div id="tasksList" class="werk-section__list">
+              <div class="werk-section__loading">Taken laden...</div>
             </div>
           </div>
         </div>
