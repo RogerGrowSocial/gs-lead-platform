@@ -1047,28 +1047,303 @@ body {
   min-height: 0;
 }
 
-/* Adaptive dashboard: employee dashboard */
-#dashboard-employee .dashboard-content {
+/* ========== Werknemer-dashboard 2026 ========== */
+.employee-dashboard-wrap .dashboard-content {
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
-.dashboard-employee-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+.employee-dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.dashboard-employee-card .user-card-content {
-  padding: 1rem;
+.employee-dashboard-header .page-header-left h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
 }
 
-.dashboard-employee-card .view-all-link {
-  color: #2563eb;
+.employee-dashboard-header .page-header-left .text-muted {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.9375rem;
+  color: #6b7280;
+}
+
+.employee-dashboard-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.employee-view-select {
+  min-width: 200px;
+  margin-right: 0.5rem;
+}
+
+.btn-primary-sm {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
   font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background: #ea5d0d;
+  border: 1px solid #ea5d0d;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-primary-sm:hover {
+  background: #d44a0b;
+  border-color: #d44a0b;
+  color: #fff;
+}
+
+/* KPI cards – same grid as company dashboard */
+.employee-dashboard-wrap .kpi-cards-container {
+  margin-bottom: 1.5rem;
+}
+
+.employee-kpi-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.employee-kpi-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.employee-kpi-card .kpi-content {
+  flex: 1;
+}
+
+.employee-kpi-card .kpi-title {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.25rem;
+}
+
+.employee-kpi-card .kpi-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.employee-kpi-card .kpi-subtitle {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.employee-kpi-icon-tasks { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-radius: 10px; padding: 0.75rem; }
+.employee-kpi-icon-tickets { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border-radius: 10px; padding: 0.75rem; }
+.employee-kpi-icon-hours { background: rgba(16, 185, 129, 0.15); color: #10b981; border-radius: 10px; padding: 0.75rem; }
+.employee-kpi-icon-urgent { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 10px; padding: 0.75rem; }
+
+/* Charts row */
+.employee-dashboard-charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.employee-chart-main .chart-card,
+.employee-chart-side .chart-card {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.employee-chart-main .chart-header,
+.employee-chart-side .chart-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.employee-chart-main .chart-header h2,
+.employee-chart-side .chart-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.employee-quick-card .chart-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.employee-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.employee-quick-action:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #ea5d0d;
+}
+
+.employee-quick-icon {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+/* Taken + Tickets lists */
+.employee-dashboard-lists {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.employee-list-card {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.employee-list-card .activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.employee-list-card .activity-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.employee-list-card .view-all {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ea5d0d;
   text-decoration: none;
 }
 
-.dashboard-employee-card .view-all-link:hover {
+.employee-list-card .view-all:hover {
   text-decoration: underline;
+}
+
+.employee-list-card .activity-body {
+  padding: 1rem 1.25rem;
+  min-height: 180px;
+}
+
+.employee-list-content {
+  font-size: 0.9375rem;
+}
+
+.employee-list-ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.employee-list-li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.employee-list-li:last-child {
+  border-bottom: none;
+}
+
+.employee-list-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+}
+
+.employee-list-link:hover {
+  text-decoration: underline;
+}
+
+.employee-list-meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: lowercase;
+}
+
+.employee-prio-badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.employee-list-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+@media (max-width: 1024px) {
+  .employee-dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+  .employee-dashboard-lists {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .employee-dashboard-wrap .kpi-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .employee-dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

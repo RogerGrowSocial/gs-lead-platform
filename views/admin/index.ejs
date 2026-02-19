@@ -480,45 +480,129 @@
         </div>
       </div>
       </div>
-      <!-- Werknemer-dashboard (mijn werk / view as employee) -->
-      <div id="dashboard-employee" style="display: ${dm === 'employee' ? 'block' : 'none'};" data-employee-id="${veId || ''}">
+      <!-- Werknemer-dashboard (mijn werk / view as employee) – volledig dashboard 2026 -->
+      <div id="dashboard-employee" style="display: ${dm === 'employee' ? 'block' : 'none'};" data-employee-id="${veId || ''}" class="employee-dashboard-wrap">
         <div class="dashboard-content">
-          <div class="page-header" style="border-bottom: 1px solid #e5e7eb; margin-bottom: 1rem;">
-            <div style="flex: 1; min-width: 0;">
-              <h1 style="width: auto; margin: 0;">Dashboard</h1>
-              <p class="text-muted" style="margin: 0.25rem 0 0 0;">${ve ? (ve.displayName || (ve.first_name && ve.last_name ? ve.first_name + ' ' + ve.last_name : ve.email) || 'Werknemer') : 'Mijn werk'}</p>
+          <div class="page-header employee-dashboard-header">
+            <div class="page-header-left">
+              <h1>Dashboard</h1>
+              <p class="text-muted">${ve ? (ve.displayName || (ve.first_name && ve.last_name ? ve.first_name + ' ' + ve.last_name : ve.email) || 'Werknemer') : 'Mijn werk'}</p>
             </div>
             <div class="header-actions">
               ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
-              <select id="dashboardViewSelectEmployee" class="date-range-select" style="margin-bottom: 16px; margin-right: 10px;">
+              <select id="dashboardViewSelectEmployee" class="date-range-select employee-view-select">
                 <option value="">Heel bedrijf</option>
                 ${employeesList.map(e => `<option value="${e.id}" ${veId === e.id ? 'selected' : ''}>${weergaveOptionLabel(e)}</option>`).join('')}
               </select>
               ` : ''}
-              <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm" style="margin-right: 8px;">Tijdregistratie</a>
+              <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="btn-primary-sm">Tijdregistratie</a>
               <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm">Alle taken</a>
             </div>
           </div>
-          <div class="dashboard-employee-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
-            <div class="dashboard-employee-card user-card" id="employee-dashboard-tasks">
-              <div class="user-card-content">
-                <h3 class="user-card-title-small">Open taken</h3>
-                <div id="employee-tasks-list" style="min-height: 120px;">Laden...</div>
-                <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Alle taken →</a>
+
+          <!-- KPI Cards -->
+          <div class="kpi-cards-container">
+            <div class="kpi-cards-grid">
+              <div class="kpi-card employee-kpi-card">
+                <div class="kpi-content">
+                  <p class="kpi-title">Open taken</p>
+                  <p class="kpi-value" id="employee-kpi-tasks">—</p>
+                  <p class="kpi-subtitle">Actief</p>
+                </div>
+                <div class="kpi-icon employee-kpi-icon-tasks">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </div>
+              </div>
+              <div class="kpi-card employee-kpi-card">
+                <div class="kpi-content">
+                  <p class="kpi-title">Toegewezen tickets</p>
+                  <p class="kpi-value" id="employee-kpi-tickets">—</p>
+                  <p class="kpi-subtitle">Open</p>
+                </div>
+                <div class="kpi-icon employee-kpi-icon-tickets">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+              </div>
+              <div class="kpi-card employee-kpi-card">
+                <div class="kpi-content">
+                  <p class="kpi-title">Uren deze week</p>
+                  <p class="kpi-value" id="employee-kpi-hours">—</p>
+                  <p class="kpi-subtitle">Geregistreerd</p>
+                </div>
+                <div class="kpi-icon employee-kpi-icon-hours">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+              </div>
+              <div class="kpi-card employee-kpi-card">
+                <div class="kpi-content">
+                  <p class="kpi-title">Urgent / Overdue</p>
+                  <p class="kpi-value" id="employee-kpi-urgent">—</p>
+                  <p class="kpi-subtitle">Aandacht nodig</p>
+                </div>
+                <div class="kpi-icon employee-kpi-icon-urgent">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
               </div>
             </div>
-            <div class="dashboard-employee-card user-card" id="employee-dashboard-tickets">
-              <div class="user-card-content">
-                <h3 class="user-card-title-small">Toegewezen tickets</h3>
-                <div id="employee-tickets-list" style="min-height: 120px;">Laden...</div>
-                <a href="/admin/tickets${veId ? '?assignee=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Alle tickets →</a>
+          </div>
+
+          <!-- Charts row -->
+          <div class="employee-dashboard-charts">
+            <div class="employee-chart-main">
+              <div class="chart-card">
+                <div class="chart-header">
+                  <h2>Uren per week</h2>
+                </div>
+                <div class="chart-body" style="height: 260px;">
+                  <canvas id="employee-hours-chart"></canvas>
+                </div>
               </div>
             </div>
-            <div class="dashboard-employee-card user-card" id="employee-dashboard-time">
-              <div class="user-card-content">
-                <h3 class="user-card-title-small">Tijdregistratie deze week</h3>
-                <div id="employee-time-summary" style="min-height: 80px;">Laden...</div>
-                <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Tijdregistratie →</a>
+            <div class="employee-chart-side">
+              <div class="chart-card employee-quick-card">
+                <div class="chart-header">
+                  <h2>Snelle acties</h2>
+                </div>
+                <div class="chart-body" style="height: 260px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                  <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="employee-quick-action">
+                    <span class="employee-quick-icon">⏱</span>
+                    <span>Klok in/uit</span>
+                  </a>
+                  <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="employee-quick-action">
+                    <span class="employee-quick-icon">✓</span>
+                    <span>Taken beheren</span>
+                  </a>
+                  <a href="/admin/tickets${veId ? '?assignee=' + veId : ''}" class="employee-quick-action">
+                    <span class="employee-quick-icon">🎫</span>
+                    <span>Mijn tickets</span>
+                  </a>
+                  <a href="/admin/customers" class="employee-quick-action">
+                    <span class="employee-quick-icon">👤</span>
+                    <span>Klanten</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Taken + Tickets lists -->
+          <div class="employee-dashboard-lists">
+            <div class="activity-card employee-list-card">
+              <div class="activity-header">
+                <h2>Open taken</h2>
+                <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="view-all">Alle bekijken</a>
+              </div>
+              <div class="activity-body">
+                <div id="employee-tasks-list" class="employee-list-content">Laden...</div>
+              </div>
+            </div>
+            <div class="activity-card employee-list-card">
+              <div class="activity-header">
+                <h2>Toegewezen tickets</h2>
+                <a href="/admin/tickets${veId ? '?assignee=' + veId : ''}" class="view-all">Alle bekijken</a>
+              </div>
+              <div class="activity-body">
+                <div id="employee-tickets-list" class="employee-list-content">Laden...</div>
               </div>
             </div>
           </div>
@@ -577,59 +661,135 @@
     const employeeId = employeeBlock?.getAttribute('data-employee-id');
     if (employeeBlock && employeeId) {
       (async function loadEmployeeDashboard() {
-        const tasksEl = document.getElementById('employee-tasks-list');
-        const ticketsEl = document.getElementById('employee-tickets-list');
-        const timeEl = document.getElementById('employee-time-summary');
+        const tasksListEl = document.getElementById('employee-tasks-list');
+        const ticketsListEl = document.getElementById('employee-tickets-list');
+        const kpiTasks = document.getElementById('employee-kpi-tasks');
+        const kpiTickets = document.getElementById('employee-kpi-tickets');
+        const kpiHours = document.getElementById('employee-kpi-hours');
+        const kpiUrgent = document.getElementById('employee-kpi-urgent');
+
+        var fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        var endDate = new Date();
+        var startISO = fourWeeksAgo.toISOString().split('T')[0];
+        var endISO = endDate.toISOString().split('T')[0];
 
         try {
-          const [tasksRes, ticketsRes, timeRes] = await Promise.all([
-            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/tasks?status=open,in_progress&limit=5', { credentials: 'same-origin' }),
-            fetch('/admin/api/admin/tickets?assignee=' + encodeURIComponent(employeeId) + '&pageSize=5&sort=-last_activity_at', { credentials: 'same-origin' }),
-            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/time-entries/week', { credentials: 'same-origin' })
+          const [tasksRes, ticketsRes, timeWeekRes, timeRangeRes] = await Promise.all([
+            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/tasks?status=open,in_progress&limit=20', { credentials: 'same-origin' }),
+            fetch('/admin/api/admin/tickets?assignee=' + encodeURIComponent(employeeId) + '&pageSize=20&sort=-last_activity_at', { credentials: 'same-origin' }),
+            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/time-entries/week', { credentials: 'same-origin' }),
+            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/time-entries?start_date=' + startISO + '&end_date=' + endISO + '&limit=200', { credentials: 'same-origin' })
           ]);
 
           const tasksData = tasksRes.ok ? await tasksRes.json() : null;
           const ticketsData = ticketsRes.ok ? await ticketsRes.json() : null;
-          const timeData = timeRes.ok ? await timeRes.json() : null;
+          const timeWeekData = timeWeekRes.ok ? await timeWeekRes.json() : null;
+          const timeRangeData = timeRangeRes.ok ? await timeRangeRes.json() : null;
 
-          if (tasksEl) {
-            const tasks = (tasksData?.data?.tasks || tasksData?.tasks || []);
+          var tasks = (tasksData?.data?.tasks || tasksData?.tasks || []);
+          var tickets = (ticketsData?.tickets || []);
+          var entries = (timeRangeData?.data?.time_entries || timeRangeData?.time_entries || []);
+
+          if (kpiTasks) kpiTasks.textContent = tasks.length;
+          if (kpiTickets) kpiTickets.textContent = tickets.length;
+
+          var totals = timeWeekData?.data?.totals?.total || timeWeekData?.totals?.total;
+          var totalMins = totals?.minutes ?? 0;
+          var h = Math.floor(totalMins / 60);
+          var m = totalMins % 60;
+          var hoursStr = (h > 0 ? h + ' u ' : '') + (m > 0 ? m + ' min' : (h === 0 ? '0 min' : ''));
+          if (kpiHours) kpiHours.textContent = hoursStr;
+
+          var urgentCount = 0;
+          tickets.forEach(function(t) { if (t.priority === 'urgent' || t.priority === 'high') urgentCount++; });
+          tasks.forEach(function(t) { if (t.priority === 'urgent' || t.priority === 'high') urgentCount++; });
+          if (kpiUrgent) kpiUrgent.textContent = urgentCount;
+
+          if (tasksListEl) {
             if (tasks.length === 0) {
-              tasksEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Geen open taken.</p>';
+              tasksListEl.innerHTML = '<p class="text-muted employee-list-empty">Geen open taken.</p>';
             } else {
-              tasksEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0;">' + tasks.slice(0, 5).map(function(t) {
-                const title = (t.title || 'Taak').substring(0, 40) + (t.title && t.title.length > 40 ? '…' : '');
-                const status = t.status || 'open';
-                return '<li style="padding:0.35rem 0;border-bottom:1px solid #f1f5f9;"><a href="/admin/tasks/' + t.id + '" style="color:#2563eb;text-decoration:none;">' + title + '</a> <span style="color:#64748b;font-size:0.75rem;">' + status + '</span></li>';
+              tasksListEl.innerHTML = '<ul class="employee-list-ul">' + tasks.slice(0, 8).map(function(t) {
+                var title = (t.title || 'Taak').substring(0, 45) + (t.title && t.title.length > 45 ? '…' : '');
+                var status = t.status || 'open';
+                var prio = (t.priority === 'urgent' || t.priority === 'high') ? ' <span class="employee-prio-badge">' + (t.priority || '') + '</span>' : '';
+                return '<li class="employee-list-li"><a href="/admin/tasks/' + t.id + '" class="employee-list-link">' + title + '</a>' + prio + ' <span class="employee-list-meta">' + status + '</span></li>';
               }).join('') + '</ul>';
             }
           }
 
-          if (ticketsEl) {
-            const tickets = (ticketsData?.tickets || []);
+          if (ticketsListEl) {
             if (tickets.length === 0) {
-              ticketsEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Geen toegewezen tickets.</p>';
+              ticketsListEl.innerHTML = '<p class="text-muted employee-list-empty">Geen toegewezen tickets.</p>';
             } else {
-              ticketsEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0;">' + tickets.slice(0, 5).map(function(t) {
-                const subj = (t.subject || 'Ticket').substring(0, 40) + (t.subject && t.subject.length > 40 ? '…' : '');
-                return '<li style="padding:0.35rem 0;border-bottom:1px solid #f1f5f9;"><a href="/admin/tickets/' + t.id + '" style="color:#2563eb;text-decoration:none;">' + subj + '</a> <span style="color:#64748b;font-size:0.75rem;">' + (t.status || '') + '</span></li>';
+              ticketsListEl.innerHTML = '<ul class="employee-list-ul">' + tickets.slice(0, 8).map(function(t) {
+                var subj = (t.subject || 'Ticket').substring(0, 45) + (t.subject && t.subject.length > 45 ? '…' : '');
+                var prio = (t.priority === 'urgent' || t.priority === 'high') ? ' <span class="employee-prio-badge">' + (t.priority || '') + '</span>' : '';
+                return '<li class="employee-list-li"><a href="/admin/tickets/' + t.id + '" class="employee-list-link">' + subj + '</a>' + prio + ' <span class="employee-list-meta">' + (t.status || '') + '</span></li>';
               }).join('') + '</ul>';
             }
           }
 
-          if (timeEl) {
-            const totals = timeData?.data?.totals?.total || timeData?.totals?.total;
-            const totalMins = totals?.minutes ?? 0;
-            const h = Math.floor(totalMins / 60);
-            const m = totalMins % 60;
-            const str = (h > 0 ? h + ' u ' : '') + (m > 0 ? m + ' min' : (h === 0 ? '0 min' : ''));
-            timeEl.innerHTML = '<p style="margin:0;font-size:1.125rem;font-weight:600;">' + str + '</p><p class="text-muted" style="margin:0.25rem 0 0 0;font-size:0.875rem;">Deze week</p>';
+          var weekLabels = [];
+          var weekMinutes = [0, 0, 0, 0];
+          var now = new Date();
+          var baseMonday = new Date(now);
+          var day = baseMonday.getDay();
+          var diff = baseMonday.getDate() - day + (day === 0 ? -6 : 1);
+          baseMonday.setDate(diff);
+          baseMonday.setHours(0,0,0,0);
+          for (var w = 0; w < 4; w++) {
+            var monday = new Date(baseMonday);
+            monday.setDate(monday.getDate() - (3 - w) * 7);
+            weekLabels.push('Wk ' + (monday.getMonth() + 1) + '/' + monday.getDate());
+          }
+          entries.forEach(function(e) {
+            var start = new Date(e.start_at);
+            var weekStart = new Date(start);
+            var d = weekStart.getDay();
+            var mon = weekStart.getDate() - d + (d === 0 ? -6 : 1);
+            weekStart.setDate(mon);
+            weekStart.setHours(0,0,0,0);
+            var weeksAgo = Math.round((baseMonday - weekStart) / (7 * 24 * 60 * 60 * 1000));
+            var idx = 3 - weeksAgo;
+            if (idx >= 0 && idx <= 3) {
+              weekMinutes[idx] = (weekMinutes[idx] || 0) + (e.duration_minutes || 0);
+            }
+          });
+          var canvas = document.getElementById('employee-hours-chart');
+          if (canvas && typeof Chart !== 'undefined') {
+            new Chart(canvas, {
+              type: 'bar',
+              data: {
+                labels: weekLabels,
+                datasets: [{
+                  label: 'Uren',
+                  data: weekMinutes.map(function(m) { return Math.round(m / 60 * 10) / 10; }),
+                  backgroundColor: 'rgba(234, 93, 13, 0.2)',
+                  borderColor: '#ea5d0d',
+                  borderWidth: 1
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { beginAtZero: true, title: { display: true, text: 'Uren' } },
+                  x: { grid: { display: false } }
+                }
+              }
+            });
           }
         } catch (e) {
           console.error('Employee dashboard load error:', e);
-          if (tasksEl) tasksEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
-          if (ticketsEl) ticketsEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
-          if (timeEl) timeEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
+          if (tasksListEl) tasksListEl.innerHTML = '<p class="text-muted employee-list-empty">Kon niet laden.</p>';
+          if (ticketsListEl) ticketsListEl.innerHTML = '<p class="text-muted employee-list-empty">Kon niet laden.</p>';
+          if (kpiTasks) kpiTasks.textContent = '—';
+          if (kpiTickets) kpiTickets.textContent = '—';
+          if (kpiHours) kpiHours.textContent = '—';
+          if (kpiUrgent) kpiUrgent.textContent = '—';
         }
       })();
     }
