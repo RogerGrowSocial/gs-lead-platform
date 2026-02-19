@@ -404,6 +404,17 @@
         stopBtn.addEventListener('click', () => this.handleStop());
       }
 
+      // Close task dropdown when clicking outside the task field
+      document.addEventListener('click', (e) => {
+        const taskDropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
+        const taskContainer = this.popover.querySelector('#timeTrackerTaskContainer');
+        if (taskDropdown && taskContainer && taskDropdown.style.display === 'block') {
+          if (!taskContainer.contains(e.target)) {
+            taskDropdown.style.display = 'none';
+          }
+        }
+      });
+
       // Close on outside click
       document.addEventListener('click', (e) => {
         if (this.isOpen && !this.popover.contains(e.target) && !this.clockButton.contains(e.target)) {
