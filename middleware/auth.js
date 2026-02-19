@@ -10,6 +10,11 @@ const AUTH_LOG_COOLDOWN = 30000; // 30 seconds cooldown between same user auth l
 const profileStatusCache = new Map();
 const PROFILE_STATUS_CACHE_TTL = 60000; // 1 minute cache for profile status
 
+// Employee/admin access cache – avoid profiles + roles DB hit on every admin request
+const employeeAccessCache = new Map();
+const EMPLOYEE_ACCESS_CACHE_TTL = 120000; // 2 minutes
+const isDev = process.env.NODE_ENV !== 'production';
+
 /**
  * Check if we should log authentication for this user
  * @param {string} userId - User ID
@@ -487,11 +492,21 @@ async function isEmployeeOrAdmin(req, res, next) {
     return next();
   }
 
+  // Cache: avoid profiles + roles DB hit on every admin request (TTL 2 min)
+  const cacheEntry = employeeAccessCache.get(req.user.id);
+  const now = Date.now();
+  if (cacheEntry && (now - cacheEntry.ts) < EMPLOYEE_ACCESS_CACHE_TTL) {
+    if (cacheEntry.allowed) return next();
+    return res.status(403).render('errors/403', {
+      message: 'Geen toegang tot deze pagina',
+      error: cacheEntry.reason || 'Geen toegang'
+    });
+  }
+
   // Check database profile for admin status
   try {
-    // Use supabaseAdmin to bypass RLS and ensure we can always read the profile
     const { supabaseAdmin } = require('../config/supabase');
-    
+
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('is_admin, role_id')
@@ -499,29 +514,23 @@ async function isEmployeeOrAdmin(req, res, next) {
       .single();
 
     if (error) {
-      console.log('[isEmployeeOrAdmin] Error checking profile for employee access:', error);
-      console.log('[isEmployeeOrAdmin] User ID:', req.user.id, 'Email:', req.user.email);
-      console.log('[isEmployeeOrAdmin] Error code:', error.code, 'Error message:', error.message);
-      return res.status(403).render('errors/403', { 
+      if (isDev) {
+        console.log('[isEmployeeOrAdmin] Error checking profile:', error.code, error.message);
+      }
+      return res.status(403).render('errors/403', {
         message: 'Geen toegang tot deze pagina',
         error: 'Kon gebruikersgegevens niet ophalen'
       });
     }
 
-    console.log(`[isEmployeeOrAdmin] Checking access for user ${req.user.id} (${req.user.email}):`, {
-      is_admin: profile?.is_admin,
-      role_id: profile?.role_id
-    });
-
     // Admins always have access
     if (profile?.is_admin === true) {
-      console.log(`[isEmployeeOrAdmin] Access granted: user is admin`);
+      employeeAccessCache.set(req.user.id, { allowed: true, ts: now });
       return next();
     }
 
     // Check role - if role_id exists, fetch the role to check if it's an employee role
     if (profile?.role_id) {
-      const { supabaseAdmin } = require('../config/supabase');
       const { data: role, error: roleError } = await supabaseAdmin
         .from('roles')
         .select('id, name')
@@ -529,20 +538,16 @@ async function isEmployeeOrAdmin(req, res, next) {
         .maybeSingle();
 
       if (roleError) {
-        console.log('Error fetching role for employee access check:', roleError);
-        console.log('Role ID:', profile.role_id);
-        // If we can't fetch the role, allow access (fail open for backward compatibility)
-        console.log(`[isEmployeeOrAdmin] Access granted: role fetch error (fail open)`);
+        if (isDev) console.log('[isEmployeeOrAdmin] Role fetch error (fail open):', roleError.message);
+        employeeAccessCache.set(req.user.id, { allowed: true, ts: now });
         return next();
       }
 
       if (role) {
         const roleName = role.name?.toLowerCase() || '';
-        console.log(`[isEmployeeOrAdmin] Checking role access for user ${req.user.id}: role_id="${profile.role_id}", role_name="${roleName}"`);
-        
+
         // Block customer/consumer roles
         if (roleName === 'consumer' || roleName === 'customer' || roleName === 'klant') {
-          console.log(`[isEmployeeOrAdmin] Access DENIED: user has customer role "${roleName}"`);
           SystemLogService.logAuth(
             req.user.id,
             'employee_access_denied',
@@ -550,41 +555,27 @@ async function isEmployeeOrAdmin(req, res, next) {
             req.ip,
             req.get('User-Agent')
           ).catch(err => console.log('Auth logging failed:', err));
-          
-          return res.status(403).render('errors/403', { 
+          const reason = 'Klanten hebben geen toegang tot het admin gebied';
+          employeeAccessCache.set(req.user.id, { allowed: false, ts: now, reason });
+          return res.status(403).render('errors/403', {
             message: 'Geen toegang tot deze pagina',
-            error: 'Klanten hebben geen toegang tot het admin gebied'
+            error: reason
           });
         }
-        
-        // Explicitly allow manager, employee, admin, and werknemer roles
-        const allowedRoles = ['manager', 'employee', 'admin', 'administrator', 'werknemer', 'employee'];
+
+        const allowedRoles = ['manager', 'employee', 'admin', 'administrator', 'werknemer'];
         const isAllowedRole = allowedRoles.some(allowed => roleName.includes(allowed));
-        
-        if (isAllowedRole) {
-          console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is an allowed role (manager/employee/admin)`);
-          return next();
-        }
-        
-        // Allow all other non-customer roles (fail open for backward compatibility)
-        console.log(`[isEmployeeOrAdmin] Access granted: role "${roleName}" is not a customer role (fail open)`);
-        return next();
-      } else {
-        console.log(`[isEmployeeOrAdmin] No role found for role_id: ${profile.role_id}`);
-        // If role doesn't exist, allow access (fail open for backward compatibility)
-        console.log(`[isEmployeeOrAdmin] Access granted: role not found (fail open)`);
+        employeeAccessCache.set(req.user.id, { allowed: true, ts: now });
         return next();
       }
     }
 
-    // If no role_id but user exists, allow access (backward compatibility)
-    // This allows existing users without roles to still access
-    console.log(`[isEmployeeOrAdmin] Access granted: no role_id (backward compatibility)`);
+    // No role_id or role not found – allow (backward compatibility)
+    employeeAccessCache.set(req.user.id, { allowed: true, ts: now });
     return next();
-
   } catch (err) {
-    console.log('Error checking employee access:', err);
-    return res.status(403).render('errors/403', { 
+    if (isDev) console.log('Error checking employee access:', err);
+    return res.status(403).render('errors/403', {
       message: 'Geen toegang tot deze pagina',
       error: 'Fout bij het controleren van toegang'
     });

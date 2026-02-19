@@ -11717,7 +11717,7 @@ router.get("/marketing-recommendations/:recId/progress", requireAuth, async (req
 // LEADSTROOM DASHBOARD API
 // =====================================================
 
-// Get dashboard overview data for Leadstroom page
+// Get dashboard overview data for Leadstroom page (queries run in parallel for faster load)
 router.get("/admin/leadstroom/overview", requireAuth, isAdmin, async (req, res) => {
   try {
     const today = new Date()
@@ -11726,163 +11726,103 @@ router.get("/admin/leadstroom/overview", requireAuth, isAdmin, async (req, res) 
     const todayEnd = new Date(today)
     todayEnd.setHours(23, 59, 59, 999)
     const todayEndISO = todayEnd.toISOString()
-    
+
     const todayDateStr = today.toISOString().split('T')[0]
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     sevenDaysAgo.setHours(0, 0, 0, 0)
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // 1. Get today's leads COUNT DIRECTLY from leads table (real-time)
-    const { count: todayLeadsCount, error: todayLeadsError } = await supabaseAdmin
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayStart)
-      .lte('created_at', todayEndISO)
+    // Run all independent Supabase queries in parallel (single round-trip wave)
+    const [
+      todayLeadsResult,
+      todayStatsResult,
+      weekLeadsResult,
+      weekStatsResult,
+      chartStatsResult,
+      plansForChartResult,
+      realTimeLeadsResult,
+      allSegmentsResult,
+      todayPlansResult,
+      todayLeadsDataResult,
+      todaySegmentStatsResult
+    ] = await Promise.all([
+      supabaseAdmin.from('leads').select('*', { count: 'exact', head: true }).gte('created_at', todayStart).lte('created_at', todayEndISO),
+      supabaseAdmin.from('lead_generation_stats').select('leads_generated, google_ads_spend').eq('date', todayDateStr),
+      supabaseAdmin.from('leads').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo.toISOString()),
+      supabaseAdmin.from('lead_generation_stats').select('leads_generated, google_ads_spend').gte('date', sevenDaysAgoStr).lte('date', todayDateStr),
+      supabaseAdmin.from('lead_generation_stats').select('date, leads_generated, google_ads_spend').gte('date', thirtyDaysAgo).order('date', { ascending: true }),
+      supabaseAdmin.from('lead_segment_plans').select('date, target_leads_per_day').gte('date', thirtyDaysAgo).lte('date', todayDateStr).order('date', { ascending: true }),
+      supabaseAdmin.from('leads').select('created_at').gte('created_at', thirtyDaysAgo + 'T00:00:00').lte('created_at', todayDateStr + 'T23:59:59'),
+      supabaseAdmin.from('lead_segments').select('*').eq('is_active', true),
+      supabaseAdmin.from('lead_segment_plans').select('*').eq('date', todayDateStr),
+      supabaseAdmin.from('leads').select('segment_id').gte('created_at', todayStart).lte('created_at', todayEndISO).not('segment_id', 'is', null),
+      supabaseAdmin.from('lead_generation_stats').select('segment_id, leads_generated').eq('date', todayDateStr)
+    ])
 
-    // 1b. Get today's stats from aggregated table (for spend data)
-    const { data: todayStats, error: todayError } = await supabaseAdmin
-      .from('lead_generation_stats')
-      .select('leads_generated, google_ads_spend')
-      .eq('date', todayDateStr)
+    const todayLeadsCount = todayLeadsResult.count
+    const todayStats = todayStatsResult.data
+    const weekLeadsCount = weekLeadsResult.count
+    const weekStats = weekStatsResult.data
+    const chartStats = chartStatsResult.data
+    const plansForChart = plansForChartResult.data
+    const realTimeLeads = realTimeLeadsResult.data
+    const allSegments = allSegmentsResult.data
+    const todayPlans = todayPlansResult.data
+    const todayLeadsData = todayLeadsDataResult.data
+    const todaySegmentStats = todaySegmentStatsResult.data
 
-    // 2. Get last 7 days leads COUNT DIRECTLY from leads table (real-time)
-    const { count: weekLeadsCount, error: weekLeadsError } = await supabaseAdmin
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', sevenDaysAgo.toISOString())
-
-    // 2b. Get last 7 days stats from aggregated table (for spend data)
-    const { data: weekStats, error: weekError } = await supabaseAdmin
-      .from('lead_generation_stats')
-      .select('leads_generated, google_ads_spend')
-      .gte('date', sevenDaysAgoStr)
-      .lte('date', todayDateStr)
-
-    // 3. Get last 30 days stats for chart
-    const { data: chartStats, error: chartError } = await supabaseAdmin
-      .from('lead_generation_stats')
-      .select('date, leads_generated, google_ads_spend')
-      .gte('date', thirtyDaysAgo)
-      .order('date', { ascending: true })
-
-    // 3b. Get plans for last 30 days to calculate targets per day
-    const { data: plansForChart, error: plansChartError } = await supabaseAdmin
-      .from('lead_segment_plans')
-      .select('date, target_leads_per_day')
-      .gte('date', thirtyDaysAgo)
-      .lte('date', todayDateStr)
-      .order('date', { ascending: true })
-
-    // 3c. Combine stats with targets per day
     // Group plans by date and sum targets
     const targetsByDate = {}
     if (plansForChart) {
       plansForChart.forEach(plan => {
         const dateStr = plan.date
-        if (!targetsByDate[dateStr]) {
-          targetsByDate[dateStr] = 0
-        }
+        if (!targetsByDate[dateStr]) targetsByDate[dateStr] = 0
         targetsByDate[dateStr] += (plan.target_leads_per_day || 0)
       })
     }
 
-    // Group stats by date and sum leads (multiple segments per day)
     const statsByDate = {}
     if (chartStats) {
       chartStats.forEach(stat => {
         const dateStr = stat.date
-        if (!statsByDate[dateStr]) {
-          statsByDate[dateStr] = {
-            leads_generated: 0,
-            google_ads_spend: 0
-          }
-        }
+        if (!statsByDate[dateStr]) statsByDate[dateStr] = { leads_generated: 0, google_ads_spend: 0 }
         statsByDate[dateStr].leads_generated += (stat.leads_generated || 0)
         statsByDate[dateStr].google_ads_spend += (parseFloat(stat.google_ads_spend) || 0)
       })
     }
 
-    // Get real-time leads count for last 30 days (from leads table directly)
-    // This ensures we count ALL leads, even if they don't have segment_id yet
-    const { data: realTimeLeads, error: realTimeLeadsError } = await supabaseAdmin
-      .from('leads')
-      .select('created_at')
-      .gte('created_at', thirtyDaysAgo + 'T00:00:00')
-      .lte('created_at', todayDateStr + 'T23:59:59')
-
-    // Group real-time leads by date
     const realTimeLeadsByDate = {}
     if (realTimeLeads) {
       realTimeLeads.forEach(lead => {
         const dateStr = lead.created_at.split('T')[0]
-        if (!realTimeLeadsByDate[dateStr]) {
-          realTimeLeadsByDate[dateStr] = 0
-        }
-        realTimeLeadsByDate[dateStr]++
+        realTimeLeadsByDate[dateStr] = (realTimeLeadsByDate[dateStr] || 0) + 1
       })
     }
 
-    // Generate all dates for the last 30 days
     const chartData = []
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
-      
-      // Use real-time leads count if available, otherwise fallback to stats
       const realTimeCount = realTimeLeadsByDate[dateStr] || 0
       const statsCount = statsByDate[dateStr]?.leads_generated || 0
-      // Prefer real-time count (includes leads without segment_id), but use stats if real-time is 0 and stats exists
       const leads_generated = realTimeCount > 0 ? realTimeCount : statsCount
-      
       const stats = statsByDate[dateStr] || { google_ads_spend: 0 }
-      const target = targetsByDate[dateStr] || 0
-      
       chartData.push({
         date: dateStr,
-        leads_generated: leads_generated,
-        target_leads_per_day: target,
+        leads_generated,
+        target_leads_per_day: targetsByDate[dateStr] || 0,
         google_ads_spend: stats.google_ads_spend
       })
     }
 
-    // 4. Get all active segments
-    const { data: allSegments, error: segmentsError } = await supabaseAdmin
-      .from('lead_segments')
-      .select('*')
-      .eq('is_active', true)
-
-    // 5. Get plans for today
-    const { data: todayPlans, error: plansError } = await supabaseAdmin
-      .from('lead_segment_plans')
-      .select('*')
-      .eq('date', todayDateStr)
-
-    // 6. Get today's stats per segment (real-time from leads table)
-    // Get all leads from today with segment_id
-    const { data: todayLeadsData, error: todayLeadsDataError } = await supabaseAdmin
-      .from('leads')
-      .select('segment_id')
-      .gte('created_at', todayStart)
-      .lte('created_at', todayEndISO)
-      .not('segment_id', 'is', null)
-
-    // Count leads per segment (real-time)
     const segmentCounts = {}
     if (todayLeadsData) {
       todayLeadsData.forEach(lead => {
-        if (lead.segment_id) {
-          segmentCounts[lead.segment_id] = (segmentCounts[lead.segment_id] || 0) + 1
-        }
+        if (lead.segment_id) segmentCounts[lead.segment_id] = (segmentCounts[lead.segment_id] || 0) + 1
       })
     }
-
-    // 6b. Get today's stats per segment from aggregated table (fallback)
-    const { data: todaySegmentStats, error: statsError } = await supabaseAdmin
-      .from('lead_generation_stats')
-      .select('segment_id, leads_generated')
-      .eq('date', todayDateStr)
 
     // Combine segments with their plans and stats (use real-time counts)
     // Also calculate real-time targets if plan doesn't exist or is outdated
