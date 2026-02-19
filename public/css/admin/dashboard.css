@@ -1038,3 +1038,45 @@ body {
     gap: 14px;
   }
 }
+
+/* Adaptive dashboard: view selector + employee dashboard */
+.dashboard-view-selector {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dashboard-view-selector label {
+  font-weight: 600;
+  color: #374151;
+}
+
+#dashboard-employee .dashboard-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-employee-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-employee-card .user-card-content {
+  padding: 1rem;
+}
+
+.dashboard-employee-card .view-all-link {
+  color: #2563eb;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.dashboard-employee-card .view-all-link:hover {
+  text-decoration: underline;
+}

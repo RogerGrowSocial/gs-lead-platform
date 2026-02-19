@@ -137,10 +137,26 @@
     { type: 'info', message: 'Systeem update gepland voor morgen 02:00', time: '5 uur geleden' }
   ];
 
+  // Adaptive dashboard: company vs employee view (from route)
+  const dm = (typeof dashboardMode !== 'undefined' && dashboardMode) ? dashboardMode : 'company';
+  const veId = (typeof viewingEmployeeId !== 'undefined') ? viewingEmployeeId : null;
+  const ve = (typeof viewingEmployee !== 'undefined') ? viewingEmployee : null;
+  const employeesList = Array.isArray(employees) ? employees : [];
+
   // Maak de inhoud van het dashboard
   var dashboardContent = `
     <div class="dashboard-container">
-      <!-- Main Content -->
+      ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
+      <div class="dashboard-view-selector" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
+        <label for="dashboardViewSelect" style="font-weight: 600; color: #374151;">Weergave:</label>
+        <select id="dashboardViewSelect" class="date-range-select" style="min-width: 220px;">
+          <option value="" ${dm === 'company' ? 'selected' : ''}>Heel bedrijf</option>
+          ${employeesList.map(e => `<option value="${e.id}" ${veId === e.id ? 'selected' : ''}>Als werknemer: ${String(e.displayName || e.first_name || e.email || e.id).replace(/</g, '&lt;')}</option>`).join('')}
+        </select>
+      </div>
+      ` : ''}
+      <div id="dashboard-company" style="display: ${dm === 'company' ? 'block' : 'none'};">
+      <!-- Main Content (bedrijfsdashboard) -->
       <div class="dashboard-content">
         <!-- Page Header (same structure as Aanvragenbeheer) -->
         <div class="page-header" style="border-bottom: 1px solid #e5e7eb; align-items: flex-start;">
@@ -460,6 +476,45 @@
           </div>
         </div>
       </div>
+      </div>
+      <!-- Werknemer-dashboard (mijn werk / view as employee) -->
+      <div id="dashboard-employee" style="display: ${dm === 'employee' ? 'block' : 'none'};" data-employee-id="${veId || ''}">
+        <div class="dashboard-content">
+          <div class="page-header" style="border-bottom: 1px solid #e5e7eb; margin-bottom: 1rem;">
+            <div style="flex: 1; min-width: 0;">
+              <h1 style="width: auto; margin: 0;">Dashboard</h1>
+              <p class="text-muted" style="margin: 0.25rem 0 0 0;">${ve ? (ve.displayName || (ve.first_name && ve.last_name ? ve.first_name + ' ' + ve.last_name : ve.email) || 'Werknemer') : 'Mijn werk'}</p>
+            </div>
+            <div class="header-actions">
+              <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm" style="margin-right: 8px;">Tijdregistratie</a>
+              <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="btn-outline-sm">Alle taken</a>
+            </div>
+          </div>
+          <div class="dashboard-employee-cards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;">
+            <div class="dashboard-employee-card user-card" id="employee-dashboard-tasks">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Open taken</h3>
+                <div id="employee-tasks-list" style="min-height: 120px;">Laden...</div>
+                <a href="/admin/tasks${veId ? '?employee_id=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Alle taken →</a>
+              </div>
+            </div>
+            <div class="dashboard-employee-card user-card" id="employee-dashboard-tickets">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Toegewezen tickets</h3>
+                <div id="employee-tickets-list" style="min-height: 120px;">Laden...</div>
+                <a href="/admin/tickets${veId ? '?assignee=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Alle tickets →</a>
+              </div>
+            </div>
+            <div class="dashboard-employee-card user-card" id="employee-dashboard-time">
+              <div class="user-card-content">
+                <h3 class="user-card-title-small">Tijdregistratie deze week</h3>
+                <div id="employee-time-summary" style="min-height: 80px;">Laden...</div>
+                <a href="/admin/time-entries${veId ? '?employee_id=' + veId : ''}" class="view-all-link" style="margin-top: 0.5rem; display: inline-block;">Tijdregistratie →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 %>
@@ -498,6 +553,78 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+  // --- Adaptive dashboard: view selector + employee dashboard data ---
+  (function() {
+    const viewSelect = document.getElementById('dashboardViewSelect');
+    if (viewSelect) {
+      viewSelect.addEventListener('change', function() {
+        const v = this.value;
+        window.location = v ? '/admin?for=' + encodeURIComponent(v) : '/admin';
+      });
+    }
+
+    const employeeBlock = document.getElementById('dashboard-employee');
+    const employeeId = employeeBlock?.getAttribute('data-employee-id');
+    if (employeeBlock && employeeId) {
+      (async function loadEmployeeDashboard() {
+        const tasksEl = document.getElementById('employee-tasks-list');
+        const ticketsEl = document.getElementById('employee-tickets-list');
+        const timeEl = document.getElementById('employee-time-summary');
+
+        try {
+          const [tasksRes, ticketsRes, timeRes] = await Promise.all([
+            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/tasks?status=open,in_progress&limit=5', { credentials: 'same-origin' }),
+            fetch('/admin/api/admin/tickets?assignee=' + encodeURIComponent(employeeId) + '&pageSize=5&sort=-last_activity_at', { credentials: 'same-origin' }),
+            fetch('/api/employees/' + encodeURIComponent(employeeId) + '/time-entries/week', { credentials: 'same-origin' })
+          ]);
+
+          const tasksData = tasksRes.ok ? await tasksRes.json() : null;
+          const ticketsData = ticketsRes.ok ? await ticketsRes.json() : null;
+          const timeData = timeRes.ok ? await timeRes.json() : null;
+
+          if (tasksEl) {
+            const tasks = (tasksData?.data?.tasks || tasksData?.tasks || []);
+            if (tasks.length === 0) {
+              tasksEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Geen open taken.</p>';
+            } else {
+              tasksEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0;">' + tasks.slice(0, 5).map(function(t) {
+                const title = (t.title || 'Taak').substring(0, 40) + (t.title && t.title.length > 40 ? '…' : '');
+                const status = t.status || 'open';
+                return '<li style="padding:0.35rem 0;border-bottom:1px solid #f1f5f9;"><a href="/admin/tasks/' + t.id + '" style="color:#2563eb;text-decoration:none;">' + title + '</a> <span style="color:#64748b;font-size:0.75rem;">' + status + '</span></li>';
+              }).join('') + '</ul>';
+            }
+          }
+
+          if (ticketsEl) {
+            const tickets = (ticketsData?.tickets || []);
+            if (tickets.length === 0) {
+              ticketsEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Geen toegewezen tickets.</p>';
+            } else {
+              ticketsEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0;">' + tickets.slice(0, 5).map(function(t) {
+                const subj = (t.subject || 'Ticket').substring(0, 40) + (t.subject && t.subject.length > 40 ? '…' : '');
+                return '<li style="padding:0.35rem 0;border-bottom:1px solid #f1f5f9;"><a href="/admin/tickets/' + t.id + '" style="color:#2563eb;text-decoration:none;">' + subj + '</a> <span style="color:#64748b;font-size:0.75rem;">' + (t.status || '') + '</span></li>';
+              }).join('') + '</ul>';
+            }
+          }
+
+          if (timeEl) {
+            const totals = timeData?.data?.totals?.total || timeData?.totals?.total;
+            const totalMins = totals?.minutes ?? 0;
+            const h = Math.floor(totalMins / 60);
+            const m = totalMins % 60;
+            const str = (h > 0 ? h + ' u ' : '') + (m > 0 ? m + ' min' : (h === 0 ? '0 min' : ''));
+            timeEl.innerHTML = '<p style="margin:0;font-size:1.125rem;font-weight:600;">' + str + '</p><p class="text-muted" style="margin:0.25rem 0 0 0;font-size:0.875rem;">Deze week</p>';
+          }
+        } catch (e) {
+          console.error('Employee dashboard load error:', e);
+          if (tasksEl) tasksEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
+          if (ticketsEl) ticketsEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
+          if (timeEl) timeEl.innerHTML = '<p class="text-muted" style="margin:0;font-size:0.875rem;">Kon niet laden.</p>';
+        }
+      })();
+    }
+  })();
+
   // Wait for both DOM and Chart.js to be ready
   function initCharts() {
     // Check if Chart is available
