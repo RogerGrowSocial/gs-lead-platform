@@ -1039,6 +1039,14 @@ body {
   }
 }
 
+/* Dashboard page: wrapper inside main-content (column layout, full width) */
+.dashboard-page-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
 /* Adaptive dashboard: view selector + employee dashboard */
 .dashboard-view-selector {
   margin-bottom: 1rem;

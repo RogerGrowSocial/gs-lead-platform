@@ -143,9 +143,9 @@
   const ve = (typeof viewingEmployee !== 'undefined') ? viewingEmployee : null;
   const employeesList = Array.isArray(employees) ? employees : [];
 
-  // Maak de inhoud van het dashboard
+  // Maak de inhoud van het dashboard (wrapper = kolom, niet row; layout heeft al sidebar+main)
   var dashboardContent = `
-    <div class="dashboard-container">
+    <div class="dashboard-page-wrap">
       ${(typeof isUserAdmin !== 'undefined' && isUserAdmin && employeesList.length > 0) ? `
       <div class="dashboard-view-selector" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; gap: 0.75rem;">
         <label for="dashboardViewSelect" style="font-weight: 600; color: #374151;">Weergave:</label>
