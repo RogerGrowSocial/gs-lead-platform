@@ -1,0 +1,54 @@
+<%
+  const cats = typeof categories !== 'undefined' ? categories : [];
+  const err = typeof error !== 'undefined' ? error : null;
+%>
+<%- include('../../layouts/admin', {
+  title: typeof title !== 'undefined' ? title : 'Handleidingen',
+  activeMenu: 'sops',
+  activeSubmenu: null,
+  user: user,
+  stylesheets: ['/css/admin/dashboard.css', '/css/admin/sops.css'],
+  body: `
+  <div class="sops-page">
+    <div class="page-header sops-header">
+      <div>
+        <h1>Handleidingen</h1>
+        <p class="text-muted">Bekijk alle processen en diensten. Lees de handleiding en doe daarna de quiz om te controleren of je het begrijpt.</p>
+      </div>
+    </div>
+    ${err ? `<div class="alert alert-error sops-alert"><i class="fas fa-exclamation-circle"></i> ${err}</div>` : ''}
+    <div class="sops-grid">
+      ${cats.map(c => `
+        <div class="sops-category-card" data-category-id="${c.id}">
+          <div class="sops-card-visual">
+            ${c.image_url ? `<img src="${c.image_url}" alt="" class="sops-card-img">` : `
+            <div class="sops-card-illustration">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                <path d="M8 7h8"></path>
+                <path d="M8 11h8"></path>
+              </svg>
+            </div>
+            `}
+          </div>
+          <div class="sops-card-body">
+            <h2 class="sops-card-title">${(c.title || '').replace(/</g, '&lt;')}</h2>
+            ${c.description ? `<p class="sops-card-desc">${(c.description || '').substring(0, 120).replace(/</g, '&lt;')}${(c.description || '').length > 120 ? '…' : ''}</p>` : ''}
+            <div class="sops-card-links">
+              ${(c.sops || []).map(s => `
+                <a href="/admin/sops/${s.id}" class="sops-tile-link">
+                  <span class="sops-tile-title">${(s.title || '').replace(/</g, '&lt;')}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </a>
+              `).join('')}
+              ${!(c.sops || []).length ? '<p class="sops-no-items">Nog geen handleidingen in deze categorie.</p>' : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    ${!cats.length ? '<div class="sops-empty"><p>Er zijn nog geen categorieën of handleidingen. Een beheerder kan deze toevoegen via Handleidingen bewerken.</p></div>' : ''}
+  </div>
+  `
+}) %>

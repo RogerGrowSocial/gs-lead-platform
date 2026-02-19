@@ -1,0 +1,37 @@
+<%
+  const s = typeof sop !== 'undefined' ? sop : {};
+  const cat = s.sop_categories || {};
+  const hasQuiz = typeof hasQuiz !== 'undefined' ? hasQuiz : false;
+%>
+<%- include('../../layouts/admin', {
+  title: typeof title !== 'undefined' ? title : (s.title || 'Handleiding'),
+  activeMenu: 'sops',
+  activeSubmenu: null,
+  user: user,
+  stylesheets: ['/css/admin/dashboard.css', '/css/admin/sops.css'],
+  body: `
+  <div class="sops-reader">
+    <div class="sops-reader-back">
+      <a href="/admin/sops" class="sops-back-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg> Terug naar overzicht</a>
+    </div>
+    <article class="sops-reader-article">
+      <header class="sops-reader-header">
+        ${s.illustration_url ? `<div class="sops-reader-hero"><img src="${s.illustration_url}" alt="" /></div>` : ''}
+        <h1 class="sops-reader-title">${(s.title || '').replace(/</g, '&lt;')}</h1>
+        ${s.excerpt ? `<p class="sops-reader-excerpt">${(s.excerpt || '').replace(/</g, '&lt;')}</p>` : ''}
+      </header>
+      <div class="sops-reader-content">
+        ${s.content || '<p>Geen inhoud.</p>'}
+      </div>
+      <footer class="sops-reader-footer">
+        ${hasQuiz ? `
+          <a href="/admin/sops/${s.id}/quiz" class="btn-sop-quiz">
+            <span>Start quiz</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+        ` : ''}
+      </footer>
+    </article>
+  </div>
+  `
+}) %>

@@ -1,0 +1,62 @@
+<%
+  const s = typeof sop !== 'undefined' ? sop : {};
+  const qs = typeof questions !== 'undefined' ? questions : [];
+%>
+<%- include('../../layouts/admin', {
+  title: typeof title !== 'undefined' ? title : 'Quiz: ' + (s.title || ''),
+  activeMenu: 'sops',
+  activeSubmenu: null,
+  user: user,
+  stylesheets: ['/css/admin/dashboard.css', '/css/admin/sops.css'],
+  scripts: ['/js/admin/sops-quiz.js'],
+  body: `
+  <div class="sops-quiz-page">
+    <div class="sops-quiz-back">
+      <a href="/admin/sops/${s.id}" class="sops-back-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg> Terug naar handleiding</a>
+    </div>
+    <div class="sops-quiz-header">
+      <h1>Quiz: ${(s.title || '').replace(/</g, '&lt;')}</h1>
+      <p class="text-muted">Beantwoord de vragen om te controleren of je de handleiding hebt begrepen. Je slaagt bij 80% of hoger.</p>
+    </div>
+    ${qs.length ? `
+    <form id="sop-quiz-form" class="sops-quiz-form" data-sop-id="${s.id}">
+      <div class="sops-quiz-questions">
+        ${qs.map((q, i) => {
+          const opts = Array.isArray(q.options) ? q.options : [];
+          const isTrueFalse = q.type === 'true_false';
+          return `
+          <div class="sops-quiz-question" data-question-id="${q.id}">
+            <p class="sops-quiz-question-text">${i + 1}. ${(q.question_text || '').replace(/</g, '&lt;')}</p>
+            <div class="sops-quiz-options">
+              ${opts.map(o => `
+                <label class="sops-quiz-option">
+                  <input type="radio" name="q_${q.id}" value="${(o.id || o.value || '').toString().replace(/"/g, '&quot;')}" required>
+                  <span class="sops-quiz-option-text">${(o.text || o.value || '').replace(/</g, '&lt;')}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="sops-quiz-submit-wrap">
+        <button type="submit" class="btn-sop-quiz-submit">Verstuur antwoorden</button>
+      </div>
+    </form>
+    <div id="sop-quiz-result" class="sops-quiz-result" style="display:none;">
+      <div class="sops-quiz-result-inner">
+        <h2 id="sop-quiz-result-title"></h2>
+        <p id="sop-quiz-result-score" class="sops-quiz-result-score"></p>
+        <a href="/admin/sops/${s.id}" class="btn-sop-quiz">Terug naar handleiding</a>
+        <a href="/admin/sops" class="btn-sop-quiz-outline">Naar overzicht</a>
+      </div>
+    </div>
+    ` : `
+    <div class="sops-quiz-empty">
+      <p>Er zijn nog geen quizvragen voor deze handleiding.</p>
+      <a href="/admin/sops/${s.id}" class="sops-back-link">Terug naar handleiding</a>
+    </div>
+    `}
+  </div>
+  `
+}) %>

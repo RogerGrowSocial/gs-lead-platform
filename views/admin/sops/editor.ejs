@@ -1,0 +1,114 @@
+<%
+  const categories = typeof categories !== 'undefined' ? categories : [];
+  const sops = typeof sops !== 'undefined' ? sops : [];
+  const sopsByCat = {};
+  (sops || []).forEach(s => {
+    const cid = s.category_id;
+    if (!sopsByCat[cid]) sopsByCat[cid] = [];
+    sopsByCat[cid].push(s);
+  });
+%>
+<%- include('../../layouts/admin', {
+  title: typeof title !== 'undefined' ? title : 'Handleidingen bewerken',
+  activeMenu: 'sops',
+  activeSubmenu: 'editor',
+  user: user,
+  stylesheets: ['/css/admin/dashboard.css', '/css/admin/sops.css'],
+  scripts: ['/js/admin/sops-editor.js'],
+  body: `
+  <div class="sops-editor-page">
+    <div class="page-header">
+      <div>
+        <h1>Handleidingen bewerken</h1>
+        <p class="text-muted">Beheer categorieën, handleidingen en quizvragen.</p>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/sops" class="btn-secondary">Naar overzicht</a>
+        <button type="button" id="sop-editor-new-category" class="btn-primary"><i class="fas fa-folder-plus"></i> Nieuwe categorie</button>
+        <button type="button" id="sop-editor-new-sop" class="btn-primary"><i class="fas fa-plus"></i> Nieuwe handleiding</button>
+      </div>
+    </div>
+
+    <div class="sops-editor-lists">
+      <section class="sops-editor-section">
+        <h2>Categorieën</h2>
+        <ul id="sop-categories-list" class="sops-editor-list">
+          ${categories.map(c => `
+            <li class="sops-editor-item" data-id="${c.id}">
+              <div class="sops-editor-item-main">
+                <span class="sops-editor-item-title">${(c.title || '').replace(/</g, '&lt;')}</span>
+                <span class="sops-editor-item-meta">${(c.sops || sopsByCat[c.id] || []).length} handleiding(en)</span>
+              </div>
+              <div class="sops-editor-item-actions">
+                <button type="button" class="sop-edit-category" data-id="${c.id}" title="Bewerken">✎</button>
+                <button type="button" class="sop-delete-category" data-id="${c.id}" title="Verwijderen">×</button>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </section>
+      <section class="sops-editor-section">
+        <h2>Handleidingen</h2>
+        <ul id="sop-sops-list" class="sops-editor-list">
+          ${sops.map(s => {
+            const cat = categories.find(c => c.id === s.category_id);
+            const catTitle = cat ? cat.title : '-';
+            return `
+            <li class="sops-editor-item" data-id="${s.id}">
+              <div class="sops-editor-item-main">
+                <span class="sops-editor-item-title">${(s.title || '').replace(/</g, '&lt;')}</span>
+                <span class="sops-editor-item-meta">${catTitle} · ${s.published ? 'Gepubliceerd' : 'Concept'}</span>
+              </div>
+              <div class="sops-editor-item-actions">
+                <a href="/admin/sops/${s.id}" target="_blank" class="sop-view-sop" title="Bekijken">👁</a>
+                <button type="button" class="sop-edit-sop" data-id="${s.id}" title="Bewerken">✎</button>
+                <button type="button" class="sop-delete-sop" data-id="${s.id}" title="Verwijderen">×</button>
+              </div>
+            </li>
+          `;
+          }).join('')}
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modals (injected by JS or simple inline) -->
+  <div id="sop-modal-category" class="sop-modal" style="display:none;">
+    <div class="sop-modal-backdrop"></div>
+    <div class="sop-modal-box">
+      <h3 id="sop-modal-category-title">Categorie</h3>
+      <form id="sop-form-category">
+        <input type="hidden" name="id" id="sop-cat-id">
+        <label>Titel <input type="text" name="title" id="sop-cat-title" required></label>
+        <label>Slug <input type="text" name="slug" id="sop-cat-slug" placeholder="auto"></label>
+        <label>Beschrijving <textarea name="description" id="sop-cat-description" rows="2"></textarea></label>
+        <label>Afbeelding URL <input type="text" name="image_url" id="sop-cat-image_url"></label>
+        <div class="sop-modal-actions">
+          <button type="button" class="btn-secondary sop-modal-cancel">Annuleren</button>
+          <button type="submit" class="btn-primary">Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="sop-modal-sop" class="sop-modal" style="display:none;">
+    <div class="sop-modal-backdrop"></div>
+    <div class="sop-modal-box sop-modal-box-large">
+      <h3 id="sop-modal-sop-title">Handleiding</h3>
+      <form id="sop-form-sop">
+        <input type="hidden" name="id" id="sop-sop-id">
+        <label>Categorie <select name="category_id" id="sop-sop-category_id" required></select></label>
+        <label>Titel <input type="text" name="title" id="sop-sop-title" required></label>
+        <label>Slug <input type="text" name="slug" id="sop-sop-slug" placeholder="auto"></label>
+        <label>Korte beschrijving <textarea name="excerpt" id="sop-sop-excerpt" rows="2"></textarea></label>
+        <label>Inhoud <textarea name="content" id="sop-sop-content" rows="12"></textarea></label>
+        <label>Illustratie URL <input type="text" name="illustration_url" id="sop-sop-illustration_url"></label>
+        <label><input type="checkbox" name="published" id="sop-sop-published" checked> Gepubliceerd</label>
+        <div class="sop-modal-actions">
+          <button type="button" class="btn-secondary sop-modal-cancel">Annuleren</button>
+          <button type="submit" class="btn-primary">Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  `
+}) %>
