@@ -1163,7 +1163,7 @@ body {
 .employee-kpi-icon-hours { background: rgba(16, 185, 129, 0.15); color: #10b981; border-radius: 10px; padding: 0.75rem; }
 .employee-kpi-icon-urgent { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-radius: 10px; padding: 0.75rem; }
 
-/* Charts row –zelfde dunne rand als KPI cards */
+/* Charts row – exact dezelfde dunne lichtgrijze rand als KPI cards */
 .employee-dashboard-charts {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -1171,12 +1171,12 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.employee-chart-main .chart-card,
-.employee-chart-side .chart-card {
+.employee-dashboard-wrap .employee-chart-main .chart-card,
+.employee-dashboard-wrap .employee-chart-side .chart-card {
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e5e7eb !important;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
   overflow: hidden;
   transition: box-shadow 0.2s;
 }
@@ -1254,18 +1254,18 @@ body {
   height: 100%;
 }
 
-/* Taken + Tickets lists –zelfde dunne rand als KPI */
+/* Taken + Tickets lists – exact dezelfde dunne lichtgrijze rand als KPI cards */
 .employee-dashboard-lists {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1.25rem;
 }
 
-.employee-list-card {
+.employee-dashboard-wrap .employee-list-card {
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e5e7eb !important;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
   overflow: hidden;
   transition: box-shadow 0.2s;
 }
