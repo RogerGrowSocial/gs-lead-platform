@@ -8,6 +8,8 @@ let allTickets = [];
 let filteredTickets = [];
 let currentPage = 1;
 let itemsPerPage = 20;
+let sortBy = '-last_activity_at'; // API: prefix '-' for desc
+let totalPages = 1;
 
 async function initializeTicketsPage() {
   const searchInput = document.getElementById('searchInput');
@@ -15,7 +17,7 @@ async function initializeTicketsPage() {
   const prioritySelect = document.getElementById('prioritySelect');
   const assignedSelect = document.getElementById('assignedSelect');
   const createTicketBtn = document.getElementById('createTicketBtn');
-  const ticketsTableBody = document.getElementById('ticketsTableBody');
+  const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
 
   // Load tickets from API
   await loadTickets();
@@ -49,15 +51,45 @@ async function initializeTicketsPage() {
     });
   }
 
+  if (itemsPerPageSelect) {
+    itemsPerPageSelect.addEventListener('change', (e) => {
+      itemsPerPage = parseInt(e.target.value, 10);
+      currentPage = 1;
+      loadTickets();
+    });
+  }
+
+  // Sortable headers
+  document.querySelectorAll('.table-header-cell.sortable[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const field = th.getAttribute('data-sort');
+      const ascending = sortBy === field;
+      sortBy = ascending ? `-${field}` : field;
+      currentPage = 1;
+      loadTickets();
+      updateSortUI();
+    });
+  });
+
   // Create ticket button
   if (createTicketBtn) {
     createTicketBtn.addEventListener('click', () => {
-      // For now, just show a message - ticket creation can be added later
       if (window.showNotification) {
         window.showNotification('Ticket aanmaken komt binnenkort beschikbaar', 'info', 3000);
       }
     });
   }
+}
+
+function updateSortUI() {
+  const dir = sortBy.startsWith('-') ? 'desc' : 'asc';
+  const field = sortBy.replace(/^-/, '');
+  document.querySelectorAll('.table-header-cell.sortable').forEach(el => {
+    el.classList.remove('active', 'asc', 'desc');
+    if (el.getAttribute('data-sort') === field) {
+      el.classList.add('active', dir);
+    }
+  });
 }
 
 async function loadTickets() {
@@ -70,7 +102,7 @@ async function loadTickets() {
     const params = new URLSearchParams({
       page: currentPage,
       pageSize: itemsPerPage,
-      sort: '-last_activity_at'
+      sort: sortBy || '-last_activity_at'
     });
     
     if (searchInput?.value) params.append('search', searchInput.value);
@@ -91,7 +123,11 @@ async function loadTickets() {
     allTickets = data.tickets || [];
     
     renderTickets(allTickets);
-    updatePaginationInfo(data.pagination);
+    const pag = data.pagination || {};
+    totalPages = pag.totalPages || 1;
+    updatePaginationInfo(pag);
+    updatePaginationButtons(pag);
+    updateSortUI();
     
   } catch (error) {
     console.error('Error loading tickets:', error);
@@ -175,7 +211,7 @@ function renderTickets(tickets) {
     const lastActivity = ticket.last_activity_at ? formatRelativeTime(ticket.last_activity_at) : '-';
     
     return `
-      <tr class="table-body-row" style="cursor: pointer;" onclick="window.location.href='/admin/tickets/${ticket.id}'">
+      <tr class="table-body-row" data-ticket-id="${ticket.id}" style="cursor: pointer;" onclick="window.location.href='/admin/tickets/${ticket.id}'">
         <td class="table-cell">
           <span class="customer-name" style="font-weight: 600; color: #111827; font-family: 'Courier New', monospace;">${ticket.ticket_number || ticket.id.substring(0, 8)}</span>
         </td>
@@ -205,7 +241,7 @@ function renderTickets(tickets) {
         <td class="table-cell">
           <span class="cell-text">${lastActivity}</span>
         </td>
-        <td class="table-cell">
+        <td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">
           <button class="actions-button" onclick="event.stopPropagation(); showTicketActions('${ticket.id}', event)" title="Meer acties">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="1"></circle>
@@ -222,10 +258,86 @@ function renderTickets(tickets) {
 function updatePaginationInfo(pagination) {
   const info = document.getElementById('paginationInfo');
   if (info && pagination) {
-    const start = ((pagination.page - 1) * pagination.pageSize) + 1;
-    const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
-    info.textContent = `Toont ${start} tot ${end} van ${pagination.total} resultaten`;
+    const total = pagination.total || 0;
+    const start = total > 0 ? ((pagination.page - 1) * pagination.pageSize) + 1 : 0;
+    const end = Math.min(pagination.page * pagination.pageSize, total);
+    info.textContent = total > 0 ? `Toont ${start} tot ${end} van ${total} resultaten` : 'Geen tickets';
   }
+}
+
+function updatePaginationButtons(pagination) {
+  const prevBtn = document.getElementById('prevButton');
+  const nextBtn = document.getElementById('nextButton');
+  const container = document.getElementById('paginationButtons');
+  const itemsSelect = document.getElementById('itemsPerPageSelect');
+  if (!container || !pagination) return;
+
+  const page = pagination.page || 1;
+  const total = pagination.total || 0;
+  const pageSize = pagination.pageSize || itemsPerPage;
+  const totalPgs = pagination.totalPages || 1;
+  const hasPrev = page > 1;
+  const hasNext = page < totalPgs;
+
+  if (prevBtn) {
+    prevBtn.disabled = !hasPrev;
+    prevBtn.onclick = () => {
+      if (hasPrev) {
+        currentPage = page - 1;
+        loadTickets();
+      }
+    };
+  }
+  if (nextBtn) {
+    nextBtn.disabled = !hasNext;
+    nextBtn.onclick = () => {
+      if (hasNext) {
+        currentPage = page + 1;
+        loadTickets();
+      }
+    };
+  }
+
+  // Sync items per page select
+  if (itemsSelect && parseInt(itemsSelect.value, 10) !== pageSize) {
+    itemsSelect.value = String(pageSize);
+  }
+  itemsPerPage = pageSize;
+
+  // Page number buttons (max 5 like customers)
+  const maxPages = 5;
+  let startPage = Math.max(1, page - Math.floor(maxPages / 2));
+  let endPage = Math.min(totalPgs, startPage + maxPages - 1);
+  if (endPage - startPage < maxPages - 1) {
+    startPage = Math.max(1, endPage - maxPages + 1);
+  }
+  const pageNumbers = [];
+  for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+
+  container.innerHTML = '';
+  const prevNew = document.createElement('button');
+  prevNew.className = 'pagination-nav';
+  prevNew.id = 'prevButton';
+  prevNew.disabled = !hasPrev;
+  prevNew.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>';
+  prevNew.onclick = () => { if (hasPrev) { currentPage = page - 1; loadTickets(); } };
+  container.appendChild(prevNew);
+  pageNumbers.forEach(num => {
+    const btn = document.createElement('button');
+    btn.className = 'pagination-page' + (num === page ? ' pagination-page-active' : '');
+    btn.setAttribute('data-page', String(num));
+    btn.textContent = num;
+    btn.type = 'button';
+    btn.onclick = () => { currentPage = num; loadTickets(); };
+    container.appendChild(btn);
+  });
+  const nextNew = document.createElement('button');
+  nextNew.className = 'pagination-nav';
+  nextNew.id = 'nextButton';
+  nextNew.disabled = !hasNext;
+  nextNew.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>';
+  nextNew.onclick = () => { if (hasNext) { currentPage = page + 1; loadTickets(); } };
+  container.appendChild(nextNew);
 }
 
 function formatRelativeTime(iso) {

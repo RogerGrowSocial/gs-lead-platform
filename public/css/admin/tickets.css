@@ -1,14 +1,47 @@
-/* Tickets page specific styles */
+/* Tickets page specific styles - aligned with customers listing */
 /* Most styles come from adminPayments.css and payments-table.css */
 
-.tickets-container {
-  /* Same as payments-container */
+/* Same table row styling as customers */
+.payments-table-tickets .table-cell {
+  padding: 10px 16px;
 }
 
-/* Additional ticket-specific styles if needed */
+.payments-table-tickets .cell-column {
+  gap: 2px;
+}
+
+.payments-table-tickets .table-body-row {
+  border-bottom: 0.5px solid #f3f4f6 !important;
+}
+
+.payments-table-tickets {
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Ticket number in listing */
 .ticket-number {
   font-weight: 600;
   color: #111827;
   font-family: 'Courier New', monospace;
+}
+
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  position: relative;
+}
+
+.payments-table-tickets thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.payments-table-tickets thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f9fafb;
+  z-index: 2;
 }
 

@@ -1,5 +1,58 @@
 <%- include('../layouts/admin', {
   content: `
+    <style>
+      /* Clickable table rows - same as customers */
+      .table-body-row[data-ticket-id] {
+        transition: all 150ms ease;
+      }
+
+      .table-body-row[data-ticket-id]:hover {
+        background-color: #fef3f2;
+        border-left: 3px solid #ea5d0d;
+      }
+
+      /* Sortable table headers - same as customers */
+      .table-header-cell.sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .table-header-cell.sortable:hover {
+        background-color: #f9fafb;
+      }
+
+      .table-header-cell.sortable .sort-icon {
+        transition: opacity 0.2s;
+      }
+
+      .table-header-cell.sortable:hover .sort-icon {
+        opacity: 0.6 !important;
+      }
+
+      .table-header-cell.sortable.active .sort-icon {
+        opacity: 1 !important;
+      }
+
+      .table-header-cell.sortable.active.asc .sort-icon path:first-child {
+        stroke: #ea5d0d;
+      }
+
+      .table-header-cell.sortable.active.desc .sort-icon path:last-child {
+        stroke: #ea5d0d;
+      }
+
+      .page-header {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      #createTicketBtn {
+        flex-shrink: 0;
+        min-width: 140px;
+      }
+    </style>
     <div class="payments-container">
       <!-- Page Header -->
       <div class="page-header">
@@ -12,7 +65,7 @@
         </button>
       </div>
 
-      <!-- KPI Cards -->
+      <!-- KPI Cards - same structure as customers -->
       <div class="kpi-cards-container">
         <div class="kpi-cards-grid">
           <div class="kpi-card">
@@ -22,46 +75,59 @@
               <p class="kpi-subtitle">Tickets totaal</p>
             </div>
             <div class="kpi-icon">
-              <i class="fas fa-ticket-alt" style="font-size: 24px; color: #ea5d0d;"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ticket">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                <path d="M13 5v2"></path>
+                <path d="M13 17v2"></path>
+                <path d="M13 11v2"></path>
+              </svg>
             </div>
           </div>
           
           <div class="kpi-card">
             <div class="kpi-content">
               <p class="kpi-title">Open</p>
-              <p class="kpi-value" style="color: #3b82f6;">${kpis.open || 0}</p>
+              <p class="kpi-value">${kpis.open || 0}</p>
               <p class="kpi-subtitle">Nog openstaand</p>
             </div>
             <div class="kpi-icon">
-              <i class="fas fa-circle" style="font-size: 24px; color: #3b82f6;"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle">
+                <circle cx="12" cy="12" r="10"></circle>
+              </svg>
             </div>
           </div>
           
           <div class="kpi-card">
             <div class="kpi-content">
               <p class="kpi-title">In behandeling</p>
-              <p class="kpi-value" style="color: #f59e0b;">${kpis.in_progress || 0}</p>
+              <p class="kpi-value">${kpis.in_progress || 0}</p>
               <p class="kpi-subtitle">In behandeling</p>
             </div>
             <div class="kpi-icon">
-              <i class="fas fa-spinner" style="font-size: 24px; color: #f59e0b;"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-circle">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+              </svg>
             </div>
           </div>
           
           <div class="kpi-card">
             <div class="kpi-content">
               <p class="kpi-title">Urgent</p>
-              <p class="kpi-value" style="color: #ef4444;">${kpis.urgent || 0}</p>
+              <p class="kpi-value">${kpis.urgent || 0}</p>
               <p class="kpi-subtitle">Urgente tickets</p>
             </div>
             <div class="kpi-icon">
-              <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #ef4444;"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                <path d="M12 9v4"></path>
+                <path d="M12 17h.01"></path>
+              </svg>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Filters -->
+      <!-- Filters - same layout as customers -->
       <div class="filters-container">
         <div class="search-wrapper">
           <input 
@@ -84,7 +150,7 @@
             <option value="closed" ${filters.status === 'closed' ? 'selected' : ''}>Gesloten</option>
           </select>
           
-          <select class="status-select" id="prioritySelect" style="margin-left: 12px;">
+          <select class="status-select" id="prioritySelect">
             <option value="all" ${filters.priority === 'all' ? 'selected' : ''}>Alle prioriteiten</option>
             <option value="low" ${filters.priority === 'low' ? 'selected' : ''}>Laag</option>
             <option value="normal" ${filters.priority === 'normal' ? 'selected' : ''}>Normaal</option>
@@ -92,7 +158,7 @@
             <option value="urgent" ${filters.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
           </select>
           
-          <select class="status-select" id="assignedSelect" style="margin-left: 12px;">
+          <select class="status-select" id="assignedSelect">
             <option value="all" ${filters.assigned_to === 'all' ? 'selected' : ''}>Alle toegewezen</option>
             <option value="unassigned">Niet toegewezen</option>
             ${(admins || []).map(admin => `
@@ -103,73 +169,117 @@
           </select>
           
           <div class="results-info" id="paginationInfo">
-            Toont ${tickets.length} tickets
+            Toont 0 tot 0 van 0 resultaten
           </div>
         </div>
       </div>
 
-      <!-- Table Container -->
+      <!-- Table Container - same structure as customers -->
       <div class="table-container">
         <div class="table-scroll">
-          <table class="payments-table">
+          <table class="payments-table payments-table-tickets">
             <thead>
               <tr class="table-header-row">
-                <th class="table-header-cell">Ticketnummer</th>
-                <th class="table-header-cell">Onderwerp</th>
-                <th class="table-header-cell">Klant</th>
-                <th class="table-header-cell">Status</th>
-                <th class="table-header-cell">Prioriteit</th>
-                <th class="table-header-cell">Toegewezen aan</th>
-                <th class="table-header-cell">Aangemaakt</th>
-                <th class="table-header-cell">Acties</th>
+                <th class="table-header-cell sortable" data-sort="ticket_number">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Ticketnummer</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="subject">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Onderwerp</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="customer_id">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Klant</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="status">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Status</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="priority">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Prioriteit</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="assignee_id">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Toegewezen aan</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell sortable" data-sort="last_activity_at">
+                  <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                    <span>Laatste activiteit</span>
+                    <svg class="sort-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.3;">
+                      <path d="M3 4L6 1L9 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 8L6 11L9 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </th>
+                <th class="table-header-cell"></th>
               </tr>
             </thead>
             <tbody id="ticketsTableBody">
               ${
-                (tickets || []).map(t => {
+                (!tickets || tickets.length === 0) ? `
+                  <tr class="table-body-row">
+                    <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
+                      Geen tickets gevonden. Klik op "Nieuw Ticket" om er een aan te maken.
+                    </td>
+                  </tr>
+                ` : (tickets || []).map(t => {
                   const statusLabels = {
+                    'new': 'Nieuw',
                     'open': 'Open',
-                    'in_progress': 'In behandeling',
-                    'waiting': 'Wachten',
+                    'waiting_on_customer': 'Wachten op klant',
+                    'waiting_on_internal': 'Wachten intern',
                     'resolved': 'Opgelost',
                     'closed': 'Gesloten'
                   };
-                  
                   const statusStyles = {
                     'open': 'status-paid',
+                    'new': 'status-paid',
                     'in_progress': 'status-pending',
-                    'waiting': 'status-pending',
+                    'waiting_on_customer': 'status-pending',
+                    'waiting_on_internal': 'status-pending',
                     'resolved': 'status-paid',
                     'closed': 'status-cancelled'
                   };
-                  
-                  const priorityLabels = {
-                    'low': 'Laag',
-                    'normal': 'Normaal',
-                    'high': 'Hoog',
-                    'urgent': 'Urgent'
-                  };
-                  
-                  const priorityColors = {
-                    'low': '#6b7280',
-                    'normal': '#3b82f6',
-                    'high': '#f59e0b',
-                    'urgent': '#ef4444'
-                  };
-                  
+                  const priorityLabels = { 'low': 'Laag', 'normal': 'Normaal', 'high': 'Hoog', 'urgent': 'Urgent' };
+                  const priorityColors = { 'low': '#6b7280', 'normal': '#3b82f6', 'high': '#f59e0b', 'urgent': '#ef4444' };
                   const customerName = t.customers?.name || t.customers?.email || 'Onbekend';
-                  const assignedName = t.profiles ? 
-                    `${t.profiles.first_name || ''} ${t.profiles.last_name || ''}`.trim() || t.profiles.email : 
-                    'Niet toegewezen';
-                  
-                  const createdDate = t.created_at ? new Date(t.created_at).toLocaleDateString('nl-NL', { 
-                    day: '2-digit', 
-                    month: 'short', 
-                    year: 'numeric' 
-                  }) : '-';
-                  
+                  const assigneeData = t.assignee || t.profiles;
+                  const assignedName = assigneeData ? `${assigneeData.first_name || ''} ${assigneeData.last_name || ''}`.trim() || assigneeData.email : 'Niet toegewezen';
+                  const createdDate = t.created_at ? new Date(t.created_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
                   return `
-                    <tr class="table-body-row">
+                    <tr class="table-body-row" data-ticket-id="${t.id}" style="cursor: pointer;">
                       <td class="table-cell">
                         <span class="customer-name" style="font-weight: 600; color: #111827;">${t.ticket_number || '-'}</span>
                       </td>
@@ -199,7 +309,7 @@
                       <td class="table-cell">
                         <span class="cell-text">${createdDate}</span>
                       </td>
-                      <td class="table-cell">
+                      <td class="table-cell" onclick="event.stopPropagation();" style="position: relative;">
                         <button class="actions-button" onclick="showTicketActions('${t.id}', event)" title="Meer acties">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="1"></circle>
@@ -212,17 +322,36 @@
                   `;
                 }).join('')
               }
-              ${
-                (!tickets || tickets.length === 0) ? `
-                  <tr class="table-body-row">
-                    <td colspan="8" class="table-cell" style="text-align: center; color: #9ca3af; padding: 48px;">
-                      Geen tickets gevonden. Klik op "Nieuw Ticket" om er een aan te maken.
-                    </td>
-                  </tr>
-                ` : ''
-              }
             </tbody>
           </table>
+        </div>
+      </div>
+      
+      <!-- Pagination - same as customers -->
+      <div class="pagination-container">
+        <div class="items-per-page-wrapper">
+          <label for="itemsPerPageSelect" class="items-per-page-label">Toon:</label>
+          <select class="items-per-page-select" id="itemsPerPageSelect">
+            <option value="15">15</option>
+            <option value="20" selected>20</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+          <span class="items-per-page-suffix">per pagina</span>
+        </div>
+        <div class="pagination-buttons" id="paginationButtons">
+          <button class="pagination-nav" id="prevButton" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          <button class="pagination-page pagination-page-active" data-page="1">1</button>
+          <button class="pagination-nav" id="nextButton" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
