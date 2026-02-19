@@ -10,7 +10,7 @@
 .time-tracking-page {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -753,10 +753,6 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .time-tracking-page {
-    padding: calc(var(--spacing) * 4);
-  }
-
   .clock-main {
     flex-direction: column;
     align-items: stretch;
