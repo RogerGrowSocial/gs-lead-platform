@@ -141,9 +141,45 @@
                   <option value="${t.id}" data-customer-id="${t.customer_id || ''}" data-contact-id="${t.contact_id || ''}" data-task-title="${(t.title || '').toLowerCase()}">${t.title}</option>
                 `).join('')}
               </select>
+              <p class="activity-form-new-task-link" id="newTaskLinkWrap">
+                <button type="button" class="activity-form-new-task-btn" id="newTaskLinkBtn" onclick="toggleNewTaskForm()" aria-label="Nieuwe taak maken">+ nieuwe taak maken</button>
+              </p>
+              <div class="activity-form-new-task" id="newTaskFormWrap" style="display: none;">
+                <p class="activity-form-new-task-title">Nieuwe taak voor klant / bedrijf</p>
+                <div class="activity-form-new-task-fields">
+                  <div class="activity-form-new-task-field">
+                    <label for="newTaskTitle">Titel <span class="required">*</span></label>
+                    <input type="text" id="newTaskTitle" class="activity-input" placeholder="Bijv. Bugfix login pagina" required>
+                  </div>
+                  <div class="activity-form-new-task-field activity-form-new-task-field--customer">
+                    <label for="newTaskCustomerSearch">Klant / bedrijf <span class="required">*</span></label>
+                    <input type="text" id="newTaskCustomerSearch" class="activity-input" placeholder="Zoek klant..." autocomplete="off">
+                    <div id="newTaskCustomerDropdown" class="activity-form-new-task-dropdown" style="display: none;"></div>
+                    <input type="hidden" id="newTaskCustomerId">
+                  </div>
+                  <div class="activity-form-new-task-field">
+                    <label for="newTaskDescription">Beschrijving</label>
+                    <textarea id="newTaskDescription" class="activity-input" rows="2" placeholder="Optioneel"></textarea>
+                  </div>
+                  <div class="activity-form-new-task-field">
+                    <label for="newTaskPriority">Prioriteit</label>
+                    <select id="newTaskPriority" class="activity-input activity-select">
+                      <option value="low">Laag</option>
+                      <option value="medium" selected>Normaal</option>
+                      <option value="high">Hoog</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="newTaskFormError" class="activity-form-new-task-error" style="display: none;"></div>
+                <div class="activity-form-new-task-actions">
+                  <button type="button" class="clock-btn" onclick="toggleNewTaskForm()">Annuleren</button>
+                  <button type="button" class="clock-btn clock-in-btn" id="newTaskSubmitBtn" onclick="submitNewTask()">Taak aanmaken</button>
+                </div>
+              </div>
             </div>
             <div class="activity-form-field" id="customerFieldContainer" style="display: none;">
               <label for="activeCustomer" data-slot="label">Klant</label>
+              <span class="activity-form-field-hint">Van taak, aanpasbaar</span>
               <select id="activeCustomer" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
                 <option value="">Selecteer klant</option>
                 ${(customers || []).map(c => `
@@ -153,6 +189,7 @@
             </div>
             <div class="activity-form-field" id="contactFieldContainer" style="display: none;">
               <label for="activeContact" data-slot="label">Contact</label>
+              <span class="activity-form-field-hint">Van taak, aanpasbaar</span>
               <select id="activeContact" class="activity-input activity-select" data-slot="input" onchange="updateActiveTimer()">
                 <option value="">Selecteer contact</option>
                 ${(contacts || []).map(c => `
@@ -337,7 +374,8 @@
       employeeId: '${viewingEmployeeId}',
       isOwnPage: ${isOwnPage},
       isAdmin: ${isAdmin},
-      canViewAll: ${userCanViewAll}
+      canViewAll: ${userCanViewAll},
+      customers: ${JSON.stringify((customers || []).map(c => ({ id: c.id, company_name: c.company_name || '', first_name: c.first_name || '', last_name: c.last_name || '', email: c.email || '' })))}
     };
   </script>
   `,

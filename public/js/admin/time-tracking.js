@@ -25,6 +25,7 @@
     if (isOwnPage) {
       await loadActiveTimer();
       startTimerUpdate();
+      setupNewTaskForm();
     }
     loadWeekOverview();
     loadTimeEntries();
@@ -370,53 +371,43 @@
     });
   };
 
-  // Handle task change - auto-populate customer and contact
+  // Handle task change - auto-fill customer and contact from task (velden blijven bewerkbaar)
   window.handleTaskChange = function() {
-    const taskId = document.getElementById('activeTask').value;
+    const taskSelect = document.getElementById('activeTask');
+    const taskId = taskSelect ? taskSelect.value : '';
     const customerField = document.getElementById('activeCustomer');
     const contactField = document.getElementById('activeContact');
     const customerFieldContainer = document.getElementById('customerFieldContainer');
     const contactFieldContainer = document.getElementById('contactFieldContainer');
     const taskSearchInput = document.getElementById('taskSearchInput');
-    
-    if (taskId) {
-      const taskOption = document.querySelector(`#activeTask option[value="${taskId}"]`);
-      if (taskOption) {
-        const customerId = taskOption.getAttribute('data-customer-id');
-        const contactId = taskOption.getAttribute('data-contact-id');
-        
-        // Set search input to selected task title
+
+    if (taskId && taskSelect.selectedIndex >= 0) {
+      const taskOption = taskSelect.options[taskSelect.selectedIndex];
+      if (taskOption && taskOption.value === taskId) {
+        const customerId = (taskOption.getAttribute('data-customer-id') || '').trim();
+        const contactId = (taskOption.getAttribute('data-contact-id') || '').trim();
+
         if (taskSearchInput) {
-          taskSearchInput.value = taskOption.textContent;
+          taskSearchInput.value = taskOption.textContent.trim();
         }
-        
-        // Show customer field
+
         customerFieldContainer.style.display = 'block';
-        if (customerId) {
-          customerField.value = customerId;
-        } else {
-          customerField.value = '';
-        }
-        
-        // Show contact field
         contactFieldContainer.style.display = 'block';
-        if (contactId) {
-          contactField.value = contactId;
-        } else {
-          contactField.value = '';
+        if (customerField) {
+          customerField.value = customerId || '';
+        }
+        if (contactField) {
+          contactField.value = contactId || '';
         }
       }
     } else {
-      // Hide fields if no task selected
       customerFieldContainer.style.display = 'none';
       contactFieldContainer.style.display = 'none';
-      customerField.value = '';
-      contactField.value = '';
-      if (taskSearchInput) {
-        taskSearchInput.value = '';
-      }
+      if (customerField) customerField.value = '';
+      if (contactField) contactField.value = '';
+      if (taskSearchInput) taskSearchInput.value = '';
     }
-    
+
     updateActiveTimer();
   };
 
@@ -503,6 +494,161 @@
       if (btnText) btnText.textContent = 'Wijzig activiteit';
     }
   };
+
+  // Toggle "nieuwe taak maken" inline form
+  window.toggleNewTaskForm = function() {
+    const wrap = document.getElementById('newTaskFormWrap');
+    const linkWrap = document.getElementById('newTaskLinkWrap');
+    if (!wrap || !linkWrap) return;
+    const isOpen = wrap.style.display !== 'none';
+    if (isOpen) {
+      wrap.style.display = 'none';
+      linkWrap.style.display = '';
+      const dropdown = document.getElementById('newTaskCustomerDropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      linkWrap.style.display = 'none';
+      document.getElementById('newTaskFormError').style.display = 'none';
+      document.getElementById('newTaskTitle').focus();
+    }
+  };
+
+  // Submit new task (create task for current employee + customer)
+  window.submitNewTask = async function() {
+    const titleEl = document.getElementById('newTaskTitle');
+    const customerIdEl = document.getElementById('newTaskCustomerId');
+    const descriptionEl = document.getElementById('newTaskDescription');
+    const priorityEl = document.getElementById('newTaskPriority');
+    const errorEl = document.getElementById('newTaskFormError');
+    const submitBtn = document.getElementById('newTaskSubmitBtn');
+    if (!titleEl || !customerIdEl || !errorEl || !submitBtn) return;
+
+    const title = (titleEl.value || '').trim();
+    const customerId = customerIdEl.value || '';
+    const description = (descriptionEl && descriptionEl.value) ? descriptionEl.value.trim() : null;
+    const priority = (priorityEl && priorityEl.value) || 'medium';
+
+    errorEl.style.display = 'none';
+    if (!title) {
+      errorEl.textContent = 'Vul een titel in.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    if (!customerId) {
+      errorEl.textContent = 'Selecteer een klant / bedrijf.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Aanmaken...';
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employee_id: employeeId,
+          customer_id: customerId,
+          title: title,
+          description: description,
+          priority: priority
+        })
+      });
+      const result = await res.json();
+
+      if (!res.ok || !result.ok) {
+        throw new Error(result.error || 'Fout bij aanmaken taak');
+      }
+
+      const task = result.data;
+      const taskSelect = document.getElementById('activeTask');
+      const taskSearchInput = document.getElementById('taskSearchInput');
+      if (taskSelect) {
+        const opt = document.createElement('option');
+        opt.value = task.id;
+        opt.textContent = task.title;
+        opt.setAttribute('data-customer-id', task.customer_id || '');
+        opt.setAttribute('data-contact-id', task.contact_id || '');
+        opt.setAttribute('data-task-title', (task.title || '').toLowerCase());
+        taskSelect.appendChild(opt);
+        taskSelect.value = task.id;
+      }
+      if (taskSearchInput) taskSearchInput.value = task.title || '';
+      if (typeof handleTaskChange === 'function') handleTaskChange();
+
+      titleEl.value = '';
+      customerIdEl.value = '';
+      const searchEl = document.getElementById('newTaskCustomerSearch');
+      if (searchEl) searchEl.value = '';
+      if (descriptionEl) descriptionEl.value = '';
+      if (priorityEl) priorityEl.value = 'medium';
+      toggleNewTaskForm();
+
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('Taak aangemaakt', 'success');
+      }
+    } catch (err) {
+      console.error('Error creating task:', err);
+      errorEl.textContent = err.message || 'Er is een fout opgetreden.';
+      errorEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Taak aanmaken';
+    }
+  };
+
+  // Setup new-task form: customer search dropdown (run once after DOM)
+  function setupNewTaskForm() {
+    const customerSearch = document.getElementById('newTaskCustomerSearch');
+    const customerDropdown = document.getElementById('newTaskCustomerDropdown');
+    const customerIdInput = document.getElementById('newTaskCustomerId');
+    const customers = (window.timeTrackingData && window.timeTrackingData.customers) || [];
+
+    if (!customerSearch || !customerDropdown || !customerIdInput) return;
+
+    customerSearch.addEventListener('input', function() {
+      const query = (this.value || '').trim();
+      if (query.length < 1) {
+        customerDropdown.style.display = 'none';
+        return;
+      }
+      const q = query.toLowerCase();
+      const filtered = customers.filter(function(c) {
+        const name = (c.company_name || (c.first_name + ' ' + c.last_name) || c.email || '').toLowerCase();
+        return name.indexOf(q) !== -1 || (c.email || '').toLowerCase().indexOf(q) !== -1;
+      });
+      if (filtered.length === 0) {
+        customerDropdown.innerHTML = '<div class="activity-form-new-task-dropdown-item activity-form-new-task-dropdown-item--empty">Geen klanten gevonden</div>';
+      } else {
+        customerDropdown.innerHTML = filtered.map(function(c) {
+          const label = c.company_name || (c.first_name + ' ' + c.last_name) || c.email || 'Onbekend';
+          return '<div class="activity-form-new-task-dropdown-item" data-customer-id="' + (c.id || '') + '" data-customer-name="' + (label.replace(/"/g, '&quot;')) + '">' + escapeHtml(label) + '</div>';
+        }).join('');
+        customerDropdown.querySelectorAll('.activity-form-new-task-dropdown-item[data-customer-id]').forEach(function(el) {
+          el.addEventListener('click', function() {
+            customerIdInput.value = this.getAttribute('data-customer-id') || '';
+            customerSearch.value = this.getAttribute('data-customer-name') || '';
+            customerDropdown.style.display = 'none';
+          });
+        });
+      }
+      customerDropdown.style.display = 'block';
+    });
+
+    customerSearch.addEventListener('focus', function() {
+      if ((this.value || '').trim().length > 0) customerDropdown.style.display = 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+      if (customerDropdown && customerDropdown.style.display !== 'none' &&
+          e.target !== customerSearch && e.target !== customerDropdown && !customerDropdown.contains(e.target)) {
+        customerDropdown.style.display = 'none';
+      }
+    });
+  }
 
   // Show save indicator
   function showSaveIndicator() {
