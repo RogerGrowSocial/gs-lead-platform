@@ -838,8 +838,10 @@
                               (typeof locals !== 'undefined' && locals.isAdmin === true) || 
                               (typeof user !== 'undefined' && (user.is_admin === true || (user.user_metadata && user.user_metadata.is_admin === true)));
           
-          // Check if user is manager - use userRole if provided
-          const userRoleName = (typeof userRole !== 'undefined' && userRole) ? userRole.toLowerCase() : '';
+          // Check if user is manager - use userRole if provided, else fall back to user.role (set by loadUserProfile)
+          const roleFromRoute = (typeof userRole !== 'undefined' && userRole) ? String(userRole) : '';
+          const roleFromUser = (typeof user !== 'undefined' && user && user.role) ? String(user.role) : '';
+          const userRoleName = (roleFromRoute || roleFromUser).toLowerCase();
           const userIsManager = userRoleName.includes('manager');
           
           // Show all menu items for admins and managers
