@@ -225,7 +225,7 @@ function renderTickets(tickets) {
     return `
       <tr class="table-body-row" data-ticket-id="${ticket.id}" style="cursor: pointer;">
         <td class="table-cell">
-          <span class="customer-name" style="font-weight: 600; color: #111827; font-family: 'Courier New', monospace;">${ticket.ticket_number || ticket.id.substring(0, 8)}</span>
+          <span class="customer-name" style="font-weight: 600; color: #111827;">${ticket.ticket_number || ticket.id.substring(0, 8)}</span>
         </td>
         <td class="table-cell">
           <div class="cell-column">

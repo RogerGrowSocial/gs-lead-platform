@@ -16,14 +16,29 @@
 
 .payments-table-tickets {
   width: 100%;
-  table-layout: auto;
+  table-layout: fixed;
 }
+.payments-table-tickets .table-header-cell:nth-child(1),
+.payments-table-tickets .table-cell:nth-child(1) { width: 11%; min-width: 140px; }
+.payments-table-tickets .table-header-cell:nth-child(2),
+.payments-table-tickets .table-cell:nth-child(2) { width: 22%; min-width: 160px; }
+.payments-table-tickets .table-header-cell:nth-child(3),
+.payments-table-tickets .table-cell:nth-child(3) { width: 12%; min-width: 100px; }
+.payments-table-tickets .table-header-cell:nth-child(4),
+.payments-table-tickets .table-cell:nth-child(4) { width: 10%; min-width: 100px; }
+.payments-table-tickets .table-header-cell:nth-child(5),
+.payments-table-tickets .table-cell:nth-child(5) { width: 8%; min-width: 80px; }
+.payments-table-tickets .table-header-cell:nth-child(6),
+.payments-table-tickets .table-cell:nth-child(6) { width: 14%; min-width: 120px; }
+.payments-table-tickets .table-header-cell:nth-child(7),
+.payments-table-tickets .table-cell:nth-child(7) { width: 11%; min-width: 100px; }
+.payments-table-tickets .table-header-cell:nth-child(8),
+.payments-table-tickets .table-cell:nth-child(8) { width: 44px; min-width: 44px; max-width: 44px; }
 
-/* Ticket number in listing */
+/* Ticket number in listing - same font as rest of table */
 .ticket-number {
   font-weight: 600;
   color: #111827;
-  font-family: 'Courier New', monospace;
 }
 
 .table-scroll {
