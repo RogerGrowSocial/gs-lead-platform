@@ -136,7 +136,7 @@
             </div>
             <div class="activity-form-field" id="taskFieldContainer" style="display: none;">
               <label for="activeTask" data-slot="label">Taken *</label>
-              <input type="text" id="taskSearchInput" class="activity-input" placeholder="Zoek taak..." style="margin-bottom: 8px;" oninput="filterTaskOptions(this.value)">
+              <input type="text" id="taskSearchInput" class="activity-input" placeholder="Maak of zoek een taak..." style="margin-bottom: 8px;" oninput="filterTaskOptions(this.value)">
               <select id="activeTask" class="activity-input activity-select" data-slot="input" onchange="handleTaskChange()">
                 <option value="">Selecteer taak...</option>
                 ${(tasks || []).map(t => `

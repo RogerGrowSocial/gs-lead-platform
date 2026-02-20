@@ -176,7 +176,7 @@
                 <input 
                   type="text" 
                   id="timeTrackerTaskSearch" 
-                  placeholder="Zoek taak..." 
+                  placeholder="Maak of zoek een taak..." 
                   autocomplete="off"
                   style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
                 />
@@ -275,7 +275,7 @@
             <div id="timeTrackerSwitchTaskContainer" style="margin-bottom: 12px; display: none;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Taak</label>
               <div style="position: relative;">
-                <input type="text" id="timeTrackerSwitchTaskSearch" placeholder="Zoek taak..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
+                <input type="text" id="timeTrackerSwitchTaskSearch" placeholder="Maak of zoek een taak..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
                 <button type="button" id="timeTrackerSwitchTaskClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis taak">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
