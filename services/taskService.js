@@ -10,18 +10,20 @@ const SystemLogService = require('./systemLogService')
  */
 class TaskService {
   /**
-   * Get tasks for employee with filters
+   * Get tasks for employee with filters and optional search
    * @param {string} employeeId - UUID of employee
-   * @param {Object} filters - { status, priority, limit, offset }
-   * @returns {Promise<Object>} Tasks with pagination
+   * @param {Object} filters - { status, priority, limit, offset, q }
+   * @returns {Promise<Object>} { tasks, total }
    */
   static async getTasks(employeeId, filters = {}) {
     try {
+      const limit = Math.min(Math.max(parseInt(filters.limit, 10) || 25, 1), 50)
+      const q = (filters.q || '').toString().trim()
+
       let query = supabaseAdmin
         .from('employee_tasks')
-        .select('*, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email)', { count: 'exact' })
+        .select('id, title, status, customer_id, contact_id, created_at, updated_at, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email)', q ? undefined : { count: 'exact' })
         .eq('employee_id', employeeId)
-        .order('created_at', { ascending: false })
 
       if (filters.status) {
         if (Array.isArray(filters.status)) {
@@ -35,21 +37,35 @@ class TaskService {
         query = query.eq('priority', filters.priority)
       }
 
-      if (filters.limit) {
-        query = query.limit(filters.limit)
+      if (q) {
+        query = query.ilike('title', `%${q.replace(/%/g, '\\%')}%`)
       }
 
-      if (filters.offset) {
-        query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1)
+      query = query.order('updated_at', { ascending: false }).limit(limit)
+
+      if (filters.offset && !q) {
+        query = query.range(filters.offset, filters.offset + limit - 1)
       }
 
       const { data, error, count } = await query
 
       if (error) throw error
 
+      const tasks = (data || []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        customer_id: t.customer_id,
+        contact_id: t.contact_id,
+        customer_name: t.customer ? (t.customer.company_name || [t.customer.first_name, t.customer.last_name].filter(Boolean).join(' ') || t.customer.email) : null,
+        contact_name: t.contact ? ([t.contact.first_name, t.contact.last_name].filter(Boolean).join(' ') || t.contact.email) : null,
+        customer: t.customer,
+        contact: t.contact
+      }))
+
       return {
-        tasks: data || [],
-        total: count || 0
+        tasks,
+        total: count != null ? count : tasks.length
       }
     } catch (error) {
       console.error('Error in getTasks:', error)

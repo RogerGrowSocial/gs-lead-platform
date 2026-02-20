@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="/css/chart-theme.css">
   <link rel="stylesheet" href="/css/admin/notifications.css">
   <link rel="stylesheet" href="/css/admin/time-tracker.css">
+  <link rel="stylesheet" href="/css/admin/search-dropdown.css">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
     <% stylesheets.forEach(function(stylesheet) { %>
       <link rel="stylesheet" href="<%= stylesheet %>" media="all" data-page-specific="true">
@@ -1329,6 +1330,7 @@
       window.currentUserId = '<%= user.id %>';
     <% } %>
   </script>
+  <script src="/js/admin/components/search-dropdown.js"></script>
   <script src="/js/admin/time-tracker.js"></script>
   <% if (typeof scripts !== 'undefined' && scripts) { %>
     <% scripts.forEach(function(script) { %>

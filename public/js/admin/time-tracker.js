@@ -15,6 +15,18 @@
     { value: 'operations', label: 'Operations' }
   ];
 
+  function avatarHtml(url, name, size) {
+    size = size || 24;
+    const initials = !name ? '?' : name.trim().split(/\s+/).length >= 2
+      ? (name.trim().split(/\s+/)[0][0] + name.trim().split(/\s+/).pop()[0]).toUpperCase().slice(0, 2)
+      : name.trim().slice(0, 2).toUpperCase();
+    if (url) {
+      return '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" width="' + size + '" height="' + size + '" style="border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">' +
+        '<span style="display:none;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;font-weight:600;align-items:center;justify-content:center;">' + initials + '</span>';
+    }
+    return '<span style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;">' + initials + '</span>';
+  }
+
   class TimeTracker {
     constructor(userId) {
       this.userId = userId;
@@ -24,7 +36,7 @@
       this.tasks = [];
       this.customers = [];
       this.contacts = [];
-      
+      this.taskSearchDebounceTimer = null;
       this.init();
     }
 
@@ -312,14 +324,18 @@
               <input type="text" id="timeTrackerSwitchNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
-            <div style="display: flex; gap: 8px;">
-              <button type="button" id="timeTrackerSwitch" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="timeTrackerUpdateDetails" style="padding: 10px 14px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+                Wijzig details
+              </button>
+              <button type="button" id="timeTrackerSwitch" style="flex: 1; min-width: 100px; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
                 Wissel taak
               </button>
-              <button type="button" id="timeTrackerStop" style="flex: 1; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+              <button type="button" id="timeTrackerStop" style="flex: 1; min-width: 100px; padding: 10px; background: #ef4444; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
                 Uitklokken
               </button>
             </div>
+            <div id="timeTrackerClockOutError" style="display: none; margin-top: 8px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #991b1b; font-size: 13px;"></div>
           </div>
 
           <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
@@ -485,6 +501,12 @@
         startBtn.addEventListener('click', () => this.handleStart());
       }
 
+      // Wijzig details button
+      const updateDetailsBtn = this.popover.querySelector('#timeTrackerUpdateDetails');
+      if (updateDetailsBtn) {
+        updateDetailsBtn.addEventListener('click', () => this.handleUpdateDetails());
+      }
+
       // Switch button
       const switchBtn = this.popover.querySelector('#timeTrackerSwitch');
       if (switchBtn) {
@@ -566,18 +588,19 @@
       this.updateSwitchCustomerClearButton();
     }
 
-    async loadTasks() {
+    async loadTasks(q = '') {
       try {
-        const response = await fetch(`/api/employees/${this.userId}/tasks?status=open,in_progress`, {
-          credentials: 'include'
-        });
+        const params = new URLSearchParams({ status: 'open,in_progress', limit: '25' });
+        if (q && q.trim()) params.set('q', q.trim());
+        const response = await fetch(`/api/employees/${this.userId}/tasks?${params}`, { credentials: 'include' });
         const result = await response.json();
-        
         if (result.ok && result.data) {
           this.tasks = result.data.tasks || result.data || [];
         }
+        return this.tasks;
       } catch (error) {
         console.error('[TimeTracker] Error loading tasks:', error);
+        return [];
       }
     }
 
@@ -599,60 +622,44 @@
 
     handleTaskSearch(query) {
       const dropdown = this.popover.querySelector('#timeTrackerTaskDropdown');
-      
-      // If no query, show all tasks (up to 50)
-      const filtered = (!query || query.length < 1) 
-        ? this.tasks.slice(0, 50)
-        : this.tasks.filter(task => 
-            task.title?.toLowerCase().includes(query.toLowerCase())
-          );
+      if (this.taskSearchDebounceTimer) clearTimeout(this.taskSearchDebounceTimer);
+      this.taskSearchDebounceTimer = setTimeout(() => {
+        this._doTaskSearch(query, dropdown);
+      }, 250);
+    }
+
+    async _doTaskSearch(query, dropdown) {
+      dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Zoeken…</div>';
+      dropdown.style.display = 'block';
+      const tasks = await this.loadTasks(query || '');
+      const filtered = tasks || [];
 
       if (filtered.length === 0) {
         dropdown.innerHTML = `
           <div style="padding: 12px; color: #6b7280; text-align: center;">
             <div style="margin-bottom: 8px;">Geen taken gevonden</div>
-            <button 
-              id="addTaskFromSearchBtn" 
-              style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s;"
-              onmouseover="this.style.background='#2563eb'"
-              onmouseout="this.style.background='#3b82f6'"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
+            <button id="addTaskFromSearchBtn" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               Taak toevoegen
             </button>
           </div>
         `;
-        
-        // Add click handler for add task button
         const addTaskBtn = dropdown.querySelector('#addTaskFromSearchBtn');
         if (addTaskBtn) {
           addTaskBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.showAddTaskModal(query || '');
+            this.showAddTaskModal((query || '').trim());
           });
         }
       } else {
-        dropdown.innerHTML = filtered.map(task => `
-          <div 
-            class="task-option" 
-            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
-            onmouseover="this.style.background='#f9fafb'"
-            onmouseout="this.style.background='white'"
-            data-task-id="${task.id}"
-            data-task-title="${task.title || ''}"
-            data-customer-id="${task.customer_id || ''}"
-            data-customer-name="${task.customer?.company_name || task.customer?.first_name + ' ' + task.customer?.last_name || ''}"
-            data-contact-id="${task.contact_id || ''}"
-          >
-            <div style="font-weight: 500; color: #111827; font-size: 14px;">${task.title || 'Geen titel'}</div>
-            ${task.customer ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${task.customer.company_name || task.customer.first_name + ' ' + task.customer.last_name}</div>` : ''}
-          </div>
-        `).join('');
+        dropdown.innerHTML = filtered.map(task => {
+          const custName = task.customer_name || (task.customer ? (task.customer.company_name || [task.customer.first_name, task.customer.last_name].filter(Boolean).join(' ')) : '');
+          return `<div class="task-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" data-task-id="${task.id}" data-task-title="${(task.title || '').replace(/"/g, '&quot;')}" data-customer-id="${task.customer_id || ''}" data-customer-name="${(custName || '').replace(/"/g, '&quot;')}" data-contact-id="${task.contact_id || ''}">
+            <div style="font-weight: 500; color: #111827; font-size: 14px;">${(task.title || 'Geen titel').replace(/</g, '&lt;')}</div>
+            ${custName ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${String(custName).replace(/</g, '&lt;')}</div>` : ''}
+          </div>`;
+        }).join('');
 
-        // Add click handlers
         dropdown.querySelectorAll('.task-option').forEach(option => {
           option.addEventListener('click', () => {
             const taskId = option.getAttribute('data-task-id');
@@ -666,38 +673,24 @@
             this.popover.querySelector('#timeTrackerTaskDropdown').style.display = 'none';
             this.updateTaskClearButton();
 
-            // Always show customer container when klantenwerk is selected
             const activity = this.popover.querySelector('#timeTrackerActivity').value;
             if (activity === 'klantenwerk') {
               this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
             }
-
             if (customerId && customerName) {
               this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
               this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
               this.updateCustomerClearButton();
-              
-              // Auto-fill title: "Taak: [taak titel] voor: [klant naam]"
               const noteInput = this.popover.querySelector('#timeTrackerNote');
-              if (noteInput && taskTitle && customerName) {
-                noteInput.value = `Taak: ${taskTitle} voor: ${customerName}`;
-              }
-              
-              // Load contacts for this customer
-              if (contactId) {
-                this.loadContactsForCustomer(customerId, contactId);
-              }
+              if (noteInput && taskTitle && customerName) noteInput.value = `Taak: ${taskTitle} voor: ${customerName}`;
+              if (contactId) this.loadContactsForCustomer(customerId, contactId);
             } else if (taskTitle) {
-              // Auto-fill title even if no customer: "Taak: [taak titel]"
               const noteInput = this.popover.querySelector('#timeTrackerNote');
-              if (noteInput) {
-                noteInput.value = `Taak: ${taskTitle}`;
-              }
+              if (noteInput) noteInput.value = `Taak: ${taskTitle}`;
             }
           });
         });
       }
-
       dropdown.style.display = 'block';
     }
 
@@ -759,18 +752,14 @@
       if (filtered.length === 0) {
         dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen klanten gevonden</div>';
       } else {
-        dropdown.innerHTML = filtered.map(customer => `
-          <div 
-            class="customer-option" 
-            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
-            onmouseover="this.style.background='#f9fafb'"
-            onmouseout="this.style.background='white'"
-            data-customer-id="${customer.id}"
-            data-customer-name="${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || ''}"
-          >
-            <div style="font-weight: 500; color: #111827; font-size: 14px;">${customer.company_name || customer.first_name + ' ' + customer.last_name || customer.email || 'Onbekend'}</div>
-          </div>
-        `).join('');
+        const custName = (c) => c.company_name || (c.first_name && c.last_name ? c.first_name + ' ' + c.last_name : c.name) || c.email || 'Onbekend';
+        dropdown.innerHTML = filtered.map(customer => {
+          const name = custName(customer);
+          return '<div class="customer-option" style="display:flex;align-items:center;gap:10px;padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'" data-customer-id="' + customer.id + '" data-customer-name="' + (name || '').replace(/"/g, '&quot;') + '">' +
+            '<span style="flex-shrink:0;">' + avatarHtml(customer.avatar_url || null, name, 24) + '</span>' +
+            '<div style="font-weight: 500; color: #111827; font-size: 14px;">' + (name || '').replace(/</g, '&lt;') + '</div>' +
+            '</div>';
+        }).join('');
 
         dropdown.querySelectorAll('.customer-option').forEach(option => {
           option.addEventListener('click', () => {
@@ -816,20 +805,12 @@
         dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen contacten gevonden</div>';
       } else {
         dropdown.innerHTML = filtered.map(contact => {
-          const contactName = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || 'Onbekend';
-          return `
-          <div 
-            class="contact-option" 
-            style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
-            onmouseover="this.style.background='#f9fafb'"
-            onmouseout="this.style.background='white'"
-            data-contact-id="${contact.id}"
-            data-contact-name="${contactName}"
-          >
-            <div style="font-weight: 500; color: #111827; font-size: 14px;">${contactName}</div>
-            ${contact.email ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${contact.email}</div>` : ''}
-          </div>
-        `;
+          const contactName = ((contact.first_name || '') + ' ' + (contact.last_name || '')).trim() || contact.email || 'Onbekend';
+          return '<div class="contact-option" style="display:flex;align-items:center;gap:10px;padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'" data-contact-id="' + contact.id + '" data-contact-name="' + (contactName || '').replace(/"/g, '&quot;') + '">' +
+            '<span style="flex-shrink:0;">' + avatarHtml(contact.avatar_url || contact.photo_url || null, contactName, 24) + '</span>' +
+            '<div><div style="font-weight: 500; color: #111827; font-size: 14px;">' + (contactName || '').replace(/</g, '&lt;') + '</div>' +
+            (contact.email ? '<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">' + String(contact.email).replace(/</g, '&lt;') + '</div>' : '') + '</div>' +
+            '</div>';
         }).join('');
 
         dropdown.querySelectorAll('.contact-option').forEach(option => {
@@ -1186,6 +1167,7 @@
           if (typeof window.showNotification === 'function') {
             window.showNotification('Timer gestart', 'success');
           }
+          if (typeof window._broadcastTimerUpdated === 'function') window._broadcastTimerUpdated();
         } else {
           throw new Error(result.error || 'Fout bij starten timer');
         }
@@ -1246,6 +1228,7 @@
           if (typeof window.showNotification === 'function') {
             window.showNotification('Taak gewisseld', 'success');
           }
+          if (typeof window._broadcastTimerUpdated === 'function') window._broadcastTimerUpdated();
         } else {
           throw new Error(result.error || 'Fout bij wisselen taak');
         }
@@ -1257,15 +1240,75 @@
       }
     }
 
+    async handleUpdateDetails() {
+      const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
+      const note = (this.popover.querySelector('#timeTrackerSwitchNote') && this.popover.querySelector('#timeTrackerSwitchNote').value) ? this.popover.querySelector('#timeTrackerSwitchNote').value.trim() : '';
+      const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId') && this.popover.querySelector('#timeTrackerSwitchTaskId').value;
+      const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId') && this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
+      const contactId = this.popover.querySelector('#timeTrackerSwitchContactId') && this.popover.querySelector('#timeTrackerSwitchContactId').value;
+      const btn = this.popover.querySelector('#timeTrackerUpdateDetails');
+      if (btn) btn.disabled = true;
+      try {
+        const body = {
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+          note: note || null,
+          task_id: taskId || null,
+          customer_id: customerId || null,
+          contact_id: contactId || null
+        };
+        const response = await fetch(`/api/employees/${this.userId}/time-entries/active-timer`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        const result = await response.json();
+        if (result.ok) {
+          this.currentEntry = result.data;
+          this.updateUI();
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Opgeslagen', 'success');
+          }
+          if (typeof window._broadcastTimerUpdated === 'function') window._broadcastTimerUpdated();
+        } else {
+          throw new Error(result.error || 'Fout bij opslaan');
+        }
+      } catch (error) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(error.message || 'Fout bij opslaan', 'error');
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     async handleStop() {
+      const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
+      const note = (this.popover.querySelector('#timeTrackerSwitchNote') && this.popover.querySelector('#timeTrackerSwitchNote').value) ? this.popover.querySelector('#timeTrackerSwitchNote').value.trim() : '';
+      const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId') && this.popover.querySelector('#timeTrackerSwitchTaskId').value;
+      const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId') && this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
+      const contactId = this.popover.querySelector('#timeTrackerSwitchContactId') && this.popover.querySelector('#timeTrackerSwitchContactId').value;
+      const body = {
+        project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+        note: note || null,
+        task_id: taskId || null,
+        customer_id: customerId || null,
+        contact_id: contactId || null
+      };
+      const errorEl = this.popover.querySelector('#timeTrackerClockOutError');
+      if (errorEl) {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+      }
+      const stopBtn = this.popover.querySelector('#timeTrackerStop');
+      if (stopBtn) stopBtn.disabled = true;
       try {
         const response = await fetch(`/api/employees/${this.userId}/time-entries/clock-out`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({})
+          body: JSON.stringify(body)
         });
-
         const result = await response.json();
 
         if (result.ok) {
@@ -1276,6 +1319,15 @@
           if (typeof window.showNotification === 'function') {
             window.showNotification('Timer gestopt', 'success');
           }
+          if (typeof window._broadcastTimerUpdated === 'function') window._broadcastTimerUpdated();
+        } else if (response.status === 400 && result.requires_completion) {
+          if (errorEl) {
+            errorEl.textContent = result.error || 'Vul eerst titel en klant/taak in om uit te klokken.';
+            errorEl.style.display = 'block';
+          }
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(result.error || 'Vul verplichte velden in om uit te klokken.', 'error');
+          }
         } else {
           throw new Error(result.error || 'Fout bij stoppen timer');
         }
@@ -1284,6 +1336,8 @@
         if (typeof window.showNotification === 'function') {
           window.showNotification(error.message || 'Fout bij stoppen timer', 'error');
         }
+      } finally {
+        if (stopBtn) stopBtn.disabled = false;
       }
     }
 
@@ -1642,6 +1696,16 @@
     }
   }
 
+  const TIMER_CHANNEL_NAME = 'gs-time-tracker';
+  function broadcastTimerUpdated() {
+    try {
+      const ch = new BroadcastChannel(TIMER_CHANNEL_NAME);
+      ch.postMessage({ type: 'timer_updated' });
+      ch.close();
+    } catch (e) {}
+  }
+  window._broadcastTimerUpdated = broadcastTimerUpdated;
+
   // Initialize when DOM is ready
   function initTimeTracker() {
     // Check if time tracker already exists
@@ -1686,7 +1750,21 @@
       existingPopover.remove();
     }
 
-    window.timeTracker = new TimeTracker(userId);
+    const tracker = new TimeTracker(userId);
+    window.timeTracker = tracker;
+    try {
+      const ch = new BroadcastChannel(TIMER_CHANNEL_NAME);
+      ch.onmessage = function (msg) {
+        if (msg.data && msg.data.type === 'timer_updated' && window.timeTracker && window.timeTracker.loadCurrentEntry) {
+          window.timeTracker.loadCurrentEntry();
+        }
+      };
+    } catch (e) {}
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && window.timeTracker && window.timeTracker.loadCurrentEntry) {
+        window.timeTracker.loadCurrentEntry();
+      }
+    });
   }
 
   // Initialize on DOM ready

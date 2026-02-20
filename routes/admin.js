@@ -9914,25 +9914,32 @@ router.get('/api/customers/search', requireAuth, isAdmin, async (req, res) => {
     
     let query = supabaseAdmin
       .from('customers')
-      .select('id, name, company_name, email')
+      .select('id, name, company_name, email, logo_url')
       .order('company_name', { ascending: true })
       .order('name', { ascending: true });
-    
+
     if (searchQuery && searchQuery.length >= 2) {
       query = query.or(`name.ilike.${searchPattern},company_name.ilike.${searchPattern},email.ilike.${searchPattern}`);
       query = query.limit(50);
     } else {
-      // If no query, return all (for multi-select initial load)
       query = query.limit(200);
     }
-    
+
     const { data: customers, error } = await query;
-    
+
     if (error) throw error;
-    
-    res.json({ 
-      success: true, 
-      customers: customers || [] 
+
+    const list = (customers || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      company_name: c.company_name,
+      email: c.email,
+      avatar_url: c.logo_url || null
+    }));
+
+    res.json({
+      success: true,
+      customers: list
     });
   } catch (err) {
     console.error('Customer search error:', err);
@@ -9996,16 +10003,21 @@ router.get('/api/customers/:id/contacts', requireAuth, isAdmin, async (req, res)
     
     const { data: contacts, error } = await supabaseAdmin
       .from('contacts')
-      .select('id, name, first_name, last_name, email, customer_id')
+      .select('id, name, first_name, last_name, email, customer_id, photo_url')
       .eq('customer_id', id)
       .order('first_name', { ascending: true })
       .order('last_name', { ascending: true });
     
     if (error) throw error;
-    
-    res.json({ 
-      success: true, 
-      contacts: contacts || [] 
+
+    const list = (contacts || []).map((c) => ({
+      ...c,
+      avatar_url: c.photo_url || null
+    }));
+
+    res.json({
+      success: true,
+      contacts: list
     });
   } catch (err) {
     console.error('Error fetching customer contacts:', err);

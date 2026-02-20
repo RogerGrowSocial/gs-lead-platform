@@ -3,9 +3,44 @@
 const { supabaseAdmin } = require('../config/supabase')
 const SystemLogService = require('./systemLogService')
 
+/** Validation error with requires_completion / missing_fields for clock-out */
+function ValidationError (message, opts = {}) {
+  const err = new Error(message)
+  err.name = 'ValidationError'
+  err.requiresCompletion = opts.requiresCompletion || false
+  err.missingFields = opts.missingFields || []
+  return err
+}
+
+/**
+ * Validate time entry data for a given mode.
+ * @param {Object} data - { project_name, task_id, customer_id, contact_id, note }
+ * @param {'clock_in'|'update'|'clock_out'|'switch'} mode
+ * @returns {{ valid: boolean, missingFields: string[] }}
+ */
+function validateEntry (data, mode) {
+  const missing = []
+  const project = (data.project_name || '').toString().trim()
+  const note = (data.note != null ? data.note : data.title != null ? data.title : '').toString().trim()
+  const taskId = data.task_id || null
+  const customerId = data.customer_id || null
+
+  if (!project) missing.push('project_name')
+  if (['Klantenwerk', 'Support'].includes(project) && !taskId && !customerId) {
+    missing.push('customer_id')
+  }
+  if (mode === 'clock_out' && !note) missing.push('note')
+  if (mode === 'update' && !note) missing.push('note')
+
+  return {
+    valid: missing.length === 0,
+    missingFields: missing
+  }
+}
+
 /**
  * Time Entry Service
- * 
+ *
  * Handles time entry CRUD operations, week submission, and inline approvals
  */
 class TimeEntryService {
@@ -381,12 +416,11 @@ class TimeEntryService {
   /**
    * Clock in - Start a new active timer
    * @param {string} employeeId - UUID of employee
-   * @param {Object} entryData - Initial entry data (project, customer, task, note)
+   * @param {Object} entryData - Initial entry data (project_name, customer_id, task_id, contact_id, note)
    * @returns {Promise<Object>} Created active time entry
    */
   static async clockIn(employeeId, entryData = {}) {
     try {
-      // Check if employee already has an active timer
       const { data: activeTimer } = await supabaseAdmin
         .from('time_entries')
         .select('id')
@@ -398,27 +432,30 @@ class TimeEntryService {
         throw new Error('Employee already has an active timer')
       }
 
-      const now = new Date()
+      let projectName = (entryData.project_name || '').toString().trim()
+      if (!projectName) projectName = 'Klantenwerk'
+
+      const payload = {
+        employee_id: employeeId,
+        task_id: entryData.task_id || null,
+        customer_id: entryData.customer_id || null,
+        contact_id: entryData.contact_id || null,
+        project_name: projectName,
+        start_at: new Date().toISOString(),
+        end_at: null,
+        duration_minutes: 0,
+        note: (entryData.note != null ? entryData.note : entryData.title) != null ? String(entryData.note != null ? entryData.note : entryData.title).trim() : null,
+        status: 'draft',
+        is_active_timer: true
+      }
+
       const { data, error } = await supabaseAdmin
         .from('time_entries')
-        .insert({
-          employee_id: employeeId,
-          task_id: entryData.task_id || null,
-          customer_id: entryData.customer_id || null,
-          contact_id: entryData.contact_id || null,
-          project_name: entryData.project_name || null,
-          start_at: now.toISOString(),
-          end_at: null,
-          duration_minutes: 0,
-          note: entryData.note || null,
-          status: 'draft',
-          is_active_timer: true
-        })
+        .insert(payload)
         .select()
         .single()
 
       if (error) throw error
-
       return data
     } catch (error) {
       console.error('Error clocking in:', error)
@@ -427,17 +464,18 @@ class TimeEntryService {
   }
 
   /**
-   * Clock out - Stop active timer and calculate duration
+   * Clock out - Stop active timer and calculate duration.
+   * If updateData is empty, uses existing timer fields. Validates for completion;
+   * if incomplete throws ValidationError (requiresCompletion, missingFields) and does NOT close.
    * @param {string} employeeId - UUID of employee
-   * @param {Object} updateData - Optional updates (note, project, customer, task)
+   * @param {Object} updateData - Optional updates (note, project_name, customer_id, task_id, contact_id)
    * @returns {Promise<Object>} Updated time entry
    */
   static async clockOut(employeeId, updateData = {}) {
     try {
-      // Get active timer
       const { data: activeTimer, error: fetchError } = await supabaseAdmin
         .from('time_entries')
-        .select('id, start_at')
+        .select('id, start_at, project_name, task_id, customer_id, contact_id, note')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .single()
@@ -446,18 +484,33 @@ class TimeEntryService {
         throw new Error('No active timer found')
       }
 
+      const merged = {
+        project_name: updateData.project_name != null ? updateData.project_name : activeTimer.project_name,
+        task_id: updateData.task_id != null ? updateData.task_id : activeTimer.task_id,
+        customer_id: updateData.customer_id != null ? updateData.customer_id : activeTimer.customer_id,
+        contact_id: updateData.contact_id != null ? updateData.contact_id : activeTimer.contact_id,
+        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note)
+      }
+      const { valid, missingFields } = validateEntry(merged, 'clock_out')
+      if (!valid) {
+        throw ValidationError('Vul verplichte velden in om uit te klokken', { requiresCompletion: true, missingFields })
+      }
+
       const now = new Date()
       const start = new Date(activeTimer.start_at)
       const durationMinutes = Math.round((now - start) / (1000 * 60))
 
-      // Update timer with end time and duration
       const { data, error } = await supabaseAdmin
         .from('time_entries')
         .update({
           end_at: now.toISOString(),
           duration_minutes: durationMinutes,
           is_active_timer: false,
-          ...updateData,
+          project_name: merged.project_name,
+          task_id: merged.task_id,
+          customer_id: merged.customer_id,
+          contact_id: merged.contact_id,
+          note: merged.note,
           updated_at: now.toISOString()
         })
         .eq('id', activeTimer.id)
@@ -465,9 +518,9 @@ class TimeEntryService {
         .single()
 
       if (error) throw error
-
       return data
     } catch (error) {
+      if (error.name === 'ValidationError') throw error
       console.error('Error clocking out:', error)
       throw error
     }
@@ -514,16 +567,17 @@ class TimeEntryService {
   }
 
   /**
-   * Update active timer (e.g., change project, customer, task, note)
+   * Update active timer (e.g., change project, customer, task, note).
+   * Validates with mode 'update'; on missing fields throws ValidationError with missingFields.
    * @param {string} employeeId - UUID of employee
-   * @param {Object} updateData - Data to update
+   * @param {Object} updateData - Data to update (project_name, task_id, customer_id, contact_id, note)
    * @returns {Promise<Object>} Updated time entry
    */
   static async updateActiveTimer(employeeId, updateData) {
     try {
       const { data: activeTimer } = await supabaseAdmin
         .from('time_entries')
-        .select('id')
+        .select('id, project_name, task_id, customer_id, contact_id, note')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -532,10 +586,26 @@ class TimeEntryService {
         throw new Error('No active timer found')
       }
 
+      const merged = {
+        project_name: updateData.project_name != null ? updateData.project_name : activeTimer.project_name,
+        task_id: updateData.task_id != null ? updateData.task_id : activeTimer.task_id,
+        customer_id: updateData.customer_id != null ? updateData.customer_id : activeTimer.customer_id,
+        contact_id: updateData.contact_id != null ? updateData.contact_id : activeTimer.contact_id,
+        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note)
+      }
+      const { valid, missingFields } = validateEntry(merged, 'update')
+      if (!valid) {
+        throw ValidationError('Ontbrekende velden', { requiresCompletion: false, missingFields })
+      }
+
       const { data, error } = await supabaseAdmin
         .from('time_entries')
         .update({
-          ...updateData,
+          project_name: merged.project_name,
+          task_id: merged.task_id,
+          customer_id: merged.customer_id,
+          contact_id: merged.contact_id,
+          note: merged.note,
           updated_at: new Date().toISOString()
         })
         .eq('id', activeTimer.id)
@@ -545,6 +615,7 @@ class TimeEntryService {
       if (error) throw error
       return data
     } catch (error) {
+      if (error.name === 'ValidationError') throw error
       console.error('Error updating active timer:', error)
       throw error
     }

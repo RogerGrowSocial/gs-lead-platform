@@ -13948,45 +13948,36 @@ router.put('/employees/:id/status', requireAuth, isAdmin, async (req, res) => {
 })
 
 // GET /api/employees/:id/tasks
-// Get tasks for employee
+// Get tasks for employee (supports q, status, limit, offset)
 router.get('/employees/:id/tasks', requireAuth, async (req, res) => {
   try {
     const { id } = req.params
-    const { status, priority, limit, offset } = req.query
-    
-    // Check permissions: employee can only see own tasks
+    const { status, priority, limit, offset, q } = req.query
+
     if (req.user.id !== id && !req.user.user_metadata?.is_admin) {
-      // Check if user is manager
       const { data: employee } = await supabaseAdmin
         .from('profiles')
         .select('manager_id')
         .eq('id', id)
         .single()
-      
       if (employee?.manager_id !== req.user.id) {
         return res.status(403).json({ ok: false, error: 'Forbidden' })
       }
     }
 
-    // Parse status: can be comma-separated string like "open,in_progress"
-    let statusArray = undefined;
+    let statusArray
     if (status) {
-      if (Array.isArray(status)) {
-        statusArray = status;
-      } else if (typeof status === 'string' && status.includes(',')) {
-        statusArray = status.split(',').map(s => s.trim());
-      } else {
-        statusArray = [status];
-      }
+      statusArray = Array.isArray(status) ? status : (typeof status === 'string' && status.includes(',') ? status.split(',').map(s => s.trim()) : [status])
     }
 
     const result = await TaskService.getTasks(id, {
       status: statusArray,
       priority,
-      limit: limit ? parseInt(limit) : undefined,
-      offset: offset ? parseInt(offset) : undefined
+      limit: limit ? parseInt(limit, 10) : 25,
+      offset: offset ? parseInt(offset, 10) : undefined,
+      q: q || ''
     })
-    
+
     res.json({ ok: true, data: result })
   } catch (error) {
     console.error('Error fetching tasks:', error)
@@ -14815,21 +14806,27 @@ router.post('/employees/:id/time-entries/clock-in', requireAuth, async (req, res
 })
 
 // POST /api/employees/:id/time-entries/clock-out
-// Clock out - stop active timer
+// Clock out - stop active timer (validates; if incomplete returns 400 with requires_completion)
 router.post('/employees/:id/time-entries/clock-out', requireAuth, async (req, res) => {
   try {
     const { id } = req.params
-    
-    // Employees can only clock out for themselves
     if (req.user.id !== id) {
       return res.status(403).json({ ok: false, error: 'Forbidden' })
     }
-
     const entry = await TimeEntryService.clockOut(id, req.body)
     res.json({ ok: true, data: entry })
   } catch (error) {
+    if (error.name === 'ValidationError' && error.requiresCompletion) {
+      return res.status(400).json({
+        ok: false,
+        error: error.message,
+        requires_completion: true,
+        missing_fields: error.missingFields || []
+      })
+    }
     console.error('Error clocking out:', error)
-    res.status(500).json({ ok: false, error: error.message })
+    const statusCode = error.message.includes('No active timer') ? 404 : 500
+    res.status(statusCode).json({ ok: false, error: error.message })
   }
 })
 
@@ -14857,17 +14854,21 @@ router.post('/employees/:id/time-entries/switch-task', requireAuth, async (req, 
 router.put('/employees/:id/time-entries/active-timer', requireAuth, async (req, res) => {
   try {
     const { id } = req.params
-    
-    // Employees can only update their own active timer
     if (req.user.id !== id) {
       return res.status(403).json({ ok: false, error: 'Forbidden' })
     }
-
     const entry = await TimeEntryService.updateActiveTimer(id, req.body)
     res.json({ ok: true, data: entry })
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        ok: false,
+        error: error.message,
+        missing_fields: error.missingFields || []
+      })
+    }
     console.error('Error updating active timer:', error)
-    res.status(500).json({ ok: false, error: error.message })
+    res.status(error.message.includes('No active timer') ? 404 : 500).json({ ok: false, error: error.message })
   }
 })
 

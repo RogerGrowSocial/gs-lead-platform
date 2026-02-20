@@ -20,12 +20,28 @@
   let timerInterval = null;
   let currentView = 'list';
 
-  // Initialize – load active timer first so clock shows live immediately, then rest
+  function broadcastTimerUpdated() {
+    try {
+      var ch = new BroadcastChannel('gs-time-tracker');
+      ch.postMessage({ type: 'timer_updated' });
+      ch.close();
+    } catch (e) {}
+  }
+
   async function init() {
     if (isOwnPage) {
       await loadActiveTimer();
       startTimerUpdate();
       setupNewTaskForm();
+      try {
+        var ch = new BroadcastChannel('gs-time-tracker');
+        ch.onmessage = function (msg) {
+          if (msg.data && msg.data.type === 'timer_updated') loadActiveTimer();
+        };
+      } catch (e) {}
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') loadActiveTimer();
+      });
     }
     loadWeekOverview();
     loadTimeEntries();
@@ -228,6 +244,7 @@
         if (typeof window.showNotification === 'function') {
           window.showNotification('Succesvol ingeklokt', 'success');
         }
+        broadcastTimerUpdated();
       } else {
         const errorMsg = data.error || 'Onbekende fout';
         // If error is about existing active timer, reload it immediately
@@ -266,12 +283,13 @@
       const contactId = document.getElementById('activeContact').value;
       const note = document.getElementById('activeNote').value;
       
+      const projectName = workType === 'klantenwerk' ? 'Klantenwerk' : (workType === 'sales' ? 'Sales' : (workType === 'platform' ? 'Platform' : workType || null));
       const updateData = {
-        project_name: workType || null,
+        project_name: projectName,
         customer_id: customerId || null,
         contact_id: contactId || null,
         task_id: taskId || null,
-        note: note || null
+        note: (note || '').trim() || null
       };
 
       const res = await fetch(`/api/employees/${employeeId}/time-entries/clock-out`, {
@@ -279,15 +297,30 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
       });
-      
+
       const data = await res.json();
       if (data.ok) {
         activeTimer = null;
         updateClockUI(false);
-        loadTimeEntries(); // Refresh list
-        loadWeekOverview(); // Refresh stats
+        loadTimeEntries();
+        loadWeekOverview();
         if (typeof window.showNotification === 'function') {
           window.showNotification('Succesvol uitgeklokt', 'success');
+        }
+        broadcastTimerUpdated();
+      } else if (res.status === 400 && data.requires_completion) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(data.error || 'Vul titel en klant/taak in om uit te klokken.', 'error');
+        }
+        if (data.missing_fields && data.missing_fields.length) {
+          var noteEl = document.getElementById('activeNote');
+          var taskEl = document.getElementById('activeTask');
+          var customerEl = document.getElementById('activeCustomer');
+          if (data.missing_fields.indexOf('note') !== -1 && noteEl) { noteEl.style.borderColor = '#ef4444'; setTimeout(function () { noteEl.style.borderColor = ''; }, 3000); }
+          if (data.missing_fields.indexOf('customer_id') !== -1) {
+            if (taskEl) { taskEl.style.borderColor = '#ef4444'; setTimeout(function () { taskEl.style.borderColor = ''; }, 3000); }
+            if (customerEl) { customerEl.style.borderColor = '#ef4444'; setTimeout(function () { customerEl.style.borderColor = ''; }, 3000); }
+          }
         }
       } else {
         const errorMsg = data.error || 'Onbekende fout';
@@ -421,13 +454,13 @@
       const customerId = document.getElementById('activeCustomer').value;
       const contactId = document.getElementById('activeContact').value;
       const note = document.getElementById('activeNote').value;
-      
+      const projectName = workType === 'klantenwerk' ? 'Klantenwerk' : (workType === 'sales' ? 'Sales' : (workType === 'platform' ? 'Platform' : workType || null));
       const updateData = {
-        project_name: workType || null,
+        project_name: projectName,
         customer_id: customerId || null,
         contact_id: contactId || null,
         task_id: taskId || null,
-        note: note || null
+        note: (note || '').trim() || null
       };
 
       const res = await fetch(`/api/employees/${employeeId}/time-entries/active-timer`, {
@@ -439,9 +472,10 @@
       const data = await res.json();
       if (data.ok) {
         activeTimer = { ...activeTimer, ...updateData };
-        updateActivityDisplay(); // Update the activity badge
-        showSaveIndicator(); // Show save confirmation
-        loadActiveTimer(); // Refresh to get full data
+        updateActivityDisplay();
+        showSaveIndicator();
+        loadActiveTimer();
+        broadcastTimerUpdated();
       }
     } catch (error) {
       console.error('Error updating active timer:', error);
