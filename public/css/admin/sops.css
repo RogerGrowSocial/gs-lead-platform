@@ -1,13 +1,13 @@
 /* SOP / Handleidingen - 2026 modern UI */
 
-/* Geen extra padding rond .sops-page (main-container heeft 24px) */
+/* Geen extra padding rond .sops-page; content links uitgelijnd, weinig witruimte links */
 .main-container:has(.sops-page) {
   padding: 0;
 }
 .sops-page {
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px 24px;
+  margin: 0;
+  padding: 0 24px 24px 16px;
 }
 
 .sops-reader,
@@ -31,7 +31,28 @@
   flex-shrink: 0;
 }
 
-/* Knop Handleidingen bewerken (in header en empty state) */
+/* Knop Handleiding aanmaken (primair, rechtsboven) */
+.btn-sop-aanmaken {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--primary-color, #ea5d0d);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background 0.2s, transform 0.05s;
+  box-shadow: 0 1px 3px rgba(234, 93, 13, 0.25);
+}
+.btn-sop-aanmaken:hover {
+  background: var(--primary-hover, #d44a0b);
+  color: #fff;
+}
+
+/* Knop Bewerken / Handleidingen bewerken (secundair) */
 .btn-sop-beheer {
   display: inline-flex;
   align-items: center;
@@ -606,4 +627,132 @@
 
 .btn-primary:hover {
   background: var(--primary-hover, #d44a0b);
+}
+
+/* ========== Notion/Google Docs-style document editor ========== */
+.sops-doc-editor {
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.sops-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.sops-doc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sops-doc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary, #4b5563);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 6px 0;
+}
+.sops-doc-back:hover {
+  color: var(--primary-color, #ea5d0d);
+}
+
+.sops-doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sops-doc-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 160px;
+}
+
+.sops-doc-published-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #4b5563);
+  margin: 0;
+  cursor: pointer;
+}
+
+.sops-doc-header-right {
+  flex-shrink: 0;
+}
+
+.btn-sop-doc-save {
+  padding: 10px 20px;
+  background: var(--primary-color, #ea5d0d);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-sop-doc-save:hover {
+  background: var(--primary-hover, #d44a0b);
+}
+
+.sops-doc-main {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  width: 100%;
+}
+
+.sops-doc-title-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin-bottom: 16px;
+  padding: 0;
+  font-family: inherit;
+}
+.sops-doc-title-input::placeholder {
+  color: var(--text-muted, #9ca3af);
+}
+
+.sops-doc-quill-wrap {
+  min-height: 400px;
+}
+
+/* Quill overrides – clean Notion-like look */
+.sops-doc-editor .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding: 8px 0;
+  background: transparent;
+}
+.sops-doc-editor .ql-container.ql-snow {
+  border: none;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.sops-doc-editor .ql-editor {
+  padding: 0;
+  min-height: 380px;
+}
+.sops-doc-editor .ql-editor.ql-blank::before {
+  color: var(--text-muted, #9ca3af);
+  font-style: normal;
 }

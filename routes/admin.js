@@ -3168,6 +3168,56 @@ router.get("/sops/beheer", requireAuth, isManagerOrAdmin, async (req, res) => {
   }
 });
 
+// GET /admin/sops/beheer/nieuw - Notion-achtige editor voor nieuwe handleiding
+router.get("/sops/beheer/nieuw", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data: categories, error } = await supabaseAdmin
+      .from('sop_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+    res.render("admin/sops/editor-doc", {
+      title: "Nieuwe handleiding",
+      activeMenu: "sops",
+      activeSubmenu: "editor",
+      user: req.user,
+      categories: categories || [],
+      sop: null
+    });
+  } catch (err) {
+    console.error("SOP doc editor (new) error:", err);
+    res.redirect("/admin/sops/beheer?error=nieuw");
+  }
+});
+
+// GET /admin/sops/beheer/bewerken/:id - Notion-achtige editor voor bestaande handleiding
+router.get("/sops/beheer/bewerken/:id", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data: sop, error: sopError } = await supabaseAdmin
+      .from('sops')
+      .select('*')
+      .eq("id", req.params.id)
+      .single();
+    if (sopError || !sop) return res.redirect("/admin/sops/beheer");
+    const { data: categories, error: catError } = await supabaseAdmin
+      .from('sop_categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (catError) throw catError;
+    res.render("admin/sops/editor-doc", {
+      title: sop.title + " – Bewerken",
+      activeMenu: "sops",
+      activeSubmenu: "editor",
+      user: req.user,
+      categories: categories || [],
+      sop
+    });
+  } catch (err) {
+    console.error("SOP doc editor (edit) error:", err);
+    res.redirect("/admin/sops/beheer?error=bewerken");
+  }
+});
+
 // GET /admin/sops/:id - SOP detail (reader)
 router.get("/sops/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {

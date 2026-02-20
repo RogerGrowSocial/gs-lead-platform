@@ -1,0 +1,43 @@
+<%
+  const categories = typeof categories !== 'undefined' ? categories : [];
+  const sop = typeof sop !== 'undefined' ? sop : null;
+  const isNew = !sop;
+%>
+<%- include('../../layouts/admin', {
+  title: typeof title !== 'undefined' ? title : (isNew ? 'Nieuwe handleiding' : 'Bewerken'),
+  activeMenu: 'sops',
+  activeSubmenu: 'editor',
+  user: user,
+  stylesheets: ['/css/admin/dashboard.css', '/css/admin/sops.css', 'https://cdn.quilljs.com/1.3.7/quill.snow.css'],
+  scripts: ['https://cdn.quilljs.com/1.3.7/quill.min.js', '/js/admin/sops-editor-doc.js'],
+  extraHead: '<style>.main-container:has(.sops-doc-editor) { padding: 0; max-width: none; }</style>',
+  body: `
+  <div class="sops-doc-editor">
+    <header class="sops-doc-header">
+      <div class="sops-doc-header-left">
+        <a href="/admin/sops/beheer" class="sops-doc-back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Terug
+        </a>
+        <div class="sops-doc-meta">
+          <select id="sop-doc-category" class="sops-doc-select" required>
+            <option value="">Categorie</option>
+            ${categories.map(c => `<option value="${c.id}" ${sop && sop.category_id === c.id ? 'selected' : ''}>${(c.title || '').replace(/</g, '&lt;')}</option>`).join('')}
+          </select>
+          <label class="sops-doc-published-wrap">
+            <input type="checkbox" id="sop-doc-published" ${!sop || sop.published ? 'checked' : ''}> Gepubliceerd
+          </label>
+        </div>
+      </div>
+      <div class="sops-doc-header-right">
+        <button type="button" id="sop-doc-save" class="btn-sop-doc-save">Opslaan</button>
+      </div>
+    </header>
+    <main class="sops-doc-main">
+      <input type="text" id="sop-doc-title" class="sops-doc-title-input" placeholder="Titel van de handleiding" value="${sop ? (sop.title || '').replace(/"/g, '&quot;') : ''}" />
+      <div id="sop-doc-editor" class="sops-doc-quill-wrap"></div>
+      <input type="hidden" id="sop-doc-id" value="${sop ? sop.id : ''}" />
+    </main>
+  </div>
+  `
+}) %>
