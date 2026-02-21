@@ -19,6 +19,7 @@
   let activeTimer = null;
   let timerInterval = null;
   let currentView = 'list';
+  let pageContacts = [];
 
   function broadcastTimerUpdated() {
     try {
@@ -33,6 +34,7 @@
       await loadActiveTimer();
       startTimerUpdate();
       setupNewTaskForm();
+      setupCustomerContactDropdowns();
       try {
         var ch = new BroadcastChannel('gs-time-tracker');
         ch.onmessage = function (msg) {
@@ -154,9 +156,17 @@
       }
       if (activeTimer.customer_id && customerField) {
         customerField.value = activeTimer.customer_id;
+        var customerSearchEl = document.getElementById('activeCustomerSearch');
+        if (customerSearchEl && activeTimer.customer) {
+          customerSearchEl.value = activeTimer.customer.company_name || (activeTimer.customer.first_name && activeTimer.customer.last_name ? activeTimer.customer.first_name + ' ' + activeTimer.customer.last_name : activeTimer.customer.name) || activeTimer.customer.email || '';
+        }
       }
       if (activeTimer.contact_id && contactField) {
         contactField.value = activeTimer.contact_id;
+        var contactSearchEl = document.getElementById('activeContactSearch');
+        if (contactSearchEl && activeTimer.contact) {
+          contactSearchEl.value = ((activeTimer.contact.first_name || '') + ' ' + (activeTimer.contact.last_name || '')).trim() || activeTimer.contact.email || '';
+        }
       }
       if (activeTimer.task_id && taskField) {
         taskField.value = activeTimer.task_id;
@@ -315,11 +325,11 @@
         if (data.missing_fields && data.missing_fields.length) {
           var noteEl = document.getElementById('activeNote');
           var taskEl = document.getElementById('activeTask');
-          var customerEl = document.getElementById('activeCustomer');
+          var customerSearchEl = document.getElementById('activeCustomerSearch');
           if (data.missing_fields.indexOf('note') !== -1 && noteEl) { noteEl.style.borderColor = '#ef4444'; setTimeout(function () { noteEl.style.borderColor = ''; }, 3000); }
           if (data.missing_fields.indexOf('customer_id') !== -1) {
             if (taskEl) { taskEl.style.borderColor = '#ef4444'; setTimeout(function () { taskEl.style.borderColor = ''; }, 3000); }
-            if (customerEl) { customerEl.style.borderColor = '#ef4444'; setTimeout(function () { customerEl.style.borderColor = ''; }, 3000); }
+            if (customerSearchEl) { customerSearchEl.style.borderColor = '#ef4444'; setTimeout(function () { customerSearchEl.style.borderColor = ''; }, 3000); }
           }
         }
       } else {
@@ -352,14 +362,16 @@
     const contactField = document.getElementById('activeContact');
     
     if (workType === 'klantenwerk') {
-      // Show task field, customer and contact fields will be shown when task is selected
       taskFieldContainer.style.display = 'block';
       taskField.required = true;
       customerFieldContainer.style.display = 'none';
       contactFieldContainer.style.display = 'none';
-      // Clear customer and contact when switching
-      customerField.value = '';
-      contactField.value = '';
+      if (customerField) customerField.value = '';
+      if (contactField) contactField.value = '';
+      var cs0 = document.getElementById('activeCustomerSearch');
+      var cts0 = document.getElementById('activeContactSearch');
+      if (cs0) cs0.value = '';
+      if (cts0) cts0.value = '';
       taskField.value = '';
       if (taskSearchInput) {
         taskSearchInput.value = '';
@@ -368,17 +380,19 @@
     } else {
       // Hide task field and related fields for other work types
       taskFieldContainer.style.display = 'none';
-      customerFieldContainer.style.display = 'none';
-      contactFieldContainer.style.display = 'none';
       taskField.required = false;
       taskField.value = '';
-      customerField.value = '';
-      contactField.value = '';
-      if (taskSearchInput) {
-        taskSearchInput.value = '';
-      }
+      if (customerField) customerField.value = '';
+      if (contactField) contactField.value = '';
+      var cs = document.getElementById('activeCustomerSearch');
+      var cts = document.getElementById('activeContactSearch');
+      if (cs) cs.value = '';
+      if (cts) cts.value = '';
+      if (taskSearchInput) taskSearchInput.value = '';
+      customerFieldContainer.style.display = 'none';
+      contactFieldContainer.style.display = 'none';
     }
-    
+
     updateActiveTimer();
   };
 
@@ -410,6 +424,8 @@
     const taskId = taskSelect ? taskSelect.value : '';
     const customerField = document.getElementById('activeCustomer');
     const contactField = document.getElementById('activeContact');
+    const customerSearchEl = document.getElementById('activeCustomerSearch');
+    const contactSearchEl = document.getElementById('activeContactSearch');
     const customerFieldContainer = document.getElementById('customerFieldContainer');
     const contactFieldContainer = document.getElementById('contactFieldContainer');
     const taskSearchInput = document.getElementById('taskSearchInput');
@@ -419,25 +435,27 @@
       if (taskOption && taskOption.value === taskId) {
         const customerId = (taskOption.getAttribute('data-customer-id') || '').trim();
         const contactId = (taskOption.getAttribute('data-contact-id') || '').trim();
+        const customerName = (taskOption.getAttribute('data-customer-name') || '').trim();
+        const contactName = (taskOption.getAttribute('data-contact-name') || '').trim();
 
-        if (taskSearchInput) {
-          taskSearchInput.value = taskOption.textContent.trim();
-        }
+        if (taskSearchInput) taskSearchInput.value = taskOption.textContent.trim();
 
         customerFieldContainer.style.display = 'block';
         contactFieldContainer.style.display = 'block';
-        if (customerField) {
-          customerField.value = customerId || '';
-        }
-        if (contactField) {
-          contactField.value = contactId || '';
-        }
+        if (customerField) customerField.value = customerId || '';
+        if (customerSearchEl) customerSearchEl.value = customerName || '';
+        if (contactField) contactField.value = contactId || '';
+        if (contactSearchEl) contactSearchEl.value = contactName || '';
+
+        if (customerId) loadContactsForActiveCustomer(customerId);
       }
     } else {
       customerFieldContainer.style.display = 'none';
       contactFieldContainer.style.display = 'none';
       if (customerField) customerField.value = '';
       if (contactField) contactField.value = '';
+      if (customerSearchEl) customerSearchEl.value = '';
+      if (contactSearchEl) contactSearchEl.value = '';
       if (taskSearchInput) taskSearchInput.value = '';
     }
 
@@ -600,12 +618,15 @@
       const task = result.data;
       const taskSelect = document.getElementById('activeTask');
       const taskSearchInput = document.getElementById('taskSearchInput');
+      var newCustomerSearch = document.getElementById('newTaskCustomerSearch');
       if (taskSelect) {
-        const opt = document.createElement('option');
+        var opt = document.createElement('option');
         opt.value = task.id;
         opt.textContent = task.title;
         opt.setAttribute('data-customer-id', task.customer_id || '');
         opt.setAttribute('data-contact-id', task.contact_id || '');
+        opt.setAttribute('data-customer-name', (newCustomerSearch && newCustomerSearch.value) ? newCustomerSearch.value.trim() : '');
+        opt.setAttribute('data-contact-name', '');
         opt.setAttribute('data-task-title', (task.title || '').toLowerCase());
         taskSelect.appendChild(opt);
         taskSelect.value = task.id;
@@ -633,6 +654,100 @@
       submitBtn.textContent = 'Taak aanmaken';
     }
   };
+
+  async function loadContactsForActiveCustomer(customerId) {
+    if (!customerId) {
+      pageContacts = [];
+      return;
+    }
+    try {
+      const res = await fetch('/admin/api/customers/' + encodeURIComponent(customerId) + '/contacts', { credentials: 'include' });
+      const data = await res.json();
+      pageContacts = (data.contacts || data.data || []);
+    } catch (e) {
+      pageContacts = [];
+    }
+  }
+
+  function setupCustomerContactDropdowns() {
+    if (typeof SearchDropdown === 'undefined' || !SearchDropdown.create) return;
+
+    var customerRoot = document.getElementById('customerFieldContainer');
+    var customerInput = document.getElementById('activeCustomerSearch');
+    var customerResults = document.getElementById('activeCustomerDropdown');
+    var customerIdEl = document.getElementById('activeCustomer');
+    if (!customerRoot || !customerInput || !customerResults || !customerIdEl) return;
+
+    SearchDropdown.create({
+      rootEl: customerRoot,
+      inputEl: customerInput,
+      resultsEl: customerResults,
+      placeholder: 'Zoek klant…',
+      minChars: 0,
+      debounceMs: 280,
+      emptyStateText: 'Geen klanten gevonden',
+      fetchResults: async function (q) {
+        try {
+          var res = await fetch('/admin/api/customers/search?q=' + encodeURIComponent(q || ''), { credentials: 'include' });
+          var data = await res.json();
+          if (!data.success || !data.customers) return [];
+          return data.customers.map(function (c) {
+            var name = c.company_name || c.name || (c.first_name && c.last_name ? c.first_name + ' ' + c.last_name : '') || c.email || '';
+            return { id: c.id, name: name, avatar_url: c.avatar_url, subtitle: c.email };
+          });
+        } catch (e) {
+          return [];
+        }
+      },
+      onSelect: function (item) {
+        customerIdEl.value = item.id;
+        customerInput.value = item.name;
+        document.getElementById('activeContact').value = '';
+        var contactSearchEl = document.getElementById('activeContactSearch');
+        if (contactSearchEl) contactSearchEl.value = '';
+        loadContactsForActiveCustomer(item.id);
+        updateActiveTimer();
+      }
+    });
+
+    var contactRoot = document.getElementById('contactFieldContainer');
+    var contactInput = document.getElementById('activeContactSearch');
+    var contactResults = document.getElementById('activeContactDropdown');
+    var contactIdEl = document.getElementById('activeContact');
+    if (!contactRoot || !contactInput || !contactResults || !contactIdEl) return;
+
+    SearchDropdown.create({
+      rootEl: contactRoot,
+      inputEl: contactInput,
+      resultsEl: contactResults,
+      placeholder: 'Zoek contact…',
+      minChars: 0,
+      debounceMs: 200,
+      emptyStateText: 'Geen contacten gevonden',
+      fetchResults: async function (q) {
+        var cid = document.getElementById('activeCustomer').value;
+        if (!cid) return [];
+        if (pageContacts.length === 0) await loadContactsForActiveCustomer(cid);
+        var list = pageContacts;
+        var ql = (q || '').toLowerCase().trim();
+        if (ql) {
+          list = list.filter(function (c) {
+            var name = ((c.first_name || '') + ' ' + (c.last_name || '')).trim() || c.email || '';
+            return name.toLowerCase().indexOf(ql) !== -1 || (c.email || '').toLowerCase().indexOf(ql) !== -1;
+          });
+        }
+        return list.map(function (c) {
+          var name = ((c.first_name || '') + ' ' + (c.last_name || '')).trim() || c.email || 'Onbekend';
+          return { id: c.id, name: name, avatar_url: c.avatar_url || c.photo_url, subtitle: c.email };
+        });
+      },
+      onSelect: function (item) {
+        contactIdEl.value = item.id;
+        contactInput.value = item.name;
+        updateActiveTimer();
+      }
+    });
+  }
 
   // Setup new-task form: customer search dropdown (run once after DOM)
   function setupNewTaskForm() {

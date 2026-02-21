@@ -13,6 +13,6 @@
 - **public/js/admin/time-tracking.js** – BroadcastChannel listener + visibilitychange; broadcast na clockIn/clockOut/updateActiveTimer; clock-out project_name genormaliseerd + requires_completion + velden rood; updateActiveTimer project_name genormaliseerd.
 - **supabase** – Geen nieuwe migration; bestaande unique index één actieve timer per employee blijft.
 
-## Niet gedaan in deze stap
+## Vervolgstap (na eerste push)
 
-- **Pagina /admin/time-entries**: klant/contact zijn nog native `<select>`; custom dropdowns met avatar op de pagina zijn niet geïmplementeerd (wel in header-popover). Aan te raden: zelfde SearchDropdown-component gebruiken voor activeCustomer/activeContact op de tijdregistratiepagina.
+- **Pagina /admin/time-entries – custom dropdowns klant/contact**: Klant- en contactvelden zijn vervangen door custom search dropdowns (input + resultatenlijst) met avatar/initials, via SearchDropdown.create(). Data: customers via /admin/api/customers/search?q=; contacten via /admin/api/customers/:id/contacts, geladen bij selectie klant. handleTaskChange zet data-customer-name/data-contact-name op taakopties en vult zoekvelden; bij wijziging klant wordt contact geleegd en contactlijst herladen.
