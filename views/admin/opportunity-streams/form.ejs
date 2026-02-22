@@ -1,0 +1,98 @@
+<%
+  const isEdit = !!stream
+  const typeLabel = (t) => ({ trustoo: 'Trustoo', webhook: 'Generic Webhook', form: 'Website Form' }[t] || t)
+  const configJson = stream && stream.config ? JSON.stringify(stream.config, null, 2) : '{\n  "mapping": {\n    "title": "payload.company_name",\n    "company_name": "payload.company_name",\n    "contact_name": "payload.contact_name",\n    "email": "payload.email",\n    "phone": "payload.phone",\n    "description": "payload.message"\n  },\n  "defaults": {\n    "status": "open",\n    "stage": "nieuw",\n    "priority": "medium"\n  }\n}'
+%>
+<%- include('../../layouts/admin', {
+  title: isEdit ? 'Bewerken: ' + (stream.name || 'Stroom') : 'Nieuwe kansenstroom',
+  activeMenu: 'opportunities',
+  activeSubmenu: 'streams',
+  user: user,
+  body: `
+  <div class="settings-container">
+    <div class="page-header">
+      <div>
+        <a href="/admin/opportunities/streams" class="back-link"><i class="fas fa-arrow-left"></i> Terug naar kansenstromen</a>
+        <h1>${isEdit ? 'Bewerken: ' + (stream.name || '') : 'Nieuwe kansenstroom'}</h1>
+        <p class="text-muted">${isEdit ? 'Wijzig naam, type, actief en configuratie.' : 'Voeg een nieuwe bron voor kansen toe.'}</p>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Algemeen</h2>
+      </div>
+      <div class="settings-card-body">
+        <form id="streamForm" ${stream ? `data-stream-id="${stream.id}"` : ''}>
+          <div class="form-group">
+            <label for="name">Naam <span class="required">*</span></label>
+            <input type="text" id="name" name="name" value="${stream ? (stream.name || '').replace(/"/g, '&quot;') : ''}" required placeholder="bijv. Trustoo Productie" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label for="type">Type <span class="required">*</span></label>
+            <select id="type" name="type" required class="form-control" ${isEdit ? 'disabled' : ''}>
+              <option value="trustoo" ${stream && stream.type === 'trustoo' ? 'selected' : ''}>Trustoo</option>
+              <option value="webhook" ${stream && stream.type === 'webhook' ? 'selected' : ''}>Generic Webhook</option>
+              <option value="form" ${stream && stream.type === 'form' ? 'selected' : ''}>Website Form</option>
+            </select>
+            ${isEdit ? '<p class="form-help">Type kan na aanmaken niet meer gewijzigd worden.</p>' : ''}
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="is_active" name="is_active" ${!stream || stream.is_active ? 'checked' : ''} /> Actief</label>
+            <p class="form-help">Inactieve stromen accepteren geen nieuwe events.</p>
+          </div>
+          <div class="form-group">
+            <label for="config">Config (JSON)</label>
+            <textarea id="config" name="config" rows="14" class="form-control" style="font-family: monospace; font-size: 13px;">${configJson}</textarea>
+            <p class="form-help">mapping: velden uit payload naar opportunity-velden. defaults: standaardwaarden (status, stage, priority).</p>
+          </div>
+          ${!isEdit ? `
+          <div class="form-group">
+            <label for="secret">Secret (optioneel)</label>
+            <input type="password" id="secret" name="secret" placeholder="Laat leeg voor geen verificatie" class="form-control" autocomplete="new-password" />
+            <p class="form-help">Bij ingest moet header X-Stream-Secret deze waarde hebben. Toon en kopieer na opslaan; daarna niet meer zichtbaar.</p>
+          </div>
+          ` : `
+          <div class="form-group">
+            <label>Secret</label>
+            <p class="form-help">Bestaand secret wijzigen: vul hieronder een nieuw secret in en sla op. Of gebruik "Rotate secret" op de detailpagina.</p>
+            <input type="password" id="secret" name="secret" placeholder="Nieuw secret (optioneel)" class="form-control" autocomplete="new-password" />
+          </div>
+          `}
+          <div class="form-actions">
+            <a href="/admin/opportunities/streams${isEdit ? '/' + stream.id : ''}" class="btn-outline">Annuleren</a>
+            <button type="submit" class="btn-primary">${isEdit ? 'Opslaan' : 'Aanmaken'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    ${!isEdit ? `
+    <div class="settings-card" id="afterCreateBlock" style="display: none;">
+      <div class="settings-card-header">
+        <h2>Webhook URL & secret</h2>
+        <p class="settings-card-subtitle">Bewaar deze gegevens; het secret wordt daarna niet meer getoond.</p>
+      </div>
+      <div class="settings-card-body">
+        <div class="form-group">
+          <label>Webhook URL</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="webhookUrlDisplay" readonly class="form-control" style="flex: 1;" />
+            <button type="button" id="copyWebhookUrlBtn" class="btn-outline"><i class="fas fa-copy"></i> Kopieer</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Secret (eenmalig zichtbaar)</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="secretDisplay" readonly class="form-control" style="flex: 1;" />
+            <button type="button" id="copySecretBtn" class="btn-outline"><i class="fas fa-copy"></i> Kopieer</button>
+          </div>
+        </div>
+        <p><a href="/admin/opportunities/streams" class="btn-primary">Naar overzicht</a></p>
+      </div>
+    </div>
+    ` : ''}
+  </div>
+  `,
+  scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams-form.js'],
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+}) %>

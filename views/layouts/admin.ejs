@@ -910,7 +910,7 @@
         </div>
 
         <!-- 3. 💼 Sales (with submenu) -->
-        <a href="/admin/opportunities" class="menu-item has-submenu <%= (activeMenu === 'opportunities' && !locals.activeSubmenu) ? 'active' : '' %> <%= (activeMenu === 'opportunities' || locals.activeSubmenu === 'deals') ? 'expanded' : '' %>" data-submenu-toggle>
+        <a href="/admin/opportunities" class="menu-item has-submenu <%= (activeMenu === 'opportunities' && !locals.activeSubmenu) ? 'active' : '' %> <%= (activeMenu === 'opportunities' || locals.activeSubmenu === 'deals' || locals.activeSubmenu === 'streams') ? 'expanded' : '' %>" data-submenu-toggle>
           <div class="icon-container">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2"></rect>
@@ -932,6 +932,21 @@
             </svg>
             Kansen
           </a>
+          <% if (canAccessAllMenus) { %>
+          <a href="/admin/opportunities/streams" class="submenu-item <%= locals.activeSubmenu === 'streams' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4"></path>
+              <path d="m4.93 4.93 2.83 2.83"></path>
+              <path d="M2 12h4"></path>
+              <path d="m4.93 19.07 2.83-2.83"></path>
+              <path d="M12 18v4"></path>
+              <path d="m19.07 19.07-2.83-2.83"></path>
+              <path d="M18 12h4"></path>
+              <path d="m19.07 4.93-2.83 2.83"></path>
+            </svg>
+            Kansenstromen
+          </a>
+          <% } %>
           <a href="/admin/opportunities/deals" class="submenu-item <%= locals.activeSubmenu === 'deals' ? 'active' : '' %>">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"></path>

@@ -1,0 +1,272 @@
+'use strict'
+
+const crypto = require('crypto')
+const bcrypt = require('bcrypt')
+const { supabaseAdmin } = require('../config/supabase')
+
+const STREAM_TYPES = ['trustoo', 'webhook', 'form']
+
+/**
+ * StreamIngestService
+ * Handles inbound opportunity creation from streams (Trustoo, Webhook, Form).
+ * - Verifies secret/signature
+ * - Idempotency/deduplication via idempotency_key or external_id
+ * - Maps payload to opportunity fields via stream.config.mapping and config.defaults
+ * - Always logs to opportunity_stream_events
+ */
+class StreamIngestService {
+  /**
+   * Verify request: either X-Stream-Secret (bcrypt compare) or X-Signature (HMAC-SHA256 of raw body)
+   * @param {object} stream - { secret_hash }
+   * @param {string} rawBody - Raw request body (for HMAC)
+   * @param {string} headerSecret - X-Stream-Secret header
+   * @param {string} headerSignature - X-Signature header
+   * @returns {{ valid: boolean, error?: string }}
+   */
+  static async verifySecret(stream, rawBody, headerSecret, headerSignature) {
+    if (!stream.secret_hash && !headerSecret && !headerSignature) {
+      return { valid: true }
+    }
+    if (stream.secret_hash && headerSecret) {
+      const match = await bcrypt.compare(headerSecret, stream.secret_hash)
+      if (match) return { valid: true }
+      return { valid: false, error: 'Invalid X-Stream-Secret' }
+    }
+    if (stream.secret_hash && headerSignature && rawBody !== undefined) {
+      const secret = await this._getSecretFromHashForHmac(stream.secret_hash)
+      if (!secret) return { valid: false, error: 'HMAC verification not available (secret stored as hash only)' }
+      const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')
+      if (crypto.timingSafeEqual(Buffer.from(headerSignature, 'utf8'), Buffer.from(expected, 'utf8'))) {
+        return { valid: true }
+      }
+      return { valid: false, error: 'Invalid X-Signature' }
+    }
+    if (stream.secret_hash && !headerSecret && !headerSignature) {
+      return { valid: false, error: 'Missing X-Stream-Secret or X-Signature' }
+    }
+    return { valid: true }
+  }
+
+  /**
+   * We cannot derive plain secret from bcrypt hash. So HMAC is only supported when
+   * the stream stores a reversible secret (e.g. encrypted). For MVP we only support
+   * X-Stream-Secret for verification; HMAC would require storing secret encrypted.
+   * Document this: HMAC supported only if config.store_secret_for_hmac is true and we store it (not in MVP).
+   */
+  static async _getSecretFromHashForHmac(secretHash) {
+    return null
+  }
+
+  /**
+   * Build idempotency key: 1) payload.idempotency_key 2) payload.external_id 3) hash of (email+phone+message+date_bucket)
+   */
+  static buildIdempotencyKey(payload) {
+    if (payload && payload.idempotency_key && typeof payload.idempotency_key === 'string') {
+      return payload.idempotency_key.trim()
+    }
+    if (payload && payload.external_id && typeof payload.external_id === 'string') {
+      return payload.external_id.trim()
+    }
+    const email = (payload && payload.email) ? String(payload.email).trim() : ''
+    const phone = (payload && payload.phone) ? String(payload.phone).trim() : ''
+    const message = (payload && (payload.message || payload.description || payload.notes)) ? String(payload.message || payload.description || payload.notes).trim() : ''
+    const dateBucket = new Date().toISOString().slice(0, 13)
+    const combined = `${email}|${phone}|${message}|${dateBucket}`
+    return crypto.createHash('sha256').update(combined).digest('hex')
+  }
+
+  /**
+   * Map inbound payload to opportunity fields using stream.config.mapping and config.defaults
+   * mapping: { opportunity_field: "payload.path.or.dot" } or { opportunity_field: "literal" }
+   */
+  static mapPayloadToOpportunity(payload, config) {
+    const mapping = (config && config.mapping) || {}
+    const defaults = (config && config.defaults) || {}
+    const result = {}
+
+    for (const [oppField, sourcePath] of Object.entries(mapping)) {
+      if (typeof sourcePath !== 'string') continue
+      let value
+      if (sourcePath.startsWith('payload.') || sourcePath.includes('.')) {
+        const path = sourcePath.replace(/^payload\./, '').split('.')
+        value = path.reduce((obj, key) => (obj != null ? obj[key] : undefined), payload)
+      } else {
+        value = sourcePath
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        result[oppField] = typeof value === 'string' ? value.trim() : value
+      }
+    }
+
+    for (const [key, val] of Object.entries(defaults)) {
+      if (result[key] === undefined || result[key] === null || result[key] === '') {
+        result[key] = val
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Minimal validation: ensure we have at least one of title, company_name, or email/contact for an opportunity
+   */
+  static validateMappedFields(mapped) {
+    const hasTitle = mapped.title && String(mapped.title).trim()
+    const hasCompany = mapped.company_name && String(mapped.company_name).trim()
+    const hasContact = (mapped.email && String(mapped.email).trim()) || (mapped.contact_name && String(mapped.contact_name).trim())
+    if (hasTitle || hasCompany || hasContact) return { valid: true }
+    return { valid: false, error: 'Payload must map to at least one of: title, company_name, or email/contact_name' }
+  }
+
+  /**
+   * Main ingest: load stream, verify, dedupe, map, create opportunity, log event.
+   * @param {string} streamId - UUID of opportunity_streams
+   * @param {string} rawBody - Raw request body (for HMAC and logging)
+   * @param {string} headerSecret - X-Stream-Secret
+   * @param {string} headerSignature - X-Signature
+   * @returns {{ success: boolean, status: number, opportunityId?: string, duplicate?: boolean, error?: string }}
+   */
+  static async ingest(streamId, rawBody, headerSecret, headerSignature) {
+    let payload
+    try {
+      payload = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody
+    } catch (e) {
+      await logEvent(streamId, 'error', 400, null, payload || rawBody, 'Invalid JSON body', null)
+      return { success: false, status: 400, error: 'Invalid JSON body' }
+    }
+
+    const { data: stream, error: streamError } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, secret_hash')
+      .eq('id', streamId)
+      .single()
+
+    if (streamError || !stream) {
+      await logEvent(streamId, 'error', 404, null, payload, 'Stream not found', null)
+      return { success: false, status: 404, error: 'Stream not found' }
+    }
+
+    if (!stream.is_active) {
+      await logEvent(streamId, 'error', 403, null, payload, 'Stream is inactive', null)
+      return { success: false, status: 403, error: 'Stream is inactive' }
+    }
+
+    const verification = await this.verifySecret(stream, rawBody, headerSecret, headerSignature)
+    if (!verification.valid) {
+      await logEvent(streamId, 'error', 401, null, payload, verification.error, null)
+      return { success: false, status: 401, error: verification.error }
+    }
+
+    const idempotencyKey = this.buildIdempotencyKey(payload)
+    const externalId = (payload && payload.external_id) ? String(payload.external_id).trim() : null
+
+    const existing = await findExistingEvent(streamId, idempotencyKey, externalId)
+    if (existing) {
+      return {
+        success: true,
+        status: 200,
+        opportunityId: existing.created_opportunity_id,
+        duplicate: true
+      }
+    }
+
+    const config = stream.config || {}
+    const mapped = this.mapPayloadToOpportunity(payload, config)
+    const validation = this.validateMappedFields(mapped)
+    if (!validation.valid) {
+      await logEvent(streamId, 'error', 400, idempotencyKey, payload, validation.error, null, externalId)
+      return { success: false, status: 400, error: validation.error }
+    }
+
+    const title = mapped.title || mapped.company_name || mapped.email || 'Kans uit stream'
+    const opportunityRow = {
+      title: String(title).slice(0, 255),
+      company_name: mapped.company_name || null,
+      contact_name: mapped.contact_name || null,
+      email: mapped.email || null,
+      phone: mapped.phone || null,
+      address: mapped.address || null,
+      city: mapped.city || null,
+      postcode: mapped.postcode || null,
+      status: mapped.status || 'open',
+      stage: mapped.stage || 'nieuw',
+      priority: mapped.priority || 'medium',
+      description: mapped.description || mapped.notes || null,
+      notes: mapped.notes || null,
+      value: mapped.value != null ? Number(mapped.value) : null,
+      source_stream_id: stream.id,
+      meta: {
+        source: 'stream',
+        source_stream_id: stream.id,
+        source_stream_name: stream.name,
+        source_stream_type: stream.type,
+        raw_source_payload: payload
+      },
+      owner_id: null,
+      assignee_id: mapped.assignee_id || null
+    }
+
+    const { data: opportunity, error: insertErr } = await supabaseAdmin
+      .from('opportunities')
+      .insert(opportunityRow)
+      .select('id')
+      .single()
+
+    if (insertErr) {
+      const msg = insertErr.message || 'Failed to create opportunity'
+      await logEvent(streamId, 'error', 500, idempotencyKey, payload, msg, null, externalId)
+      return { success: false, status: 500, error: msg }
+    }
+
+    await logEvent(streamId, 'success', 200, idempotencyKey, payload, null, opportunity.id, externalId)
+    return {
+      success: true,
+      status: 200,
+      opportunityId: opportunity.id,
+      duplicate: false
+    }
+  }
+}
+
+async function findExistingEvent(streamId, idempotencyKey, externalId) {
+  if (idempotencyKey) {
+    const { data } = await supabaseAdmin
+      .from('opportunity_stream_events')
+      .select('id, created_opportunity_id')
+      .eq('stream_id', streamId)
+      .eq('idempotency_key', idempotencyKey)
+      .limit(1)
+      .maybeSingle()
+    if (data && data.created_opportunity_id) return data
+  }
+  if (externalId) {
+    const { data } = await supabaseAdmin
+      .from('opportunity_stream_events')
+      .select('id, created_opportunity_id')
+      .eq('stream_id', streamId)
+      .eq('external_id', externalId)
+      .limit(1)
+      .maybeSingle()
+    if (data && data.created_opportunity_id) return data
+  }
+  return null
+}
+
+async function logEvent(streamId, status, httpStatus, idempotencyKey, payloadRaw, errorMessage, createdOpportunityId, externalId) {
+  const payloadSafe = payloadRaw && typeof payloadRaw === 'object' ? payloadRaw : (typeof payloadRaw === 'string' ? { _raw: payloadRaw } : null)
+  await supabaseAdmin
+    .from('opportunity_stream_events')
+    .insert({
+      stream_id: streamId,
+      received_at: new Date().toISOString(),
+      status,
+      http_status: httpStatus,
+      idempotency_key: idempotencyKey || null,
+      external_id: externalId || null,
+      payload_raw: payloadSafe,
+      error_message: errorMessage || null,
+      created_opportunity_id: createdOpportunityId || null
+    })
+}
+
+module.exports = StreamIngestService

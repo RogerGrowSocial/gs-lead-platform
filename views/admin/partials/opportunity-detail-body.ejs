@@ -120,6 +120,9 @@
               <div class="company-badges">
                 <span class="opportunity-badge <%= statusConfig.class %>"><%= statusConfig.label %></span>
                 <span class="opportunity-badge <%= priorityConfig.class %>"><%= priorityConfig.label %></span>
+                <% if (opp.meta && (opp.meta.source_stream_name || opp.meta.source_stream_type)) { %>
+                  <span class="opportunity-badge status-gray" title="Bron: <%= opp.meta.source_stream_name || opp.meta.source_stream_type %>">Bron: <%= opp.meta.source_stream_name || opp.meta.source_stream_type %></span>
+                <% } %>
               </div>
             </div>
             <div class="company-value">

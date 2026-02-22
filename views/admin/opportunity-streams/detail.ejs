@@ -1,0 +1,93 @@
+<%
+  const typeLabel = (t) => ({ trustoo: 'Trustoo', webhook: 'Generic Webhook', form: 'Website Form' }[t] || t)
+  const base = typeof baseUrl !== 'undefined' ? baseUrl : ''
+  const webhookUrl = base ? `${base}/api/ingest/opportunities/${stream.id}` : `/api/ingest/opportunities/${stream.id}`
+%>
+<%- include('../../layouts/admin', {
+  title: stream.name + ' | Kansenstromen',
+  activeMenu: 'opportunities',
+  activeSubmenu: 'streams',
+  user: user,
+  body: `
+  <div class="settings-container" data-stream-id="${stream.id}">
+    <div class="page-header">
+      <div>
+        <a href="/admin/opportunities/streams" class="back-link"><i class="fas fa-arrow-left"></i> Terug naar kansenstromen</a>
+        <h1>${stream.name || 'Stroom'}</h1>
+        <p class="text-muted">
+          <span class="status-badge ${stream.is_active ? 'active' : 'expired'}">${stream.is_active ? 'Actief' : 'Inactief'}</span>
+          <span class="status-badge pending">${typeLabel(stream.type)}</span>
+        </p>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/opportunities/streams/${stream.id}/edit" class="btn-outline"><i class="fas fa-edit"></i> Bewerken</a>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Webhook URL</h2>
+        <p class="settings-card-subtitle">POST naar deze URL met JSON body. Stel header X-Stream-Secret in als je een secret hebt geconfigureerd.</p>
+      </div>
+      <div class="settings-card-body">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <input type="text" id="webhookUrlDisplay" value="${webhookUrl}" readonly class="form-control" style="flex: 1; min-width: 280px;" />
+          <button type="button" id="copyWebhookUrlBtn" class="btn-outline"><i class="fas fa-copy"></i> Kopieer</button>
+        </div>
+        <p style="margin-top: 12px;"><button type="button" id="rotateSecretBtn" class="btn-outline"><i class="fas fa-key"></i> Rotate secret</button> <span id="rotateMessage" class="text-muted"></span></p>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Mapping (config)</h2>
+      </div>
+      <div class="settings-card-body">
+        <pre id="configDisplay" style="background: #f5f5f5; padding: 12px; border-radius: 8px; overflow: auto; max-height: 240px;">${JSON.stringify(stream.config || {}, null, 2)}</pre>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Event logs (laatste 100)</h2>
+        <p class="settings-card-subtitle">Filters</p>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button type="button" class="btn-outline-sm event-filter-btn active" data-status="">Alles</button>
+          <button type="button" class="btn-outline-sm event-filter-btn" data-status="success">Success</button>
+          <button type="button" class="btn-outline-sm event-filter-btn" data-status="error">Errors</button>
+          <button type="button" id="sendTestEventBtn" class="btn-primary"><i class="fas fa-paper-plane"></i> Test event versturen</button>
+        </div>
+      </div>
+      <div class="settings-card-body">
+        <div class="admins-table">
+          <div class="admins-table-head">
+            <div class="admins-row">
+              <div class="admins-cell">Ontvangen</div>
+              <div class="admins-cell">Status</div>
+              <div class="admins-cell">HTTP</div>
+              <div class="admins-cell">Idempotency</div>
+              <div class="admins-cell">Kans</div>
+              <div class="admins-cell">Fout</div>
+              <div class="admins-cell actions-cell">Actie</div>
+            </div>
+          </div>
+          <div class="admins-table-body" id="eventsTableBody">
+            <div class="admins-row"><div class="admins-cell">Laden…</div></div>
+          </div>
+        </div>
+        <div id="eventsPagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="payloadModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 8px; padding: 16px; max-width: 90vw; max-height: 80vh; overflow: auto;">
+      <h3 style="margin: 0 0 12px;">Payload / Fout</h3>
+      <pre id="payloadModalContent" style="background: #f5f5f5; padding: 12px; border-radius: 6px; overflow: auto; max-height: 60vh; white-space: pre-wrap; font-size: 12px;"></pre>
+      <div style="margin-top: 12px;"><button type="button" class="btn-outline" onclick="document.getElementById('payloadModal').style.display='none'">Sluiten</button></div>
+    </div>
+  </div>
+  `,
+  scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams-detail.js'],
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+}) %>

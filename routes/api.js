@@ -20,6 +20,7 @@ const { validateAssignment, validateAssignmentCreate } = require('../guards/vali
 const UserRiskAssessmentService = require('../services/userRiskAssessmentService')
 const KvkApiService = require('../services/kvkApiService')
 const LeadAssignmentService = require('../services/leadAssignmentService')
+const StreamIngestService = require('../services/streamIngestService')
 
 // API routes voor gebruikers
 
@@ -16327,6 +16328,200 @@ router.delete('/admin/scraper/opportunities/:id', requireAuth, isManagerOrAdmin,
     res.json({ success: true })
   } catch (err) {
     console.error('Error deleting opportunity:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// =====================================================
+// OPPORTUNITY STREAMS (KANSENSTROMEN) - Admin CRUD + Ingest
+// =====================================================
+
+// Public ingest endpoint (secured by stream secret). No auth; verification inside service.
+// Note: For HMAC (X-Signature) to work, this route should be mounted with express.raw() for application/json so raw body is available.
+router.post('/ingest/opportunities/:streamId', async (req, res) => {
+  try {
+    const { streamId } = req.params
+    const rawBody = typeof req.rawBody === 'string' ? req.rawBody : (req.body ? JSON.stringify(req.body) : '{}')
+    const headerSecret = req.get('X-Stream-Secret')
+    const headerSignature = req.get('X-Signature')
+    const result = await StreamIngestService.ingest(streamId, rawBody, headerSecret, headerSignature)
+    res.status(result.status).json(
+      result.success
+        ? { success: true, opportunity_id: result.opportunityId, duplicate: result.duplicate || false }
+        : { success: false, error: result.error }
+    )
+  } catch (err) {
+    console.error('Stream ingest error:', err)
+    res.status(500).json({ success: false, error: 'Internal server error' })
+  }
+})
+
+// Admin stream CRUD (admin/manager only)
+router.get('/admin/opportunities/streams', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, created_at, updated_at, created_by')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    res.json({ streams: data || [] })
+  } catch (err) {
+    console.error('List streams error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.post('/admin/opportunities/streams', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { name, type, is_active = true, config = {} } = req.body
+    if (!name || !type) {
+      return res.status(400).json({ error: 'name and type are required' })
+    }
+    if (!['trustoo', 'webhook', 'form'].includes(type)) {
+      return res.status(400).json({ error: 'type must be trustoo, webhook, or form' })
+    }
+    let secret_hash = null
+    const plainSecret = req.body.secret && typeof req.body.secret === 'string' ? req.body.secret.trim() : ''
+    if (plainSecret) {
+      secret_hash = await bcrypt.hash(plainSecret, 10)
+    }
+    const { data, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .insert({
+        name: name.trim(),
+        type,
+        is_active: !!is_active,
+        config: config || {},
+        secret_hash,
+        created_by: req.user.id
+      })
+      .select()
+      .single()
+    if (error) throw error
+    const response = { ...data }
+    if (plainSecret) response.secret = plainSecret
+    res.status(201).json(response)
+  } catch (err) {
+    console.error('Create stream error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.get('/admin/opportunities/streams/:id', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, created_at, updated_at, created_by')
+      .eq('id', req.params.id)
+      .single()
+    if (error || !data) return res.status(404).json({ error: 'Stream not found' })
+    res.json(data)
+  } catch (err) {
+    console.error('Get stream error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.put('/admin/opportunities/streams/:id', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { name, type, is_active, config } = req.body
+    const updates = {}
+    if (name !== undefined) updates.name = String(name).trim()
+    if (type !== undefined) {
+      if (!['trustoo', 'webhook', 'form'].includes(type)) return res.status(400).json({ error: 'type must be trustoo, webhook, or form' })
+      updates.type = type
+    }
+    if (is_active !== undefined) updates.is_active = !!is_active
+    if (config !== undefined) updates.config = config || {}
+    if (req.body.secret && typeof req.body.secret === 'string' && req.body.secret.trim()) {
+      updates.secret_hash = await bcrypt.hash(req.body.secret.trim(), 10)
+    }
+    updates.updated_at = new Date().toISOString()
+    const { data, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single()
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    console.error('Update stream error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.delete('/admin/opportunities/streams/:id', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.from('opportunity_streams').delete().eq('id', req.params.id)
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Delete stream error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.post('/admin/opportunities/streams/:id/rotate-secret', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const crypto = require('crypto')
+    const newSecret = crypto.randomBytes(24).toString('hex')
+    const secret_hash = await bcrypt.hash(newSecret, 10)
+    const { error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .update({ secret_hash, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+    if (error) throw error
+    res.json({ success: true, secret: newSecret })
+  } catch (err) {
+    console.error('Rotate secret error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.get('/admin/opportunities/streams/:id/events', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100)
+    const offset = parseInt(req.query.offset) || 0
+    const status = req.query.status
+    let query = supabaseAdmin
+      .from('opportunity_stream_events')
+      .select('id, stream_id, received_at, status, http_status, idempotency_key, external_id, payload_raw, error_message, created_opportunity_id, created_at', { count: 'exact' })
+      .eq('stream_id', req.params.id)
+      .order('received_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (status === 'success' || status === 'error') query = query.eq('status', status)
+    const { data, error, count } = await query
+    if (error) throw error
+    res.json({ events: data || [], total: count ?? 0 })
+  } catch (err) {
+    console.error('List stream events error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.post('/admin/opportunities/streams/:id/test-event', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const streamId = req.params.id
+    const testPayload = req.body.payload || {
+      idempotency_key: `test-${Date.now()}`,
+      email: 'test@example.com',
+      company_name: 'Test Bedrijf',
+      contact_name: 'Test Contact',
+      message: 'Test event from admin UI'
+    }
+    const rawBody = JSON.stringify(testPayload)
+    const { data: stream } = await supabaseAdmin.from('opportunity_streams').select('id').eq('id', streamId).single()
+    if (!stream) return res.status(404).json({ error: 'Stream not found' })
+    const headerSecret = req.body.secret || req.get('X-Stream-Secret')
+    const result = await StreamIngestService.ingest(streamId, rawBody, headerSecret, null)
+    res.status(result.status).json(
+      result.success
+        ? { success: true, opportunity_id: result.opportunityId, duplicate: result.duplicate }
+        : { success: false, error: result.error }
+    )
+  } catch (err) {
+    console.error('Test event error:', err)
     res.status(500).json({ error: err.message })
   }
 })

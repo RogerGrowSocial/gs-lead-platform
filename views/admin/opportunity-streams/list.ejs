@@ -1,0 +1,73 @@
+<%
+  const formatDate = (iso) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+  const typeLabel = (t) => ({ trustoo: 'Trustoo', webhook: 'Generic Webhook', form: 'Website Form' }[t] || t)
+%>
+<%- include('../../layouts/admin', {
+  title: 'Kansenstromen',
+  activeMenu: 'opportunities',
+  activeSubmenu: 'streams',
+  user: user,
+  body: `
+  <div class="settings-container">
+    <div class="page-header">
+      <div>
+        <h1>Kansenstromen</h1>
+        <p class="text-muted">Beheer bronnen die kansen genereren (Trustoo, Webhook, Formulier)</p>
+      </div>
+      <div class="header-actions">
+        <a href="/admin/opportunities/streams/new" class="btn-primary">
+          <i class="fas fa-plus"></i> Nieuwe stroom
+        </a>
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div class="settings-card-header">
+        <h2>Overzicht</h2>
+        <p class="settings-card-subtitle">Actieve en inactieve stromen</p>
+      </div>
+      <div class="settings-card-body">
+        <div class="admins-table">
+          <div class="admins-table-head">
+            <div class="admins-row">
+              <div class="admins-cell">Naam</div>
+              <div class="admins-cell">Type</div>
+              <div class="admins-cell">Actief</div>
+              <div class="admins-cell">Laatste event</div>
+              <div class="admins-cell">Slagingspercentage (laatste 50)</div>
+              <div class="admins-cell actions-cell">Acties</div>
+            </div>
+          </div>
+          <div class="admins-table-body" id="streamsTableBody">
+            ${ (streams || []).map(s => `
+              <div class="admins-row" data-id="${s.id}">
+                <div class="admins-cell"><div class="admin-name">${s.name || '—'}</div></div>
+                <div class="admins-cell"><span class="status-badge pending">${typeLabel(s.type)}</span></div>
+                <div class="admins-cell">${s.is_active ? '<span class="status-badge active">Ja</span>' : '<span class="status-badge expired">Nee</span>'}</div>
+                <div class="admins-cell"><div class="date-info">${formatDate(lastEventByStream[s.id])}</div></div>
+                <div class="admins-cell">${successRateByStream[s.id] != null ? successRateByStream[s.id] + '%' : '—'}</div>
+                <div class="admins-cell actions-cell">
+                  <div class="action-buttons">
+                    <a href="/admin/opportunities/streams/${s.id}" class="btn-icon" title="Bekijken"><i class="fas fa-eye"></i></a>
+                    <a href="/admin/opportunities/streams/${s.id}/edit" class="btn-icon" title="Bewerken"><i class="fas fa-edit"></i></a>
+                    <button type="button" class="btn-icon copy-webhook-btn" data-stream-id="${s.id}" title="Kopieer webhook URL"><i class="fas fa-link"></i></button>
+                    <button type="button" class="btn-icon rotate-secret-btn" data-stream-id="${s.id}" data-stream-name="${(s.name || '').replace(/"/g, '&quot;')}" title="Rotate secret"><i class="fas fa-key"></i></button>
+                  </div>
+                </div>
+              </div>
+            `).join('') }
+            ${ (!streams || streams.length === 0) ? `
+              <div class="admins-row"><div class="admins-cell" style="grid-column: 1 / -1;">Nog geen kansenstromen. <a href="/admin/opportunities/streams/new">Maak er een aan</a>.</div></div>
+            ` : '' }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  `,
+  scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams.js'],
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+}) %>

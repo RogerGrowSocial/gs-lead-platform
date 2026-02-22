@@ -2,6 +2,28 @@ const express = require("express")
 const router = express.Router()
 const { supabase, supabaseAdmin } = require('../config/supabase')
 const { requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin } = require("../middleware/auth")
+
+/** For GET requests to stream pages: render 403 page instead of JSON when user is not manager/admin */
+async function requireManagerOrAdminPage(req, res, next) {
+  if (req.method !== 'GET') return isManagerOrAdmin(req, res, next)
+  const render403 = (message, error) => res.status(403).render('errors/403', { message: message || 'Geen toegang', error: error || 'Manager of admin toegang vereist', user: req.user })
+  if (!req.user) return render403('Geen toegang tot deze pagina', 'Authenticatie vereist')
+  if (req.user.user_metadata?.is_admin === true) return next()
+  try {
+    const { createBaseClient } = require('../lib/supabase')
+    const supabase = createBaseClient()
+    const { data: profile, error } = await supabase.from('profiles').select('is_admin, role_id').eq('id', req.user.id).single()
+    if (error) return render403('Geen toegang', 'Kon gebruikersgegevens niet ophalen')
+    if (profile?.is_admin === true) return next()
+    if (profile?.role_id) {
+      const { data: role, error: roleError } = await supabaseAdmin.from('roles').select('name').eq('id', profile.role_id).maybeSingle()
+      if (!roleError && role && (role.name || '').toLowerCase().includes('manager')) return next()
+    }
+    return render403('Geen toegang tot deze pagina', 'Alleen managers en beheerders hebben toegang tot Kansenstromen.')
+  } catch (err) {
+    return render403('Geen toegang', 'Fout bij het controleren van toegang')
+  }
+}
 const userRepository = require("../database/userRepository")
 const moment = require('moment')
 const logger = require('../utils/logger')
@@ -15043,6 +15065,32 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
     const conversionRate = totalCount ? Math.round((wonCount / totalCount) * 100) : 0;
     const aiSuggestions = (allOpportunities || []).filter(o => !!o.ai_suggestion).length;
 
+    // Admin/manager: show Kansenstromen quick-link and optional empty-state callout
+    let showStreamsLink = false;
+    let showStreamsEmptyCallout = false;
+    try {
+      let isUserAdmin = req.user?.user_metadata?.is_admin === true;
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('is_admin, role_id')
+        .eq('id', req.user.id)
+        .single();
+      if (profile?.is_admin) isUserAdmin = true;
+      let isManager = false;
+      if (profile?.role_id) {
+        const { data: role } = await supabaseAdmin.from('roles').select('name').eq('id', profile.role_id).maybeSingle();
+        if (role && (role.name || '').toLowerCase().includes('manager')) isManager = true;
+      }
+      showStreamsLink = isUserAdmin || isManager;
+      if (showStreamsLink) {
+        const { count: streamsCount } = await supabaseAdmin.from('opportunity_streams').select('*', { count: 'exact', head: true });
+        const streamOppsCount = (allOpportunities || []).filter(o => o.source_stream_id || (o.meta && o.meta.source === 'stream')).length;
+        showStreamsEmptyCallout = (streamsCount === 0) || (streamOppsCount === 0);
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') console.log('Streams link/callout check:', err.message);
+    }
+
     res.render('admin/opportunities', {
       title: 'Kansen',
       activeMenu: 'opportunities',
@@ -15051,6 +15099,8 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
       opportunities: opportunitiesWithAI || [],
       salesReps,
       pagination: { page, perPage, totalPages, totalCount },
+      showStreamsLink,
+      showStreamsEmptyCallout,
       scripts: ['/js/admin/opportunities.js'],
       stylesheets: ['/css/opportunities.css']
     });
@@ -15078,6 +15128,116 @@ router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, r
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon deals niet laden', error: {}, user: req.user })
+  }
+})
+
+// Opportunity Streams (Kansenstromen) - admin/manager only
+router.get('/opportunities/streams', requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    const { data: streams } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, created_at, updated_at')
+      .order('created_at', { ascending: false })
+    const streamIds = (streams || []).map(s => s.id)
+    let lastEventByStream = {}
+    let successRateByStream = {}
+    if (streamIds.length > 0) {
+      const { data: events } = await supabaseAdmin
+        .from('opportunity_stream_events')
+        .select('stream_id, received_at, status')
+        .in('stream_id', streamIds)
+        .order('received_at', { ascending: false })
+      const last50ByStream = {}
+      ;(events || []).forEach(ev => {
+        if (!lastEventByStream[ev.stream_id]) lastEventByStream[ev.stream_id] = ev.received_at
+        if (!last50ByStream[ev.stream_id]) last50ByStream[ev.stream_id] = []
+        if (last50ByStream[ev.stream_id].length < 50) last50ByStream[ev.stream_id].push(ev.status)
+      })
+      Object.keys(last50ByStream).forEach(sid => {
+        const arr = last50ByStream[sid]
+        const success = arr.filter(s => s === 'success').length
+        successRateByStream[sid] = arr.length ? Math.round((success / arr.length) * 100) : null
+      })
+    }
+    res.render('admin/opportunity-streams/list', {
+      title: 'Kansenstromen',
+      activeMenu: 'opportunities',
+      activeSubmenu: 'streams',
+      user: req.user,
+      streams: streams || [],
+      lastEventByStream,
+      successRateByStream,
+      scripts: ['/js/admin/opportunity-streams.js'],
+      stylesheets: ['/css/opportunities.css']
+    })
+  } catch (e) {
+    res.status(500).render('error', { message: 'Kon kansenstromen niet laden', error: {}, user: req.user })
+  }
+})
+
+router.get('/opportunities/streams/new', requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    res.render('admin/opportunity-streams/form', {
+      title: 'Nieuwe kansenstroom',
+      activeMenu: 'opportunities',
+      activeSubmenu: 'streams',
+      user: req.user,
+      stream: null,
+      scripts: ['/js/admin/opportunity-streams-form.js'],
+      stylesheets: ['/css/opportunities.css']
+    })
+  } catch (e) {
+    res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
+  }
+})
+
+router.get('/opportunities/streams/:id', requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    const { data: stream, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, created_at, updated_at')
+      .eq('id', req.params.id)
+      .single()
+    if (error || !stream) {
+      return res.status(404).render('error', { message: 'Kansenstroom niet gevonden', error: {}, user: req.user })
+    }
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
+    res.render('admin/opportunity-streams/detail', {
+      title: stream.name,
+      activeMenu: 'opportunities',
+      activeSubmenu: 'streams',
+      user: req.user,
+      stream,
+      baseUrl: baseUrl.replace(/\/$/, ''),
+      scripts: ['/js/admin/opportunity-streams-detail.js'],
+      stylesheets: ['/css/opportunities.css']
+    })
+  } catch (e) {
+    res.status(500).render('error', { message: 'Kon kansenstroom niet laden', error: {}, user: req.user })
+  }
+})
+
+router.get('/opportunities/streams/:id/edit', requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    const { data: stream, error } = await supabaseAdmin
+      .from('opportunity_streams')
+      .select('id, name, type, is_active, config, created_at, updated_at')
+      .eq('id', req.params.id)
+      .single()
+    if (error || !stream) {
+      return res.status(404).render('error', { message: 'Kansenstroom niet gevonden', error: {}, user: req.user })
+    }
+    res.render('admin/opportunity-streams/form', {
+      title: `Bewerken: ${stream.name}`,
+      activeMenu: 'opportunities',
+      activeSubmenu: 'streams',
+      user: req.user,
+      stream,
+      scripts: ['/js/admin/opportunity-streams-form.js'],
+      stylesheets: ['/css/opportunities.css']
+    })
+  } catch (e) {
+    res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
   }
 })
 
