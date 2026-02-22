@@ -931,6 +931,15 @@
         const n = entry.participant_user_ids.length;
         meta.push(`<span class="entry-meta-item">Met: ${n} deelnemer${n === 1 ? '' : 's'}</span>`);
       }
+      if (entry.ops_category) {
+        const opsCatLabels = { algemeen: 'Algemeen', processen: 'Processen & SOP', automations: 'Automations', data: 'Data / Reporting', platform: 'Platform / QA', planning: 'Planning / HR', finance: 'Finance / Admin', onboarding: 'Onboarding' };
+        meta.push(`<span class="entry-meta-item"><i class="fas fa-cogs"></i> ${opsCatLabels[entry.ops_category] || entry.ops_category}</span>`);
+      }
+      if (entry.ops_area) meta.push(`<span class="entry-meta-item">${escapeHtml(entry.ops_area)}</span>`);
+      if (entry.ops_impact) {
+        const impactLabels = { bespaart_tijd: 'Bespaart tijd', verhoogt_omzet: 'Verhoogt omzet', vermindert_fouten: 'Vermindert fouten', compliance: 'Compliance' };
+        meta.push(`<span class="entry-meta-item">${impactLabels[entry.ops_impact] || entry.ops_impact}</span>`);
+      }
 
       return `
         <div class="entry-item">
