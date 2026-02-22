@@ -594,9 +594,11 @@
         if (q && q.trim()) params.set('q', q.trim());
         const response = await fetch(`/api/employees/${this.userId}/tasks?${params}`, { credentials: 'include' });
         const result = await response.json();
+        let list = [];
         if (result.ok && result.data) {
-          this.tasks = result.data.tasks || result.data || [];
+          list = result.data.tasks || result.data || [];
         }
+        this.tasks = list.filter(t => t.status !== 'done' && t.status !== 'rejected');
         return this.tasks;
       } catch (error) {
         console.error('[TimeTracker] Error loading tasks:', error);
@@ -660,11 +662,14 @@
           });
         }
       } else {
+        const statusLabels = { open: 'Open', in_progress: 'In uitvoering', in_review: 'In beoordeling', done: 'Voltooid', rejected: 'Afgewezen' };
         dropdown.innerHTML = filtered.map(task => {
           const custName = task.customer_name || (task.customer ? (task.customer.company_name || [task.customer.first_name, task.customer.last_name].filter(Boolean).join(' ')) : '');
+          const statusLabel = statusLabels[task.status] || task.status || 'Open';
           return `<div class="task-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" data-task-id="${task.id}" data-task-title="${(task.title || '').replace(/"/g, '&quot;')}" data-customer-id="${task.customer_id || ''}" data-customer-name="${(custName || '').replace(/"/g, '&quot;')}" data-contact-id="${task.contact_id || ''}">
             <div style="font-weight: 500; color: #111827; font-size: 14px;">${(task.title || 'Geen titel').replace(/</g, '&lt;')}</div>
             ${custName ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${String(custName).replace(/</g, '&lt;')}</div>` : ''}
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${statusLabel}</div>
           </div>`;
         }).join('');
 
