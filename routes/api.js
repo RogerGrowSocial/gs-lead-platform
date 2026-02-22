@@ -5,7 +5,7 @@ const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
 const { supabase, supabaseAdmin } = require('../config/supabase')
-const { requireAuth, isAdmin, isManagerOrAdmin } = require("../middleware/auth")
+const { requireAuth, isAdmin, isManagerOrAdmin, isEmployeeOrAdmin } = require("../middleware/auth")
 const { requirePermission, requireAnyPermission, getUserPermissions, isAdminOrHasPermission, requireAdmin } = require('../middleware/permissions')
 const userRepository = require("../database/userRepository")
 const subscriptionsRoutes = require('./subscriptions')
@@ -9554,6 +9554,105 @@ router.get("/admin/opportunities/:id/routing-decisions/:decisionId", requireAuth
   }
 });
 
+// Helper: can user update this opportunity's sales status? (assignee, or manager/admin)
+async function canUpdateOpportunityStatus(userId, opportunity) {
+  if (opportunity.assigned_to === userId) return true;
+  const { data: profile } = await supabaseAdmin.from('profiles').select('is_admin, role_id').eq('id', userId).single();
+  if (profile?.is_admin === true) return true;
+  if (!profile?.role_id) return false;
+  const { data: role } = await supabaseAdmin.from('roles').select('name').eq('id', profile.role_id).maybeSingle();
+  return (role?.name || '').toLowerCase().includes('manager');
+}
+
+const SALES_STATUS_VALUES = ['new', 'contacted', 'appointment_set', 'customer', 'lost', 'unreachable'];
+
+// PUT /api/admin/opportunities/:id/sales-status
+router.put("/admin/opportunities/:id/sales-status", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const opportunityId = req.params.id;
+    const { sales_status, sales_outcome_reason, contact_attempt_increment } = req.body || {};
+    if (!sales_status || !SALES_STATUS_VALUES.includes(sales_status)) {
+      return res.status(400).json({ success: false, error: 'sales_status is verplicht en moet een van: ' + SALES_STATUS_VALUES.join(', ') });
+    }
+    if (sales_status === 'lost' && (sales_outcome_reason == null || String(sales_outcome_reason).trim() === '')) {
+      return res.status(400).json({ success: false, error: 'sales_outcome_reason is verplicht wanneer status "lost" is' });
+    }
+
+    const { data: opp, error: oppErr } = await supabaseAdmin
+      .from('opportunities')
+      .select('id, assigned_to, sales_status, sales_status_updated_at')
+      .eq('id', opportunityId)
+      .single();
+    if (oppErr || !opp) return res.status(404).json({ success: false, error: 'Opportunity niet gevonden' });
+    const canUpdate = await canUpdateOpportunityStatus(req.user.id, opp);
+    if (!canUpdate) return res.status(403).json({ success: false, error: 'Geen rechten om status van deze kans bij te werken' });
+
+    const now = new Date().toISOString();
+    const updates = {
+      sales_status,
+      sales_status_updated_at: now,
+      sales_outcome_reason: sales_status === 'lost' ? (sales_outcome_reason || null) : null
+    };
+    if (contact_attempt_increment === true || contact_attempt_increment === 1) {
+      const { data: cur } = await supabaseAdmin.from('opportunities').select('contact_attempts').eq('id', opportunityId).single();
+      updates.contact_attempts = (cur?.contact_attempts ?? 0) + 1;
+      updates.last_contact_at = now;
+    }
+
+    const { data: updated, error: updErr } = await supabaseAdmin
+      .from('opportunities')
+      .update(updates)
+      .eq('id', opportunityId)
+      .select()
+      .single();
+    if (updErr) throw updErr;
+
+    await supabaseAdmin.from('opportunity_sales_status_history').insert({
+      opportunity_id: opportunityId,
+      old_status: opp.sales_status,
+      new_status: sales_status,
+      reason: sales_status === 'lost' ? sales_outcome_reason : null,
+      changed_by: req.user.id
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating sales status:', error);
+    res.status(500).json({ success: false, error: error.message || 'Fout bij bijwerken status' });
+  }
+});
+
+// POST /api/admin/opportunities/:id/contact-attempt
+router.post("/admin/opportunities/:id/contact-attempt", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const opportunityId = req.params.id;
+    const { data: opp, error: oppErr } = await supabaseAdmin
+      .from('opportunities')
+      .select('id, assigned_to, contact_attempts')
+      .eq('id', opportunityId)
+      .single();
+    if (oppErr || !opp) return res.status(404).json({ success: false, error: 'Opportunity niet gevonden' });
+    const canUpdate = await canUpdateOpportunityStatus(req.user.id, opp);
+    if (!canUpdate) return res.status(403).json({ success: false, error: 'Geen rechten om deze kans bij te werken' });
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updErr } = await supabaseAdmin
+      .from('opportunities')
+      .update({
+        contact_attempts: (opp.contact_attempts ?? 0) + 1,
+        last_contact_at: now
+      })
+      .eq('id', opportunityId)
+      .select()
+      .single();
+    if (updErr) throw updErr;
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error incrementing contact attempt:', error);
+    res.status(500).json({ success: false, error: error.message || 'Fout bij bijwerken pogingen' });
+  }
+});
+
 // =====================================================
 // AI ROUTER PERFORMANCE DEBUG ENDPOINT
 // =====================================================
@@ -16462,6 +16561,7 @@ router.post('/ingest/opportunities/:streamId', async (req, res) => {
     )
   } catch (err) {
     console.error('Stream ingest error:', err)
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
     res.status(500).json({ success: false, error: 'Internal server error' })
   }
 })

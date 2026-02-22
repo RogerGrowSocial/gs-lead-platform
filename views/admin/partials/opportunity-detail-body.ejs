@@ -84,6 +84,18 @@
   const assignedEmail = assignedRep && assignedRep.email ? assignedRep.email : null
   const contactEmail = opp.contact_email || opp.email || '-'
   const contactPhone = opp.contact_phone || opp.phone || '-'
+
+  const salesStatusConfigs = {
+    new: { label: 'Nieuw', class: 'status-blue' },
+    contacted: { label: 'Gecontacteerd', class: 'status-purple' },
+    appointment_set: { label: 'Afspraak gepland', class: 'status-orange' },
+    customer: { label: 'Klant (gewonnen)', class: 'status-success' },
+    lost: { label: 'Verloren', class: 'status-gray' },
+    unreachable: { label: 'Onbereikbaar', class: 'status-gray' }
+  }
+  const salesStatusConfig = salesStatusConfigs[opp.sales_status] || salesStatusConfigs.new
+  const assignedAtMs = opp.assigned_at ? new Date(opp.assigned_at).getTime() : null
+  const isStale = opp.assigned_to && (opp.sales_status || 'new') === 'new' && assignedAtMs && (Date.now() - assignedAtMs > 48 * 60 * 60 * 1000)
 %>
 
 <div class="opportunity-detail-page" data-opportunity-id="<%= opp.id %>">
@@ -105,8 +117,42 @@
   </header>
 
   <div class="opportunity-detail-container">
+    <% if (isStale) { %>
+    <div class="opportunity-stale-banner" id="opportunity-stale-banner">
+      <span><i class="fas fa-exclamation-triangle"></i> Deze kans is nog niet bijgewerkt. Update de status.</span>
+      <a href="#status-panel" class="btn-outline-sm">Naar status</a>
+    </div>
+    <% } %>
     <div class="opportunity-detail-grid">
       <div class="opportunity-detail-main">
+        <!-- Sales status panel -->
+        <section class="detail-card" id="status-panel">
+          <h3 class="card-title">Sales status</h3>
+          <div class="sales-status-form">
+            <div class="form-group">
+              <label class="form-label" for="sales-status-select">Status</label>
+              <select id="sales-status-select" class="form-select" data-opp-id="<%= opp.id %>">
+                <option value="new" <%= (opp.sales_status || 'new') === 'new' ? 'selected' : '' %>>Nieuw</option>
+                <option value="contacted" <%= opp.sales_status === 'contacted' ? 'selected' : '' %>>Gecontacteerd</option>
+                <option value="appointment_set" <%= opp.sales_status === 'appointment_set' ? 'selected' : '' %>>Afspraak gepland</option>
+                <option value="customer" <%= opp.sales_status === 'customer' ? 'selected' : '' %>>Klant (gewonnen)</option>
+                <option value="lost" <%= opp.sales_status === 'lost' ? 'selected' : '' %>>Verloren</option>
+                <option value="unreachable" <%= opp.sales_status === 'unreachable' ? 'selected' : '' %>>Onbereikbaar</option>
+              </select>
+            </div>
+            <div class="form-group sales-outcome-reason-wrap" id="sales-outcome-reason-wrap" style="<%= opp.sales_status === 'lost' ? '' : 'display:none' %>">
+              <label class="form-label" for="sales-outcome-reason">Reden (verplicht bij Verloren)</label>
+              <input type="text" id="sales-outcome-reason" class="form-input" value="<%= (opp.sales_outcome_reason || '') %>" placeholder="Bijv. geen budget, concurrent" />
+            </div>
+            <div class="sales-status-meta">
+              <span>Laatste update: <%= formatRelativeTime(opp.sales_status_updated_at) %></span>
+              <span>Pogingen: <%= opp.contact_attempts ?? 0 %></span>
+              <button type="button" class="btn-outline-sm" id="contact-attempt-btn" data-opp-id="<%= opp.id %>">+1 poging</button>
+            </div>
+            <button type="button" class="btn-primary-sm" id="sales-status-save-btn" data-opp-id="<%= opp.id %>">Opslaan</button>
+          </div>
+        </section>
+
         <!-- Summary Card -->
         <section class="detail-card company-card">
           <div class="company-header">

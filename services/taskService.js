@@ -87,6 +87,7 @@ class TaskService {
         employee_id: taskData.employee_id,
         customer_id: taskData.customer_id || null,
         contact_id: taskData.contact_id || null,
+        opportunity_id: taskData.opportunity_id || null,
         title: taskData.title,
         description: taskData.description || null,
         status: 'open',

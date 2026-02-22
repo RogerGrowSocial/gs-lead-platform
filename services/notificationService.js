@@ -37,6 +37,7 @@ class NotificationService {
           quota_warning_notification: 1,
           quota_reached_notification: 1,
           lead_assigned_notification: 1,
+          opportunity_assigned_notification: 1,
           lead_status_changed_notification: 0,
           subscription_expiring_notification: 1,
           subscription_expired_notification: 1,
@@ -54,6 +55,7 @@ class NotificationService {
         quota_warning_notification: settings.quota_warning_notification ?? 1,
         quota_reached_notification: settings.quota_reached_notification ?? 1,
         lead_assigned_notification: settings.lead_assigned_notification ?? 1,
+        opportunity_assigned_notification: settings.opportunity_assigned_notification ?? 1,
         lead_status_changed_notification: settings.lead_status_changed_notification ?? 0,
         subscription_expiring_notification: settings.subscription_expiring_notification ?? 1,
         subscription_expired_notification: settings.subscription_expired_notification ?? 1,
@@ -167,6 +169,18 @@ class NotificationService {
         fullTemplateData.lead_url = fullTemplateData.lead_url || fullTemplateData.dashboard_url;
       }
 
+      if (notificationType === 'opportunity_assigned') {
+        fullTemplateData.company_name = fullTemplateData.company_name || 'Onbekend bedrijf';
+        fullTemplateData.contact_name = fullTemplateData.contact_name || 'Onbekend';
+        fullTemplateData.email = fullTemplateData.email || '';
+        fullTemplateData.phone = fullTemplateData.phone || '';
+        fullTemplateData.location = fullTemplateData.location || '';
+        fullTemplateData.message_summary = fullTemplateData.message_summary || '';
+        fullTemplateData.stream_name = fullTemplateData.stream_name || 'Kans';
+        fullTemplateData.opportunity_url = fullTemplateData.opportunity_url || fullTemplateData.dashboard_url;
+        fullTemplateData.opportunity_status_url = fullTemplateData.opportunity_status_url || fullTemplateData.opportunity_url;
+      }
+
       console.log(`📋 Template data for ${notificationType}:`, JSON.stringify(fullTemplateData, null, 2));
 
       // Render email template
@@ -187,6 +201,11 @@ class NotificationService {
         case 'lead_assigned':
           htmlContent = this.emailService.renderTemplate('lead_assigned', fullTemplateData);
           subject = `Nieuwe lead toegewezen: ${fullTemplateData.company_name || 'Nieuwe lead'}`;
+          break;
+
+        case 'opportunity_assigned':
+          htmlContent = this.emailService.renderTemplate('opportunity_assigned', fullTemplateData);
+          subject = `Nieuwe kans aan jou toegewezen: ${fullTemplateData.company_name || fullTemplateData.contact_name || 'Nieuwe kans'}`;
           break;
 
         case 'subscription_expiring':
@@ -307,6 +326,27 @@ class NotificationService {
     }
 
     return emailSent;
+  }
+
+  /**
+   * Send opportunity assigned notification (email only for MVP).
+   */
+  async sendOpportunityAssigned(userId, opportunityData) {
+    const baseUrl = process.env.DASHBOARD_URL || (process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000') + '/dashboard';
+    const oppId = opportunityData.opportunity_id;
+    const opportunityUrl = `${baseUrl.replace(/\/$/, '')}/admin/opportunities/${oppId}`;
+    const opportunityStatusUrl = `${opportunityUrl}#status`;
+    return this.sendNotification(userId, 'opportunity_assigned', {
+      company_name: opportunityData.company_name,
+      contact_name: opportunityData.contact_name,
+      email: opportunityData.email,
+      phone: opportunityData.phone,
+      location: opportunityData.location,
+      message_summary: opportunityData.message_summary,
+      stream_name: opportunityData.stream_name,
+      opportunity_url: opportunityUrl,
+      opportunity_status_url: opportunityStatusUrl
+    });
   }
 
   /**

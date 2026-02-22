@@ -177,7 +177,8 @@ let billingCron
 if (!isVercel) {
   console.log('📅 Loading cron jobs...')
   requireWithRetry('./cron/invoiceJobs')
-  console.log('✅ invoiceJobs loaded')
+  requireWithRetry('./cron/opportunityFollowUpReminders')
+  console.log('✅ invoiceJobs + opportunityFollowUpReminders loaded')
 
   // Initialize billing cron job
   console.log('💰 Loading BillingCronJob...')

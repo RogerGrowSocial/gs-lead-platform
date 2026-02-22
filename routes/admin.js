@@ -30,6 +30,9 @@ const logger = require('../utils/logger')
 const UserRiskAssessmentService = require('../services/userRiskAssessmentService')
 const aiCustomerSummaryService = require('../services/aiCustomerSummaryService')
 const opportunityAssignmentService = require('../services/opportunityAssignmentService')
+const opportunityAssignmentFollowUpService = require('../services/opportunityAssignmentFollowUpService')
+const chatService = require('../services/chatService')
+const adminNotificationsService = require('../services/adminNotificationsService')
 
 /**
  * Ensure a Supabase Storage bucket exists, create it if it doesn't
@@ -180,6 +183,180 @@ router.delete('/api/notes/:id', requireAuth, isManagerOrAdmin, async (req, res) 
     res.json({ success: true })
   } catch (err) {
     console.error('Error deleting note:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// ========== Admin Chat / Messages API ==========
+router.get('/api/messages/conversations', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const unread = req.query.unread === 'true'
+    const search = req.query.search || ''
+    const { conversations } = await chatService.getConversationsForUser(userId, { unread, search: search || undefined })
+    res.json({ success: true, conversations })
+  } catch (err) {
+    console.error('Error listing conversations:', err)
+    res.status(500).json({ success: false, error: err.message || 'Kon conversaties niet laden' })
+  }
+})
+
+router.get('/api/messages/conversations/:id', requireAuth, async (req, res) => {
+  try {
+    const conv = await chatService.getConversation(req.params.id, req.user.id)
+    if (!conv) return res.status(404).json({ success: false, error: 'Conversatie niet gevonden' })
+    res.json({ success: true, conversation: conv })
+  } catch (err) {
+    console.error('Error fetching conversation:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.get('/api/messages/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const cursor = req.query.cursor || null
+    const limit = Math.min(Number(req.query.limit) || 30, 50)
+    const { messages, nextCursor } = await chatService.getMessages(req.params.id, req.user.id, cursor, limit)
+    res.json({ success: true, messages, nextCursor })
+  } catch (err) {
+    console.error('Error fetching messages:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/messages/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const body = req.body.body || req.body.message || ''
+    const mentionUserIds = req.body.mention_user_ids || []
+    const message = await chatService.sendMessage(req.params.id, body, req.user.id, mentionUserIds)
+    res.json({ success: true, message })
+  } catch (err) {
+    console.error('Error sending message:', err)
+    res.status(400).json({ success: false, error: err.message || 'Kon bericht niet verzenden' })
+  }
+})
+
+router.post('/api/messages/conversations/:id/read', requireAuth, async (req, res) => {
+  try {
+    await chatService.markConversationRead(req.params.id, req.user.id)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error marking read:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/messages/dm', requireAuth, async (req, res) => {
+  try {
+    const otherUserId = req.body.other_user_id
+    if (!otherUserId) return res.status(400).json({ success: false, error: 'other_user_id is verplicht' })
+    const conv = await chatService.getOrCreateDM(req.user.id, otherUserId)
+    res.json({ success: true, conversation: conv })
+  } catch (err) {
+    console.error('Error creating DM:', err)
+    res.status(400).json({ success: false, error: err.message })
+  }
+})
+
+router.get('/api/messages/users', requireAuth, async (req, res) => {
+  try {
+    const search = (req.query.search || '').trim().slice(0, 100)
+    if (!search || search.length < 2) {
+      return res.json({ success: true, users: [] })
+    }
+    const term = '%' + search.replace(/"/g, '') + '%'
+    const quoted = '"' + term + '"'
+    let q = supabaseAdmin
+      .from('profiles')
+      .select('id, first_name, last_name, email, avatar_url, role_id')
+      .neq('id', req.user.id)
+      .or('first_name.ilike.' + quoted + ',last_name.ilike.' + quoted + ',email.ilike.' + quoted + ',company_name.ilike.' + quoted)
+    const { data: profiles, error } = await q.limit(20)
+    if (error) throw error
+    const roleIds = [...new Set((profiles || []).map((p) => p.role_id).filter(Boolean))]
+    let roles = {}
+    if (roleIds.length > 0) {
+      const { data: roleRows } = await supabaseAdmin.from('roles').select('id, name').in('id', roleIds)
+      for (const r of roleRows || []) roles[r.id] = r.name
+    }
+    const users = (profiles || []).map((p) => ({
+      id: p.id,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      email: p.email,
+      avatar_url: p.avatar_url,
+      role_name: roles[p.role_id] || null
+    }))
+    res.json({ success: true, users })
+  } catch (err) {
+    console.error('Error searching users:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/messages/group', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { title, participant_ids } = req.body
+    if (!participant_ids || !Array.isArray(participant_ids)) return res.status(400).json({ success: false, error: 'participant_ids array is verplicht' })
+    const conv = await chatService.createGroup(title, req.user.id, participant_ids)
+    res.json({ success: true, conversation: conv })
+  } catch (err) {
+    console.error('Error creating group:', err)
+    res.status(400).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/messages/conversations/:id/participants', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const userIds = req.body.user_ids || []
+    await chatService.addParticipants(req.params.id, userIds, req.user.id)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error adding participants:', err)
+    res.status(400).json({ success: false, error: err.message })
+  }
+})
+
+// ========== Admin Bell Notifications API ==========
+router.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const type = req.query.type || null
+    const limit = Number(req.query.limit) || 20
+    const list = await adminNotificationsService.getNotifications(req.user.id, { limit, type: type || undefined })
+    const unreadCount = await adminNotificationsService.getUnreadCount(req.user.id)
+    res.json({ success: true, notifications: list, unreadCount })
+  } catch (err) {
+    console.error('Error fetching notifications:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.get('/api/notifications/unread-count', requireAuth, async (req, res) => {
+  try {
+    const count = await adminNotificationsService.getUnreadCount(req.user.id)
+    res.json({ success: true, count })
+  } catch (err) {
+    console.error('Error fetching unread count:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    await adminNotificationsService.markRead(req.params.id, req.user.id)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error marking notification read:', err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+router.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    await adminNotificationsService.markAllRead(req.user.id)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error marking all read:', err)
     res.status(500).json({ success: false, error: err.message })
   }
 })
@@ -5422,6 +5599,45 @@ async function getAccessibleMailboxes(userId, userEmail) {
     return []
   }
 }
+
+// Admin Messages (Chat) - main and conversation view
+router.get("/messages", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    res.render('admin/messages/index', {
+      title: 'Chat',
+      activeMenu: 'mail',
+      activeSubmenu: 'messages',
+      user: req.user,
+      userRole: req.user.role,
+      openConversationId: req.query.open || null,
+      scrollToMessageId: req.query.message || null,
+      stylesheets: ['/css/admin/messages.css'],
+      scripts: ['/js/admin/messages.js']
+    })
+  } catch (err) {
+    console.error('Admin messages route error:', err)
+    res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
+  }
+})
+
+router.get("/messages/:conversationId", requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    res.render('admin/messages/index', {
+      title: 'Chat',
+      activeMenu: 'mail',
+      activeSubmenu: 'messages',
+      user: req.user,
+      userRole: req.user.role,
+      openConversationId: req.params.conversationId,
+      scrollToMessageId: req.query.message || null,
+      stylesheets: ['/css/admin/messages.css'],
+      scripts: ['/js/admin/messages.js']
+    })
+  } catch (err) {
+    console.error('Admin messages conversation route error:', err)
+    res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
+  }
+})
 
 // Mail - Admin Inbox
 router.get("/mail", requireAuth, isEmployeeOrAdmin, async (req, res) => {
@@ -14924,7 +15140,7 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
   try {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const perPage = 20;
-    const { status, priority, assignee, search } = req.query;
+    const { status, priority, assignee, search, stale } = req.query;
 
     // Build base query
     let query = supabaseAdmin
@@ -14951,10 +15167,19 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
     }
 
     // Fetch all matching (we'll paginate in-memory to keep things simple here)
-    const { data: allOpportunities, error: oppErr } = await query;
+    let allOpportunities;
+    const { data: fetched, error: oppErr } = await query;
     if (oppErr) throw oppErr;
+    allOpportunities = fetched || [];
 
-    const totalCount = (allOpportunities || []).length;
+    // Filter "Stale kansen": assigned, still new, assigned > 48h ago
+    if (stale === '1') {
+      const now = Date.now();
+      const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+      allOpportunities = allOpportunities.filter(o => o.assigned_to && (o.sales_status || 'new') === 'new' && o.assigned_at && (now - new Date(o.assigned_at).getTime() > fortyEightHoursMs));
+    }
+
+    const totalCount = allOpportunities.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
     const startIndex = (page - 1) * perPage;
     const paginated = (allOpportunities || []).slice(startIndex, startIndex + perPage);
@@ -15102,6 +15327,8 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
       pagination: { page, perPage, totalPages, totalCount },
       showStreamsLink,
       showStreamsEmptyCallout,
+      filterStale: stale === '1',
+      filterQuery: { status, priority, assignee, search, stale },
       scripts: ['/js/admin/opportunities.js', '/js/admin/ai-kansen-router.js'],
       stylesheets: ['/css/opportunities.css', '/css/admin/ai-lead-router.css']
     });
@@ -15457,6 +15684,7 @@ router.post('/opportunities/:id/assign', requireAuth, isAdmin, async (req, res) 
     const updateData = {
       assigned_to: rep_id,
       assigned_to_name: assigned_to_name,
+      assigned_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
@@ -15502,6 +15730,13 @@ router.post('/opportunities/:id/assign', requireAuth, isAdmin, async (req, res) 
       await opportunityAssignmentService.logManualOverride(id, rep_id, req.user?.id);
     } catch (logErr) {
       console.warn('Error logging manual override:', logErr.message);
+    }
+
+    // Assignment follow-up: email + task (idempotent)
+    try {
+      await opportunityAssignmentFollowUpService.recordAssignmentAndNotify(id, rep_id, req.user?.id, 'manual');
+    } catch (followErr) {
+      console.warn('Opportunity follow-up (email/task) failed:', followErr.message);
     }
 
     res.json({ success: true, opportunity: updated || { id, assigned_to: rep_id, assigned_to_name } });
@@ -15622,6 +15857,7 @@ router.patch('/opportunities/:id', requireAuth, isAdmin, async (req, res) => {
           .single();
         if (rep) {
           filteredUpdates.assigned_to_name = [rep.first_name, rep.last_name].filter(Boolean).join(' ') || 'Onbekend';
+          filteredUpdates.assigned_at = new Date().toISOString();
         }
       }
     }
@@ -15640,6 +15876,14 @@ router.patch('/opportunities/:id', requireAuth, isAdmin, async (req, res) => {
       .eq('id', id);
     
     if (updErr) return res.status(500).json({ success: false, error: updErr.message });
+
+    if (filteredUpdates.assigned_to) {
+      try {
+        await opportunityAssignmentFollowUpService.recordAssignmentAndNotify(id, filteredUpdates.assigned_to, req.user?.id, 'manual');
+      } catch (followErr) {
+        console.warn('Opportunity follow-up (email/task) failed:', followErr.message);
+      }
+    }
 
     res.json({ success: true });
   } catch (e) {

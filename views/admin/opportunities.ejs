@@ -84,6 +84,11 @@
 
     const statusBadge = `<span class="opportunity-badge ${getStatusClass(opp.status || 'open')}">${getStatusLabel(opp.status || 'open')}</span>`
     const priorityBadge = `<span class="opportunity-badge ${getPriorityClass(opp.priority || 'low')}">${getPriorityLabel(opp.priority || 'low')}</span>`
+    const salesStatus = opp.sales_status || 'new'
+    const salesStatusBadge = `<span class="opportunity-badge ${getSalesStatusClass(salesStatus)}" title="Sales status">${getSalesStatusLabel(salesStatus)}</span>`
+    const assignedAtMs = opp.assigned_at ? new Date(opp.assigned_at).getTime() : null
+    const isStale = opp.assigned_to && salesStatus === 'new' && assignedAtMs && (Date.now() - assignedAtMs > 48 * 60 * 60 * 1000)
+    const staleIcon = isStale ? `<span class="opportunity-stale-icon" title="Nog niet bijgewerkt (&gt;48u)"><i class="fas fa-exclamation-triangle"></i></span>` : ''
     const sourceLabel = opp.meta && (opp.meta.source_stream_name || opp.meta.source_stream_type) ? (opp.meta.source_stream_name || opp.meta.source_stream_type) : null
     const sourceBadge = sourceLabel ? `<span class="opportunity-badge status-gray" title="Bron: ${sourceLabel}">Bron: ${sourceLabel}</span>` : ''
 
@@ -121,6 +126,8 @@
                 <div class="opportunity-card-heading">
                   <div class="opportunity-card-heading-row">
                     <h3 class="opportunity-card-company">${companyName}</h3>
+                    ${staleIcon}
+                    ${salesStatusBadge}
                     ${statusBadge}
                     ${priorityBadge}
                     ${sourceBadge}
@@ -161,6 +168,16 @@
   function getPriorityLabel(priority) {
     const map = { high: 'Hoog', medium: 'Gemiddeld', low: 'Laag' }
     return map[priority] || 'Laag'
+  }
+
+  function getSalesStatusClass(salesStatus) {
+    const map = { new: 'status-blue', contacted: 'status-purple', appointment_set: 'status-orange', customer: 'status-success', lost: 'status-gray', unreachable: 'status-gray' }
+    return map[salesStatus] || 'status-gray'
+  }
+
+  function getSalesStatusLabel(salesStatus) {
+    const map = { new: 'Nieuw', contacted: 'Gecontacteerd', appointment_set: 'Afspraak', customer: 'Klant', lost: 'Verloren', unreachable: 'Onbereikbaar' }
+    return map[salesStatus] || 'Nieuw'
   }
 %>
 <%- include('../layouts/admin', {
@@ -277,6 +294,7 @@
             <option value="all">Alle sales reps</option>
             ${(salesReps || []).map(rep => `<option value="${rep.id}">${rep.name}</option>`).join('')}
           </select>
+          ${typeof filterStale !== 'undefined' && filterStale ? '<a href="/admin/opportunities" class="opportunities-filter-link active">Alle kansen</a>' : '<a href="/admin/opportunities?stale=1" class="opportunities-filter-link" id="staleFilterLink">Stale kansen</a>'}
         </div>
       </div>
       <!-- Opportunities List -->

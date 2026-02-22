@@ -308,6 +308,21 @@
 }
 .opportunities-dropdown:hover { border-color: #d1d5db; background-color: #f9fafb; }
 .opportunities-dropdown:focus { border-color: #ea5d0d; box-shadow: 0 0 0 3px rgba(234,93,13,.1); }
+.opportunities-filter-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 42px;
+  font-size: 14px;
+  color: #6b7280;
+  text-decoration: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+.opportunities-filter-link:hover { border-color: #d1d5db; background: #f9fafb; color: #111; }
+.opportunities-filter-link.active { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+.opportunity-stale-icon { color: #f59e0b; font-size: 14px; }
 /* Opportunities List */
 .opportunities-list {
   flex: 1;

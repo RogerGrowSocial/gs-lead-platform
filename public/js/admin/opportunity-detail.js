@@ -227,10 +227,79 @@ function setupRouterDrawer() {
   }
 }
 
+function setupSalesStatusPanel() {
+  const select = document.getElementById('sales-status-select');
+  const reasonWrap = document.getElementById('sales-outcome-reason-wrap');
+  const reasonInput = document.getElementById('sales-outcome-reason');
+  const saveBtn = document.getElementById('sales-status-save-btn');
+  const attemptBtn = document.getElementById('contact-attempt-btn');
+
+  if (select) {
+    select.addEventListener('change', () => {
+      if (reasonWrap) reasonWrap.style.display = select.value === 'lost' ? 'block' : 'none';
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const oppId = saveBtn.dataset.oppId;
+      if (!oppId) return;
+      const status = document.getElementById('sales-status-select')?.value;
+      const reason = document.getElementById('sales-outcome-reason')?.value?.trim();
+      if (status === 'lost' && !reason) {
+        alert('Vul een reden in bij status Verloren.');
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Opslaan...';
+      try {
+        const res = await fetch(`/api/admin/opportunities/${oppId}/sales-status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ sales_status: status, sales_outcome_reason: status === 'lost' ? reason : null })
+        });
+        const data = await res.json();
+        if (data.success) {
+          saveBtn.textContent = 'Opgeslagen';
+          setTimeout(() => { saveBtn.textContent = 'Opslaan'; saveBtn.disabled = false; }, 1500);
+          if (document.getElementById('opportunity-stale-banner')) document.getElementById('opportunity-stale-banner').remove();
+        } else throw new Error(data.error || 'Fout bij opslaan');
+      } catch (e) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Opslaan';
+        alert(e.message || 'Fout bij opslaan');
+      }
+    });
+  }
+
+  if (attemptBtn) {
+    attemptBtn.addEventListener('click', async () => {
+      const oppId = attemptBtn.dataset.oppId;
+      if (!oppId) return;
+      attemptBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/opportunities/${oppId}/contact-attempt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.success) window.location.reload();
+        else throw new Error(data.error || 'Fout');
+      } catch (e) {
+        attemptBtn.disabled = false;
+        alert(e.message || 'Fout bij bijwerken');
+      }
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupEditableFields();
   setupTabs();
   setupRouterDrawer();
+  setupSalesStatusPanel();
 });
 
 function editOpportunity() {

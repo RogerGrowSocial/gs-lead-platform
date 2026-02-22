@@ -1,6 +1,7 @@
 'use strict'
 
 const { supabaseAdmin } = require('../config/supabase')
+const opportunityAssignmentFollowUpService = require('./opportunityAssignmentFollowUpService')
 
 const ROUTER_NAME = 'ai_kansen_router'
 const ROUTER_VERSION = '1.0'
@@ -214,6 +215,7 @@ async function assignOpportunity(opportunityId, options = {}) {
         const updateData = {
           assigned_to: topMatch.rep_id,
           assigned_to_name,
+          assigned_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
         const { data: updated, error: assignErr } = await supabaseAdmin
@@ -237,6 +239,11 @@ async function assignOpportunity(opportunityId, options = {}) {
             error_message: assignErr?.message || null
           })
           return null
+        }
+        try {
+          await opportunityAssignmentFollowUpService.recordAssignmentAndNotify(opportunityId, topMatch.rep_id, null, 'ai')
+        } catch (followErr) {
+          console.warn('Opportunity follow-up (email/task) failed:', followErr.message)
         }
       }
     }
