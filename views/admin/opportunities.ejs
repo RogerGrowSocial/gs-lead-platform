@@ -370,11 +370,11 @@
           </div>
           <div class="ai-settings-section">
             <div class="ai-settings-label-row">
-              <label class="ai-settings-label" for="kansenAutoAssignThreshold">Minimum score (0–100)</label>
+              <label class="ai-settings-label" for="kansenAutoAssignThreshold">Drempel automatische toewijzing</label>
               <span class="ai-settings-value" id="kansenAutoAssignThresholdValue">60</span>
             </div>
-            <input type="number" id="kansenAutoAssignThreshold" min="0" max="100" value="60" class="ai-settings-input">
-            <p class="ai-settings-hint">Onder deze score wordt niet automatisch toegewezen.</p>
+            <input type="number" id="kansenAutoAssignThreshold" min="0" max="100" value="60" class="ai-settings-number-input" aria-describedby="kansenThresholdHint">
+            <p class="ai-settings-hint" id="kansenThresholdHint">De router berekent voor elke sales rep een matchscore (0–100). Alleen als de <strong>beste match</strong> minimaal deze score haalt, wordt de kans automatisch toegewezen. Lager = vaker handmatig toewijzen.</p>
           </div>
         </div>
         <div class="ai-router-modal-footer">
