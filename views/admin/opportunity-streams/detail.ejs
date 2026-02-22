@@ -104,6 +104,18 @@
       <div style="margin-top: 12px;"><button type="button" class="btn-outline" onclick="document.getElementById('payloadModal').style.display='none'">Sluiten</button></div>
     </div>
   </div>
+
+  <div id="secretModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: #fff; border-radius: 8px; padding: 20px; max-width: 480px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+      <h3 style="margin: 0 0 8px;">Nieuw secret</h3>
+      <p class="text-muted" style="margin: 0 0 12px; font-size: 14px;">Bewaar dit secret; het wordt daarna niet meer getoond. Gebruik het als header <code>X-Stream-Secret</code> in Zapier of andere integraties.</p>
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+        <input type="text" id="secretModalValue" readonly class="form-control" style="flex: 1; font-family: monospace;" />
+        <button type="button" id="secretModalCopyBtn" class="btn-outline"><i class="fas fa-copy"></i> Kopieer</button>
+      </div>
+      <div style="display: flex; justify-content: flex-end;"><button type="button" id="secretModalCloseBtn" class="btn-primary">Sluiten</button></div>
+    </div>
+  </div>
   `,
   scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams-detail.js'],
   stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']

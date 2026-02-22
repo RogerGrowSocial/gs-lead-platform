@@ -20,7 +20,6 @@
   document.querySelectorAll('.rotate-secret-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const streamId = btn.getAttribute('data-stream-id')
-      const streamName = btn.getAttribute('data-stream-name') || 'Deze stroom'
       if (!confirm('Weet je het zeker? Het oude secret werkt daarna niet meer. Je krijgt één keer het nieuwe secret te zien.')) return
       fetch('/api/admin/opportunities/streams/' + streamId + '/rotate-secret', {
         method: 'POST',
@@ -30,7 +29,14 @@
         .then(function (r) { return r.json() })
         .then(function (data) {
           if (data.success && data.secret) {
-            alert('Nieuw secret (bewaar dit; wordt niet opnieuw getoond):\n\n' + data.secret)
+            var modal = document.getElementById('secretModal')
+            var input = document.getElementById('secretModalValue')
+            if (modal && input) {
+              input.value = data.secret
+              modal.style.display = 'flex'
+            } else {
+              alert('Nieuw secret (bewaar dit):\n\n' + data.secret)
+            }
           } else {
             alert('Fout: ' + (data.error || 'Onbekend'))
           }
@@ -40,5 +46,20 @@
           alert('Fout bij roteren secret')
         })
     })
+  })
+
+  document.getElementById('secretModalCopyBtn')?.addEventListener('click', function () {
+    var input = document.getElementById('secretModalValue')
+    if (!input || !input.value) return
+    navigator.clipboard.writeText(input.value).then(function () {
+      var btn = document.getElementById('secretModalCopyBtn')
+      if (btn) { btn.textContent = ' Gekopieerd!'; btn.disabled = true; setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Kopieer'; btn.disabled = false }, 2000) }
+    })
+  })
+  document.getElementById('secretModalCloseBtn')?.addEventListener('click', function () {
+    document.getElementById('secretModal').style.display = 'none'
+  })
+  document.getElementById('secretModal')?.addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none'
   })
 })()

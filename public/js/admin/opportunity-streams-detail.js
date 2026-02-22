@@ -26,7 +26,14 @@
       .then(function (r) { return r.json() })
       .then(function (data) {
         if (data.success && data.secret) {
-          document.getElementById('rotateMessage').textContent = 'Nieuw secret: ' + data.secret + ' (bewaar dit)'
+          var modal = document.getElementById('secretModal')
+          var input = document.getElementById('secretModalValue')
+          if (modal && input) {
+            input.value = data.secret
+            modal.style.display = 'flex'
+          } else {
+            document.getElementById('rotateMessage').textContent = 'Nieuw secret: ' + data.secret + ' (bewaar dit)'
+          }
         } else {
           document.getElementById('rotateMessage').textContent = 'Fout: ' + (data.error || 'Onbekend')
         }
@@ -34,6 +41,21 @@
       .catch(function () {
         document.getElementById('rotateMessage').textContent = 'Fout bij roteren'
       })
+  })
+
+  document.getElementById('secretModalCopyBtn')?.addEventListener('click', function () {
+    var input = document.getElementById('secretModalValue')
+    if (!input || !input.value) return
+    navigator.clipboard.writeText(input.value).then(function () {
+      var btn = document.getElementById('secretModalCopyBtn')
+      if (btn) { btn.textContent = ' Gekopieerd!'; btn.disabled = true; setTimeout(function () { btn.innerHTML = '<i class="fas fa-copy"></i> Kopieer'; btn.disabled = false }, 2000) }
+    })
+  })
+  document.getElementById('secretModalCloseBtn')?.addEventListener('click', function () {
+    document.getElementById('secretModal').style.display = 'none'
+  })
+  document.getElementById('secretModal')?.addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none'
   })
 
   let currentStatus = ''
