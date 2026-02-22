@@ -723,4 +723,54 @@ function setAuthCookies(res, session) {
   }
 }
 
-module.exports = { refreshIfNeeded, requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin, clearSession, setAuthCookies };
+/**
+ * Redirect employees (werknemers) from /dashboard to /admin/dashboard.
+ * Admins may use both; customers stay on /dashboard; employees are sent to admin.
+ */
+async function redirectEmployeesToAdminDashboard(req, res, next) {
+  if (!req.user) return next();
+
+  if (req.user.user_metadata?.is_admin === true) return next();
+
+  const cacheEntry = employeeAccessCache.get(req.user.id);
+  const now = Date.now();
+  if (cacheEntry && (now - cacheEntry.ts) < EMPLOYEE_ACCESS_CACHE_TTL) {
+    if (cacheEntry.allowed) return res.redirect('/admin/dashboard');
+    return next();
+  }
+
+  try {
+    const { supabaseAdmin } = require('../config/supabase');
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      .select('is_admin, role_id')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error) return next();
+    if (profile?.is_admin === true) return next();
+
+    if (profile?.role_id) {
+      const { data: role, error: roleError } = await supabaseAdmin
+        .from('roles')
+        .select('id, name')
+        .eq('id', profile.role_id)
+        .maybeSingle();
+
+      if (!roleError && role?.name) {
+        const roleName = role.name?.toLowerCase() || '';
+        if (roleName === 'consumer' || roleName === 'customer' || roleName === 'klant') return next();
+        const employeeRoles = ['manager', 'employee', 'admin', 'administrator', 'werknemer'];
+        if (employeeRoles.some(r => roleName.includes(r))) {
+          employeeAccessCache.set(req.user.id, { allowed: true, ts: now });
+          return res.redirect('/admin/dashboard');
+        }
+      }
+    }
+  } catch (err) {
+    if (isDev) console.log('[redirectEmployeesToAdminDashboard]', err);
+  }
+  return next();
+}
+
+module.exports = { refreshIfNeeded, requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin, redirectEmployeesToAdminDashboard, clearSession, setAuthCookies };

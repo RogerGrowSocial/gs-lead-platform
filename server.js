@@ -134,7 +134,7 @@ try {
 }
 console.log('📂 Loading middleware/auth...')
 const startAuth = Date.now()
-const { requireAuth, isAdmin } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
+const { requireAuth, isAdmin, redirectEmployeesToAdminDashboard } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
 console.log(`✅ middleware/auth (requireAuth, isAdmin) loaded (${Date.now() - startAuth}ms)`)
 const startRefresh = Date.now()
 const { refreshIfNeeded } = isVercel ? require("./middleware/auth") : requireWithRetry("./middleware/auth")
@@ -663,7 +663,7 @@ app.use("/", authRoutes)
 app.get("/payments", requireAuth, (req, res) => {
   res.redirect('/dashboard/payments');
 });
-app.use("/dashboard", requireAuth, dashboardRoutes)
+app.use("/dashboard", requireAuth, redirectEmployeesToAdminDashboard, dashboardRoutes)
 app.use("/onboarding", requireAuth, onboardingRoutes)
 app.use("/admin", requireAuth, adminRoutes)
 app.use("/api", apiRoutes)
