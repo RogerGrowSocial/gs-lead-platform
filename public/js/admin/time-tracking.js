@@ -918,6 +918,19 @@
       if (entry.context_type) meta.push(`<span class="entry-meta-item"><i class="fas fa-link"></i> ${entry.context_type === 'deal' ? 'Deal' : entry.context_type === 'opportunity' ? 'Kans' : entry.context_type}</span>`);
       if (entry.customer?.company_name) meta.push(`<span class="entry-meta-item"><i class="fas fa-building"></i> ${entry.customer.company_name}</span>`);
       if (entry.task?.title) meta.push(`<span class="entry-meta-item"><i class="fas fa-tasks"></i> ${entry.task.title}</span>`);
+      if (entry.ticket) {
+        const ticketLabel = (entry.ticket.ticket_number || '') + (entry.ticket.subject ? ' – ' + entry.ticket.subject : '');
+        if (ticketLabel) meta.push(`<span class="entry-meta-item"><i class="fas fa-ticket-alt"></i> ${escapeHtml(ticketLabel)}</span>`);
+      }
+      if (entry.ticket_task?.title) meta.push(`<span class="entry-meta-item"><i class="fas fa-list-check"></i> ${escapeHtml(entry.ticket_task.title)}</span>`);
+      if (entry.meeting_type) {
+        const meetingLabels = { intern: 'Intern (team)', klant: 'Klant', partner: 'Partner', '1op1': '1:1', overig: 'Overig' };
+        meta.push(`<span class="entry-meta-item"><i class="fas fa-users"></i> ${meetingLabels[entry.meeting_type] || entry.meeting_type}</span>`);
+      }
+      if (entry.participant_user_ids && entry.participant_user_ids.length > 0) {
+        const n = entry.participant_user_ids.length;
+        meta.push(`<span class="entry-meta-item">Met: ${n} deelnemer${n === 1 ? '' : 's'}</span>`);
+      }
 
       return `
         <div class="entry-item">

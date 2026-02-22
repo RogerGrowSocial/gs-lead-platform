@@ -26,6 +26,15 @@
     { value: 'admin', label: 'Admin / Intern' }
   ];
 
+  // Overleg: soort overleg
+  const OVERLEG_MEETING_TYPES = [
+    { value: 'intern', label: 'Intern (team)' },
+    { value: 'klant', label: 'Klant' },
+    { value: 'partner', label: 'Partner' },
+    { value: '1op1', label: '1:1' },
+    { value: 'overig', label: 'Overig' }
+  ];
+
   function avatarHtml(url, name, size) {
     size = size || 24;
     const initials = !name ? '?' : name.trim().split(/\s+/).length >= 2
@@ -48,6 +57,20 @@
       this.customers = [];
       this.contacts = [];
       this.taskSearchDebounceTimer = null;
+      this.ticketSearchDebounceTimer = null;
+      this.ticketTasks = [];
+      this.switchTicketTasks = [];
+      this.switchTicketSearchDebounce = null;
+      this.klantContactSearchDebounce = null;
+      this.klantContactCustomerTitle = '';
+      this.klantContactContactTitle = '';
+      this.switchKlantContactSearchDebounce = null;
+      this.switchKlantContactCustomerTitle = '';
+      this.switchKlantContactContactTitle = '';
+      this.overlegParticipants = [];
+      this.overlegParticipantsSearchDebounce = null;
+      this.switchOverlegParticipants = [];
+      this.switchOverlegParticipantsSearchDebounce = null;
       this.init();
     }
 
@@ -219,49 +242,53 @@
               <input type="hidden" id="timeTrackerTaskId" />
             </div>
 
-            <!-- Customer Selection (shown when task is selected or "Taken" is selected) -->
-            <div id="timeTrackerCustomerContainer" style="margin-bottom: 12px; display: none;">
+            <!-- Klantenwerk: Koppel aan (klant + contact, zelfde UX als Sales) -->
+            <div id="timeTrackerKlantContactContainer" style="display: none; margin-bottom: 12px;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
-                Klant
+                Koppel aan <span style="color: #6b7280; font-weight: 400;">(klant en/of contactpersoon)</span>
               </label>
               <div style="position: relative;">
-                <input 
-                  type="text" 
-                  id="timeTrackerCustomerSearch" 
-                  placeholder="Zoek klant..." 
-                  autocomplete="off"
-                  style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
-                />
-                <button 
-                  type="button"
-                  id="timeTrackerCustomerClear" 
-                  style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; transition: color 0.2s;"
-                  aria-label="Wis klant"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                <input type="text" id="timeTrackerKlantContactSearch" placeholder="Zoek klant of contact..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerKlantContactClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis selectie">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
-              <div id="timeTrackerCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <div id="timeTrackerKlantContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <div id="timeTrackerKlantContactChips" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
               <input type="hidden" id="timeTrackerCustomerId" />
+              <input type="hidden" id="timeTrackerContactId" />
+              <input type="hidden" id="timeTrackerContactCustomerId" value="" />
             </div>
 
-            <!-- Contact Selection (shown when task is selected) -->
-            <div id="timeTrackerContactContainer" style="margin-bottom: 12px; display: none;">
+            <!-- Support: ticket + tasks (only when "Support" selected) -->
+            <div id="timeTrackerSupportContainer" style="display: none; margin-bottom: 12px;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
-                Contact
+                Ticket <span style="color: #ef4444;">*</span>
               </label>
-              <input 
-                type="text" 
-                id="timeTrackerContactSearch" 
-                placeholder="Zoek contact..." 
-                autocomplete="off"
-                style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
-              />
-              <div id="timeTrackerContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
-              <input type="hidden" id="timeTrackerContactId" />
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerTicketSearch" placeholder="Zoek ticket..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerTicketClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis ticket">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div id="timeTrackerTicketDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerTicketId" />
+              <div id="timeTrackerTicketTasksWrap" style="display: none; margin-top: 10px;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 6px;">Taak binnen ticket (optioneel)</label>
+                <div id="timeTrackerTicketTasksList" style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa;"></div>
+                <div style="margin-top: 8px;">
+                  <button type="button" id="timeTrackerTicketTaskNewBtn" style="padding: 6px 10px; font-size: 13px; color: #3b82f6; background: none; border: 1px dashed #93c5fd; border-radius: 6px; cursor: pointer;">+ Nieuwe taak toevoegen</button>
+                  <div id="timeTrackerTicketTaskNewForm" style="display: none; margin-top: 10px; padding: 10px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+                    <input type="text" id="timeTrackerTicketTaskNewTitle" placeholder="Titel *" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
+                    <input type="text" id="timeTrackerTicketTaskNewDesc" placeholder="Beschrijving (optioneel)" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 8px;">
+                      <button type="button" id="timeTrackerTicketTaskNewSave" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">Opslaan</button>
+                      <button type="button" id="timeTrackerTicketTaskNewCancel" style="padding: 6px 12px; background: #e5e7eb; color: #374151; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">Annuleren</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="timeTrackerTicketTaskId" />
             </div>
 
             <div style="margin-bottom: 12px;">
@@ -271,30 +298,53 @@
               <input type="text" id="timeTrackerNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
-            <!-- Sales: extra options (only when "Sales" selected) -->
+            <!-- Overleg: soort overleg, deelnemers, Koppel aan (alleen bij Overleg) -->
+            <div id="timeTrackerOverlegContainer" style="display: none; margin-bottom: 12px;">
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">Soort overleg</label>
+                <select id="timeTrackerMeetingType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                  ${OVERLEG_MEETING_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                </select>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Deelnemers (optioneel)</label>
+                <div style="position: relative;">
+                  <input type="text" id="timeTrackerParticipantsSearch" placeholder="Zoek collega..." autocomplete="off" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                  <div id="timeTrackerParticipantsDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 1001;"></div>
+                </div>
+                <div id="timeTrackerParticipantsChips" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+              </div>
+              <div style="margin-bottom: 0;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
+                <div style="position: relative;">
+                  <input type="text" id="timeTrackerOverlegContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                  <button type="button" id="timeTrackerOverlegContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">×</button>
+                </div>
+                <div id="timeTrackerOverlegContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); z-index: 1001;"></div>
+                <input type="hidden" id="timeTrackerOverlegContextType" />
+                <input type="hidden" id="timeTrackerOverlegContextId" />
+              </div>
+            </div>
+
+            <!-- Sales: activiteit type (verplicht) + Koppel aan (altijd zichtbaar bij Sales) -->
             <div id="timeTrackerSalesOptions" style="display: none; margin-bottom: 12px;">
-              <button type="button" id="timeTrackerSalesOptionsToggle" style="width: 100%; padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 500; color: #6b7280; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
-                Meer opties
-              </button>
-              <div id="timeTrackerSalesOptionsBody" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                <div style="margin-bottom: 10px;">
-                  <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Activiteit type</label>
-                  <select id="timeTrackerActivityType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
-                    ${SALES_ACTIVITY_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
-                  </select>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">Activiteit type <span style="color: #ef4444;">*</span></label>
+                <select id="timeTrackerActivityType" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                  ${SALES_ACTIVITY_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                </select>
+              </div>
+              <div style="margin-bottom: 0;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
+                <div style="position: relative;">
+                  <input type="text" id="timeTrackerContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                  <button type="button" id="timeTrackerContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
                 </div>
-                <div style="margin-bottom: 0;">
-                  <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
-                  <div style="position: relative;">
-                    <input type="text" id="timeTrackerContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                    <button type="button" id="timeTrackerContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  </div>
-                  <div id="timeTrackerContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
-                  <input type="hidden" id="timeTrackerContextType" />
-                  <input type="hidden" id="timeTrackerContextId" />
-                </div>
+                <div id="timeTrackerContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+                <input type="hidden" id="timeTrackerContextType" />
+                <input type="hidden" id="timeTrackerContextId" />
               </div>
             </div>
 
@@ -321,7 +371,7 @@
               </select>
             </div>
 
-            <!-- Task (switch) - shown when Klantenwerk or Support -->
+            <!-- Task (switch) - shown when Klantenwerk -->
             <div id="timeTrackerSwitchTaskContainer" style="margin-bottom: 12px; display: none;">
               <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Taak</label>
               <div style="position: relative;">
@@ -334,25 +384,58 @@
               <input type="hidden" id="timeTrackerSwitchTaskId" />
             </div>
 
-            <!-- Klant (switch) - shown when Klantenwerk or Support -->
-            <div id="timeTrackerSwitchCustomerContainer" style="margin-bottom: 12px; display: none;">
-              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Klant <span style="color: #ef4444;">*</span></label>
+            <!-- Support (switch) - ticket + task when Support -->
+            <div id="timeTrackerSwitchSupportContainer" style="display: none; margin-bottom: 12px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Ticket <span style="color: #ef4444;">*</span></label>
               <div style="position: relative;">
-                <input type="text" id="timeTrackerSwitchCustomerSearch" placeholder="Zoek klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-                <button type="button" id="timeTrackerSwitchCustomerClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis klant">
+                <input type="text" id="timeTrackerSwitchTicketSearch" placeholder="Zoek ticket..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerSwitchTicketClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis ticket">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
-              <div id="timeTrackerSwitchCustomerDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
-              <input type="hidden" id="timeTrackerSwitchCustomerId" />
+              <div id="timeTrackerSwitchTicketDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerSwitchTicketId" />
+              <div id="timeTrackerSwitchTicketTasksWrap" style="display: none; margin-top: 8px;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Taak (optioneel)</label>
+                <div id="timeTrackerSwitchTicketTasksList" style="max-height: 120px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa;"></div>
+              </div>
+              <input type="hidden" id="timeTrackerSwitchTicketTaskId" />
             </div>
 
-            <!-- Contact (switch) -->
-            <div id="timeTrackerSwitchContactContainer" style="margin-bottom: 12px; display: none;">
-              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Contact</label>
-              <input type="text" id="timeTrackerSwitchContactSearch" placeholder="Zoek contact..." autocomplete="off" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" />
-              <div id="timeTrackerSwitchContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+            <!-- Klantenwerk (switch): Koppel aan klant + contact -->
+            <div id="timeTrackerSwitchKlantContactContainer" style="display: none; margin-bottom: 12px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Koppel aan <span style="color: #6b7280; font-weight: 400;">(klant en/of contactpersoon)</span></label>
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerSwitchKlantContactSearch" placeholder="Zoek klant of contact..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerSwitchKlantContactClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis selectie">×</button>
+              </div>
+              <div id="timeTrackerSwitchKlantContactDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <div id="timeTrackerSwitchKlantContactChips" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+              <input type="hidden" id="timeTrackerSwitchCustomerId" />
               <input type="hidden" id="timeTrackerSwitchContactId" />
+              <input type="hidden" id="timeTrackerSwitchContactCustomerId" value="" />
+            </div>
+
+            <!-- Overleg (switch) -->
+            <div id="timeTrackerSwitchOverlegContainer" style="display: none; margin-bottom: 12px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">Soort overleg</label>
+              <select id="timeTrackerSwitchMeetingType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; margin-bottom: 8px;">
+                ${OVERLEG_MEETING_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+              </select>
+              <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Deelnemers (optioneel)</label>
+              <div style="position: relative; margin-bottom: 6px;">
+                <input type="text" id="timeTrackerSwitchParticipantsSearch" placeholder="Zoek collega..." autocomplete="off" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <div id="timeTrackerSwitchParticipantsDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 180px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              </div>
+              <div id="timeTrackerSwitchParticipantsChips" style="margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px;"></div>
+              <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerSwitchOverlegContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerSwitchOverlegContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">×</button>
+              </div>
+              <div id="timeTrackerSwitchOverlegContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerSwitchOverlegContextType" />
+              <input type="hidden" id="timeTrackerSwitchOverlegContextId" />
             </div>
 
             <div style="margin-bottom: 12px;">
@@ -469,46 +552,17 @@
         });
       }
 
-      // Customer search handler
-      const customerSearch = this.popover.querySelector('#timeTrackerCustomerSearch');
-      const customerClearBtn = this.popover.querySelector('#timeTrackerCustomerClear');
-      if (customerSearch) {
-        customerSearch.addEventListener('input', (e) => {
-          this.handleCustomerSearch(e.target.value);
-          this.updateCustomerClearButton();
-        });
-        customerSearch.addEventListener('focus', () => this.loadCustomers());
-        // Update clear button visibility on change
-        customerSearch.addEventListener('change', () => this.updateCustomerClearButton());
+      // Klantenwerk: Koppel aan (klant + contact) search
+      const klantContactSearch = this.popover.querySelector('#timeTrackerKlantContactSearch');
+      const klantContactClear = this.popover.querySelector('#timeTrackerKlantContactClear');
+      const klantContactDropdown = this.popover.querySelector('#timeTrackerKlantContactDropdown');
+      if (klantContactSearch) {
+        klantContactSearch.addEventListener('input', (e) => this.handleKlantContactSearch(e.target.value));
+        klantContactSearch.addEventListener('focus', () => { if (klantContactSearch.value.trim().length >= 2) this.handleKlantContactSearch(klantContactSearch.value.trim()); });
+        klantContactSearch.addEventListener('blur', () => setTimeout(() => { if (klantContactDropdown) klantContactDropdown.style.display = 'none'; }, 200));
       }
-      if (customerClearBtn) {
-        customerClearBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.clearCustomerSelection();
-        });
-        customerClearBtn.addEventListener('mouseenter', () => {
-          customerClearBtn.style.color = '#ef4444';
-        });
-        customerClearBtn.addEventListener('mouseleave', () => {
-          customerClearBtn.style.color = '#6b7280';
-        });
-      }
-
-      // Contact search handler
-      const contactSearch = this.popover.querySelector('#timeTrackerContactSearch');
-      if (contactSearch) {
-        contactSearch.addEventListener('input', (e) => this.handleContactSearch(e.target.value));
-      }
-
-      // Sales: Meer opties toggle
-      const salesOptsToggle = this.popover.querySelector('#timeTrackerSalesOptionsToggle');
-      const salesOptsBody = this.popover.querySelector('#timeTrackerSalesOptionsBody');
-      if (salesOptsToggle && salesOptsBody) {
-        salesOptsToggle.addEventListener('click', () => {
-          const open = salesOptsBody.style.display !== 'none';
-          salesOptsBody.style.display = open ? 'none' : 'block';
-          salesOptsToggle.textContent = open ? 'Meer opties' : 'Minder opties';
-        });
+      if (klantContactClear) {
+        klantContactClear.addEventListener('click', () => this.clearKlantContactSelection());
       }
 
       // Sales: Context search (form)
@@ -541,6 +595,49 @@
       if (nudgeLink) nudgeLink.addEventListener('click', () => this.showSalesContextField());
       if (nudgeSkip) nudgeSkip.addEventListener('click', () => this.doClockOut());
 
+      // Support: ticket search
+      const ticketSearch = this.popover.querySelector('#timeTrackerTicketSearch');
+      const ticketClear = this.popover.querySelector('#timeTrackerTicketClear');
+      const ticketDropdown = this.popover.querySelector('#timeTrackerTicketDropdown');
+      if (ticketSearch) {
+        ticketSearch.addEventListener('input', (e) => this.handleTicketSearch(e.target.value));
+        ticketSearch.addEventListener('focus', () => { if (ticketSearch.value.trim().length >= 2) this.handleTicketSearch(ticketSearch.value.trim()); });
+        ticketSearch.addEventListener('blur', () => setTimeout(() => { if (ticketDropdown) ticketDropdown.style.display = 'none'; }, 200));
+      }
+      if (ticketClear) {
+        ticketClear.addEventListener('click', () => this.clearTicketSelection());
+      }
+
+      // Overleg: deelnemers search
+      const participantsSearch = this.popover.querySelector('#timeTrackerParticipantsSearch');
+      const participantsDropdown = this.popover.querySelector('#timeTrackerParticipantsDropdown');
+      if (participantsSearch) {
+        participantsSearch.addEventListener('input', (e) => this.handleParticipantsSearch(e.target.value));
+        participantsSearch.addEventListener('focus', () => { if (participantsSearch.value.trim().length >= 2) this.handleParticipantsSearch(participantsSearch.value.trim()); });
+        participantsSearch.addEventListener('blur', () => setTimeout(() => { if (participantsDropdown) participantsDropdown.style.display = 'none'; }, 200));
+      }
+      // Overleg: Koppel aan context search
+      const overlegContextSearch = this.popover.querySelector('#timeTrackerOverlegContextSearch');
+      const overlegContextClear = this.popover.querySelector('#timeTrackerOverlegContextClear');
+      const overlegContextDropdown = this.popover.querySelector('#timeTrackerOverlegContextDropdown');
+      if (overlegContextSearch) {
+        overlegContextSearch.addEventListener('input', (e) => this.handleContextSearch(e.target.value, 'overleg'));
+        overlegContextSearch.addEventListener('focus', () => { if (overlegContextSearch.value.trim().length >= 2) this.handleContextSearch(overlegContextSearch.value.trim(), 'overleg'); });
+        overlegContextSearch.addEventListener('blur', () => setTimeout(() => { if (overlegContextDropdown) overlegContextDropdown.style.display = 'none'; }, 200));
+      }
+      if (overlegContextClear) {
+        overlegContextClear.addEventListener('click', () => this.clearContextSelection('overleg'));
+      }
+
+      // Support: new task form
+      const ticketTaskNewBtn = this.popover.querySelector('#timeTrackerTicketTaskNewBtn');
+      const ticketTaskNewForm = this.popover.querySelector('#timeTrackerTicketTaskNewForm');
+      const ticketTaskNewSave = this.popover.querySelector('#timeTrackerTicketTaskNewSave');
+      const ticketTaskNewCancel = this.popover.querySelector('#timeTrackerTicketTaskNewCancel');
+      if (ticketTaskNewBtn) ticketTaskNewBtn.addEventListener('click', () => { ticketTaskNewForm.style.display = 'block'; this.popover.querySelector('#timeTrackerTicketTaskNewTitle').value = ''; this.popover.querySelector('#timeTrackerTicketTaskNewDesc').value = ''; });
+      if (ticketTaskNewCancel) ticketTaskNewCancel.addEventListener('click', () => { ticketTaskNewForm.style.display = 'none'; });
+      if (ticketTaskNewSave) ticketTaskNewSave.addEventListener('click', () => this.createTicketTaskAndSelect());
+
       // Switch activity change (when timer is running)
       const switchActivity = this.popover.querySelector('#timeTrackerSwitchActivity');
       if (switchActivity) {
@@ -562,21 +659,48 @@
         switchTaskClear.addEventListener('click', (e) => { e.stopPropagation(); this.clearSwitchTaskSelection(); });
       }
 
-      // Switch customer search
-      const switchCustomerSearch = this.popover.querySelector('#timeTrackerSwitchCustomerSearch');
-      if (switchCustomerSearch) {
-        switchCustomerSearch.addEventListener('input', (e) => this.handleSwitchCustomerSearch(e.target.value));
-        switchCustomerSearch.addEventListener('focus', () => this.loadCustomers());
+      // Switch Klant/Contact (Koppel aan, same as form)
+      const switchKlantContactSearch = this.popover.querySelector('#timeTrackerSwitchKlantContactSearch');
+      const switchKlantContactClear = this.popover.querySelector('#timeTrackerSwitchKlantContactClear');
+      const switchKlantContactDropdown = this.popover.querySelector('#timeTrackerSwitchKlantContactDropdown');
+      if (switchKlantContactSearch) {
+        switchKlantContactSearch.addEventListener('input', (e) => this.handleSwitchKlantContactSearch(e.target.value));
+        switchKlantContactSearch.addEventListener('focus', () => { if (switchKlantContactSearch.value.trim().length >= 2) this.handleSwitchKlantContactSearch(switchKlantContactSearch.value.trim()); });
+        switchKlantContactSearch.addEventListener('blur', () => setTimeout(() => { if (switchKlantContactDropdown) switchKlantContactDropdown.style.display = 'none'; }, 200));
       }
-      const switchCustomerClear = this.popover.querySelector('#timeTrackerSwitchCustomerClear');
-      if (switchCustomerClear) {
-        switchCustomerClear.addEventListener('click', (e) => { e.stopPropagation(); this.clearSwitchCustomerSelection(); });
+      if (switchKlantContactClear) {
+        switchKlantContactClear.addEventListener('click', () => this.clearSwitchKlantContactSelection());
       }
-
-      // Switch contact search
-      const switchContactSearch = this.popover.querySelector('#timeTrackerSwitchContactSearch');
-      if (switchContactSearch) {
-        switchContactSearch.addEventListener('input', (e) => this.handleSwitchContactSearch(e.target.value));
+      // Switch ticket search (Support)
+      const switchTicketSearch = this.popover.querySelector('#timeTrackerSwitchTicketSearch');
+      const switchTicketClear = this.popover.querySelector('#timeTrackerSwitchTicketClear');
+      const switchTicketDropdown = this.popover.querySelector('#timeTrackerSwitchTicketDropdown');
+      if (switchTicketSearch) {
+        switchTicketSearch.addEventListener('input', (e) => this.handleSwitchTicketSearch(e.target.value));
+        switchTicketSearch.addEventListener('focus', () => { if (switchTicketSearch.value.trim().length >= 2) this.handleSwitchTicketSearch(switchTicketSearch.value.trim()); });
+        switchTicketSearch.addEventListener('blur', () => setTimeout(() => { if (switchTicketDropdown) switchTicketDropdown.style.display = 'none'; }, 200));
+      }
+      if (switchTicketClear) {
+        switchTicketClear.addEventListener('click', () => this.clearSwitchTicketSelection());
+      }
+      // Switch Overleg: deelnemers + context
+      const switchParticipantsSearch = this.popover.querySelector('#timeTrackerSwitchParticipantsSearch');
+      const switchParticipantsDropdown = this.popover.querySelector('#timeTrackerSwitchParticipantsDropdown');
+      if (switchParticipantsSearch) {
+        switchParticipantsSearch.addEventListener('input', (e) => this.handleSwitchParticipantsSearch(e.target.value));
+        switchParticipantsSearch.addEventListener('focus', () => { if (switchParticipantsSearch.value.trim().length >= 2) this.handleSwitchParticipantsSearch(switchParticipantsSearch.value.trim()); });
+        switchParticipantsSearch.addEventListener('blur', () => setTimeout(() => { if (switchParticipantsDropdown) switchParticipantsDropdown.style.display = 'none'; }, 200));
+      }
+      const switchOverlegContextSearch = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
+      const switchOverlegContextClear = this.popover.querySelector('#timeTrackerSwitchOverlegContextClear');
+      const switchOverlegContextDropdown = this.popover.querySelector('#timeTrackerSwitchOverlegContextDropdown');
+      if (switchOverlegContextSearch) {
+        switchOverlegContextSearch.addEventListener('input', (e) => this.handleContextSearch(e.target.value, 'switch_overleg'));
+        switchOverlegContextSearch.addEventListener('focus', () => { if (switchOverlegContextSearch.value.trim().length >= 2) this.handleContextSearch(switchOverlegContextSearch.value.trim(), 'switch_overleg'); });
+        switchOverlegContextSearch.addEventListener('blur', () => setTimeout(() => { if (switchOverlegContextDropdown) switchOverlegContextDropdown.style.display = 'none'; }, 200));
+      }
+      if (switchOverlegContextClear) {
+        switchOverlegContextClear.addEventListener('click', () => this.clearContextSelection('switch_overleg'));
       }
 
       // Close switch dropdowns on mousedown outside
@@ -589,8 +713,13 @@
           }
         };
         closeIfOutside('#timeTrackerSwitchTaskDropdown', '#timeTrackerSwitchTaskContainer');
-        closeIfOutside('#timeTrackerSwitchCustomerDropdown', '#timeTrackerSwitchCustomerContainer');
-        closeIfOutside('#timeTrackerSwitchContactDropdown', '#timeTrackerSwitchContactContainer');
+        closeIfOutside('#timeTrackerSwitchTicketDropdown', '#timeTrackerSwitchSupportContainer');
+        closeIfOutside('#timeTrackerKlantContactDropdown', '#timeTrackerKlantContactContainer');
+        closeIfOutside('#timeTrackerSwitchKlantContactDropdown', '#timeTrackerSwitchKlantContactContainer');
+        closeIfOutside('#timeTrackerSwitchParticipantsDropdown', '#timeTrackerSwitchOverlegContainer');
+        closeIfOutside('#timeTrackerSwitchOverlegContextDropdown', '#timeTrackerSwitchOverlegContainer');
+        closeIfOutside('#timeTrackerParticipantsDropdown', '#timeTrackerOverlegContainer');
+        closeIfOutside('#timeTrackerOverlegContextDropdown', '#timeTrackerOverlegContainer');
       });
 
       // Start button
@@ -639,58 +768,350 @@
     handleActivityChange() {
       const activity = this.popover.querySelector('#timeTrackerActivity').value;
       const taskContainer = this.popover.querySelector('#timeTrackerTaskContainer');
-      const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
-      const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
+      const supportContainer = this.popover.querySelector('#timeTrackerSupportContainer');
       const salesOptions = this.popover.querySelector('#timeTrackerSalesOptions');
 
       if (activity === 'sales') {
         if (salesOptions) salesOptions.style.display = 'block';
+        const noteElSales = this.popover.querySelector('#timeTrackerNote');
+        if (noteElSales) noteElSales.placeholder = 'Bijv. Bugfix login pagina';
       } else {
         if (salesOptions) salesOptions.style.display = 'none';
       }
 
-      if (activity === 'klantenwerk' || activity === 'support') {
-        taskContainer.style.display = 'block';
-        customerContainer.style.display = 'block';
+      if (activity === 'support') {
+        if (supportContainer) supportContainer.style.display = 'block';
+        if (taskContainer) taskContainer.style.display = 'none';
+        const kc = this.popover.querySelector('#timeTrackerKlantContactContainer');
+        if (kc) kc.style.display = 'none';
+        const overleg = this.popover.querySelector('#timeTrackerOverlegContainer');
+        if (overleg) overleg.style.display = 'none';
+        const noteElSup = this.popover.querySelector('#timeTrackerNote');
+        if (noteElSup) noteElSup.placeholder = 'Bijv. Bugfix login pagina';
+        this.clearTicketSelection();
+      } else if (activity === 'overleg') {
+        if (supportContainer) supportContainer.style.display = 'none';
+        if (taskContainer) taskContainer.style.display = 'none';
+        const kc = this.popover.querySelector('#timeTrackerKlantContactContainer');
+        if (kc) kc.style.display = 'none';
+        const overleg = this.popover.querySelector('#timeTrackerOverlegContainer');
+        if (overleg) overleg.style.display = 'block';
+        const noteEl = this.popover.querySelector('#timeTrackerNote');
+        if (noteEl) noteEl.placeholder = 'Bijv. Weekstart / Klant call / 1:1 Servé';
+      } else if (activity === 'klantenwerk') {
+        if (supportContainer) supportContainer.style.display = 'none';
+        if (taskContainer) taskContainer.style.display = 'block';
+        const klantContactContainer = this.popover.querySelector('#timeTrackerKlantContactContainer');
+        if (klantContactContainer) klantContactContainer.style.display = 'block';
+        const overleg = this.popover.querySelector('#timeTrackerOverlegContainer');
+        if (overleg) overleg.style.display = 'none';
         this.loadTasks();
-        this.loadCustomers();
+        this.clearKlantContactSelection();
+        const noteEl = this.popover.querySelector('#timeTrackerNote');
+        if (noteEl) noteEl.placeholder = 'Bijv. Bugfix login pagina';
       } else {
+        if (supportContainer) supportContainer.style.display = 'none';
         taskContainer.style.display = 'none';
-        customerContainer.style.display = 'none';
-        contactContainer.style.display = 'none';
+        const klantContactContainer = this.popover.querySelector('#timeTrackerKlantContactContainer');
+        if (klantContactContainer) klantContactContainer.style.display = 'none';
+        const overleg = this.popover.querySelector('#timeTrackerOverlegContainer');
+        if (overleg) overleg.style.display = 'none';
         this.popover.querySelector('#timeTrackerTaskId').value = '';
         this.popover.querySelector('#timeTrackerTaskSearch').value = '';
         this.popover.querySelector('#timeTrackerCustomerId').value = '';
-        this.popover.querySelector('#timeTrackerCustomerSearch').value = '';
         this.popover.querySelector('#timeTrackerContactId').value = '';
-        this.popover.querySelector('#timeTrackerContactSearch').value = '';
+        this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+        this.overlegParticipants = [];
+        this.clearContextSelection('overleg');
+        this.renderOverlegParticipantsChips();
+        const noteEl = this.popover.querySelector('#timeTrackerNote');
+        if (noteEl) noteEl.placeholder = 'Bijv. Bugfix login pagina';
       }
     }
 
     handleSwitchActivityChange() {
       const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
       const taskContainer = this.popover.querySelector('#timeTrackerSwitchTaskContainer');
-      const customerContainer = this.popover.querySelector('#timeTrackerSwitchCustomerContainer');
-      const contactContainer = this.popover.querySelector('#timeTrackerSwitchContactContainer');
+      const supportContainer = this.popover.querySelector('#timeTrackerSwitchSupportContainer');
+      const switchKlantContact = this.popover.querySelector('#timeTrackerSwitchKlantContactContainer');
+      const switchOverleg = this.popover.querySelector('#timeTrackerSwitchOverlegContainer');
 
-      if (activity === 'klantenwerk' || activity === 'support') {
-        taskContainer.style.display = 'block';
-        customerContainer.style.display = 'block';
-        this.loadTasks();
-        this.loadCustomers();
-      } else {
+      if (activity === 'support') {
+        if (supportContainer) supportContainer.style.display = 'block';
         taskContainer.style.display = 'none';
-        customerContainer.style.display = 'none';
-        contactContainer.style.display = 'none';
+        if (switchKlantContact) switchKlantContact.style.display = 'none';
+        if (switchOverleg) switchOverleg.style.display = 'none';
+        this.clearSwitchTicketSelection();
+      } else if (activity === 'overleg') {
+        if (supportContainer) supportContainer.style.display = 'none';
+        taskContainer.style.display = 'none';
+        if (switchKlantContact) switchKlantContact.style.display = 'none';
+        if (switchOverleg) switchOverleg.style.display = 'block';
+      } else if (activity === 'klantenwerk') {
+        if (supportContainer) supportContainer.style.display = 'none';
+        taskContainer.style.display = 'block';
+        if (switchKlantContact) switchKlantContact.style.display = 'block';
+        if (switchOverleg) switchOverleg.style.display = 'none';
+        this.loadTasks();
+        this.clearSwitchKlantContactSelection();
+        this.clearSwitchOverlegSelection();
+      } else {
+        if (supportContainer) supportContainer.style.display = 'none';
+        taskContainer.style.display = 'none';
+        if (switchKlantContact) switchKlantContact.style.display = 'none';
+        if (switchOverleg) switchOverleg.style.display = 'none';
         this.popover.querySelector('#timeTrackerSwitchTaskId').value = '';
         this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = '';
         this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
-        this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
         this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
-        this.popover.querySelector('#timeTrackerSwitchContactSearch').value = '';
+        this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+        this.clearSwitchOverlegSelection();
       }
       this.updateSwitchTaskClearButton();
-      this.updateSwitchCustomerClearButton();
+    }
+
+    clearSwitchOverlegSelection() {
+      this.switchOverlegParticipants = [];
+      const oct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+      const ocid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+      const os = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
+      const oc = this.popover.querySelector('#timeTrackerSwitchOverlegContextClear');
+      if (oct) oct.value = '';
+      if (ocid) ocid.value = '';
+      if (os) os.value = '';
+      if (oc) oc.style.display = 'none';
+      this.renderSwitchOverlegParticipantsChips();
+    }
+
+    clearSwitchTicketSelection() {
+      const wrap = this.popover.querySelector('#timeTrackerSwitchTicketTasksWrap');
+      const list = this.popover.querySelector('#timeTrackerSwitchTicketTasksList');
+      this.popover.querySelector('#timeTrackerSwitchTicketId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchTicketSearch').value = '';
+      this.popover.querySelector('#timeTrackerSwitchTicketTaskId').value = '';
+      const clearBtn = this.popover.querySelector('#timeTrackerSwitchTicketClear');
+      if (clearBtn) clearBtn.style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      if (list) list.innerHTML = '';
+      this.switchTicketTasks = [];
+    }
+
+    clearSwitchKlantContactSelection() {
+      this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerSwitchKlantContactSearch').value = '';
+      const clearBtn = this.popover.querySelector('#timeTrackerSwitchKlantContactClear');
+      if (clearBtn) clearBtn.style.display = 'none';
+      this.switchKlantContactCustomerTitle = '';
+      this.switchKlantContactContactTitle = '';
+      this.renderSwitchKlantContactChips();
+    }
+
+    handleSwitchKlantContactSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchKlantContactDropdown');
+      if (this.switchKlantContactSearchDebounce) clearTimeout(this.switchKlantContactSearchDebounce);
+      const q = (query || '').trim();
+      if (q.length < 2) {
+        if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+        return;
+      }
+      const self = this;
+      this.switchKlantContactSearchDebounce = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/time-entries/context-search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const result = await response.json();
+          if (!result.ok || !result.data) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;">Geen resultaten</div>';
+            dropdown.style.display = 'block';
+            return;
+          }
+          const only = (result.data || []).filter((r) => r.type === 'customer' || r.type === 'contact');
+          self.renderKlantContactDropdownSwitch(dropdown, only);
+          dropdown.style.display = 'block';
+        } catch (e) {
+          dropdown.innerHTML = '<div style="padding:12px;color:#991b1b;">Fout</div>';
+          dropdown.style.display = 'block';
+        }
+      }, 350);
+    }
+
+    renderKlantContactDropdownSwitch(dropdown, results) {
+      const typeLabels = { customer: 'Klanten', contact: 'Contactpersonen' };
+      const byType = {};
+      results.forEach((r) => { if (!byType[r.type]) byType[r.type] = []; byType[r.type].push(r); });
+      let html = '';
+      ['customer', 'contact'].forEach((type) => {
+        const list = byType[type] || [];
+        if (list.length === 0) return;
+        html += '<div style="padding:6px 10px 4px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">' + (typeLabels[type] || type) + '</div>';
+        list.forEach((item) => {
+          const title = (item.title || '').replace(/</g, '&lt;');
+          const subtitle = (item.subtitle || '').replace(/</g, '&lt;');
+          const dataCustomerId = (item.type === 'contact' && item.customerId) ? (' data-customer-id="' + item.customerId + '"') : '';
+          html += '<div class="switch-klant-contact-option" style="padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;" data-type="' + (item.type || '') + '" data-id="' + (item.id || '') + '" data-title="' + title + '"' + dataCustomerId + '>' +
+            '<div><div style="font-weight:500;">' + title + '</div>' + (subtitle ? '<div style="font-size:12px;color:#6b7280;">' + subtitle + '</div>' : '') + '</div></div>';
+        });
+      });
+      dropdown.innerHTML = html || '<div style="padding:12px;color:#6b7280;">Geen resultaten</div>';
+      dropdown.querySelectorAll('.switch-klant-contact-option').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          const type = el.getAttribute('data-type');
+          const id = el.getAttribute('data-id');
+          const title = el.getAttribute('data-title');
+          const customerIdAttr = el.getAttribute('data-customer-id');
+          if (type === 'customer') {
+            this.popover.querySelector('#timeTrackerSwitchCustomerId').value = id || '';
+            this.switchKlantContactCustomerTitle = title || '';
+            this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+            this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+            this.switchKlantContactContactTitle = '';
+          } else {
+            this.popover.querySelector('#timeTrackerSwitchContactId').value = id || '';
+            this.switchKlantContactContactTitle = title || '';
+            this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = customerIdAttr || '';
+          }
+          const hasAny = (this.popover.querySelector('#timeTrackerSwitchCustomerId').value || '') || (this.popover.querySelector('#timeTrackerSwitchContactId').value || '');
+          this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = hasAny ? 'block' : 'none';
+          this.popover.querySelector('#timeTrackerSwitchKlantContactSearch').value = '';
+          this.renderSwitchKlantContactChips();
+          dropdown.style.display = 'none';
+        });
+      });
+    }
+
+    renderSwitchKlantContactChips() {
+      const container = this.popover.querySelector('#timeTrackerSwitchKlantContactChips');
+      if (!container) return;
+      const customerId = (this.popover.querySelector('#timeTrackerSwitchCustomerId').value || '').trim();
+      const contactId = (this.popover.querySelector('#timeTrackerSwitchContactId').value || '').trim();
+      const contactCustomerId = (this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value || '').trim();
+      const customerTitle = this.switchKlantContactCustomerTitle || '';
+      const contactTitle = this.switchKlantContactContactTitle || '';
+      const isLinked = customerId && contactId && contactCustomerId === customerId;
+      container.innerHTML = '';
+      if (customerId) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:13px;';
+        chip.innerHTML = 'Klant: ' + (customerTitle || '—').replace(/</g, '&lt;') + ' <button type="button" data-clear="customer" style="background:none;border:none;cursor:pointer;">×</button>';
+        chip.querySelector('[data-clear="customer"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
+          this.switchKlantContactCustomerTitle = '';
+          this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+          this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+          this.switchKlantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = 'none';
+          this.renderSwitchKlantContactChips();
+        });
+        container.appendChild(chip);
+      }
+      if (isLinked) {
+        const linkChip = document.createElement('span');
+        linkChip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#dcfce7;color:#166534;border-radius:6px;font-size:12px;';
+        linkChip.innerHTML = '↔ Gekoppeld <button type="button" data-dismiss-link style="background:none;border:none;cursor:pointer;">×</button>';
+        linkChip.querySelector('[data-dismiss-link]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+          this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+          this.switchKlantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = (this.popover.querySelector('#timeTrackerSwitchCustomerId').value || '') ? 'block' : 'none';
+          this.renderSwitchKlantContactChips();
+        });
+        container.appendChild(linkChip);
+      }
+      if (contactId) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#f3e8ff;color:#6b21a8;border-radius:6px;font-size:13px;';
+        chip.innerHTML = 'Contact: ' + (contactTitle || '—').replace(/</g, '&lt;') + ' <button type="button" data-clear="contact" style="background:none;border:none;cursor:pointer;">×</button>';
+        chip.querySelector('[data-clear="contact"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+          this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+          this.switchKlantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = (this.popover.querySelector('#timeTrackerSwitchCustomerId').value || '') ? 'block' : 'none';
+          this.renderSwitchKlantContactChips();
+        });
+        container.appendChild(chip);
+      }
+    }
+
+    handleSwitchTicketSearch(q) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchTicketDropdown');
+      if (this.switchTicketSearchDebounce) clearTimeout(this.switchTicketSearchDebounce);
+      this.switchTicketSearchDebounce = setTimeout(() => this._doSwitchTicketSearch((q || '').trim(), dropdown), 300);
+    }
+
+    async _doSwitchTicketSearch(q, dropdown) {
+      dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280;">Zoeken…</div>';
+      dropdown.style.display = 'block';
+      try {
+        const params = new URLSearchParams({ limit: '15' });
+        if (q.length >= 2) params.set('q', q);
+        const response = await fetch(`/api/tickets/search?${params}`, { credentials: 'include' });
+        const result = await response.json();
+        const list = result.ok && result.data ? result.data : [];
+        dropdown.innerHTML = '';
+        if (list.length === 0) {
+          dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280;">Geen tickets gevonden</div>';
+        } else {
+          list.forEach((t) => {
+            const el = document.createElement('div');
+            el.style.cssText = 'padding:8px 10px;cursor:pointer;border-bottom:1px solid #f3f4f6;';
+            el.setAttribute('data-id', t.id);
+            el.setAttribute('data-title', t.title || '');
+            el.textContent = t.title || '';
+            el.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              this.popover.querySelector('#timeTrackerSwitchTicketId').value = t.id;
+              this.popover.querySelector('#timeTrackerSwitchTicketSearch').value = t.title || '';
+              this.popover.querySelector('#timeTrackerSwitchTicketClear').style.display = 'block';
+              dropdown.style.display = 'none';
+              this.loadSwitchTicketTasks(t.id);
+            });
+            dropdown.appendChild(el);
+          });
+        }
+      } catch (e) {
+        dropdown.innerHTML = '<div style="padding: 12px; color: #ef4444;">Fout</div>';
+      }
+    }
+
+    async loadSwitchTicketTasks(ticketId) {
+      const wrap = this.popover.querySelector('#timeTrackerSwitchTicketTasksWrap');
+      const listEl = this.popover.querySelector('#timeTrackerSwitchTicketTasksList');
+      if (!wrap || !listEl) return;
+      wrap.style.display = 'block';
+      listEl.innerHTML = '<div style="padding: 8px;">Laden…</div>';
+      try {
+        const response = await fetch(`/api/tickets/${ticketId}/tasks`, { credentials: 'include' });
+        const result = await response.json();
+        this.switchTicketTasks = result.ok && result.data ? result.data : [];
+        this.renderSwitchTicketTasksList();
+      } catch (e) {
+        this.switchTicketTasks = [];
+        listEl.innerHTML = '<div style="padding: 8px; color: #ef4444;">Fout</div>';
+      }
+    }
+
+    renderSwitchTicketTasksList() {
+      const listEl = this.popover.querySelector('#timeTrackerSwitchTicketTasksList');
+      const selectedId = (this.popover.querySelector('#timeTrackerSwitchTicketTaskId').value || '').trim();
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      (this.switchTicketTasks || []).forEach((t) => {
+        const isSelected = t.id === selectedId;
+        const row = document.createElement('div');
+        row.style.cssText = 'padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f3f4f6;' + (isSelected ? ' background: #dbeafe;' : '');
+        row.setAttribute('data-task-id', t.id);
+        row.textContent = t.title || '';
+        row.addEventListener('click', () => {
+          this.popover.querySelector('#timeTrackerSwitchTicketTaskId').value = t.id;
+          this.renderSwitchTicketTasksList();
+        });
+        listEl.appendChild(row);
+      });
     }
 
     async loadTasks(q = '') {
@@ -724,6 +1145,438 @@
         }
       } catch (error) {
         console.error('[TimeTracker] Error loading customers:', error);
+      }
+    }
+
+    clearTicketSelection() {
+      const wrap = this.popover.querySelector('#timeTrackerTicketTasksWrap');
+      const list = this.popover.querySelector('#timeTrackerTicketTasksList');
+      const newForm = this.popover.querySelector('#timeTrackerTicketTaskNewForm');
+      this.popover.querySelector('#timeTrackerTicketId').value = '';
+      this.popover.querySelector('#timeTrackerTicketSearch').value = '';
+      this.popover.querySelector('#timeTrackerTicketTaskId').value = '';
+      if (this.popover.querySelector('#timeTrackerTicketClear')) this.popover.querySelector('#timeTrackerTicketClear').style.display = 'none';
+      if (wrap) wrap.style.display = 'none';
+      if (list) list.innerHTML = '';
+      if (newForm) newForm.style.display = 'none';
+      this.ticketTasks = [];
+    }
+
+    clearKlantContactSelection() {
+      this.popover.querySelector('#timeTrackerCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerContactId').value = '';
+      this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+      this.popover.querySelector('#timeTrackerKlantContactSearch').value = '';
+      const clearBtn = this.popover.querySelector('#timeTrackerKlantContactClear');
+      if (clearBtn) clearBtn.style.display = 'none';
+      this.klantContactCustomerTitle = '';
+      this.klantContactContactTitle = '';
+      this.renderKlantContactChips();
+    }
+
+    handleParticipantsSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerParticipantsDropdown');
+      if (this.overlegParticipantsSearchDebounce) clearTimeout(this.overlegParticipantsSearchDebounce);
+      const q = (query || '').trim();
+      if (q.length < 2) {
+        if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+        return;
+      }
+      const self = this;
+      this.overlegParticipantsSearchDebounce = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const list = await response.json();
+          const users = Array.isArray(list) ? list : (list.data || list.ok ? (list.data || []) : []);
+          if (!dropdown) return;
+          dropdown.innerHTML = '';
+          if (users.length === 0) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:13px;">Geen resultaten</div>';
+          } else {
+            users.forEach((u) => {
+              const already = self.overlegParticipants.some((p) => p.id === u.id);
+              const name = (u.display_name || u.full_name || (u.first_name && u.last_name ? u.first_name + ' ' + u.last_name : '') || u.email || '').trim() || '—';
+              const el = document.createElement('div');
+              el.className = 'time-tracker-participant-option';
+              el.style.cssText = 'padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;' + (already ? 'opacity:0.6;' : '');
+              el.setAttribute('data-id', u.id);
+              el.setAttribute('data-name', name);
+              el.innerHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">' + (name.slice(0, 2).toUpperCase()) + '</span><div style="font-size:14px;font-weight:500;">' + (name.replace(/</g, '&lt;')) + '</div>';
+              el.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (already) return;
+                self.overlegParticipants.push({ id: u.id, display_name: name });
+                self.popover.querySelector('#timeTrackerParticipantsSearch').value = '';
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                self.renderOverlegParticipantsChips();
+              });
+              dropdown.appendChild(el);
+            });
+          }
+          dropdown.style.display = 'block';
+        } catch (e) {
+          console.error('[TimeTracker] Participants search:', e);
+          if (dropdown) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#991b1b;font-size:13px;">Fout bij zoeken</div>';
+            dropdown.style.display = 'block';
+          }
+        }
+      }, 300);
+    }
+
+    renderOverlegParticipantsChips() {
+      const container = this.popover.querySelector('#timeTrackerParticipantsChips');
+      if (!container) return;
+      container.innerHTML = '';
+      this.overlegParticipants.forEach((p) => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:13px;';
+        const pid = (p.id || '').replace(/"/g, '&quot;');
+        chip.innerHTML = (p.display_name || p.id).replace(/</g, '&lt;') + ' <button type="button" data-remove-id="' + pid + '" style="background:none;border:none;cursor:pointer;padding:0 2px;color:#0369a1;" aria-label="Verwijder">×</button>';
+        chip.querySelector('[data-remove-id]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = e.target.getAttribute('data-remove-id');
+          const i = this.overlegParticipants.findIndex((x) => String(x.id) === String(id));
+          if (i !== -1) this.overlegParticipants.splice(i, 1);
+          this.renderOverlegParticipantsChips();
+        });
+        container.appendChild(chip);
+      });
+    }
+
+    handleSwitchParticipantsSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerSwitchParticipantsDropdown');
+      if (this.switchOverlegParticipantsSearchDebounce) clearTimeout(this.switchOverlegParticipantsSearchDebounce);
+      const q = (query || '').trim();
+      if (q.length < 2) {
+        if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+        return;
+      }
+      const self = this;
+      this.switchOverlegParticipantsSearchDebounce = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const list = await response.json();
+          const users = Array.isArray(list) ? list : (list.data || list.ok ? (list.data || []) : []);
+          if (!dropdown) return;
+          dropdown.innerHTML = '';
+          if (users.length === 0) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:13px;">Geen resultaten</div>';
+          } else {
+            users.forEach((u) => {
+              const already = self.switchOverlegParticipants.some((p) => p.id === u.id);
+              const name = (u.display_name || u.full_name || (u.first_name && u.last_name ? u.first_name + ' ' + u.last_name : '') || u.email || '').trim() || '—';
+              const el = document.createElement('div');
+              el.className = 'time-tracker-participant-option';
+              el.style.cssText = 'padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;' + (already ? 'opacity:0.6;' : '');
+              el.setAttribute('data-id', u.id);
+              el.setAttribute('data-name', name);
+              el.innerHTML = '<span style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">' + (name.slice(0, 2).toUpperCase()) + '</span><div style="font-size:14px;font-weight:500;">' + (name.replace(/</g, '&lt;')) + '</div>';
+              el.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (already) return;
+                self.switchOverlegParticipants.push({ id: u.id, display_name: name });
+                self.popover.querySelector('#timeTrackerSwitchParticipantsSearch').value = '';
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                self.renderSwitchOverlegParticipantsChips();
+              });
+              dropdown.appendChild(el);
+            });
+          }
+          dropdown.style.display = 'block';
+        } catch (e) {
+          console.error('[TimeTracker] Switch participants search:', e);
+          if (dropdown) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#991b1b;font-size:13px;">Fout bij zoeken</div>';
+            dropdown.style.display = 'block';
+          }
+        }
+      }, 300);
+    }
+
+    renderSwitchOverlegParticipantsChips() {
+      const container = this.popover.querySelector('#timeTrackerSwitchParticipantsChips');
+      if (!container) return;
+      container.innerHTML = '';
+      this.switchOverlegParticipants.forEach((p) => {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:13px;';
+        const pid = (p.id || '').replace(/"/g, '&quot;');
+        chip.innerHTML = (p.display_name || p.id).replace(/</g, '&lt;') + ' <button type="button" data-remove-id="' + pid + '" style="background:none;border:none;cursor:pointer;padding:0 2px;color:#0369a1;" aria-label="Verwijder">×</button>';
+        chip.querySelector('[data-remove-id]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = e.target.getAttribute('data-remove-id');
+          const i = this.switchOverlegParticipants.findIndex((x) => String(x.id) === String(id));
+          if (i !== -1) this.switchOverlegParticipants.splice(i, 1);
+          this.renderSwitchOverlegParticipantsChips();
+        });
+        container.appendChild(chip);
+      });
+    }
+
+    handleKlantContactSearch(query) {
+      const dropdown = this.popover.querySelector('#timeTrackerKlantContactDropdown');
+      if (this.klantContactSearchDebounce) clearTimeout(this.klantContactSearchDebounce);
+      const q = (query || '').trim();
+      if (q.length < 2) {
+        if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+        return;
+      }
+      const self = this;
+      this.klantContactSearchDebounce = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/time-entries/context-search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const result = await response.json();
+          if (!result.ok || !result.data) {
+            dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;">Geen resultaten</div>';
+            dropdown.style.display = 'block';
+            return;
+          }
+          const only = (result.data || []).filter((r) => r.type === 'customer' || r.type === 'contact');
+          self.renderKlantContactDropdown(dropdown, only);
+          dropdown.style.display = 'block';
+        } catch (e) {
+          console.error('[TimeTracker] Klant/contact search:', e);
+          dropdown.innerHTML = '<div style="padding:12px;color:#991b1b;">Fout bij zoeken</div>';
+          dropdown.style.display = 'block';
+        }
+      }, 350);
+    }
+
+    renderKlantContactDropdown(dropdown, results) {
+      const typeLabels = { customer: 'Klanten', contact: 'Contactpersonen' };
+      const byType = {};
+      results.forEach((r) => {
+        if (!byType[r.type]) byType[r.type] = [];
+        byType[r.type].push(r);
+      });
+      let html = '';
+      ['customer', 'contact'].forEach((type) => {
+        const list = byType[type] || [];
+        if (list.length === 0) return;
+        html += '<div style="padding:6px 10px 4px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">' + (typeLabels[type] || type) + '</div>';
+        list.forEach((item) => {
+          const title = (item.title || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const subtitle = (item.subtitle || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const avatar = item.avatarUrl
+            ? '<img src="' + item.avatarUrl.replace(/"/g, '&quot;') + '" alt="" width="24" height="24" style="border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+            : '<span style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;display:inline-flex;align-items:center;justify-content:center;">' + (type === 'customer' ? 'B' : 'C') + '</span>';
+          const dataCustomerId = (item.type === 'contact' && item.customerId) ? (' data-customer-id="' + item.customerId + '"') : '';
+          html += '<div class="time-tracker-klant-contact-option" style="padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;" data-type="' + (item.type || '') + '" data-id="' + (item.id || '') + '" data-title="' + title + '"' + dataCustomerId + ' onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">' +
+            avatar + '<div style="min-width:0;"><div style="font-size:14px;font-weight:500;">' + title + '</div>' + (subtitle ? '<div style="font-size:12px;color:#6b7280;">' + subtitle + '</div>' : '') + '</div></div>';
+        });
+      });
+      dropdown.innerHTML = html || '<div style="padding:12px;color:#6b7280;">Geen resultaten</div>';
+      dropdown.querySelectorAll('.time-tracker-klant-contact-option').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          const type = el.getAttribute('data-type');
+          const id = el.getAttribute('data-id');
+          const title = el.getAttribute('data-title');
+          const customerIdAttr = el.getAttribute('data-customer-id');
+          if (type === 'customer') {
+            this.popover.querySelector('#timeTrackerCustomerId').value = id || '';
+            this.klantContactCustomerTitle = title || '';
+            if (!id || customerIdAttr !== id) {
+              this.popover.querySelector('#timeTrackerContactId').value = '';
+              this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+              this.klantContactContactTitle = '';
+            }
+          } else {
+            this.popover.querySelector('#timeTrackerContactId').value = id || '';
+            this.klantContactContactTitle = title || '';
+            this.popover.querySelector('#timeTrackerContactCustomerId').value = customerIdAttr || '';
+          }
+          const hasAny = (this.popover.querySelector('#timeTrackerCustomerId').value || '') || (this.popover.querySelector('#timeTrackerContactId').value || '');
+          this.popover.querySelector('#timeTrackerKlantContactClear').style.display = hasAny ? 'block' : 'none';
+          this.popover.querySelector('#timeTrackerKlantContactSearch').value = '';
+          this.renderKlantContactChips();
+          dropdown.style.display = 'none';
+        });
+      });
+    }
+
+    renderKlantContactChips() {
+      const container = this.popover.querySelector('#timeTrackerKlantContactChips');
+      if (!container) return;
+      const customerId = (this.popover.querySelector('#timeTrackerCustomerId').value || '').trim();
+      const contactId = (this.popover.querySelector('#timeTrackerContactId').value || '').trim();
+      const contactCustomerId = (this.popover.querySelector('#timeTrackerContactCustomerId').value || '').trim();
+      const customerTitle = this.klantContactCustomerTitle || '';
+      const contactTitle = this.klantContactContactTitle || '';
+      const isLinked = customerId && contactId && contactCustomerId === customerId;
+      container.innerHTML = '';
+      if (customerId) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;font-size:13px;';
+        chip.innerHTML = 'Klant: ' + (customerTitle || '—').replace(/</g, '&lt;') + ' <button type="button" data-clear="customer" style="background:none;border:none;cursor:pointer;padding:0 2px;color:#0369a1;" aria-label="Wis klant">×</button>';
+        chip.querySelector('[data-clear="customer"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerCustomerId').value = '';
+          this.klantContactCustomerTitle = '';
+          this.popover.querySelector('#timeTrackerContactId').value = '';
+          this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+          this.klantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerKlantContactClear').style.display = (this.popover.querySelector('#timeTrackerContactId').value || '') ? 'block' : 'none';
+          this.renderKlantContactChips();
+        });
+        container.appendChild(chip);
+      }
+      if (isLinked) {
+        const linkChip = document.createElement('span');
+        linkChip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#dcfce7;color:#166534;border-radius:6px;font-size:12px;';
+        linkChip.innerHTML = '↔ Gekoppeld <button type="button" data-dismiss-link style="background:none;border:none;cursor:pointer;padding:0 2px;color:#166534;" aria-label="Ontkoppel">×</button>';
+        linkChip.querySelector('[data-dismiss-link]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerContactId').value = '';
+          this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+          this.klantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerKlantContactClear').style.display = (this.popover.querySelector('#timeTrackerCustomerId').value || '') ? 'block' : 'none';
+          this.renderKlantContactChips();
+        });
+        container.appendChild(linkChip);
+      }
+      if (contactId) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;background:#f3e8ff;color:#6b21a8;border-radius:6px;font-size:13px;';
+        chip.innerHTML = 'Contact: ' + (contactTitle || '—').replace(/</g, '&lt;') + ' <button type="button" data-clear="contact" style="background:none;border:none;cursor:pointer;padding:0 2px;color:#6b21a8;" aria-label="Wis contact">×</button>';
+        chip.querySelector('[data-clear="contact"]').addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.popover.querySelector('#timeTrackerContactId').value = '';
+          this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+          this.klantContactContactTitle = '';
+          this.popover.querySelector('#timeTrackerKlantContactClear').style.display = (this.popover.querySelector('#timeTrackerCustomerId').value || '') ? 'block' : 'none';
+          this.renderKlantContactChips();
+        });
+        container.appendChild(chip);
+      }
+    }
+
+    handleTicketSearch(q) {
+      const dropdown = this.popover.querySelector('#timeTrackerTicketDropdown');
+      if (this.ticketSearchDebounceTimer) clearTimeout(this.ticketSearchDebounceTimer);
+      this.ticketSearchDebounceTimer = setTimeout(() => {
+        this._doTicketSearch((q || '').trim(), dropdown);
+      }, 300);
+    }
+
+    async _doTicketSearch(q, dropdown) {
+      dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Zoeken…</div>';
+      dropdown.style.display = 'block';
+      try {
+        const params = new URLSearchParams({ limit: '15' });
+        if (q.length >= 2) params.set('q', q);
+        const response = await fetch(`/api/tickets/search?${params}`, { credentials: 'include' });
+        const result = await response.json();
+        const list = result.ok && result.data ? result.data : [];
+        dropdown.innerHTML = '';
+        if (list.length === 0) {
+          dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen tickets gevonden</div>';
+        } else {
+          list.forEach((t) => {
+            const title = (t.title || '').replace(/</g, '&lt;');
+            const sub = (t.subtitle || '').replace(/</g, '&lt;');
+            const el = document.createElement('div');
+            el.className = 'time-tracker-context-option';
+            el.style.cssText = 'padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;';
+            el.setAttribute('data-id', t.id);
+            el.setAttribute('data-title', t.title || '');
+            el.innerHTML = '<div><div style="font-weight:500;">' + title + '</div>' + (sub ? '<div style="font-size:12px;color:#6b7280;">' + sub + '</div>' : '') + '</div>';
+            el.addEventListener('mouseover', () => { el.style.background = '#f9fafb'; });
+            el.addEventListener('mouseout', () => { el.style.background = 'white'; });
+            el.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              this.popover.querySelector('#timeTrackerTicketId').value = t.id;
+              this.popover.querySelector('#timeTrackerTicketSearch').value = t.title || '';
+              this.popover.querySelector('#timeTrackerTicketClear').style.display = 'block';
+              dropdown.style.display = 'none';
+              this.loadTicketTasks(t.id);
+            });
+            dropdown.appendChild(el);
+          });
+        }
+      } catch (e) {
+        console.error('[TimeTracker] Ticket search:', e);
+        dropdown.innerHTML = '<div style="padding: 12px; color: #ef4444;">Fout bij zoeken</div>';
+      }
+    }
+
+    async loadTicketTasks(ticketId) {
+      const wrap = this.popover.querySelector('#timeTrackerTicketTasksWrap');
+      const listEl = this.popover.querySelector('#timeTrackerTicketTasksList');
+      if (!wrap || !listEl) return;
+      wrap.style.display = 'block';
+      listEl.innerHTML = '<div style="padding: 12px; color: #6b7280;">Laden…</div>';
+      try {
+        const response = await fetch(`/api/tickets/${ticketId}/tasks`, { credentials: 'include' });
+        const result = await response.json();
+        this.ticketTasks = result.ok && result.data ? result.data : [];
+        this.renderTicketTasksList();
+      } catch (e) {
+        console.error('[TimeTracker] Load ticket tasks:', e);
+        this.ticketTasks = [];
+        listEl.innerHTML = '<div style="padding: 12px; color: #ef4444;">Fout bij laden</div>';
+      }
+    }
+
+    renderTicketTasksList() {
+      const listEl = this.popover.querySelector('#timeTrackerTicketTasksList');
+      const selectedId = (this.popover.querySelector('#timeTrackerTicketTaskId').value || '').trim();
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      this.ticketTasks.forEach((t) => {
+        const desc = (t.description || '').trim();
+        const oneLine = desc ? (desc.length > 60 ? desc.slice(0, 60) + '…' : desc) : '';
+        const isSelected = t.id === selectedId;
+        const row = document.createElement('div');
+        row.style.cssText = 'padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f3f4f6; display: flex; align-items: flex-start; gap: 8px;' + (isSelected ? ' background: #dbeafe; border-left: 3px solid #3b82f6;' : '');
+        row.setAttribute('data-task-id', t.id);
+        row.innerHTML = '<div style="flex:1;"><div style="font-weight:500;font-size:13px;">' + (t.title || '').replace(/</g, '&lt;') + '</div>' + (oneLine ? '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + oneLine.replace(/</g, '&lt;') + '</div>' : '') + '</div>';
+        row.addEventListener('click', () => {
+          this.popover.querySelector('#timeTrackerTicketTaskId').value = t.id;
+          const noteEl = this.popover.querySelector('#timeTrackerNote');
+          if (noteEl && (!noteEl.value || !noteEl.value.trim())) noteEl.value = (t.title || '').trim();
+          this.renderTicketTasksList();
+        });
+        listEl.appendChild(row);
+      });
+    }
+
+    async createTicketTaskAndSelect() {
+      const ticketId = (this.popover.querySelector('#timeTrackerTicketId').value || '').trim();
+      const titleEl = this.popover.querySelector('#timeTrackerTicketTaskNewTitle');
+      const descEl = this.popover.querySelector('#timeTrackerTicketTaskNewDesc');
+      const title = (titleEl && titleEl.value) ? titleEl.value.trim() : '';
+      if (!ticketId || !title) {
+        if (typeof window.showNotification === 'function') window.showNotification('Titel is verplicht', 'error');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/tickets/${ticketId}/tasks`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ title: title, description: (descEl && descEl.value) ? descEl.value.trim() : null })
+        });
+        const result = await response.json();
+        if (result.ok && result.data) {
+          this.ticketTasks = [...this.ticketTasks, result.data];
+          this.popover.querySelector('#timeTrackerTicketTaskId').value = result.data.id;
+          const noteEl = this.popover.querySelector('#timeTrackerNote');
+          if (noteEl && (!noteEl.value || !noteEl.value.trim())) noteEl.value = (result.data.title || '').trim();
+          this.popover.querySelector('#timeTrackerTicketTaskNewForm').style.display = 'none';
+          titleEl.value = '';
+          if (descEl) descEl.value = '';
+          this.renderTicketTasksList();
+          if (typeof window.showNotification === 'function') window.showNotification('Taak toegevoegd', 'success');
+        } else {
+          throw new Error(result.error || 'Fout bij opslaan');
+        }
+      } catch (e) {
+        console.error('[TimeTracker] Create ticket task:', e);
+        if (typeof window.showNotification === 'function') window.showNotification(e.message || 'Fout bij opslaan', 'error');
       }
     }
 
@@ -817,14 +1670,14 @@
             this.popover.querySelector('#timeTrackerTaskDropdown').style.display = 'none';
             this.updateTaskClearButton();
 
-            const activity = this.popover.querySelector('#timeTrackerActivity').value;
-            if (activity === 'klantenwerk') {
-              this.popover.querySelector('#timeTrackerCustomerContainer').style.display = 'block';
-            }
             if (customerId && customerName) {
               this.popover.querySelector('#timeTrackerCustomerId').value = customerId;
-              this.popover.querySelector('#timeTrackerCustomerSearch').value = customerName;
-              this.updateCustomerClearButton();
+              this.klantContactCustomerTitle = customerName;
+              this.popover.querySelector('#timeTrackerContactId').value = '';
+              this.popover.querySelector('#timeTrackerContactCustomerId').value = '';
+              this.klantContactContactTitle = '';
+              this.popover.querySelector('#timeTrackerKlantContactClear').style.display = 'block';
+              this.renderKlantContactChips();
               const noteInput = this.popover.querySelector('#timeTrackerNote');
               if (noteInput && taskTitle && customerName) noteInput.value = `Taak: ${taskTitle} voor: ${customerName}`;
               if (contactId) this.loadContactsForCustomer(customerId, contactId);
@@ -840,47 +1693,28 @@
 
     async loadContactsForCustomer(customerId, selectedContactId = null) {
       try {
-        // Try to load contacts - endpoint may not exist yet
-        const response = await fetch(`/admin/api/customers/${customerId}/contacts`, {
-          credentials: 'include'
-        });
+        const response = await fetch(`/admin/api/customers/${customerId}/contacts`, { credentials: 'include' });
         const result = await response.json();
-        
-        if (result.success && result.contacts) {
-          this.contacts = result.contacts || [];
-        } else if (result.ok && result.data) {
-          this.contacts = result.data || [];
-        } else {
-          this.contacts = [];
-        }
-        
-        const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
-        if (this.contacts.length > 0) {
-          contactContainer.style.display = 'block';
-          
-          if (selectedContactId) {
-            const contact = this.contacts.find(c => c.id === selectedContactId);
-            if (contact) {
-              const contactName = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || '';
-              this.popover.querySelector('#timeTrackerContactId').value = contact.id;
-              this.popover.querySelector('#timeTrackerContactSearch').value = contactName;
-            }
+        this.contacts = result.success && result.contacts ? result.contacts : (result.ok && result.data ? result.data : []);
+        if (selectedContactId && this.contacts.length > 0) {
+          const contact = this.contacts.find(c => c.id === selectedContactId);
+          if (contact) {
+            const contactName = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || '';
+            this.popover.querySelector('#timeTrackerContactId').value = contact.id;
+            this.klantContactContactTitle = contactName;
+            this.popover.querySelector('#timeTrackerContactCustomerId').value = customerId;
+            this.popover.querySelector('#timeTrackerKlantContactClear').style.display = 'block';
+            this.renderKlantContactChips();
           }
-        } else {
-          contactContainer.style.display = 'none';
         }
       } catch (error) {
         console.error('[TimeTracker] Error loading contacts:', error);
-        // Hide contact container if endpoint doesn't exist
-        const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
-        if (contactContainer) {
-          contactContainer.style.display = 'none';
-        }
       }
     }
 
     handleCustomerSearch(query) {
       const dropdown = this.popover.querySelector('#timeTrackerCustomerDropdown');
+      if (!dropdown) return;
       if (!query || query.length < 1) {
         dropdown.style.display = 'none';
         return;
@@ -934,6 +1768,7 @@
 
     handleContactSearch(query) {
       const dropdown = this.popover.querySelector('#timeTrackerContactDropdown');
+      if (!dropdown) return;
       if (!query || query.length < 1) {
         dropdown.style.display = 'none';
         return;
@@ -1006,11 +1841,14 @@
 
             if (customerId && customerName) {
               this.popover.querySelector('#timeTrackerSwitchCustomerId').value = customerId;
-              this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = customerName;
-              this.updateSwitchCustomerClearButton();
+              this.switchKlantContactCustomerTitle = customerName;
+              this.popover.querySelector('#timeTrackerSwitchContactId').value = '';
+              this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = '';
+              this.switchKlantContactContactTitle = '';
+              this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = 'block';
+              this.renderSwitchKlantContactChips();
               const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
               if (noteEl && taskTitle && customerName) noteEl.value = `Taak: ${taskTitle} voor: ${customerName}`;
-              if (contactId) this.loadContactsForCustomerSwitch(customerId, contactId);
             } else if (taskTitle) {
               const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
               if (noteEl) noteEl.value = `Taak: ${taskTitle}`;
@@ -1021,111 +1859,20 @@
       dropdown.style.display = 'block';
     }
 
-    handleSwitchCustomerSearch(query) {
-      const dropdown = this.popover.querySelector('#timeTrackerSwitchCustomerDropdown');
-      if (!query || query.length < 1) { dropdown.style.display = 'none'; return; }
-      const filtered = this.customers.filter(c => (c.company_name?.toLowerCase().includes(query.toLowerCase())) || (c.first_name?.toLowerCase().includes(query.toLowerCase())) || (c.last_name?.toLowerCase().includes(query.toLowerCase())) || (c.email?.toLowerCase().includes(query.toLowerCase())));
-      if (filtered.length === 0) {
-        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen klanten gevonden</div>';
-      } else {
-        dropdown.innerHTML = filtered.map(c => `
-          <div class="customer-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
-            data-customer-id="${c.id}" data-customer-name="${c.company_name || c.first_name + ' ' + c.last_name || c.email || ''}">
-            <div style="font-weight: 500; color: #111827; font-size: 14px;">${c.company_name || c.first_name + ' ' + c.last_name || c.email || 'Onbekend'}</div>
-          </div>
-        `).join('');
-        dropdown.querySelectorAll('.customer-option').forEach(opt => {
-          opt.addEventListener('click', () => {
-            const customerId = opt.getAttribute('data-customer-id');
-            const customerName = opt.getAttribute('data-customer-name');
-            this.popover.querySelector('#timeTrackerSwitchCustomerId').value = customerId;
-            this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = customerName;
-            this.popover.querySelector('#timeTrackerSwitchCustomerDropdown').style.display = 'none';
-            this.updateSwitchCustomerClearButton();
-            const taskTitle = this.popover.querySelector('#timeTrackerSwitchTaskSearch').value;
-            const noteEl = this.popover.querySelector('#timeTrackerSwitchNote');
-            if (noteEl && taskTitle && customerName) noteEl.value = `Taak: ${taskTitle} voor: ${customerName}`;
-            this.loadContactsForCustomerSwitch(customerId);
-          });
-        });
-      }
-      dropdown.style.display = 'block';
-    }
-
-    async loadContactsForCustomerSwitch(customerId, selectedContactId = null) {
-      try {
-        const response = await fetch(`/admin/api/customers/${customerId}/contacts`, { credentials: 'include' });
-        const result = await response.json();
-        this.contacts = result.success && result.contacts ? result.contacts : (result.ok && result.data ? result.data : []);
-        const contactContainer = this.popover.querySelector('#timeTrackerSwitchContactContainer');
-        if (this.contacts.length > 0) {
-          contactContainer.style.display = 'block';
-          if (selectedContactId) {
-            const contact = this.contacts.find(c => c.id === selectedContactId);
-            if (contact) {
-              const name = (contact.first_name || '') + ' ' + (contact.last_name || '') || contact.email || '';
-              this.popover.querySelector('#timeTrackerSwitchContactId').value = contact.id;
-              this.popover.querySelector('#timeTrackerSwitchContactSearch').value = name;
-            }
-          }
-        } else {
-          contactContainer.style.display = 'none';
-        }
-      } catch (e) {
-        this.popover.querySelector('#timeTrackerSwitchContactContainer').style.display = 'none';
-      }
-    }
-
-    handleSwitchContactSearch(query) {
-      const dropdown = this.popover.querySelector('#timeTrackerSwitchContactDropdown');
-      if (!query || query.length < 1) { dropdown.style.display = 'none'; return; }
-      const filtered = this.contacts.filter(c => (c.first_name?.toLowerCase().includes(query.toLowerCase())) || (c.last_name?.toLowerCase().includes(query.toLowerCase())) || (c.email?.toLowerCase().includes(query.toLowerCase())));
-      if (filtered.length === 0) {
-        dropdown.innerHTML = '<div style="padding: 12px; color: #6b7280; text-align: center;">Geen contacten gevonden</div>';
-      } else {
-        dropdown.innerHTML = filtered.map(c => {
-          const name = (c.first_name || '') + ' ' + (c.last_name || '') || c.email || 'Onbekend';
-          return `<div class="contact-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" data-contact-id="${c.id}" data-contact-name="${name}"><div style="font-weight: 500; font-size: 14px;">${name}</div></div>`;
-        }).join('');
-        dropdown.querySelectorAll('.contact-option').forEach(opt => {
-          opt.addEventListener('click', () => {
-            this.popover.querySelector('#timeTrackerSwitchContactId').value = opt.getAttribute('data-contact-id');
-            this.popover.querySelector('#timeTrackerSwitchContactSearch').value = opt.getAttribute('data-contact-name');
-            this.popover.querySelector('#timeTrackerSwitchContactDropdown').style.display = 'none';
-          });
-        });
-      }
-      dropdown.style.display = 'block';
-    }
-
     clearSwitchTaskSelection() {
       this.popover.querySelector('#timeTrackerSwitchTaskId').value = '';
       this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = '';
       this.updateSwitchTaskClearButton();
-      const customerContainer = this.popover.querySelector('#timeTrackerSwitchCustomerContainer');
-      if (customerContainer && customerContainer.style.display !== 'none') {
-        this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
-        this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
-        this.updateSwitchCustomerClearButton();
+      const kc = this.popover.querySelector('#timeTrackerSwitchKlantContactContainer');
+      if (kc && kc.style.display !== 'none') {
+        this.clearSwitchKlantContactSelection();
       }
-    }
-
-    clearSwitchCustomerSelection() {
-      this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
-      this.popover.querySelector('#timeTrackerSwitchCustomerSearch').value = '';
-      this.updateSwitchCustomerClearButton();
     }
 
     updateSwitchTaskClearButton() {
       const clearBtn = this.popover.querySelector('#timeTrackerSwitchTaskClear');
       const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId');
       if (clearBtn && taskId) clearBtn.style.display = (taskId.value && taskId.value.length > 0) ? 'block' : 'none';
-    }
-
-    updateSwitchCustomerClearButton() {
-      const clearBtn = this.popover.querySelector('#timeTrackerSwitchCustomerClear');
-      const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId');
-      if (clearBtn && customerId) clearBtn.style.display = (customerId.value && customerId.value.length > 0) ? 'block' : 'none';
     }
 
     async loadCurrentEntry() {
@@ -1172,13 +1919,41 @@
           noteEl.style.display = this.currentEntry.note ? 'block' : 'none';
         }
 
-        // Sync switch activity dropdown and show task/customer when Klantenwerk or Support
+        // Sync switch activity dropdown and show task/customer or ticket/tasks when Support
         const pn = (this.currentEntry.project_name || '').toLowerCase();
         const switchActivitySelect = this.popover.querySelector('#timeTrackerSwitchActivity');
         if (switchActivitySelect) {
           const match = ACTIVITY_TYPES.find(a => a.value === pn);
           if (match) switchActivitySelect.value = match.value;
           this.handleSwitchActivityChange();
+        }
+        if (pn === 'support' && this.currentEntry.ticket_id) {
+          const tid = this.currentEntry.ticket_id;
+          const t = this.currentEntry.ticket;
+          const ticketTitle = t ? ((t.ticket_number || '') + (t.subject ? ' – ' + t.subject : '')) : tid;
+          this.popover.querySelector('#timeTrackerSwitchTicketId').value = tid;
+          this.popover.querySelector('#timeTrackerSwitchTicketSearch').value = ticketTitle;
+          const switchTicketClear = this.popover.querySelector('#timeTrackerSwitchTicketClear');
+          if (switchTicketClear) switchTicketClear.style.display = 'block';
+          if (this.currentEntry.ticket_task_id) {
+            this.popover.querySelector('#timeTrackerSwitchTicketTaskId').value = this.currentEntry.ticket_task_id;
+          }
+          this.loadSwitchTicketTasks(tid);
+        }
+        if (pn === 'klantenwerk' && (this.currentEntry.customer_id || this.currentEntry.contact_id)) {
+          const cust = this.currentEntry.customer;
+          const cont = this.currentEntry.contact;
+          if (this.currentEntry.customer_id) {
+            this.popover.querySelector('#timeTrackerSwitchCustomerId').value = this.currentEntry.customer_id;
+            this.switchKlantContactCustomerTitle = cust ? (cust.company_name || cust.name || cust.email || '') : '';
+          }
+          if (this.currentEntry.contact_id) {
+            this.popover.querySelector('#timeTrackerSwitchContactId').value = this.currentEntry.contact_id;
+            this.switchKlantContactContactTitle = cont ? ([cont.first_name, cont.last_name].filter(Boolean).join(' ') || cont.name || cont.email || '') : '';
+            this.popover.querySelector('#timeTrackerSwitchContactCustomerId').value = (cont && cont.customer_id) ? cont.customer_id : '';
+          }
+          this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = 'block';
+          this.renderSwitchKlantContactChips();
         }
 
         // Sales: show/hide context wrap and nudge; fill context from currentEntry
@@ -1209,6 +1984,29 @@
           }
         }
 
+        // Overleg: prefill switch overleg fields from currentEntry
+        if (pn === 'overleg') {
+          const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+          if (switchMeetingType && this.currentEntry.meeting_type) switchMeetingType.value = this.currentEntry.meeting_type;
+          const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+          const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+          const sos = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
+          const soc = this.popover.querySelector('#timeTrackerSwitchOverlegContextClear');
+          if (this.currentEntry.context_type && this.currentEntry.context_id) {
+            if (soct) soct.value = this.currentEntry.context_type;
+            if (socid) socid.value = this.currentEntry.context_id;
+            if (sos) sos.value = 'Gekoppeld';
+            if (soc) soc.style.display = 'block';
+          } else {
+            if (soct) soct.value = '';
+            if (socid) socid.value = '';
+            if (sos) sos.value = '';
+            if (soc) soc.style.display = 'none';
+          }
+          this.switchOverlegParticipants = [];
+          this.renderSwitchOverlegParticipantsChips();
+        }
+
         // Update elapsed time
         this.updateElapsedTime();
       } else {
@@ -1221,7 +2019,8 @@
     }
 
     getActivityLabel(activityType) {
-      const activity = ACTIVITY_TYPES.find(a => a.value === activityType);
+      const key = (activityType || '').toLowerCase();
+      const activity = ACTIVITY_TYPES.find(a => a.value === key);
       return activity ? activity.label : activityType || 'Overig';
     }
 
@@ -1292,21 +2091,47 @@
 
     async handleStart() {
       const activity = this.popover.querySelector('#timeTrackerActivity').value;
-      const note = this.popover.querySelector('#timeTrackerNote').value.trim();
+      let note = this.popover.querySelector('#timeTrackerNote').value.trim();
       const taskId = this.popover.querySelector('#timeTrackerTaskId').value;
       const customerId = this.popover.querySelector('#timeTrackerCustomerId').value;
       const contactId = this.popover.querySelector('#timeTrackerContactId').value;
+      const ticketId = (this.popover.querySelector('#timeTrackerTicketId').value || '').trim();
+      const ticketTaskId = (this.popover.querySelector('#timeTrackerTicketTaskId').value || '').trim();
 
+      if (activity === 'overleg' && !note) {
+        const meetingTypeEl = this.popover.querySelector('#timeTrackerMeetingType');
+        const meetingType = meetingTypeEl ? meetingTypeEl.value : 'intern';
+        const labelObj = OVERLEG_MEETING_TYPES.find((t) => t.value === meetingType);
+        const firstParticipant = this.overlegParticipants[0];
+        if (firstParticipant && firstParticipant.display_name) {
+          note = 'Overleg met ' + firstParticipant.display_name;
+        } else {
+          note = 'Overleg - ' + (labelObj ? labelObj.label : 'Intern (team)');
+        }
+      }
+
+      if (activity === 'support') {
+        if (!ticketId) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Selecteer eerst een ticket', 'error');
+          }
+          return;
+        }
+        if (!note && ticketTaskId) {
+          const task = this.ticketTasks.find((t) => t.id === ticketTaskId);
+          if (task && task.title) note = task.title;
+        }
+      }
       if (!note) {
         if (typeof window.showNotification === 'function') {
           window.showNotification('Titel is verplicht', 'error');
         }
         return;
       }
-      if (activity === 'klantenwerk' || activity === 'support') {
+      if (activity === 'klantenwerk') {
         if (!customerId || customerId.length === 0) {
           if (typeof window.showNotification === 'function') {
-            window.showNotification('Kies een klant bij Klantenwerk of Support', 'error');
+            window.showNotification('Kies een klant bij Klantenwerk', 'error');
           }
           return;
         }
@@ -1314,19 +2139,40 @@
 
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : (activity === 'overleg' ? 'Overleg' : activity))),
           note: note
         };
 
         if (taskId) body.task_id = taskId;
         if (customerId) body.customer_id = customerId;
         if (contactId) body.contact_id = contactId;
+        if (activity === 'support' && ticketId) {
+          body.ticket_id = ticketId;
+          if (ticketTaskId) body.ticket_task_id = ticketTaskId;
+        }
+
+        if (activity === 'overleg') {
+          const meetingTypeEl = this.popover.querySelector('#timeTrackerMeetingType');
+          body.meeting_type = (meetingTypeEl && meetingTypeEl.value) ? meetingTypeEl.value : 'intern';
+          body.participant_user_ids = this.overlegParticipants.length ? this.overlegParticipants.map((p) => p.id) : [];
+          const oct = this.popover.querySelector('#timeTrackerOverlegContextType');
+          const ocid = this.popover.querySelector('#timeTrackerOverlegContextId');
+          if (oct && oct.value) body.context_type = oct.value;
+          if (ocid && ocid.value) body.context_id = ocid.value;
+        }
 
         if (activity === 'sales') {
           const at = this.popover.querySelector('#timeTrackerActivityType');
           const ct = this.popover.querySelector('#timeTrackerContextType');
           const cid = this.popover.querySelector('#timeTrackerContextId');
-          if (at && at.value) body.activity_type = at.value;
+          const activityType = at ? (at.value || '').trim() : '';
+          if (!activityType) {
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Kies een activiteit type bij Sales', 'error');
+            }
+            return;
+          }
+          body.activity_type = activityType;
           if (ct && ct.value) body.context_type = ct.value;
           if (cid && cid.value) body.context_id = cid.value;
         }
@@ -1366,6 +2212,8 @@
       const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId').value;
       const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
       const contactId = this.popover.querySelector('#timeTrackerSwitchContactId').value;
+      const ticketId = (this.popover.querySelector('#timeTrackerSwitchTicketId').value || '').trim();
+      const ticketTaskId = (this.popover.querySelector('#timeTrackerSwitchTicketTaskId').value || '').trim();
 
       if (!note) {
         if (typeof window.showNotification === 'function') {
@@ -1374,10 +2222,18 @@
         return;
       }
 
-      if (activity === 'klantenwerk' || activity === 'support') {
+      if (activity === 'support') {
+        if (!ticketId) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Selecteer eerst een ticket', 'error');
+          }
+          return;
+        }
+      }
+      if (activity === 'klantenwerk') {
         if (!customerId || customerId.length === 0) {
           if (typeof window.showNotification === 'function') {
-            window.showNotification('Kies een klant bij Klantenwerk of Support', 'error');
+            window.showNotification('Kies een klant bij Klantenwerk', 'error');
           }
           return;
         }
@@ -1385,12 +2241,25 @@
 
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'overleg' ? 'Overleg' : activity)),
           note: note || null
         };
         if (taskId) body.task_id = taskId;
         if (customerId) body.customer_id = customerId;
         if (contactId) body.contact_id = contactId;
+        if (activity === 'support' && ticketId) {
+          body.ticket_id = ticketId;
+          if (ticketTaskId) body.ticket_task_id = ticketTaskId;
+        }
+        if (activity === 'overleg') {
+          const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+          body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : 'intern';
+          body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : [];
+          const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+          const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+          if (soct && soct.value) body.context_type = soct.value;
+          if (socid && socid.value) body.context_id = socid.value;
+        }
 
         const response = await fetch(`/api/employees/${this.userId}/time-entries/switch-task`, {
           method: 'POST',
@@ -1431,7 +2300,7 @@
       if (btn) btn.disabled = true;
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : (activity === 'overleg' ? 'Overleg' : activity))),
           note: note || null,
           task_id: taskId || null,
           customer_id: customerId || null,
@@ -1443,6 +2312,15 @@
           body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
           body.context_type = (rType && rType.value) ? rType.value : (this.currentEntry && this.currentEntry.context_type) || null;
           body.context_id = (rId && rId.value) ? rId.value : (this.currentEntry && this.currentEntry.context_id) || null;
+        }
+        if (activity === 'overleg') {
+          const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+          body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : (this.currentEntry && this.currentEntry.meeting_type) || 'intern';
+          body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : (this.currentEntry && this.currentEntry.participant_user_ids) || [];
+          const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+          const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+          body.context_type = (soct && soct.value) ? soct.value : (this.currentEntry && this.currentEntry.context_type) || null;
+          body.context_id = (socid && socid.value) ? socid.value : (this.currentEntry && this.currentEntry.context_id) || null;
         }
         const response = await fetch(`/api/employees/${this.userId}/time-entries/active-timer`, {
           method: 'PUT',
@@ -1490,7 +2368,7 @@
       const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId') && this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
       const contactId = this.popover.querySelector('#timeTrackerSwitchContactId') && this.popover.querySelector('#timeTrackerSwitchContactId').value;
       const body = {
-        project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
+        project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : (activity === 'overleg' ? 'Overleg' : activity))),
         note: note || null,
         task_id: taskId || null,
         customer_id: customerId || null,
@@ -1502,6 +2380,15 @@
         body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
         body.context_type = (rt && rt.value) ? rt.value : (this.currentEntry && this.currentEntry.context_type) || null;
         body.context_id = (rid && rid.value) ? rid.value : (this.currentEntry && this.currentEntry.context_id) || null;
+      }
+      if (activity === 'overleg' || (this.currentEntry && (this.currentEntry.project_name || '').toLowerCase() === 'overleg')) {
+        const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+        body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : (this.currentEntry && this.currentEntry.meeting_type) || 'intern';
+        body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : (this.currentEntry && this.currentEntry.participant_user_ids) || [];
+        const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+        const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+        body.context_type = (soct && soct.value) ? soct.value : (this.currentEntry && this.currentEntry.context_type) || null;
+        body.context_id = (socid && socid.value) ? socid.value : (this.currentEntry && this.currentEntry.context_id) || null;
       }
       const errorEl = this.popover.querySelector('#timeTrackerClockOutError');
       if (errorEl) {
@@ -1564,8 +2451,20 @@
 
     handleContextSearch(query, mode) {
       if (this.contextSearchDebounceTimer) clearTimeout(this.contextSearchDebounceTimer);
-      const dropdown = mode === 'running' ? this.popover.querySelector('#timeTrackerRunningContextDropdown') : this.popover.querySelector('#timeTrackerContextDropdown');
-      const input = mode === 'running' ? this.popover.querySelector('#timeTrackerRunningContextSearch') : this.popover.querySelector('#timeTrackerContextSearch');
+      let dropdown, input;
+      if (mode === 'running') {
+        dropdown = this.popover.querySelector('#timeTrackerRunningContextDropdown');
+        input = this.popover.querySelector('#timeTrackerRunningContextSearch');
+      } else if (mode === 'overleg') {
+        dropdown = this.popover.querySelector('#timeTrackerOverlegContextDropdown');
+        input = this.popover.querySelector('#timeTrackerOverlegContextSearch');
+      } else if (mode === 'switch_overleg') {
+        dropdown = this.popover.querySelector('#timeTrackerSwitchOverlegContextDropdown');
+        input = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
+      } else {
+        dropdown = this.popover.querySelector('#timeTrackerContextDropdown');
+        input = this.popover.querySelector('#timeTrackerContextSearch');
+      }
       if (!dropdown || !input) return;
       const q = (query || '').trim();
       if (q.length < 2) {
@@ -1579,7 +2478,7 @@
           const response = await fetch(`/api/time-entries/context-search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
           const result = await response.json();
           if (result.ok && result.data) {
-            self.renderContextDropdown(mode, result.data, dropdown);
+            self.renderContextDropdown(mode, result.data, dropdown, input);
             dropdown.style.display = 'block';
           } else {
             dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:13px;">Geen resultaten</div>';
@@ -1593,7 +2492,7 @@
       }, 350);
     }
 
-    renderContextDropdown(mode, results, dropdown) {
+    renderContextDropdown(mode, results, dropdown, inputEl) {
       const typeLabels = { deal: 'Deals', opportunity: 'Kansen', customer: 'Klanten', contact: 'Contactpersonen' };
       const byType = {};
       results.forEach((r) => {
@@ -1630,6 +2529,16 @@
             this.popover.querySelector('#timeTrackerContextId').value = id || '';
             this.popover.querySelector('#timeTrackerContextSearch').value = title || '';
             this.popover.querySelector('#timeTrackerContextClear').style.display = (id ? 'block' : 'none');
+          } else if (mode === 'overleg') {
+            this.popover.querySelector('#timeTrackerOverlegContextType').value = type || '';
+            this.popover.querySelector('#timeTrackerOverlegContextId').value = id || '';
+            this.popover.querySelector('#timeTrackerOverlegContextSearch').value = title || '';
+            this.popover.querySelector('#timeTrackerOverlegContextClear').style.display = (id ? 'block' : 'none');
+          } else if (mode === 'switch_overleg') {
+            this.popover.querySelector('#timeTrackerSwitchOverlegContextType').value = type || '';
+            this.popover.querySelector('#timeTrackerSwitchOverlegContextId').value = id || '';
+            this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch').value = title || '';
+            this.popover.querySelector('#timeTrackerSwitchOverlegContextClear').style.display = (id ? 'block' : 'none');
           } else {
             this.popover.querySelector('#timeTrackerRunningContextType').value = type || '';
             this.popover.querySelector('#timeTrackerRunningContextId').value = id || '';
@@ -1677,6 +2586,24 @@
         this.popover.querySelector('#timeTrackerContextId').value = '';
         this.popover.querySelector('#timeTrackerContextSearch').value = '';
         this.popover.querySelector('#timeTrackerContextClear').style.display = 'none';
+      } else if (mode === 'overleg') {
+        const ot = this.popover.querySelector('#timeTrackerOverlegContextType');
+        const oid = this.popover.querySelector('#timeTrackerOverlegContextId');
+        const os = this.popover.querySelector('#timeTrackerOverlegContextSearch');
+        const oc = this.popover.querySelector('#timeTrackerOverlegContextClear');
+        if (ot) ot.value = '';
+        if (oid) oid.value = '';
+        if (os) os.value = '';
+        if (oc) oc.style.display = 'none';
+      } else if (mode === 'switch_overleg') {
+        const sot = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
+        const soid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
+        const sos = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
+        const soc = this.popover.querySelector('#timeTrackerSwitchOverlegContextClear');
+        if (sot) sot.value = '';
+        if (soid) soid.value = '';
+        if (sos) sos.value = '';
+        if (soc) soc.style.display = 'none';
       } else {
         this.popover.querySelector('#timeTrackerRunningContextType').value = '';
         this.popover.querySelector('#timeTrackerRunningContextId').value = '';

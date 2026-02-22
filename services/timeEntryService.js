@@ -24,9 +24,15 @@ function validateEntry (data, mode) {
   const note = (data.note != null ? data.note : data.title != null ? data.title : '').toString().trim()
   const taskId = data.task_id || null
   const customerId = data.customer_id || null
+  const ticketId = data.ticket_id || null
 
   if (!project) missing.push('project_name')
-  if (['Klantenwerk', 'Support'].includes(project) && !taskId && !customerId) {
+  // Support: ticket required (no customer/task required)
+  if (project === 'Support' && !ticketId) {
+    missing.push('ticket_id')
+  }
+  // Klantenwerk: task or customer required
+  if (project === 'Klantenwerk' && !taskId && !customerId) {
     missing.push('customer_id')
   }
   if (mode === 'clock_out' && !note) missing.push('note')
@@ -54,7 +60,13 @@ class TimeEntryService {
     try {
       let query = supabaseAdmin
         .from('time_entries')
-        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title)', { count: 'exact' })
+        .select(`
+          *,
+          task:employee_tasks!time_entries_task_id_fkey(id, title),
+          customer:customers!time_entries_customer_id_fkey(id, name, company_name, email),
+          ticket:tickets!time_entries_ticket_id_fkey(id, ticket_number, subject, status),
+          ticket_task:ticket_tasks!time_entries_ticket_task_id_fkey(id, title, description)
+        `, { count: 'exact' })
         .eq('employee_id', employeeId)
         .order('start_at', { ascending: false })
 
@@ -444,6 +456,10 @@ class TimeEntryService {
         activity_type: entryData.activity_type || null,
         context_type: entryData.context_type || null,
         context_id: entryData.context_id || null,
+        ticket_id: entryData.ticket_id || null,
+        ticket_task_id: entryData.ticket_task_id || null,
+        meeting_type: entryData.meeting_type || null,
+        participant_user_ids: Array.isArray(entryData.participant_user_ids) ? entryData.participant_user_ids : null,
         start_at: new Date().toISOString(),
         end_at: null,
         duration_minutes: 0,
@@ -478,7 +494,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer, error: fetchError } = await supabaseAdmin
         .from('time_entries')
-        .select('id, start_at, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id')
+        .select('id, start_at, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .single()
@@ -495,7 +511,11 @@ class TimeEntryService {
         note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note),
         activity_type: updateData.activity_type !== undefined ? updateData.activity_type : activeTimer.activity_type,
         context_type: updateData.context_type !== undefined ? updateData.context_type : activeTimer.context_type,
-        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id
+        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id,
+        ticket_id: updateData.ticket_id !== undefined ? updateData.ticket_id : activeTimer.ticket_id,
+        ticket_task_id: updateData.ticket_task_id !== undefined ? updateData.ticket_task_id : activeTimer.ticket_task_id,
+        meeting_type: updateData.meeting_type !== undefined ? updateData.meeting_type : activeTimer.meeting_type,
+        participant_user_ids: updateData.participant_user_ids !== undefined ? updateData.participant_user_ids : activeTimer.participant_user_ids
       }
       const { valid, missingFields } = validateEntry(merged, 'clock_out')
       if (!valid) {
@@ -520,6 +540,10 @@ class TimeEntryService {
           activity_type: merged.activity_type || null,
           context_type: merged.context_type || null,
           context_id: merged.context_id || null,
+          ticket_id: merged.ticket_id || null,
+          ticket_task_id: merged.ticket_task_id || null,
+          meeting_type: merged.meeting_type || null,
+          participant_user_ids: merged.participant_user_ids != null ? merged.participant_user_ids : null,
           updated_at: now.toISOString()
         })
         .eq('id', activeTimer.id)
@@ -545,7 +569,14 @@ class TimeEntryService {
       // First try with full joins, but handle errors gracefully
       let query = supabaseAdmin
         .from('time_entries')
-        .select('*, task:employee_tasks!time_entries_task_id_fkey(id, title), customer:customers!time_entries_customer_id_fkey(id, name, company_name, email), contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email)')
+        .select(`
+          *,
+          task:employee_tasks!time_entries_task_id_fkey(id, title),
+          customer:customers!time_entries_customer_id_fkey(id, name, company_name, email),
+          contact:contacts!time_entries_contact_id_fkey(id, first_name, last_name, email),
+          ticket:tickets!time_entries_ticket_id_fkey(id, ticket_number, subject, status),
+          ticket_task:ticket_tasks!time_entries_ticket_task_id_fkey(id, title, description)
+        `)
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -586,7 +617,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer } = await supabaseAdmin
         .from('time_entries')
-        .select('id, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id')
+        .select('id, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -603,7 +634,11 @@ class TimeEntryService {
         note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note),
         activity_type: updateData.activity_type !== undefined ? updateData.activity_type : activeTimer.activity_type,
         context_type: updateData.context_type !== undefined ? updateData.context_type : activeTimer.context_type,
-        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id
+        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id,
+        ticket_id: updateData.ticket_id !== undefined ? updateData.ticket_id : activeTimer.ticket_id,
+        ticket_task_id: updateData.ticket_task_id !== undefined ? updateData.ticket_task_id : activeTimer.ticket_task_id,
+        meeting_type: updateData.meeting_type !== undefined ? updateData.meeting_type : activeTimer.meeting_type,
+        participant_user_ids: updateData.participant_user_ids !== undefined ? updateData.participant_user_ids : activeTimer.participant_user_ids
       }
       const { valid, missingFields } = validateEntry(merged, 'update')
       if (!valid) {
@@ -621,6 +656,10 @@ class TimeEntryService {
           activity_type: merged.activity_type || null,
           context_type: merged.context_type || null,
           context_id: merged.context_id || null,
+          ticket_id: merged.ticket_id || null,
+          ticket_task_id: merged.ticket_task_id || null,
+          meeting_type: merged.meeting_type || null,
+          participant_user_ids: merged.participant_user_ids != null ? merged.participant_user_ids : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', activeTimer.id)
@@ -687,6 +726,10 @@ class TimeEntryService {
           activity_type: newEntryData.activity_type || null,
           context_type: newEntryData.context_type || null,
           context_id: newEntryData.context_id || null,
+          ticket_id: newEntryData.ticket_id || null,
+          ticket_task_id: newEntryData.ticket_task_id || null,
+          meeting_type: newEntryData.meeting_type || null,
+          participant_user_ids: Array.isArray(newEntryData.participant_user_ids) ? newEntryData.participant_user_ids : null,
           start_at: now.toISOString(),
           end_at: null,
           duration_minutes: 0,
