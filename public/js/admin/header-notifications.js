@@ -1,23 +1,24 @@
 /**
- * Header bell notifications: unread count, popover list, tabs, mark read.
+ * Header notifications: trigger in user dropdown, popover list, tabs, mark read.
  * Loaded on every admin page.
  */
 (function () {
-  const wrap = document.getElementById('headerNotificationsWrap');
-  const btn = document.getElementById('headerNotificationsBtn');
+  const trigger = document.getElementById('headerNotificationsTrigger');
   const badge = document.getElementById('headerNotificationsBadge');
   const popover = document.getElementById('headerNotificationsPopover');
   const listEl = document.getElementById('headerNotificationsList');
   const loadingEl = document.getElementById('headerNotificationsLoading');
   const readAllBtn = document.getElementById('headerNotificationsReadAll');
+  const userDropdown = document.getElementById('headerUserDropdown');
 
-  if (!wrap || !btn || !popover || !listEl) return;
+  if (!trigger || !popover || !listEl) return;
 
   let currentTab = 'all';
   let notifications = [];
   let lastUnreadCount = 0;
 
   function setBadge(count) {
+    if (!badge) return;
     const n = Number(count) || 0;
     badge.setAttribute('data-count', n);
     badge.textContent = n > 99 ? '99+' : String(n);
@@ -83,7 +84,7 @@
         const url = el.getAttribute('data-url');
         if (url) window.location.href = url;
         popover.setAttribute('hidden', '');
-        btn.setAttribute('aria-expanded', 'false');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
       });
     });
   }
@@ -95,7 +96,7 @@
   }
 
   async function loadNotifications(type) {
-    loadingEl.style.display = 'block';
+    if (loadingEl) loadingEl.style.display = 'block';
     listEl.innerHTML = '';
     try {
       const params = new URLSearchParams({ limit: '20' });
@@ -112,32 +113,33 @@
     } catch (_) {
       listEl.innerHTML = '<div class="header-notifications-loading">Fout bij laden</div>';
     }
-    loadingEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
   }
 
-  btn.addEventListener('click', (e) => {
+  trigger.addEventListener('click', (e) => {
+    e.preventDefault();
     e.stopPropagation();
     const open = !popover.hasAttribute('hidden');
     if (open) {
       popover.setAttribute('hidden', '');
-      btn.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-expanded', 'false');
     } else {
       popover.removeAttribute('hidden');
-      btn.setAttribute('aria-expanded', 'true');
+      trigger.setAttribute('aria-expanded', 'true');
       loadNotifications(currentTab === 'all' ? null : currentTab);
     }
   });
 
-  wrap.querySelectorAll('.header-notifications-tab').forEach((tab) => {
+  popover.querySelectorAll('.header-notifications-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      wrap.querySelectorAll('.header-notifications-tab').forEach((t) => t.classList.remove('active'));
+      popover.querySelectorAll('.header-notifications-tab').forEach((t) => t.classList.remove('active'));
       tab.classList.add('active');
       currentTab = tab.getAttribute('data-tab') || 'all';
       loadNotifications(currentTab === 'all' ? null : currentTab);
     });
   });
 
-  readAllBtn.addEventListener('click', async () => {
+  if (readAllBtn) readAllBtn.addEventListener('click', async () => {
     try {
       await fetch('/admin/api/notifications/read-all', { method: 'POST', credentials: 'same-origin' });
       setBadge(0);
@@ -147,9 +149,9 @@
   });
 
   document.addEventListener('click', (e) => {
-    if (wrap && !wrap.contains(e.target)) {
+    if (userDropdown && !userDropdown.contains(e.target)) {
       popover.setAttribute('hidden', '');
-      btn.setAttribute('aria-expanded', 'false');
+      trigger.setAttribute('aria-expanded', 'false');
     }
   });
 

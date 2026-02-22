@@ -815,36 +815,12 @@
       padding: 0 24px 24px;
     }
 
-    /* Header bell notifications */
-    .header-notifications-wrap {
-      position: relative;
-      margin-right: 8px;
+    /* Header notifications: trigger in user dropdown, popover below */
+    .user-dropdown-item-btn {
+      text-align: left;
     }
-    .header-notifications-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      border: none;
-      background: transparent;
-      border-radius: 8px;
-      color: #6b7280;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-    }
-    .header-notifications-btn:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-    .header-notifications-icon {
-      width: 22px;
-      height: 22px;
-    }
-    .header-notifications-badge {
-      position: absolute;
-      top: 4px;
-      right: 4px;
+    .header-notifications-badge-in-menu {
+      margin-left: auto;
       min-width: 18px;
       height: 18px;
       padding: 0 5px;
@@ -857,13 +833,14 @@
       border-radius: 9px;
       display: none;
     }
-    .header-notifications-badge[data-count]:not([data-count="0"]) {
+    .header-notifications-badge-in-menu[data-count]:not([data-count="0"]) {
       display: inline-block;
     }
     .header-notifications-popover {
       position: absolute;
-      top: calc(100% + 8px);
+      top: 100%;
       right: 0;
+      margin-top: 8px;
       width: 380px;
       max-height: 420px;
       background: #fff;
@@ -1405,33 +1382,7 @@
         </div>
         
         <div class="main-header-right">
-          <!-- Bell notifications -->
-          <div class="header-notifications-wrap" id="headerNotificationsWrap">
-            <button type="button" class="header-notifications-btn" id="headerNotificationsBtn" aria-label="Meldingen" aria-expanded="false" aria-haspopup="true">
-              <svg class="header-notifications-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-              </svg>
-              <span class="header-notifications-badge" id="headerNotificationsBadge" data-count="0">0</span>
-            </button>
-            <div class="header-notifications-popover" id="headerNotificationsPopover" role="dialog" aria-label="Meldingen" hidden>
-              <div class="header-notifications-popover-header">
-                <span class="header-notifications-popover-title">Meldingen</span>
-                <div class="header-notifications-tabs">
-                  <button type="button" class="header-notifications-tab active" data-tab="all">Alles</button>
-                  <button type="button" class="header-notifications-tab" data-tab="mention">Mentions</button>
-                  <button type="button" class="header-notifications-tab" data-tab="system">Systeem</button>
-                </div>
-              </div>
-              <div class="header-notifications-list" id="headerNotificationsList">
-                <div class="header-notifications-loading" id="headerNotificationsLoading">Laden…</div>
-              </div>
-              <div class="header-notifications-footer">
-                <button type="button" class="header-notifications-read-all" id="headerNotificationsReadAll">Alles gelezen</button>
-              </div>
-            </div>
-          </div>
-          <div class="user-dropdown">
+          <div class="user-dropdown" id="headerUserDropdown">
             <div class="user-dropdown-toggle">
               <div class="user-avatar">
                 <% if (user && user.profile_picture) { %>
@@ -1461,16 +1412,14 @@
                 <i class="fas fa-cog user-dropdown-icon"></i>
                 Instellingen
               </a>
-              <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
-              <a href="/dashboard" class="user-dropdown-item">
+              <button type="button" class="user-dropdown-item user-dropdown-item-btn" id="headerNotificationsTrigger" aria-label="Meldingen" style="width: 100%; border: none; background: none; cursor: pointer; font: inherit;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="user-dropdown-icon" style="margin-right: 12px;">
-                  <rect width="7" height="9" x="3" y="3" rx="1"></rect>
-                  <rect width="7" height="5" x="14" y="3" rx="1"></rect>
-                  <rect width="7" height="9" x="14" y="12" rx="1"></rect>
-                  <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
                 </svg>
-                User Dashboard
-              </a>
+                Meldingen
+                <span class="header-notifications-badge header-notifications-badge-in-menu" id="headerNotificationsBadge" data-count="0">0</span>
+              </button>
               <% if (user && (user.user_metadata?.is_admin === true || user.is_admin === true)) { %>
               <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
               <a href="https://opsportal2.vercel.app" target="_blank" rel="noopener noreferrer" class="user-dropdown-item">
@@ -1483,6 +1432,22 @@
                 <i class="fas fa-rectangle-xmark user-dropdown-icon"></i>
                 Uitloggen
               </a>
+            </div>
+            <div class="header-notifications-popover" id="headerNotificationsPopover" role="dialog" aria-label="Meldingen" hidden>
+              <div class="header-notifications-popover-header">
+                <span class="header-notifications-popover-title">Meldingen</span>
+                <div class="header-notifications-tabs">
+                  <button type="button" class="header-notifications-tab active" data-tab="all">Alles</button>
+                  <button type="button" class="header-notifications-tab" data-tab="mention">Mentions</button>
+                  <button type="button" class="header-notifications-tab" data-tab="system">Systeem</button>
+                </div>
+              </div>
+              <div class="header-notifications-list" id="headerNotificationsList">
+                <div class="header-notifications-loading" id="headerNotificationsLoading">Laden…</div>
+              </div>
+              <div class="header-notifications-footer">
+                <button type="button" class="header-notifications-read-all" id="headerNotificationsReadAll">Alles gelezen</button>
+              </div>
             </div>
           </div>
         </div>
