@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="/css/admin/notifications.css">
   <link rel="stylesheet" href="/css/admin/time-tracker.css">
   <link rel="stylesheet" href="/css/admin/search-dropdown.css">
+  <link rel="stylesheet" href="/css/admin/employees-drawer.css">
   <% if (typeof stylesheets !== 'undefined' && stylesheets) { %>
     <% stylesheets.forEach(function(stylesheet) { %>
       <link rel="stylesheet" href="<%= stylesheet %>" media="all" data-page-specific="true">
@@ -1318,6 +1319,7 @@
         <% } %>
       </div>
     </main>
+    <%- include('../admin/partials/task-drawer-global') %>
   </div>
   
   <!-- Client-side router voor snelle navigatie -->
@@ -1332,6 +1334,7 @@
   </script>
   <script src="/js/admin/components/search-dropdown.js"></script>
   <script src="/js/admin/time-tracker.js"></script>
+  <script src="/js/admin/tasks-drawer.js"></script>
   <% if (typeof scripts !== 'undefined' && scripts) { %>
     <% scripts.forEach(function(script) { %>
       <script src="<%= script %>"></script>

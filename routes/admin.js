@@ -8305,6 +8305,85 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Shared helper: get employees + customers for task drawer (used by tasks page and by drawer when opened from other pages)
+async function getTaskDrawerData(req) {
+  const isAdmin = req.user?.user_metadata?.is_admin || false;
+  const currentUserId = req.user?.id;
+  let isManager = false;
+  if (req.user?.role_id) {
+    const { data: role } = await supabaseAdmin
+      .from('roles')
+      .select('name')
+      .eq('id', req.user.role_id)
+      .maybeSingle();
+    if (role?.name?.toLowerCase().includes('manager')) {
+      isManager = true;
+    }
+  }
+  const canViewAll = isAdmin || isManager;
+
+  let employees = [];
+  if (canViewAll) {
+    const [profilesResult, rolesResult] = await Promise.all([
+      supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email, role_id, employee_status, is_admin')
+        .order('first_name'),
+      Promise.resolve().then(async () => {
+        const { getRoleMap } = require('../utils/roleCache');
+        return await getRoleMap();
+      })
+    ]);
+    const { data: allProfiles, error: profilesError } = profilesResult;
+    const { roleMap: roleMapRaw } = rolesResult || {};
+    if (profilesError) console.error('Error fetching profiles:', profilesError);
+    const roleMap = {};
+    Object.entries(roleMapRaw || {}).forEach(([roleId, roleName]) => {
+      roleMap[String(roleId)] = (roleName || '').toLowerCase();
+    });
+    const customerRoleId = '873fe734-197d-41a0-828b-31ced55e6695';
+    const consumerRoleId = '58e20673-a6c1-4f48-9633-2462f4a124db';
+    const filtered = (allProfiles || []).filter(profile => {
+      if (profile.role_id) {
+        const rid = String(profile.role_id);
+        if (rid === customerRoleId || rid === consumerRoleId) return false;
+        const rn = roleMap[rid] || '';
+        if (['customer', 'consumer', 'klant'].includes(rn)) return false;
+      }
+      if (profile.is_admin === true) return true;
+      if (profile.employee_status === 'active' || profile.employee_status === 'paused') return true;
+      if (profile.role_id && roleMap[String(profile.role_id)]) return true;
+      return false;
+    });
+    employees = filtered.map(emp => ({ id: emp.id, first_name: emp.first_name, last_name: emp.last_name, email: emp.email }));
+  } else {
+    const { data: empData } = await supabaseAdmin
+      .from('profiles')
+      .select('id, first_name, last_name, email')
+      .eq('id', currentUserId);
+    employees = empData || [];
+  }
+
+  const { data: customers } = await supabaseAdmin
+    .from('customers')
+    .select('id, name, company_name, email')
+    .order('company_name', { ascending: true })
+    .order('name', { ascending: true });
+
+  return { canViewAll, currentUserId, employees: employees || [], customers: customers || [] };
+}
+
+// API: task drawer data (for opening drawer from time-tracker etc. without full page load)
+router.get('/api/tasks/drawer-data', requireAuth, async (req, res) => {
+  try {
+    const data = await getTaskDrawerData(req);
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    console.error('Error fetching task drawer data:', err);
+    res.status(500).json({ ok: false, error: 'Kon gegevens niet laden' });
+  }
+});
+
 // Tasks overview page - MUST be before /employees/:id to avoid route conflicts
 router.get('/tasks', requireAuth, async (req, res) => {
   try {
@@ -8362,125 +8441,10 @@ router.get('/tasks', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Get all employees for filter and task creation
-    // Employees are identified by: having employee_status OR not having customer/consumer/klant role
-    let employees = [];
-    
-    if (canViewAll) {
-      // OPTIMIZED: Fetch profiles and roles in parallel
-      const [profilesResult, rolesResult] = await Promise.all([
-        supabaseAdmin
-          .from('profiles')
-          .select('id, first_name, last_name, email, role_id, employee_status, is_admin')
-          .order('first_name'),
-        // Get roles using cache
-        Promise.resolve().then(async () => {
-          const { getRoleMap } = require('../utils/roleCache');
-          return await getRoleMap();
-        })
-      ]);
-      
-      const { data: allProfiles, error: profilesError } = profilesResult;
-      const { roleMap: roleMapRaw, roles: allRoles } = rolesResult;
-      
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-      }
-      
-      // Create role map
-      const roleMap = {};
-      Object.entries(roleMapRaw).forEach(([roleId, roleName]) => {
-        roleMap[String(roleId)] = roleName?.toLowerCase() || '';
-      });
-      
-      // Filter to only employees
-      // Include all roles EXCEPT customer/consumer/klant
-      const excludedProfiles = [];
-      const customerRoleId = '873fe734-197d-41a0-828b-31ced55e6695'; // Customer role ID
-      const consumerRoleId = '58e20673-a6c1-4f48-9633-2462f4a124db'; // Consumer role ID
-      
-      const filteredEmployees = (allProfiles || []).filter(profile => {
-        // FIRST: Check if this is a customer/consumer role - EXCLUDE immediately
-        if (profile.role_id) {
-          const roleIdStr = String(profile.role_id);
-          const roleName = roleMap[roleIdStr] || '';
-          
-          // Exclude customer and consumer roles by ID (most reliable)
-          if (roleIdStr === customerRoleId || roleIdStr === consumerRoleId) {
-            excludedProfiles.push({ email: profile.email, role_id: roleIdStr, reason: `Customer/Consumer role ID` });
-            return false;
-          }
-          
-          // Also check by role name (backup)
-          if (roleName) {
-            const lowerRoleName = roleName.toLowerCase();
-            if (lowerRoleName === 'customer' || lowerRoleName === 'consumer' || lowerRoleName === 'klant') {
-              excludedProfiles.push({ email: profile.email, role_id: roleIdStr, role_name: roleName, reason: `Customer/Consumer role: ${roleName}` });
-              return false;
-            }
-          }
-        }
-        
-        // SECOND: If not a customer/consumer, check if it's an employee
-        // Include if:
-        // 1. is_admin = true, OR
-        // 2. employee_status = 'active' or 'paused', OR
-        // 3. has a valid employee role_id (manager, developer, sales, admin, hr, cto, etc.)
-        
-        // Admins are always employees
-        if (profile.is_admin === true) {
-          return true;
-        }
-        
-        // If has employee_status set to 'active' or 'paused', it's an employee
-        if (profile.employee_status === 'active' || profile.employee_status === 'paused') {
-          return true;
-        }
-        
-        // If has a role_id (and it's not customer/consumer, already checked above), include it
-        if (profile.role_id) {
-          const roleIdStr = String(profile.role_id);
-          const roleName = roleMap[roleIdStr] || '';
-          
-          // If role name exists and it's not customer/consumer, include it
-          if (roleName) {
-            return true;
-          }
-          
-          // If role_id exists but role name not found, exclude (safety)
-          excludedProfiles.push({ email: profile.email, role_id: roleIdStr, reason: `Role ID exists but role name not found in map` });
-          return false;
-        }
-        
-        // If no role_id and no employee_status, exclude (likely a customer)
-        excludedProfiles.push({ email: profile.email, employee_status: profile.employee_status || 'null', reason: 'No role_id and no employee_status' });
-        return false;
-      });
-      
-      // Map to final format
-      employees = filteredEmployees.map(emp => ({
-        id: emp.id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
-        email: emp.email
-      }));
-    } else {
-      // Employees can also create tasks for themselves
-      const { data: empData } = await supabaseAdmin
-        .from('profiles')
-        .select('id, first_name, last_name, email')
-        .eq('id', currentUserId)
-        .order('first_name');
-      employees = empData || [];
-    }
+    const drawerData = await getTaskDrawerData(req);
+    const employees = drawerData.employees;
+    const customers = drawerData.customers;
 
-    // Get customers for task creation - from customers table
-    const { data: customers } = await supabaseAdmin
-      .from('customers')
-      .select('id, name, company_name, email')
-      .order('company_name', { ascending: true })
-      .order('name', { ascending: true });
-    
     // Get contacts for task creation
     const { data: contacts } = await supabaseAdmin
       .from('contacts')

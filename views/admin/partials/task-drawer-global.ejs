@@ -1,0 +1,153 @@
+<!-- Task Drawer (global: time-tracker + tasks page) - options filled by JS from /admin/api/tasks/drawer-data -->
+<div id="taskDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true" style="position:fixed;inset:0;background:rgba(11,18,32,0.55);opacity:0;pointer-events:none;z-index:9998;"></div>
+<aside id="taskDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuwe taak" style="position:fixed;top:0;right:0;height:100vh;width:min(520px,92vw);background:#fff;border-left:1px solid rgba(17,24,39,0.08);box-shadow:-12px 0 40px rgba(0,0,0,0.18);transform:translateX(110%);z-index:9999;display:flex;flex-direction:column;">
+  <div class="gs-drawer__header">
+    <div>
+      <h3 class="gs-drawer__title">Nieuwe taak</h3>
+      <p class="gs-drawer__subtitle">Maak een nieuwe taak aan en wijs deze toe aan een werknemer.</p>
+    </div>
+    <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div id="taskAiSuggestion" class="task-ai-suggestion" style="display: none; margin: 0 18px 16px 18px;">
+    <div class="task-ai-suggestion-header">
+      <div class="task-ai-header-left">
+        <div class="task-ai-header-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles" style="width:16px;height:16px;">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+            <path d="M20 3v4"></path><path d="M22 5h-4"></path><path d="M4 17v2"></path><path d="M5 18H3"></path>
+          </svg>
+        </div>
+        <h3 class="task-ai-suggestion-title">AI-taak toewijzing</h3>
+      </div>
+    </div>
+    <div class="task-ai-suggestion-content" id="taskAiSuggestionContent">
+      <div class="task-ai-loading" id="taskAiLoading" style="display: none;">
+        <div class="task-ai-spinner"></div>
+        <span>AI analyseert de taak...</span>
+      </div>
+      <div class="task-ai-suggestion-primary" id="taskAiSuggestionPrimary" style="display: none;">
+        <div class="task-ai-suggestion-header-inner">
+          <span class="task-ai-employee-name" id="taskAiEmployeeName"></span>
+          <span class="task-ai-match-badge" id="taskAiMatchBadge"></span>
+        </div>
+        <p class="task-ai-reason" id="taskAiReason"></p>
+        <div class="task-ai-actions">
+          <button type="button" class="task-ai-approve-btn" id="taskAiApproveBtn">Toewijzing goedkeuren</button>
+          <button type="button" class="task-ai-dismiss-btn" id="taskAiDismissBtn">Negeren</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="gs-drawer__body">
+    <form id="taskCreateForm">
+      <div class="gs-form-group">
+        <label for="taskTitle" class="gs-form-label">Titel <span style="color: #ef4444;">*</span></label>
+        <input type="text" id="taskTitle" name="title" class="gs-form-input" required placeholder="Bijv. Website redesign">
+      </div>
+      <div class="gs-form-group">
+        <label for="taskDescription" class="gs-form-label">Beschrijving</label>
+        <textarea id="taskDescription" name="description" class="gs-form-input" rows="4" placeholder="Beschrijf de taak..."></textarea>
+      </div>
+      <div id="taskEmployeeRow" class="gs-form-grid">
+        <div class="gs-form-group" id="taskEmployeeGroup">
+          <label for="taskEmployee" class="gs-form-label">Werknemer <span style="color: #ef4444;">*</span></label>
+          <select id="taskEmployee" name="employee_id" class="gs-form-input" required>
+            <option value="">Selecteer werknemer...</option>
+          </select>
+        </div>
+        <div class="gs-form-group">
+          <label for="taskPriority" class="gs-form-label">Prioriteit</label>
+          <select id="taskPriority" name="priority" class="gs-form-input">
+            <option value="low">Laag</option>
+            <option value="medium" selected>Normaal</option>
+            <option value="high">Hoog</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div class="gs-form-group">
+        <label class="gs-form-label">Bedrijf of Contactpersoon <span style="color: #ef4444;">*</span></label>
+        <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+            <input type="radio" name="taskRelationType" value="customer" id="taskRelationCustomer" checked>
+            <span>Bedrijf</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
+            <input type="radio" name="taskRelationType" value="contact" id="taskRelationContact">
+            <span>Contactpersoon</span>
+          </label>
+        </div>
+        <div id="taskCustomerContainer" style="position: relative;">
+          <select id="taskCustomer" name="customer_id" class="gs-form-input">
+            <option value="">Selecteer bedrijf...</option>
+          </select>
+        </div>
+        <div id="taskContactContainer" style="position: relative; display: none;">
+          <input type="text" id="taskContactSearch" class="gs-form-input" placeholder="Zoek contactpersoon..." autocomplete="off">
+          <input type="hidden" id="taskContactId" name="contact_id">
+          <div id="taskContactSearchResults" class="customer-search-results" style="display: none;"></div>
+        </div>
+      </div>
+      <div class="gs-form-group">
+        <label for="taskDueDate" class="gs-form-label">Deadline</label>
+        <input type="date" id="taskDueDate" name="due_at" class="gs-form-input">
+      </div>
+      <div class="gs-form-group">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <input type="checkbox" id="taskIsRecurring" name="is_recurring" class="form-checkbox">
+          <label for="taskIsRecurring" style="margin: 0; font-weight: 500; cursor: pointer;">Terugkerend</label>
+        </div>
+        <div id="taskRecurrenceOptions" style="display: none; padding-left: 24px;">
+          <div class="gs-form-grid">
+            <div class="gs-form-group">
+              <label for="taskRecurrenceFrequency" class="gs-form-label">Frequentie</label>
+              <select id="taskRecurrenceFrequency" name="recurrence_frequency" class="gs-form-input">
+                <option value="daily">Dagelijks</option>
+                <option value="weekly" selected>Wekelijks</option>
+                <option value="monthly">Maandelijks</option>
+                <option value="yearly">Jaarlijks</option>
+              </select>
+            </div>
+            <div class="gs-form-group">
+              <label for="taskRecurrenceInterval" class="gs-form-label">Elke</label>
+              <input type="number" id="taskRecurrenceInterval" name="recurrence_interval" class="gs-form-input" value="1" min="1">
+            </div>
+          </div>
+          <div class="gs-form-group" id="taskWeeklyDaysGroup" style="display: none;">
+            <label class="gs-form-label">Dagen van de week</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="1" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Ma</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="2" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Di</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="3" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Wo</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="4" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Do</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="5" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Vr</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="6" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Za</label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;"><input type="checkbox" value="7" name="recurrence_days_of_week" class="recurrence-day-checkbox"> Zo</label>
+            </div>
+          </div>
+          <div class="gs-form-group">
+            <label for="taskRecurrenceEndType" class="gs-form-label">Eindigt op</label>
+            <select id="taskRecurrenceEndType" name="recurrence_end_type" class="gs-form-input">
+              <option value="never">Nooit</option>
+              <option value="date">Op datum</option>
+              <option value="count">Na aantal keren</option>
+            </select>
+          </div>
+          <div class="gs-form-group" id="taskRecurrenceEndDateGroup" style="display: none;">
+            <input type="date" id="taskRecurrenceEndDate" name="recurrence_end_date" class="gs-form-input">
+          </div>
+          <div class="gs-form-group" id="taskRecurrenceEndCountGroup" style="display: none;">
+            <input type="number" id="taskRecurrenceCount" name="recurrence_count" class="gs-form-input" value="10" min="1" placeholder="Aantal keren">
+          </div>
+        </div>
+      </div>
+      <div id="taskCreateError" style="display: none; padding: 12px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; margin-bottom: 16px; font-size: 14px;"></div>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button type="button" class="gs-form-btn-secondary" data-drawer-close style="flex: 1;">Annuleren</button>
+        <button type="submit" id="taskCreateSubmit" class="gs-form-btn-primary" style="flex: 1;">Taak aanmaken</button>
+      </div>
+    </form>
+  </div>
+</aside>

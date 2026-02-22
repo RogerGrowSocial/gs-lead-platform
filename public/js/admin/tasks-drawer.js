@@ -156,15 +156,76 @@
     hideAiSuggestion();
   }
 
+  let drawerDataLoaded = false;
+
+  async function ensureDrawerData() {
+    const empSel = qs('#taskEmployee');
+    if (drawerDataLoaded || (empSel && empSel.tagName === 'SELECT' && empSel.options.length > 1)) {
+      drawerDataLoaded = true;
+      return;
+    }
+    try {
+      const r = await fetch('/admin/api/tasks/drawer-data', { credentials: 'include' });
+      const data = await r.json();
+      if (!data.ok || !data.employees) {
+        drawerDataLoaded = true;
+        return;
+      }
+      const drawer = qs('#' + DRAWER_ID);
+      if (drawer) drawer.setAttribute('data-can-view-all', data.canViewAll ? 'true' : 'false');
+
+      if (empSel && empSel.tagName === 'SELECT') {
+        empSel.innerHTML = '<option value="">Selecteer werknemer...</option>';
+        (data.employees || []).forEach(function(emp) {
+          const opt = document.createElement('option');
+          opt.value = emp.id;
+          opt.textContent = (emp.first_name || '') + ' ' + (emp.last_name || '') + (emp.email ? ' (' + emp.email + ')' : '');
+          empSel.appendChild(opt);
+        });
+      }
+      const custSel = qs('#taskCustomer');
+      if (custSel && custSel.tagName === 'SELECT') {
+        custSel.innerHTML = '<option value="">Selecteer bedrijf...</option>';
+        (data.customers || []).forEach(function(cust) {
+          const opt = document.createElement('option');
+          opt.value = cust.id;
+          opt.textContent = cust.company_name || cust.name || '';
+          custSel.appendChild(opt);
+        });
+      }
+      if (!data.canViewAll) {
+        const group = qs('#taskEmployeeGroup');
+        if (group) group.style.display = 'none';
+        const sel = qs('#taskEmployee');
+        if (sel && sel.tagName === 'SELECT') {
+          const hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'employee_id';
+          hidden.id = 'taskEmployee';
+          hidden.value = data.currentUserId || '';
+          sel.parentNode.replaceChild(hidden, sel);
+        }
+        const ai = qs('#taskAiSuggestion');
+        if (ai) ai.style.display = 'none';
+      } else {
+        const group = qs('#taskEmployeeGroup');
+        if (group) group.style.display = '';
+        const ai = qs('#taskAiSuggestion');
+        if (ai) ai.style.display = 'none'; /* show on demand by AI */
+      }
+      drawerDataLoaded = true;
+    } catch (e) {
+      console.error('Task drawer data:', e);
+      drawerDataLoaded = true;
+    }
+  }
+
   function openDrawer() {
     setOpen(true);
-    // Focus first input
     const firstInput = qs('#taskTitle');
-    if (firstInput) {
-      setTimeout(() => firstInput.focus(), 100);
-    }
-    // Hide AI suggestion initially
+    if (firstInput) setTimeout(function() { firstInput.focus(); }, 100);
     hideAiSuggestion();
+    ensureDrawerData();
   }
 
   function closeDrawer() {
@@ -479,9 +540,10 @@
     const approveBtn = qs('#taskAiApproveBtn');
     const dismissBtn = qs('#taskAiDismissBtn');
 
-    // Check if user can view all (manager/admin) - only show AI for them
+    // Check if user can view all (manager/admin) - from tasks page or set by ensureDrawerData()
     const tasksPage = qs('.tasks-page');
-    const canViewAll = tasksPage?.getAttribute('data-can-view-all') === 'true';
+    const canViewAll = (tasksPage && tasksPage.getAttribute('data-can-view-all') === 'true') ||
+      (drawer && drawer.getAttribute('data-can-view-all') === 'true');
 
     if (canViewAll && titleInput) {
       const triggerAiSuggestion = () => {
@@ -517,7 +579,7 @@
     document.addEventListener('click', onDocumentClick);
     document.addEventListener('keydown', onKeyDown);
 
-    // Open drawer from URL (e.g. time-tracker "Taak toevoegen")
+    // Open drawer from URL (e.g. bookmark /admin/tasks?openTaskDrawer=1)
     const params = new URLSearchParams(window.location.search);
     if (params.get('openTaskDrawer') === '1') {
       const title = params.get('title') || '';
@@ -529,7 +591,20 @@
         window.history.replaceState({}, '', window.location.pathname + '?view=' + view);
       }
     }
+
+    initTaskDrawer();
   }
+
+  window.openTaskDrawer = function(opts) {
+    setOpen(true);
+    const firstInput = qs('#taskTitle');
+    if (firstInput) {
+      firstInput.value = (opts && opts.prefilledTitle) ? opts.prefilledTitle : '';
+      setTimeout(function() { firstInput.focus(); }, 80);
+    }
+    hideAiSuggestion();
+    ensureDrawerData();
+  };
 
   // Initialize on DOM ready
   if (document.readyState === 'loading') {
