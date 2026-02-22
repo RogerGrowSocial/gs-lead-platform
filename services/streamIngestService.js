@@ -3,6 +3,8 @@
 const crypto = require('crypto')
 const bcrypt = require('bcrypt')
 const { supabaseAdmin } = require('../config/supabase')
+const opportunityAssignmentService = require('./opportunityAssignmentService')
+const aiOpportunityDescriptionService = require('./aiOpportunityDescriptionService')
 
 const STREAM_TYPES = ['trustoo', 'webhook', 'form']
 
@@ -178,6 +180,30 @@ class StreamIngestService {
       return { success: false, status: 400, error: validation.error }
     }
 
+    // AI-beschrijving als er geen of een heel korte beschrijving is
+    let description = mapped.description || mapped.notes || null
+    if (!description || String(description).trim().length < 50) {
+      try {
+        const aiDesc = await aiOpportunityDescriptionService.generateOpportunityDescription(mapped, payload)
+        if (aiDesc && aiDesc.trim()) description = aiDesc.trim()
+      } catch (descErr) {
+        console.warn('Stream ingest: AI beschrijving mislukt (kans wordt wel aangemaakt):', descErr.message)
+      }
+    }
+
+    // Waarde: eerst uit stream (mapping), anders AI-inschatting (gebruikt ook de eventueel net gegenereerde beschrijving)
+    let value = mapped.value != null ? Number(mapped.value) : null
+    if (value == null || value === 0) {
+      try {
+        const payloadWithDescription = { ...payload }
+        if (description && description.trim()) payloadWithDescription._generatedDescription = description
+        const aiValue = await aiOpportunityDescriptionService.estimateOpportunityValue(mapped, payloadWithDescription)
+        if (aiValue != null && aiValue > 0) value = aiValue
+      } catch (valueErr) {
+        console.warn('Stream ingest: AI waarde-inschatting mislukt (kans wordt wel aangemaakt):', valueErr.message)
+      }
+    }
+
     const title = mapped.title || mapped.company_name || mapped.email || 'Kans uit stream'
     const opportunityRow = {
       title: String(title).slice(0, 255),
@@ -191,9 +217,9 @@ class StreamIngestService {
       status: mapped.status || 'open',
       stage: mapped.stage || 'nieuw',
       priority: mapped.priority || 'medium',
-      description: mapped.description || mapped.notes || null,
+      description: description || null,
       notes: mapped.notes || null,
-      value: mapped.value != null ? Number(mapped.value) : null,
+      value: value != null ? value : null,
       source_stream_id: stream.id,
       meta: {
         source: 'stream',
@@ -216,6 +242,17 @@ class StreamIngestService {
       const msg = insertErr.message || 'Failed to create opportunity'
       await logEvent(streamId, 'error', 500, idempotencyKey, payload, msg, null, externalId)
       return { success: false, status: 500, error: msg }
+    }
+
+    // Laat elke nieuwe kans via de AI Kansen Router lopen (auto-toewijzing + beslissing loggen)
+    try {
+      await opportunityAssignmentService.assignOpportunity(opportunity.id, {
+        assignedBy: 'auto',
+        streamId
+      })
+    } catch (assignErr) {
+      console.warn('Stream ingest: AI Kansen Router toewijzing mislukt (kans wel aangemaakt):', assignErr.message)
+      // Ingest blijft geslaagd; kans kan later handmatig of opnieuw toegewezen worden
     }
 
     await logEvent(streamId, 'success', 200, idempotencyKey, payload, null, opportunity.id, externalId)
