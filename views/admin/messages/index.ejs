@@ -1,3 +1,7 @@
+<%
+  const _openId = typeof openConversationId === 'string' ? openConversationId : '';
+  const _scrollId = typeof scrollToMessageId === 'string' ? scrollToMessageId : '';
+%>
 <%- include('../../layouts/admin', {
   title,
   activeMenu: activeMenu || 'mail',
@@ -7,7 +11,7 @@
   stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : [],
   scripts: typeof scripts !== 'undefined' ? scripts : [],
   content: `
-  <div class="messages-page" id="messagesPage" data-open-id="<%= typeof openConversationId === 'string' ? openConversationId : '' %>" data-scroll-message-id="<%= typeof scrollToMessageId === 'string' ? scrollToMessageId : '' %>">
+  <div class="messages-page" id="messagesPage" data-open-id="${_openId}" data-scroll-message-id="${_scrollId}">
     <aside class="messages-sidebar">
       <div class="messages-sidebar-header">
         <h2 class="messages-sidebar-title">Communicatie</h2>
