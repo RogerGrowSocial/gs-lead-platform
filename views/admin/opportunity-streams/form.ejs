@@ -9,6 +9,7 @@
   activeSubmenu: 'streams',
   user: user,
   body: `
+  <div class="streams-page">
   <div class="settings-container">
     <div class="page-header">
       <div>
@@ -44,17 +45,18 @@
           <div class="form-group">
             <label for="secret">Secret (optioneel)</label>
             <input type="password" id="secret" name="secret" placeholder="Voor beveiligde webhook (X-Stream-Secret)" class="form-control" autocomplete="new-password" />
+            <p class="form-help">Voor beveiligde webhook (X-Stream-Secret)</p>
           </div>
 
           <div class="form-group" style="margin-top: 1.5rem;">
             <button type="button" id="toggleMoreOptions" class="btn-outline">
               <i class="fas fa-cog"></i> Meer opties (veldkoppeling, standaardwaarden, JSON)
             </button>
-            <div id="moreOptionsBlock" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border, #e2e8f0);">
+            <div id="moreOptionsBlock" style="display: none;">
               <div class="form-group" id="simpleMappingSection">
                 <h3 class="form-section-title" style="margin-top: 0; font-size: 1rem;">Veldkoppeling</h3>
                 <p class="form-help" style="margin-bottom: 12px;">Payload-veldnamen die naar onze velden mappen. Standaard: company_name, email, enz.</p>
-                <div class="stream-mapping-grid" style="display: grid; gap: 12px; max-width: 480px;">
+                <div class="stream-mapping-grid">
                   <div class="form-group" style="margin-bottom: 0;"><label for="map_company_name">Bedrijfsnaam</label><input type="text" id="map_company_name" class="form-control" placeholder="company_name" /></div>
                   <div class="form-group" style="margin-bottom: 0;"><label for="map_contact_name">Contactnaam</label><input type="text" id="map_contact_name" class="form-control" placeholder="contact_name" /></div>
                   <div class="form-group" style="margin-bottom: 0;"><label for="map_email">E-mail</label><input type="text" id="map_email" class="form-control" placeholder="email" /></div>
@@ -106,7 +108,8 @@
     </div>
     ` : ''}
   </div>
+  </div>
   `,
   scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams-form.js'],
-  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
 }) %>

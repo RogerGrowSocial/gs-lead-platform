@@ -203,7 +203,7 @@ class StreamIngestService {
         raw_source_payload: payload
       },
       owner_id: null,
-      assignee_id: mapped.assignee_id || null
+      assigned_to: mapped.assignee_id || mapped.assigned_to || null
     }
 
     const { data: opportunity, error: insertErr } = await supabaseAdmin

@@ -1,0 +1,425 @@
+/* ============================================
+   OPPORTUNITY STREAMS (KANSENSTROMEN) - MODERN UI
+   Matches platform design: opportunities, admin settings
+   ============================================ */
+
+/* Design tokens (align with style.css / adminSettings) */
+.streams-page {
+  --str-primary: #ea5d0d;
+  --str-primary-hover: #cf4a09;
+  --str-primary-light: rgba(234, 93, 13, 0.08);
+  --str-border: #e5e7eb;
+  --str-muted: #6b7280;
+  --str-bg-subtle: #f9fafb;
+  --str-radius: 8px;
+  --str-radius-lg: 12px;
+  --str-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  --str-shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Page container */
+.streams-page .settings-container {
+  max-width: 100%;
+  padding: 0;
+}
+
+/* Back link */
+.streams-page .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--str-muted);
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: color 0.15s ease;
+}
+.streams-page .back-link:hover {
+  color: var(--str-primary);
+}
+
+/* Page header */
+.streams-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.streams-page .page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+.streams-page .page-header .text-muted {
+  font-size: 14px;
+  color: var(--str-muted);
+  margin: 0;
+}
+
+/* Cards */
+.streams-page .settings-card {
+  background: #fff;
+  border: 1px solid var(--str-border);
+  border-radius: var(--str-radius-lg);
+  box-shadow: var(--str-shadow);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.streams-page .settings-card:last-child {
+  margin-bottom: 0;
+}
+.streams-page .settings-card-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--str-border);
+  background: var(--str-bg-subtle);
+}
+.streams-page .settings-card-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+.streams-page .settings-card-subtitle {
+  font-size: 13px;
+  color: var(--str-muted);
+  margin: 0;
+}
+.streams-page .settings-card-body {
+  padding: 24px;
+}
+
+/* Primary button */
+.streams-page .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--str-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--str-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+  text-decoration: none;
+}
+.streams-page .btn-primary:hover {
+  background: var(--str-primary-hover);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Outline button */
+.streams-page .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff;
+  color: #374151;
+  border: 1px solid var(--str-border);
+  border-radius: var(--str-radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.streams-page .btn-outline:hover {
+  background: var(--str-bg-subtle);
+  border-color: #d1d5db;
+}
+
+/* Form */
+.streams-page .form-group {
+  margin-bottom: 20px;
+}
+.streams-page .form-group:last-child {
+  margin-bottom: 0;
+}
+.streams-page .form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.streams-page .form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--str-border);
+  border-radius: var(--str-radius);
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.streams-page .form-control:focus {
+  outline: none;
+  border-color: var(--str-primary);
+  box-shadow: 0 0 0 3px var(--str-primary-light);
+}
+.streams-page .form-help {
+  font-size: 13px;
+  color: var(--str-muted);
+  margin-top: 6px;
+}
+.streams-page .form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--str-border);
+}
+.streams-page .form-group .checkbox-wrapper,
+.streams-page .form-group label:has(input[type="checkbox"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.streams-page .form-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--str-primary);
+  cursor: pointer;
+}
+.streams-page #moreOptionsBlock {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--str-border);
+}
+.streams-page .stream-mapping-grid {
+  display: grid;
+  gap: 12px;
+  max-width: 480px;
+}
+
+/* Streams list table */
+.streams-page .admins-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.streams-page .admins-table-head .admins-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr 1.4fr 1.2fr 120px;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--str-bg-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--str-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--str-border);
+}
+.streams-page .admins-table-body .admins-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr 1.4fr 1.2fr 120px;
+  gap: 16px;
+  padding: 16px 20px;
+  align-items: center;
+  border-bottom: 1px solid var(--str-border);
+  transition: background 0.15s ease;
+}
+.streams-page .admins-table-body .admins-row:hover {
+  background: var(--str-bg-subtle);
+}
+.streams-page .admins-cell {
+  min-width: 0;
+  font-size: 14px;
+  color: #374151;
+}
+.streams-page .admins-cell .admin-name {
+  font-weight: 600;
+  color: #111827;
+}
+.streams-page .admins-cell.actions-cell {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.streams-page .admins-table-body .admins-row .admins-cell.empty-state {
+  grid-column: 1 / -1;
+  padding: 24px;
+  text-align: center;
+  color: var(--str-muted);
+  font-size: 14px;
+}
+.streams-page .admins-table-body .admins-row .admins-cell.empty-state a {
+  color: var(--str-primary);
+  font-weight: 500;
+}
+.streams-page .action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.streams-page .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--str-muted);
+  border-radius: var(--str-radius);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.streams-page .btn-icon:hover {
+  background: var(--str-primary-light);
+  color: var(--str-primary);
+}
+.streams-page .btn-icon svg,
+.streams-page .btn-icon i {
+  font-size: 14px;
+}
+
+/* Status badges */
+.streams-page .status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.streams-page .status-badge.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+.streams-page .status-badge.expired {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.streams-page .status-badge.pending {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+/* Webhook URL box (detail page) */
+.streams-page .webhook-url-box {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.streams-page .webhook-url-box .form-control {
+  flex: 1;
+  min-width: 280px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+
+/* Trustoo callout */
+.streams-page .stream-callout-trustoo {
+  border-left: 4px solid #0ea5e9;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+/* Config / JSON block */
+.streams-page pre#configDisplay,
+.streams-page .stream-config-pre {
+  background: #f8fafc;
+  border: 1px solid var(--str-border);
+  border-radius: var(--str-radius);
+  padding: 16px;
+  font-size: 13px;
+  font-family: ui-monospace, monospace;
+  overflow: auto;
+  max-height: 280px;
+  margin: 0;
+}
+
+/* Event log filters */
+.streams-page .event-filter-btn {
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--str-border);
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.streams-page .event-filter-btn:hover {
+  background: var(--str-bg-subtle);
+}
+.streams-page .event-filter-btn.active {
+  background: var(--str-primary);
+  border-color: var(--str-primary);
+  color: #fff;
+}
+
+/* Event log table (detail) - 7 columns */
+.streams-page .stream-events-table .admins-table-head .admins-row,
+.streams-page .stream-events-table .admins-table-body .admins-row {
+  grid-template-columns: 1.4fr 0.9fr 0.6fr 1fr 1fr 1fr 80px;
+}
+.streams-page .stream-events-table .admins-table-body .admins-row .admins-cell:only-child {
+  grid-column: 1 / -1;
+  padding: 20px;
+  color: var(--str-muted);
+}
+.streams-page .admins-table-body .admins-row .status-badge.active { background: rgba(16, 185, 129, 0.12); color: #059669; }
+.streams-page .admins-table-body .admins-row .status-badge.expired { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+.streams-page .btn-link {
+  background: none;
+  border: none;
+  color: var(--str-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.streams-page .btn-link:hover {
+  color: var(--str-primary-hover);
+}
+
+/* Modals */
+.streams-page #secretModal,
+.streams-page #payloadModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.streams-page #secretModal[style*="flex"],
+.streams-page #payloadModal[style*="flex"] {
+  display: flex !important;
+}
+.streams-page #secretModal > div,
+.streams-page #payloadModal > div {
+  background: #fff;
+  border-radius: var(--str-radius-lg);
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+.streams-page #secretModal h3,
+.streams-page #payloadModal h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.streams-page #secretModal .form-control {
+  font-family: ui-monospace, monospace;
+}
+
+/* Form section title */
+.streams-page .form-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px 0;
+}

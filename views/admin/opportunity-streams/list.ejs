@@ -11,6 +11,7 @@
   activeSubmenu: 'streams',
   user: user,
   body: `
+  <div class="streams-page">
   <div class="settings-container">
     <div class="page-header">
       <div>
@@ -60,7 +61,7 @@
               </div>
             `).join('') }
             ${ (!streams || streams.length === 0) ? `
-              <div class="admins-row"><div class="admins-cell" style="grid-column: 1 / -1;">Nog geen kansenstromen. <a href="/admin/opportunities/streams/new">Maak er een aan</a>.</div></div>
+              <div class="admins-row"><div class="admins-cell empty-state">Nog geen kansenstromen. <a href="/admin/opportunities/streams/new">Maak er een aan</a>.</div></div>
             ` : '' }
           </div>
         </div>
@@ -79,7 +80,8 @@
       <div style="display: flex; justify-content: flex-end;"><button type="button" id="secretModalCloseBtn" class="btn-primary">Sluiten</button></div>
     </div>
   </div>
+  </div>
   `,
   scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams.js'],
-  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
 }) %>

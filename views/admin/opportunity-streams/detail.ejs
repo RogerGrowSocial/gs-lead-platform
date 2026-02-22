@@ -9,6 +9,7 @@
   activeSubmenu: 'streams',
   user: user,
   body: `
+  <div class="streams-page">
   <div class="settings-container" data-stream-id="${stream.id}">
     <div class="page-header">
       <div>
@@ -30,8 +31,8 @@
         <p class="settings-card-subtitle">POST naar deze URL met JSON body. Stel header X-Stream-Secret in als je een secret hebt geconfigureerd.</p>
       </div>
       <div class="settings-card-body">
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <input type="text" id="webhookUrlDisplay" value="${webhookUrl}" readonly class="form-control" style="flex: 1; min-width: 280px;" />
+        <div class="webhook-url-box">
+          <input type="text" id="webhookUrlDisplay" value="${webhookUrl}" readonly class="form-control" />
           <button type="button" id="copyWebhookUrlBtn" class="btn-outline"><i class="fas fa-copy"></i> Kopieer</button>
         </div>
         <p style="margin-top: 12px;"><button type="button" id="rotateSecretBtn" class="btn-outline"><i class="fas fa-key"></i> Rotate secret</button> <span id="rotateMessage" class="text-muted"></span></p>
@@ -39,7 +40,7 @@
     </div>
 
     ${stream.type === 'trustoo' ? `
-    <div class="settings-card" style="border-left: 4px solid var(--color-primary, #3b82f6);">
+    <div class="settings-card stream-callout-trustoo">
       <div class="settings-card-header">
         <h2><i class="fas fa-plug"></i> Trustoo via Zapier</h2>
         <p class="settings-card-subtitle">Zo stuur je Trustoo-leads naar deze stroom.</p>
@@ -60,7 +61,7 @@
         <h2>Mapping (config)</h2>
       </div>
       <div class="settings-card-body">
-        <pre id="configDisplay" style="background: #f5f5f5; padding: 12px; border-radius: 8px; overflow: auto; max-height: 240px;">${JSON.stringify(stream.config || {}, null, 2)}</pre>
+        <pre id="configDisplay" class="stream-config-pre">${JSON.stringify(stream.config || {}, null, 2)}</pre>
       </div>
     </div>
 
@@ -68,15 +69,15 @@
       <div class="settings-card-header">
         <h2>Event logs (laatste 100)</h2>
         <p class="settings-card-subtitle">Filters</p>
-        <div style="display: flex; gap: 8px; margin-top: 8px;">
-          <button type="button" class="btn-outline-sm event-filter-btn active" data-status="">Alles</button>
-          <button type="button" class="btn-outline-sm event-filter-btn" data-status="success">Success</button>
-          <button type="button" class="btn-outline-sm event-filter-btn" data-status="error">Errors</button>
+        <div class="event-filters-row" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+          <button type="button" class="event-filter-btn active" data-status="">Alles</button>
+          <button type="button" class="event-filter-btn" data-status="success">Success</button>
+          <button type="button" class="event-filter-btn" data-status="error">Errors</button>
           <button type="button" id="sendTestEventBtn" class="btn-primary"><i class="fas fa-paper-plane"></i> Test event versturen</button>
         </div>
       </div>
       <div class="settings-card-body">
-        <div class="admins-table">
+        <div class="admins-table stream-events-table">
           <div class="admins-table-head">
             <div class="admins-row">
               <div class="admins-cell">Ontvangen</div>
@@ -89,7 +90,7 @@
             </div>
           </div>
           <div class="admins-table-body" id="eventsTableBody">
-            <div class="admins-row"><div class="admins-cell">Laden…</div></div>
+            <div class="admins-row"><div class="admins-cell empty-state">Laden…</div></div>
           </div>
         </div>
         <div id="eventsPagination"></div>
@@ -116,7 +117,8 @@
       <div style="display: flex; justify-content: flex-end;"><button type="button" id="secretModalCloseBtn" class="btn-primary">Sluiten</button></div>
     </div>
   </div>
+  </div>
   `,
   scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/opportunity-streams-detail.js'],
-  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css']
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
 }) %>

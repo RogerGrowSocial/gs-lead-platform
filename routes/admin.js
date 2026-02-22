@@ -15169,7 +15169,7 @@ router.get('/opportunities/streams', requireAuth, requireManagerOrAdminPage, asy
       lastEventByStream,
       successRateByStream,
       scripts: ['/js/admin/opportunity-streams.js'],
-      stylesheets: ['/css/opportunities.css']
+      stylesheets: ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon kansenstromen niet laden', error: {}, user: req.user })
@@ -15185,7 +15185,7 @@ router.get('/opportunities/streams/new', requireAuth, requireManagerOrAdminPage,
       user: req.user,
       stream: null,
       scripts: ['/js/admin/opportunity-streams-form.js'],
-      stylesheets: ['/css/opportunities.css']
+      stylesheets: ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
@@ -15211,7 +15211,7 @@ router.get('/opportunities/streams/:id', requireAuth, requireManagerOrAdminPage,
       stream,
       baseUrl: baseUrl.replace(/\/$/, ''),
       scripts: ['/js/admin/opportunity-streams-detail.js'],
-      stylesheets: ['/css/opportunities.css']
+      stylesheets: ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon kansenstroom niet laden', error: {}, user: req.user })
@@ -15235,7 +15235,7 @@ router.get('/opportunities/streams/:id/edit', requireAuth, requireManagerOrAdmin
       user: req.user,
       stream,
       scripts: ['/js/admin/opportunity-streams-form.js'],
-      stylesheets: ['/css/opportunities.css']
+      stylesheets: ['/css/opportunities.css', '/css/admin/opportunity-streams.css']
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon pagina niet laden', error: {}, user: req.user })
