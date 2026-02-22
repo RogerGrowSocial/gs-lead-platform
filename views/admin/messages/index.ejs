@@ -1,0 +1,105 @@
+<%- include('../../layouts/admin', {
+  title,
+  activeMenu: activeMenu || 'mail',
+  activeSubmenu: 'messages',
+  user,
+  userRole,
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : [],
+  scripts: typeof scripts !== 'undefined' ? scripts : [],
+  content: `
+  <div class="messages-page" id="messagesPage" data-open-id="<%= typeof openConversationId === 'string' ? openConversationId : '' %>" data-scroll-message-id="<%= typeof scrollToMessageId === 'string' ? scrollToMessageId : '' %>">
+    <aside class="messages-sidebar">
+      <div class="messages-sidebar-header">
+        <h2 class="messages-sidebar-title">Communicatie</h2>
+        <button type="button" class="messages-btn-new" id="messagesBtnNew" aria-label="Nieuwe chat">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Nieuwe chat
+        </button>
+      </div>
+      <div class="messages-search-wrap">
+        <svg class="messages-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" class="messages-search-input" id="messagesSearchInput" placeholder="Zoek conversaties..." autocomplete="off" />
+      </div>
+      <div class="messages-tabs">
+        <button type="button" class="messages-tab active" data-tab="all">Alles</button>
+        <button type="button" class="messages-tab" data-tab="unread">Ongelezen</button>
+      </div>
+      <div class="messages-conversation-list" id="messagesConversationList">
+        <div class="messages-skeleton" id="messagesListSkeleton">
+          <div class="messages-skeleton-item"></div>
+          <div class="messages-skeleton-item"></div>
+          <div class="messages-skeleton-item"></div>
+          <div class="messages-skeleton-item"></div>
+          <div class="messages-skeleton-item"></div>
+        </div>
+        <div class="messages-empty" id="messagesListEmpty" style="display:none;">
+          <p>Nog geen conversaties.</p>
+          <p class="messages-empty-hint">Start een nieuwe chat met een collega.</p>
+        </div>
+        <div class="messages-list-inner" id="messagesListInner" style="display:none;"></div>
+      </div>
+    </aside>
+    <section class="messages-main">
+      <div class="messages-main-placeholder" id="messagesMainPlaceholder">
+        <div class="messages-placeholder-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <p class="messages-placeholder-title">Selecteer een conversatie</p>
+        <p class="messages-placeholder-text">Kies een chat links of start een nieuwe.</p>
+      </div>
+      <div class="messages-thread-wrap" id="messagesThreadWrap" style="display:none;">
+        <header class="messages-thread-header">
+          <div class="messages-thread-header-left">
+            <button type="button" class="messages-back-btn" id="messagesBackBtn" aria-label="Terug">←</button>
+            <div class="messages-thread-avatars" id="messagesThreadAvatars"></div>
+            <div class="messages-thread-info">
+              <h3 class="messages-thread-title" id="messagesThreadTitle">—</h3>
+              <span class="messages-thread-meta" id="messagesThreadMeta">—</span>
+            </div>
+          </div>
+          <div class="messages-thread-header-right">
+            <button type="button" class="messages-info-panel-btn" id="messagesInfoPanelBtn" aria-label="Info">ℹ</button>
+          </div>
+        </header>
+        <div class="messages-messages-list" id="messagesMessagesList">
+          <div class="messages-load-more" id="messagesLoadMore" style="display:none;">
+            <button type="button" class="messages-load-more-btn" id="messagesLoadMoreBtn">Oudere berichten laden</button>
+          </div>
+          <div class="messages-messages-inner" id="messagesMessagesInner"></div>
+          <div class="messages-new-pill" id="messagesNewPill" style="display:none;"></div>
+        </div>
+        <div class="messages-composer">
+          <textarea class="messages-composer-input" id="messagesComposerInput" placeholder="Schrijf een bericht… (Enter = verzenden, Shift+Enter = nieuwe regel)" rows="1"></textarea>
+          <button type="button" class="messages-composer-send" id="messagesComposerSend" aria-label="Verstuur">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+    <aside class="messages-right-panel" id="messagesRightPanel">
+      <div class="messages-right-panel-header">
+        <h4>Deelnemers</h4>
+        <button type="button" class="messages-right-panel-close" id="messagesRightPanelClose" aria-label="Sluiten">×</button>
+      </div>
+      <div class="messages-right-panel-body" id="messagesRightPanelBody"></div>
+    </aside>
+  </div>
+
+  <!-- New conversation modal -->
+  <div class="messages-modal" id="messagesNewModal" role="dialog" aria-label="Nieuwe chat" hidden>
+    <div class="messages-modal-backdrop" id="messagesNewModalBackdrop"></div>
+    <div class="messages-modal-content">
+      <div class="messages-modal-header">
+        <h3>Nieuwe chat</h3>
+        <button type="button" class="messages-modal-close" id="messagesNewModalClose" aria-label="Sluiten">×</button>
+      </div>
+      <div class="messages-modal-search">
+        <input type="text" class="messages-modal-search-input" id="messagesNewSearchInput" placeholder="Zoek op naam of e-mail..." autocomplete="off" />
+      </div>
+      <div class="messages-modal-results" id="messagesNewResults">
+        <p class="messages-modal-hint">Typ om collega's te zoeken.</p>
+      </div>
+    </div>
+  </div>
+  `
+}) %>
