@@ -166,8 +166,13 @@ class StreamIngestService {
     if (!options.skipVerification) {
       const verification = await this.verifySecret(stream, rawBody, headerSecret, headerSignature)
       if (!verification.valid) {
-        await logEvent(streamId, 'error', 401, null, payload, verification.error, null)
-        return { success: false, status: 401, error: verification.error }
+        let errMsg = verification.error
+        if (errMsg && errMsg.includes('Missing')) {
+          console.warn('[ingest] Request without X-Stream-Secret rejected. StreamId=', streamId, 'Payload keys:', payload && typeof payload === 'object' ? Object.keys(payload) : 'n/a')
+          errMsg += ' Stuur de header X-Stream-Secret met het secret van deze stroom. Gebruik maar één bron: alleen Call Hook (snippet) of alleen Zapier.'
+        }
+        await logEvent(streamId, 'error', 401, null, payload, errMsg, null)
+        return { success: false, status: 401, error: errMsg }
       }
     }
 
