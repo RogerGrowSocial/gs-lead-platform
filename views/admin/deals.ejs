@@ -8,15 +8,24 @@
     return new Date(iso).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
   }
   const formatRelativeTime = (iso) => {
-    if (!iso) return '—'
-    const d = new Date(iso)
+    if (!iso) return '-'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '-'
     const now = new Date()
-    const diffMs = now - d
-    const days = Math.floor(diffMs / (24 * 60 * 60 * 1000))
-    if (days === 0) return 'Vandaag'
-    if (days === 1) return 'Gisteren'
-    if (days < 7) return `${days} dagen geleden`
-    return formatDate(iso)
+    const diffMs = now - date
+    const diffMinutes = Math.round(diffMs / 60000)
+    if (diffMinutes <= 0) return 'zojuist'
+    if (diffMinutes < 60) return diffMinutes === 1 ? '1 minuut geleden' : `${diffMinutes} minuten geleden`
+    const diffHours = Math.round(diffMinutes / 60)
+    if (diffHours < 24) return diffHours === 1 ? '1 uur geleden' : `${diffHours} uur geleden`
+    const diffDays = Math.round(diffHours / 24)
+    if (diffDays < 7) return diffDays === 1 ? '1 dag geleden' : `${diffDays} dagen geleden`
+    const diffWeeks = Math.round(diffDays / 7)
+    if (diffWeeks < 5) return diffWeeks === 1 ? '1 week geleden' : `${diffWeeks} weken geleden`
+    const diffMonths = Math.round(diffDays / 30)
+    if (diffMonths < 12) return diffMonths === 1 ? '1 maand geleden' : `${diffMonths} maanden geleden`
+    const diffYears = Math.round(diffDays / 365)
+    return diffYears === 1 ? '1 jaar geleden' : `${diffYears} jaar geleden`
   }
   // Eenduidige deal-stages voor pipeline en data (list + Kanban)
   const DEAL_STAGES = [
@@ -51,9 +60,10 @@
   const renderDealCard = (d, forKanban = false) => {
     const title = d.title || opp(d).title || opp(d).company_name || 'Deal'
     const company = opp(d).company_name || ''
+    const companyName = company || title || 'Onbekend bedrijf'
     const hasDistinctTitle = Boolean(company && title && title !== company)
-    const initialsSource = company || title || '?'
-    const initials = initialsSource.slice(0, 2).toUpperCase()
+    const initialsMatches = companyName ? companyName.match(/\b\w/g) : null
+    const initials = (initialsMatches && initialsMatches.length ? initialsMatches.slice(0, 2).join('') : companyName.substring(0, 2)).toUpperCase()
     const repName = (typeof salesRepsMap !== 'undefined' && d.sales_rep_id && salesRepsMap[d.sales_rep_id]) ? salesRepsMap[d.sales_rep_id] : (d.sales_rep_id ? 'Rep' : '—')
     const valueDisplay = formatCurrency(d.value_eur)
     const stageLabel = getStageLabel(d.stage)
@@ -61,13 +71,15 @@
     const statusClass = getStatusClass(d.status)
     const statusLabel = getStatusLabel(d.status)
     const contactItems = []
-    if (opp(d).contact_name) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span>${opp(d).contact_name}</span></div>`)
-    if (opp(d).email) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><span>${opp(d).email}</span></div>`)
-    if (opp(d).phone) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>${opp(d).phone}</span></div>`)
+    if (opp(d).contact_name) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span>${opp(d).contact_name}</span></div>`)
+    if (opp(d).email) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><span>${opp(d).email}</span></div>`)
+    if (opp(d).phone) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>${opp(d).phone}</span></div>`)
     const contactRow = contactItems.length ? `<div class="opportunity-card-contact">${contactItems.join('')}</div>` : ''
     const subtitleLine = hasDistinctTitle ? `<p class="opportunity-card-subtitle">${title}</p>` : (!company && title ? `<p class="opportunity-card-subtitle">${title}</p>` : '')
-    const companyDisplay = company || title || 'Onbekend'
-    const cardClasses = forKanban ? 'deal-kanban-card' : 'deal-list-card'
+    const descriptionText = opp(d).description ? opp(d).description.trim() : ''
+    const truncatedDescription = descriptionText.length > 160 ? `${descriptionText.substring(0, 160)}…` : descriptionText
+    const descriptionLine = truncatedDescription ? `<p class="opportunity-card-description">${truncatedDescription}</p>` : ''
+    const cardClasses = forKanban ? 'deal-kanban-card' : ''
     return `
       <a href="/admin/opportunities/deals/${d.id}" class="opportunity-card-entry ${cardClasses}">
         <div class="opportunity-card">
@@ -77,12 +89,13 @@
               <div class="opportunity-card-header">
                 <div class="opportunity-card-heading">
                   <div class="opportunity-card-heading-row">
-                    <h3 class="opportunity-card-company">${companyDisplay}</h3>
+                    <h3 class="opportunity-card-company">${companyName}</h3>
                     <span class="opportunity-badge ${statusClass}">${statusLabel}</span>
                     <span class="opportunity-badge ${stageClass}">${stageLabel}</span>
                     <span class="opportunity-badge status-gray">${repName}</span>
                   </div>
                   ${subtitleLine}
+                  ${descriptionLine}
                   ${contactRow}
                 </div>
                 <div class="opportunity-card-meta">
@@ -110,7 +123,7 @@
   activeSubmenu: 'deals',
   user: user,
   body: `
-  <div class="deals-container">
+  <div class="opportunities-container">
     <div class="page-header">
       <div class="page-header-title">
         <h1>Deals</h1>
@@ -147,8 +160,8 @@
       </div>
     </div>
 
-    <div class="deals-listing-container">
-      <div class="deals-header-row">
+    <div class="opportunities-listing-container">
+      <div class="opportunities-header-row">
         <div class="deals-filter-tabs">
           <a href="${baseUrl}${viewMode === 'kanban' ? '?view=kanban' : ''}" class="deals-tab ${filterStatus === 'all' ? 'active' : ''}">Alle</a>
           <a href="${baseUrl}?status=open${viewMode === 'kanban' ? '&view=kanban' : ''}" class="deals-tab ${filterStatus === 'open' ? 'active' : ''}">Open</a>
@@ -178,7 +191,7 @@
         }).join('')}
       </div>
       ` : `
-      <div class="deals-list opportunities-list" id="dealsList">
+      <div class="opportunities-list" id="dealsList">
         ${(deals || []).map(d => renderDealCard(d, false)).join('')}
         ${(!deals || deals.length === 0) ? `
           <div class="deals-empty">

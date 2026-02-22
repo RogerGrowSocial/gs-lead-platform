@@ -15354,7 +15354,7 @@ router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, r
     const viewMode = req.query.view || 'list' // list | kanban
     const { data: dealsRaw } = await supabaseAdmin
       .from('deals')
-      .select('*, opportunity:opportunities(id, title, company_name, contact_name, email, phone)')
+      .select('*, opportunity:opportunities(id, title, company_name, contact_name, email, phone, description)')
       .order('created_at', { ascending: false })
 
     let deals = dealsRaw || []

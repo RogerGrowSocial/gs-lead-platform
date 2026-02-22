@@ -1,48 +1,27 @@
 /* ============================================
-   DEALS - List & detail (platform style, HubSpot-achtig)
+   DEALS - Zelfde listing als Kansen, + Kanban & detail
    ============================================ */
-
-.deals-container {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background-color: #ffffff;
-}
-
-.deals-kpis .kpi-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
 
 .deals-kpis .kpi-icon {
   color: #ea5d0d;
   opacity: 0.9;
 }
 
-.deals-listing-container {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-top: 24px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+/* Deal cards: link als block, zelfde look als opportunity cards */
+a.opportunity-card-entry {
+  display: block;
+  text-decoration: none;
+  color: inherit;
 }
 
-.deals-header-row {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+#dealsList .opportunity-card-avatar.deal-avatar {
+  background: linear-gradient(135deg, #ea5d0d 0%, #cf4a09 100%);
+  color: #ffffff;
 }
 
+.opportunities-header-row .deals-filter-tabs {
+  flex: 1;
+}
 .deals-filter-tabs {
   display: flex;
   align-items: center;
@@ -93,155 +72,6 @@
 .deals-view-btn.active {
   background: #e5e7eb;
   color: #111827;
-}
-
-/* Deals list: same card layout as opportunities, orange avatar */
-.deals-list .opportunity-card-avatar.deal-avatar,
-.deal-list-card .opportunity-card-avatar.deal-avatar {
-  background: linear-gradient(135deg, #ea5d0d 0%, #cf4a09 100%);
-  color: #ffffff;
-}
-
-.deals-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.deal-card-entry {
-  display: block;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  text-decoration: none;
-  color: inherit;
-  transition: background 0.15s ease;
-}
-
-.deal-card-entry:last-child {
-  border-bottom: none;
-}
-
-.deal-card-entry:hover {
-  background: #f9fafb;
-}
-
-.deal-card-main {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.deal-card-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #ea5d0d 0%, #cf4a09 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.deal-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.deal-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.deal-card-heading {
-  min-width: 0;
-}
-
-.deal-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
-  line-height: 1.3;
-}
-
-.deal-card-company {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0;
-}
-
-.deal-card-meta {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.deal-card-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 4px 0;
-}
-
-.deal-card-time {
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
-}
-
-.deal-card-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.deal-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.deal-badge.status-blue {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.deal-badge.status-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.deal-badge.status-gray {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.deal-badge.deal-stage-won {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.deal-badge.deal-stage-lost {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.deal-badge.deal-stage-open {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.deal-card-rep {
-  font-size: 12px;
-  color: #6b7280;
-  margin-left: 4px;
 }
 
 .deals-empty {
