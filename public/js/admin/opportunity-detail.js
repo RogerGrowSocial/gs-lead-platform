@@ -295,11 +295,46 @@ function setupSalesStatusPanel() {
   }
 }
 
+function setupConvertToDeal() {
+  const btn = document.getElementById('convert-to-deal-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const oppId = btn.dataset.oppId;
+    if (!oppId) return;
+    if (!confirm('Deze kans omzetten naar een deal? De sales status wordt gezet op Klant (gewonnen).')) return;
+    btn.disabled = true;
+    btn.textContent = 'Bezig...';
+    try {
+      const res = await fetch(`/admin/api/opportunities/${oppId}/convert-to-deal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.alreadyConverted) {
+          btn.textContent = 'Al geconverteerd';
+          window.location.reload();
+        } else {
+          btn.textContent = 'Omgezet!';
+          window.location.reload();
+        }
+      } else throw new Error(data.error || 'Fout bij converteren');
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Converteer naar deal';
+      alert(e.message || 'Fout bij converteren');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupEditableFields();
   setupTabs();
   setupRouterDrawer();
   setupSalesStatusPanel();
+  setupConvertToDeal();
 });
 
 function editOpportunity() {

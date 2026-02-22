@@ -3,8 +3,17 @@
 const crypto = require('crypto')
 const bcrypt = require('bcrypt')
 const { supabaseAdmin } = require('../config/supabase')
-const opportunityAssignmentService = require('./opportunityAssignmentService')
-const aiOpportunityDescriptionService = require('./aiOpportunityDescriptionService')
+// Lazy-load optional services so serverless (e.g. Vercel) can start even if they fail to load
+let _opportunityAssignmentService = null
+let _aiOpportunityDescriptionService = null
+function getOpportunityAssignmentService() {
+  if (!_opportunityAssignmentService) _opportunityAssignmentService = require('./opportunityAssignmentService')
+  return _opportunityAssignmentService
+}
+function getAiOpportunityDescriptionService() {
+  if (!_aiOpportunityDescriptionService) _aiOpportunityDescriptionService = require('./aiOpportunityDescriptionService')
+  return _aiOpportunityDescriptionService
+}
 
 const STREAM_TYPES = ['trustoo', 'webhook', 'form']
 
@@ -126,9 +135,10 @@ class StreamIngestService {
    * @param {string} rawBody - Raw request body (for HMAC and logging)
    * @param {string} headerSecret - X-Stream-Secret
    * @param {string} headerSignature - X-Signature
+   * @param {{ skipVerification?: boolean }} options - skipVerification: true for admin test-event (no plain secret available)
    * @returns {{ success: boolean, status: number, opportunityId?: string, duplicate?: boolean, error?: string }}
    */
-  static async ingest(streamId, rawBody, headerSecret, headerSignature) {
+  static async ingest(streamId, rawBody, headerSecret, headerSignature, options = {}) {
     let payload
     try {
       payload = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody
@@ -153,10 +163,12 @@ class StreamIngestService {
       return { success: false, status: 403, error: 'Stream is inactive' }
     }
 
-    const verification = await this.verifySecret(stream, rawBody, headerSecret, headerSignature)
-    if (!verification.valid) {
-      await logEvent(streamId, 'error', 401, null, payload, verification.error, null)
-      return { success: false, status: 401, error: verification.error }
+    if (!options.skipVerification) {
+      const verification = await this.verifySecret(stream, rawBody, headerSecret, headerSignature)
+      if (!verification.valid) {
+        await logEvent(streamId, 'error', 401, null, payload, verification.error, null)
+        return { success: false, status: 401, error: verification.error }
+      }
     }
 
     const idempotencyKey = this.buildIdempotencyKey(payload)
@@ -180,24 +192,26 @@ class StreamIngestService {
       return { success: false, status: 400, error: validation.error }
     }
 
-    // AI-beschrijving als er geen of een heel korte beschrijving is
+    // AI-beschrijving als er geen of een heel korte beschrijving is (lazy-load service)
     let description = mapped.description || mapped.notes || null
     if (!description || String(description).trim().length < 50) {
       try {
-        const aiDesc = await aiOpportunityDescriptionService.generateOpportunityDescription(mapped, payload)
+        const aiSvc = getAiOpportunityDescriptionService()
+        const aiDesc = await aiSvc.generateOpportunityDescription(mapped, payload)
         if (aiDesc && aiDesc.trim()) description = aiDesc.trim()
       } catch (descErr) {
         console.warn('Stream ingest: AI beschrijving mislukt (kans wordt wel aangemaakt):', descErr.message)
       }
     }
 
-    // Waarde: eerst uit stream (mapping), anders AI-inschatting (gebruikt ook de eventueel net gegenereerde beschrijving)
+    // Waarde: eerst uit stream (mapping), anders AI-inschatting (lazy-load service)
     let value = mapped.value != null ? Number(mapped.value) : null
     if (value == null || value === 0) {
       try {
+        const aiSvc = getAiOpportunityDescriptionService()
         const payloadWithDescription = { ...payload }
         if (description && description.trim()) payloadWithDescription._generatedDescription = description
-        const aiValue = await aiOpportunityDescriptionService.estimateOpportunityValue(mapped, payloadWithDescription)
+        const aiValue = await aiSvc.estimateOpportunityValue(mapped, payloadWithDescription)
         if (aiValue != null && aiValue > 0) value = aiValue
       } catch (valueErr) {
         console.warn('Stream ingest: AI waarde-inschatting mislukt (kans wordt wel aangemaakt):', valueErr.message)
@@ -244,9 +258,10 @@ class StreamIngestService {
       return { success: false, status: 500, error: msg }
     }
 
-    // Laat elke nieuwe kans via de AI Kansen Router lopen (auto-toewijzing + beslissing loggen)
+    // Laat elke nieuwe kans via de AI Kansen Router lopen (lazy-load service)
     try {
-      await opportunityAssignmentService.assignOpportunity(opportunity.id, {
+      const assignSvc = getOpportunityAssignmentService()
+      await assignSvc.assignOpportunity(opportunity.id, {
         assignedBy: 'auto',
         streamId
       })

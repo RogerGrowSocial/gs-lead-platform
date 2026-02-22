@@ -153,6 +153,25 @@
           </div>
         </section>
 
+        <!-- Deal: Converteer of bekijk -->
+        <section class="detail-card" id="deal-panel">
+          <h3 class="card-title">Deal</h3>
+          <% if (typeof linkedDeal !== 'undefined' && linkedDeal) { %>
+            <p class="deal-linked-message">Deze kans is omgezet naar een deal.</p>
+            <a href="/admin/opportunities/deals" class="btn-primary-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fas fa-external-link-alt"></i>
+              Bekijk deal: <%= linkedDeal.title || 'Deal' %>
+            </a>
+            <p class="deal-meta"><%= formatCurrency(linkedDeal.value_eur) %> · <%= linkedDeal.stage || 'proposal' %></p>
+          <% } else { %>
+            <p class="deal-convert-message">Zet deze kans om in een deal om verder te werken in de deal-pipeline.</p>
+            <button type="button" class="btn-primary-sm" id="convert-to-deal-btn" data-opp-id="<%= opp.id %>">
+              <i class="fas fa-exchange-alt"></i>
+              Converteer naar deal
+            </button>
+          <% } %>
+        </section>
+
         <!-- Summary Card -->
         <section class="detail-card company-card">
           <div class="company-header">

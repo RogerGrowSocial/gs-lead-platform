@@ -1,0 +1,112 @@
+<%
+  const d = deal || {}
+  const opp = opportunity || {}
+  const formatCurrency = (amount) => {
+    if (amount == null) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+  }
+  const formatDate = (iso) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  const formatDateTime = (iso) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+  const stageLabels = { proposal: 'Offerte', negotiation: 'Onderhandeling', discovery: 'Discovery', qualified: 'Gekwalificeerd', closed_won: 'Gewonnen', closed_lost: 'Verloren' }
+  const stages = ['proposal', 'negotiation', 'qualified', 'closed_won']
+  const currentStage = d.stage || 'proposal'
+  const stageIndex = stages.indexOf(currentStage) >= 0 ? stages.indexOf(currentStage) : 0
+  const assigneeName = assignee ? assignee.name : 'Niet toegewezen'
+  const titleDisplay = d.title || opp.company_name || opp.title || 'Deal'
+  const initials = (opp.company_name || titleDisplay).slice(0, 2).toUpperCase()
+%>
+<div class="deal-detail-page" data-deal-id="<%= d.id %>">
+  <header class="opportunity-detail-header">
+    <div class="opportunity-detail-header-content">
+      <a href="/admin/opportunities/deals" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Terug naar deals
+      </a>
+    </div>
+  </header>
+
+  <div class="opportunity-detail-container">
+    <div class="opportunity-detail-grid">
+      <div class="opportunity-detail-main">
+        <section class="detail-card company-card deal-header-card">
+          <div class="company-header">
+            <div class="company-avatar deal-avatar"><%= initials %></div>
+            <div class="company-info">
+              <h1 class="company-title"><%= titleDisplay %></h1>
+              <% if (opp.company_name && opp.company_name !== titleDisplay) { %>
+                <p class="company-subtitle"><%= opp.company_name %></p>
+              <% } %>
+              <div class="company-badges deal-detail-badges">
+                <span class="opportunity-badge <%= d.status === 'won' ? 'status-success' : d.status === 'lost' ? 'status-gray' : 'status-blue' %>">
+                  <%= d.status === 'open' ? 'Open' : d.status === 'won' ? 'Gewonnen' : d.status === 'lost' ? 'Verloren' : d.status || 'Open' %>
+                </span>
+                <span class="opportunity-badge status-orange"><%= stageLabels[d.stage] || d.stage || 'Offerte' %></span>
+              </div>
+            </div>
+            <div class="company-value">
+              <p class="value-label">Dealwaarde</p>
+              <p class="value-amount"><%= formatCurrency(d.value_eur) %></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-card">
+          <h3 class="card-title">Pipeline</h3>
+          <div class="pipeline-container">
+            <div class="pipeline-line">
+              <div class="pipeline-progress" style="width: <%= (stageIndex / (stages.length - 1)) * 100 %>%"></div>
+            </div>
+            <div class="pipeline-stages">
+              <% stages.forEach((stage, i) => { %>
+                <div class="pipeline-stage">
+                  <div class="pipeline-stage-indicator <%= i === stageIndex ? 'active' : '' %> <%= i < stageIndex ? 'past' : '' %> <%= i > stageIndex ? 'future' : '' %>">
+                    <% if (i < stageIndex) { %><i class="fas fa-check"></i><% } else { %><div class="stage-dot"></div><% } %>
+                  </div>
+                  <p class="pipeline-stage-label <%= i === stageIndex ? 'active' : '' %>"><%= stageLabels[stage] || stage %></p>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        </section>
+
+        <% if (opp.id) { %>
+        <section class="detail-card">
+          <h3 class="card-title">Gekoppelde kans</h3>
+          <a href="/admin/opportunities/<%= opp.id %>" class="deal-opportunity-link">
+            <div class="deal-opportunity-box">
+              <span class="deal-opportunity-title"><%= opp.title || opp.company_name || 'Kans' %></span>
+              <span class="deal-opportunity-meta"><%= opp.contact_name || '' %> · <%= formatCurrency(opp.value || opp.value_eur) %></span>
+              <i class="fas fa-external-link-alt"></i>
+            </div>
+          </a>
+        </section>
+        <% } %>
+      </div>
+
+      <aside class="opportunity-detail-sidebar">
+        <section class="detail-card">
+          <h3 class="card-title">Eigenaar</h3>
+          <p class="deal-sidebar-value"><%= assigneeName %></p>
+          <% if (assignee && assignee.email) { %>
+            <p class="deal-sidebar-meta"><a href="mailto:<%= assignee.email %>"><%= assignee.email %></a></p>
+          <% } %>
+        </section>
+        <section class="detail-card">
+          <h3 class="card-title">Details</h3>
+          <div class="deal-detail-meta">
+            <p><span class="deal-meta-label">Aangemaakt</span><br><%= formatDateTime(d.created_at) %></p>
+            <% if (d.updated_at) { %>
+              <p><span class="deal-meta-label">Bijgewerkt</span><br><%= formatDateTime(d.updated_at) %></p>
+            <% } %>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>

@@ -15340,22 +15340,104 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
 // Deals list (under Kansen) - MUST be before /opportunities/:id route
 router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
-    const { data: deals } = await supabaseAdmin
+    const statusFilter = req.query.status || 'all'
+    const { data: dealsRaw } = await supabaseAdmin
       .from('deals')
-      .select('*, opportunity:opportunities(id,title)')
+      .select('*, opportunity:opportunities(id, title, company_name, contact_name)')
       .order('created_at', { ascending: false })
+
+    let deals = dealsRaw || []
+    if (statusFilter !== 'all') {
+      deals = deals.filter(d => d.status === statusFilter)
+    }
+
+    const repIds = [...new Set(deals.map(d => d.sales_rep_id).filter(Boolean))]
+    let salesRepsMap = {}
+    if (repIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', repIds)
+      salesRepsMap = (profiles || []).reduce((acc, p) => {
+        acc[p.id] = [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Onbekend'
+        return acc
+      }, {})
+    }
+
+    const allDeals = dealsRaw || []
+    const kpis = {
+      totalValue: allDeals.reduce((s, d) => s + (Number(d.value_eur) || 0), 0),
+      openCount: allDeals.filter(d => d.status === 'open').length,
+      wonCount: allDeals.filter(d => d.status === 'won').length,
+      lostCount: allDeals.filter(d => d.status === 'lost').length
+    }
 
     res.render('admin/deals', {
       title: 'Deals',
       activeMenu: 'opportunities',
       activeSubmenu: 'deals',
       user: req.user,
-      deals: deals || [],
-      scripts: [],
-      stylesheets: ['/css/admin/adminSettings.css', '/css/admin/adminPayments.css']
+      deals,
+      salesRepsMap,
+      kpis,
+      filterStatus: statusFilter,
+      scripts: ['/js/admin/deals.js'],
+      stylesheets: ['/css/opportunities.css', '/css/deals.css']
     })
   } catch (e) {
     res.status(500).render('error', { message: 'Kon deals niet laden', error: {}, user: req.user })
+  }
+})
+
+// Deal detail (single deal page) - MUST be before /opportunities/:id
+router.get('/opportunities/deals/:id', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { data: deal, error: dealErr } = await supabaseAdmin
+      .from('deals')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (dealErr || !deal) {
+      return res.status(404).render('error', { message: 'Deal niet gevonden', error: {}, user: req.user })
+    }
+    let opportunity = null
+    if (deal.opportunity_id) {
+      const { data: opp } = await supabaseAdmin
+        .from('opportunities')
+        .select('*')
+        .eq('id', deal.opportunity_id)
+        .single()
+      opportunity = opp
+    }
+    let assignee = null
+    if (deal.sales_rep_id) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .eq('id', deal.sales_rep_id)
+        .single()
+      if (profile) {
+        assignee = {
+          id: profile.id,
+          name: [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Onbekend',
+          email: profile.email
+        }
+      }
+    }
+    res.render('admin/deal-detail', {
+      title: deal.title || 'Deal',
+      activeMenu: 'opportunities',
+      activeSubmenu: 'deals',
+      user: req.user,
+      deal,
+      opportunity,
+      assignee,
+      scripts: ['/js/admin/deal-detail.js'],
+      stylesheets: ['/css/opportunities.css', '/css/opportunity-detail.css', '/css/deals.css']
+    })
+  } catch (e) {
+    res.status(500).render('error', { message: 'Kon deal niet laden', error: {}, user: req.user })
   }
 })
 
@@ -15616,6 +15698,9 @@ router.get('/opportunities/:id', requireAuth, isEmployeeOrAdmin, async (req, res
       console.log('Error fetching user admin status:', roleErr);
     }
 
+    const opportunityToDealService = require('../services/opportunityToDealService');
+    const linkedDeal = await opportunityToDealService.getDealForOpportunity(id);
+
     res.render('admin/opportunity-detail', {
       title: opportunity.title || 'Kans details',
       activeMenu: 'opportunities',
@@ -15625,6 +15710,7 @@ router.get('/opportunities/:id', requireAuth, isEmployeeOrAdmin, async (req, res
       assignedRep,
       salesReps,
       aiSuggestion,
+      linkedDeal,
       scripts: ['/js/admin/opportunity-detail.js'],
       stylesheets: ['/css/opportunities.css']
     });
@@ -16109,42 +16195,43 @@ router.post('/api/opportunities/auto-assign-all', requireAuth, isAdmin, async (r
 
 // Deals list removed - already defined earlier (line 5105)
 
-// Convert opportunity to deal
-router.post('/api/opportunities/:id/convert-to-deal', requireAuth, isAdmin, async (req, res) => {
+// Convert opportunity to deal (idempotent; assignee or manager/admin)
+const opportunityToDealService = require('../services/opportunityToDealService')
+router.post('/api/opportunities/:id/convert-to-deal', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const { id } = req.params
     const { value_eur, sales_rep_id } = req.body || {}
 
-    const { data: opp, error: oppErr } = await supabaseAdmin
+    const { data: opp } = await supabaseAdmin
       .from('opportunities')
-      .select('*')
+      .select('id, assigned_to')
       .eq('id', id)
       .single()
-    if (oppErr || !opp) return res.status(404).json({ error: 'Kans niet gevonden' })
+    if (!opp) return res.status(404).json({ success: false, error: 'Kans niet gevonden' })
 
-    const { data: deal, error: dealErr } = await supabaseAdmin
-      .from('deals')
-      .insert({
-        opportunity_id: id,
-        title: opp.title,
-        value_eur: value_eur || opp.value_eur || 0,
-        status: 'open',
-        stage: 'proposal',
-        sales_rep_id: sales_rep_id || req.user.id
-      })
-      .select()
-      .single()
-    if (dealErr) return res.status(500).json({ error: dealErr.message })
+    const isAssignee = opp.assigned_to === req.user.id
+    let isManagerOrAdmin = req.user?.user_metadata?.is_admin === true
+    if (!isManagerOrAdmin) {
+      const { data: profile } = await supabaseAdmin.from('profiles').select('is_admin, role_id').eq('id', req.user.id).single()
+      if (profile?.is_admin) isManagerOrAdmin = true
+      else if (profile?.role_id) {
+        const { data: role } = await supabaseAdmin.from('roles').select('name').eq('id', profile.role_id).maybeSingle()
+        if ((role?.name || '').toLowerCase().includes('manager')) isManagerOrAdmin = true
+      }
+    }
+    if (!isAssignee && !isManagerOrAdmin) {
+      return res.status(403).json({ success: false, error: 'Alleen toegewezen medewerker of manager/admin kan converteren' })
+    }
 
-    // Mark opportunity as converted
-    await supabaseAdmin
-      .from('opportunities')
-      .update({ status: 'won', stage: 'converted', updated_at: new Date().toISOString() })
-      .eq('id', id)
+    const result = await opportunityToDealService.convertToDeal(id, {
+      value_eur,
+      sales_rep_id: sales_rep_id || undefined,
+      actorId: req.user.id
+    })
 
-    res.json({ success: true, deal })
+    res.json({ success: true, deal: result.deal, alreadyConverted: result.alreadyConverted })
   } catch (e) {
-    res.status(500).json({ error: 'Fout bij converteren naar deal: ' + e.message })
+    res.status(500).json({ success: false, error: e.message || 'Fout bij converteren naar deal' })
   }
 })
 

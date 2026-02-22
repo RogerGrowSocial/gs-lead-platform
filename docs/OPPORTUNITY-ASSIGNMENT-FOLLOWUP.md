@@ -2,7 +2,8 @@
 
 ## Summary
 
-- **Assignment hook**: When an opportunity is assigned (manual or AI), we send an email to the assignee and create one follow-up task. Idempotent per (opportunity, assignee, day).
+- **Assignment hook**: When an opportunity is assigned (manual or AI), we send an email to the assignee and create **two** follow-up tasks (slim taaksysteem). Idempotent per (opportunity, assignee, day).
+- **Slim taaksysteem**: Taken per fase, geen duplicaten. Bij toewijzing: **Eerste contact** (due 1u) + **Status bijwerken** (due 24u). Bij status → Gecontacteerd: **Volgende stap (afspraak/offerte)** (due +3d). Bij status → Afspraak gepland: **Afspraak voorbereiden** (due +2d). `employee_tasks.task_type` voorkomt dubbele taken per type.
 - **Sales status**: `sales_status` (new, contacted, appointment_set, customer, lost, unreachable) with history and required reason when lost.
 - **Reminders**: +1 day and +3 days to assignee; +7 days escalation to manager/admin. Stored in `opportunity_followup_reminders` (once per type).
 - **UI**: Sales status panel on opportunity detail, stale banner (>48h still new), list badges and "Stale kansen" filter.
@@ -13,19 +14,21 @@
 
 ### New files
 - `supabase/migrations/20260229000000_opportunity_sales_status_and_followup.sql` – sales_status fields, history, assignment_actions, followup_reminders, employee_tasks.opportunity_id, assigned_at
-- `services/opportunityAssignmentFollowUpService.js` – recordAssignmentAndNotify, createFollowUpTaskIfNeeded, sendAssignmentEmail, assignmentHash
-- `services/opportunityFollowUpReminderService.js` – runReminders, day1/day3/day7 escalation, getManagerAndAdminUserIds
+- `supabase/migrations/20260229100000_employee_tasks_task_type.sql` – employee_tasks.task_type voor opportunity-taaktypes
+- `services/opportunityTaskService.js` – ensureOpportunityTask, createInitialOpportunityTasks, TASK_CONFIG (opportunity_contact, opportunity_status, opportunity_next_step, opportunity_appointment)
+- `services/opportunityAssignmentFollowUpService.js` – recordAssignmentAndNotify, createFollowUpTasksIfNeeded (roept opportunityTaskService aan), sendAssignmentEmail, assignmentHash
+- `services/opportunityFollowUpReminderService.js` – runReminders, day1/day3/day7 escalation, getManagerAndAdminUserIds; isHandled kijkt naar elke opportunity-taak (done = handled)
 - `cron/opportunityFollowUpReminders.js` – cron every 15 min
 - `templates/emails/opportunity_assigned.html` – HTML email for assignee
 - `services/opportunityAssignmentFollowUpService.test.js` – unit test for assignmentHash
 - `docs/OPPORTUNITY-ASSIGNMENT-FOLLOWUP.md` – this file
 
 ### Modified files
-- `services/taskService.js` – add `opportunity_id` to createTask insertData
+- `services/taskService.js` – add `opportunity_id` and `task_type` to createTask insertData
 - `services/notificationService.js` – opportunity_assigned_notification default, sendOpportunityAssigned, case opportunity_assigned in sendNotification
 - `services/opportunityAssignmentService.js` – call recordAssignmentAndNotify after AI assign; set assigned_at on update
 - `routes/admin.js` – POST assign: set assigned_at, call recordAssignmentAndNotify; PATCH opportunities: set assigned_at when assigned_to set, call recordAssignmentAndNotify; GET opportunities: stale filter, pass filterStale/filterQuery; require opportunityAssignmentFollowUpService
-- `routes/api.js` – canUpdateOpportunityStatus helper, PUT /admin/opportunities/:id/sales-status, POST /admin/opportunities/:id/contact-attempt; isEmployeeOrAdmin
+- `routes/api.js` – canUpdateOpportunityStatus helper, PUT /admin/opportunities/:id/sales-status (na update: ensureOpportunityTask bij contacted/appointment_set), POST /admin/opportunities/:id/contact-attempt; opportunityTaskService; isEmployeeOrAdmin
 - `views/admin/partials/opportunity-detail-body.ejs` – Sales status panel, stale banner, salesStatusConfigs, isStale
 - `views/admin/opportunity-detail.ejs` – (no change; body partial handles it)
 - `public/js/admin/opportunity-detail.js` – setupSalesStatusPanel (save status, +1 poging, show reason when lost)
@@ -49,7 +52,7 @@ npx supabase db push
 - Log in as admin.
 - Go to **Kansen** → open an opportunity (or create one).
 - Assign to a sales rep via "Toewijzen" (assign button) or in "Details bewerken" set "Toegewezen aan" and save.
-- **Verify**: Email received (subject like "Nieuwe kans aan jou toegewezen: …") and one task created for that user with title "Volg kans op: …" and due in ~1 hour. In DB: `opportunity_assignment_actions` has one row with `email_sent_at` and `task_id` set; `employee_tasks` has row with `opportunity_id` and that assignee.
+- **Verify**: Email received (subject like "Nieuwe kans aan jou toegewezen: …") and **two** tasks created: "Eerste contact: …" (due 1u) and "Status bijwerken: …" (due 24u). In DB: `opportunity_assignment_actions` has one row with `email_sent_at` and `task_id` (contact task); `employee_tasks` has two rows with `opportunity_id`, `task_type` = `opportunity_contact` and `opportunity_status`.
 
 ### 3. Idempotency (no duplicate email/task)
 - Re-assign the **same** opportunity to the **same** user again (same day).
@@ -57,7 +60,11 @@ npx supabase db push
 
 ### 4. Reassign to different user
 - Assign the same opportunity to a **different** user.
-- **Verify**: New assignee gets email and one new follow-up task. Previous assignee’s open follow-up task for this opportunity is closed (status done).
+- **Verify**: New assignee gets email and two new tasks (Eerste contact + Status bijwerken). Previous assignee’s open opportunity tasks for this opportunity are closed (status done).
+
+### 4b. Taken bij statuswijziging
+- Zet sales status op **Gecontacteerd** → **Verify**: Nieuwe taak "Volgende stap (afspraak/offerte): …" (due +3d), `task_type` = `opportunity_next_step`.
+- Zet sales status op **Afspraak gepland** → **Verify**: Nieuwe taak "Afspraak voorbereiden: …" (due +2d), `task_type` = `opportunity_appointment`. Geen dubbele taken bij opnieuw opslaan.
 
 ### 5. Sales status and “lost” reason
 - Open an opportunity → **Sales status** panel.
@@ -91,6 +98,18 @@ npx supabase db push
 node services/opportunityAssignmentFollowUpService.test.js
 ```
 - **Verify**: assignmentHash deterministic and 64-char hex; different (opp, user) give different hashes.
+
+---
+
+## Kans → Deal (slim conversiesysteem)
+
+- **Service**: `opportunityToDealService.convertToDeal(opportunityId, { value_eur?, sales_rep_id?, actorId })`
+  - Idempotent: als er al een deal bestaat met `opportunity_id`, wordt die teruggegeven (`alreadyConverted: true`).
+  - Nieuwe deal: `title` (uit opp), `value_eur` (override of uit kans), `sales_rep_id` (override of assignee of actor), `status: 'open'`, `stage: 'proposal'`.
+  - Opportunity wordt bijgewerkt: `sales_status: 'customer'`, `status: 'won'`, `stage: 'converted'` + history-regel.
+- **Rechten**: toegewezen medewerker of manager/admin.
+- **UI**: Op kansdetail: sectie "Deal" met knop "Converteer naar deal" of link "Bekijk deal" als er al een deal is.
+- **API**: `POST /admin/api/opportunities/:id/convert-to-deal` (body: `value_eur?`, `sales_rep_id?`).
 
 ---
 

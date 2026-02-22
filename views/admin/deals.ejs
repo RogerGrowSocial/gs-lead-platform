@@ -1,84 +1,140 @@
+<%
+  const formatCurrency = (amount) => {
+    if (amount == null) return '€0'
+    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+  }
+  const formatDate = (iso) => {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  const formatRelativeTime = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    const now = new Date()
+    const diffMs = now - d
+    const days = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+    if (days === 0) return 'Vandaag'
+    if (days === 1) return 'Gisteren'
+    if (days < 7) return `${days} dagen geleden`
+    return formatDate(iso)
+  }
+  const stageLabels = { proposal: 'Offerte', negotiation: 'Onderhandeling', discovery: 'Discovery', qualified: 'Gekwalificeerd', closed_won: 'Gewonnen', closed_lost: 'Verloren' }
+  const getStageLabel = (s) => stageLabels[s] || s || 'Offerte'
+  const getStageClass = (s) => {
+    if (s === 'closed_won' || s === 'won') return 'deal-stage-won'
+    if (s === 'closed_lost' || s === 'lost') return 'deal-stage-lost'
+    return 'deal-stage-open'
+  }
+  const getStatusClass = (s) => {
+    if (s === 'won') return 'status-success'
+    if (s === 'lost') return 'status-gray'
+    return 'status-blue'
+  }
+  const getStatusLabel = (s) => (s === 'open' ? 'Open' : s === 'won' ? 'Gewonnen' : s === 'lost' ? 'Verloren' : s || 'Open')
+  const renderDealCard = (d) => {
+    const title = d.title || d.opportunity?.title || d.opportunity?.company_name || 'Deal'
+    const company = d.opportunity?.company_name || ''
+    const initials = (company || title).slice(0, 2).toUpperCase()
+    const repName = (typeof salesRepsMap !== 'undefined' && d.sales_rep_id && salesRepsMap[d.sales_rep_id]) ? salesRepsMap[d.sales_rep_id] : (d.sales_rep_id ? 'Rep' : '—')
+    const valueDisplay = formatCurrency(d.value_eur)
+    const stageLabel = getStageLabel(d.stage)
+    const stageClass = getStageClass(d.stage)
+    const statusClass = getStatusClass(d.status)
+    const statusLabel = getStatusLabel(d.status)
+    return `
+      <a href="/admin/opportunities/deals/${d.id}" class="deal-card-entry">
+        <div class="deal-card">
+          <div class="deal-card-main">
+            <div class="deal-card-avatar">${initials}</div>
+            <div class="deal-card-body">
+              <div class="deal-card-header">
+                <div class="deal-card-heading">
+                  <h3 class="deal-card-title">${title}</h3>
+                  ${company ? `<p class="deal-card-company">${company}</p>` : ''}
+                </div>
+                <div class="deal-card-meta">
+                  <p class="deal-card-value">${valueDisplay}</p>
+                  <p class="deal-card-time">${formatRelativeTime(d.created_at)}</p>
+                </div>
+              </div>
+              <div class="deal-card-badges">
+                <span class="deal-badge ${statusClass}">${statusLabel}</span>
+                <span class="deal-badge ${stageClass}">${stageLabel}</span>
+                <span class="deal-card-rep">${repName}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </a>
+    `
+  }
+%>
 <%- include('../layouts/admin', {
   title: 'Deals',
   activeMenu: 'opportunities',
   activeSubmenu: 'deals',
   user: user,
   body: `
-  <div class="settings-container">
+  <div class="deals-container">
     <div class="page-header">
-      <div>
+      <div class="page-header-title">
         <h1>Deals</h1>
-        <p class="text-muted">Pipeline met openstaande en gesloten deals</p>
+        <p class="page-header-subtitle">Pipeline met openstaande en afgesloten deals</p>
       </div>
-      
     </div>
 
-    <div class="settings-card">
-      <div class="settings-card-header">
-        <h2>Overzicht</h2>
-        <p class="settings-card-subtitle">Laatste deals</p>
-      </div>
-      <div class="settings-card-body">
-        <div class="admins-table">
-          <div class="admins-table-head">
-            <div class="admins-row">
-              <div class="admins-cell">Titel</div>
-              <div class="admins-cell">Waarde (€)</div>
-              <div class="admins-cell">Status</div>
-              <div class="admins-cell">Fase</div>
-              <div class="admins-cell">Sales rep</div>
-              <div class="admins-cell">Aangemaakt</div>
-              <div class="admins-cell actions-cell">Acties</div>
-            </div>
+    <div class="kpi-cards-container deals-kpis">
+      <div class="kpi-cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Totale waarde</p>
+            <p class="kpi-value">${formatCurrency(kpis?.totalValue || 0)}</p>
+            <p class="kpi-subtitle">Alle deals</p>
           </div>
-          <div class="admins-table-body">
-            ${ (deals || []).map(d => `
-              <div class="admins-row" data-id="${d.id}">
-                <div class="admins-cell"><div class="admin-name">${d.title || (d.opportunity?.title || '—')}</div></div>
-                <div class="admins-cell"><div class="payment-amount">€${Number(d.value_eur||0).toFixed(2)}</div></div>
-                <div class="admins-cell"><span class="status-badge ${d.status==='open'?'pending':(d.status==='won'?'active':'expired')}">${d.status}</span></div>
-                <div class="admins-cell"><div class="admin-role">${d.stage || 'proposal'}</div></div>
-                <div class="admins-cell"><div class="admin-email">${d.sales_rep_id || '—'}</div></div>
-                <div class="admins-cell"><div class="date-info"><div>${new Date(d.created_at).toLocaleDateString('nl-NL')}</div></div></div>
-                <div class="admins-cell actions-cell">
-                  <div class="action-buttons">
-                    <button class="btn-icon" onclick="openReminder('${d.id}')" title="Reminder"><i class="fas fa-bell"></i></button>
-                  </div>
-                </div>
-              </div>
-            `).join('') }
-            ${ (!deals || deals.length===0) ? `
-              <div class="admins-row"><div class="admins-cell">Nog geen deals</div></div>
-            ` : '' }
+          <div class="kpi-icon"><i class="fas fa-euro-sign"></i></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Open</p>
+            <p class="kpi-value">${kpis?.openCount ?? 0}</p>
+            <p class="kpi-subtitle">In pipeline</p>
           </div>
+          <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-content">
+            <p class="kpi-title">Gewonnen</p>
+            <p class="kpi-value">${kpis?.wonCount ?? 0}</p>
+            <p class="kpi-subtitle">Gesloten</p>
+          </div>
+          <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
         </div>
       </div>
     </div>
 
-    <div id="dealReminderModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:9999; align-items:center; justify-content:center;">
-      <div style="background:#fff; border-radius:8px; padding:16px; width:420px;">
-        <h3 style="margin:0 0 12px;">Reminder inplannen</h3>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-          <input id="remindAt" type="datetime-local" style="flex:1; padding:8px; border:1px solid #e5e7eb; border-radius:6px;" />
-          <select id="remindType" style="width:140px; padding:8px; border:1px solid #e5e7eb; border-radius:6px;">
-            <option value="nudge">Nudge</option>
-            <option value="close">Close</option>
-            <option value="followup">Follow-up</option>
-          </select>
+    <div class="deals-listing-container">
+      <div class="deals-header-row">
+        <div class="deals-filter-tabs">
+          <a href="/admin/opportunities/deals" class="deals-tab ${filterStatus === 'all' ? 'active' : ''}">Alle</a>
+          <a href="/admin/opportunities/deals?status=open" class="deals-tab ${filterStatus === 'open' ? 'active' : ''}">Open</a>
+          <a href="/admin/opportunities/deals?status=won" class="deals-tab ${filterStatus === 'won' ? 'active' : ''}">Gewonnen</a>
+          <a href="/admin/opportunities/deals?status=lost" class="deals-tab ${filterStatus === 'lost' ? 'active' : ''}">Verloren</a>
         </div>
-        <textarea id="remindNote" rows="3" style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:6px;" placeholder="Notitie (optioneel)"></textarea>
-        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:12px;">
-          <button onclick="closeReminder()" class="btn-outline">Annuleren</button>
-          <button onclick="saveReminder()" class="btn-primary">Opslaan</button>
-        </div>
+      </div>
+      <div class="deals-list" id="dealsList">
+        ${(deals || []).map(renderDealCard).join('')}
+        ${(!deals || deals.length === 0) ? `
+          <div class="deals-empty">
+            <div class="deals-empty-icon"><i class="fas fa-handshake"></i></div>
+            <p class="deals-empty-title">Nog geen deals</p>
+            <p class="deals-empty-text">Deals ontstaan wanneer je een kans omzet naar een deal op de kansdetailpagina.</p>
+            <a href="/admin/opportunities" class="btn btn-primary">Naar kansen</a>
+          </div>
+        ` : ''}
       </div>
     </div>
   </div>
   `,
-  scripts: [
-    `/js/admin/deals.js?v=${Date.now()}`
-  ],
+  scripts: (scripts || ['/js/admin/deals.js']),
   stylesheets: (stylesheets || [])
 }) %>
-
-

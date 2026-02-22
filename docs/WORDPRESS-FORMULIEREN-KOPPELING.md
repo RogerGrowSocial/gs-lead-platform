@@ -2,6 +2,9 @@
 
 Met deze stappen stuur je inzendingen van WordPress-formulieren als kansen naar GrowSocial (zelfde ingest-endpoint als Trustoo/webhooks).
 
+**Optie 1 – Via Zapier (aanbevolen voor JetFormBuilder):** formulier → Zapier Catch Hook → Zapier POST naar GrowSocial. Geen PHP, geen `content_type_not_found`. Zie [Via Zapier](#via-zapier-zoals-trustoo).  
+**Optie 2 – Direct:** formulier stuurt zelf naar de webhook-URL (met secret in header). Zie [Stap 3](#stap-3-wordpress--formulier-direct-sturen-zonder-zapier).
+
 ---
 
 ## Stap 1: Kansenstroom aanmaken in GrowSocial
@@ -44,7 +47,49 @@ Als je WordPress andere namen gebruikt (bijv. `your_name`, `bedrijfsnaam`), zet 
 
 ---
 
-## Stap 3: WordPress – formulier sturen naar het platform
+## Via Zapier (zoals Trustoo)
+
+Je kunt het formulier ook via Zapier naar GrowSocial sturen: WordPress stuurt naar een Zapier-webhook, Zapier stuurt door naar GrowSocial met het secret. Geen PHP nodig, en je vermijdt vaak de `content_type_not_found`-fout omdat het formulier alleen met Zapier praat.
+
+### Zapier – Stap 1: Zap aanmaken, trigger = Catch Hook
+
+1. In Zapier: **Create Zap** (Zap maken).
+2. **Trigger:** app **Webhooks by Zapier** → trigger **Catch Hook**.
+3. Klik **Continue**, kopieer de **Webhook URL** die Zapier toont (bijv. `https://hooks.zapier.com/hooks/catch/12345/abcdef/`). Die gebruik je straks in JetFormBuilder als “Call Webhook”-URL.
+4. Laat deze stap open; je vult de hook later met een test-submit.
+
+### WordPress / JetFormBuilder – formulier naar Zapier sturen
+
+1. In het formulier: **Post Submit Actions** → **Call Webhook**.
+2. **Webhook URL:** plak de Zapier Catch Hook-URL uit de vorige stap.
+3. Geen secret nodig voor Zapier. Zorg dat de velden die je stuurt herkenbare namen hebben (bijv. `company_name`, `contact_name`, `email`, `phone`, `message`); die kun je in de Zapier-action stap koppelen naar de GrowSocial-body.
+4. Sla het formulier op, doe een **testverzending**.
+5. Ga terug naar Zapier: klik **Test trigger**. Zapier zou nu de testinzending moeten zien.
+
+### Zapier – Stap 2: Action = POST naar GrowSocial
+
+1. **Action:** app **Webhooks by Zapier** → action **POST**.
+2. Vul in:
+   - **URL:** de Webhook URL uit GrowSocial (Stap 1), bijv.  
+     `https://app.growsocialmedia.nl/api/ingest/opportunities/xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx`
+   - **Payload Type:** **JSON**
+   - **Data:** koppel de velden uit de trigger (wat Zapier van het formulier kreeg) naar de keys die GrowSocial verwacht, bijv.:
+     - `company_name` → (veld uit trigger)
+     - `contact_name` → (veld uit trigger)
+     - `email` → (veld uit trigger)
+     - `phone` → (veld uit trigger)
+     - `message` → (veld uit trigger)
+   - **Headers:**  
+     - **Key:** `X-Stream-Secret`  
+     - **Value:** het Secret van de kansenstroom uit GrowSocial
+3. **Test** de action; controleer in GrowSocial bij **Sales → Kansen** of er een kans is aangemaakt.
+4. Zet de Zap **Aan**.
+
+Klaar: elk formulierinzending gaat naar Zapier en wordt door Zapier naar GrowSocial gestuurd met het juiste secret.
+
+---
+
+## Stap 3: WordPress – formulier direct sturen (zonder Zapier)
 
 Je moet bij *form submit* een **server-side** POST doen naar de webhook-URL (met secret in de header). Dat kan op twee manieren:
 
@@ -58,25 +103,11 @@ Controleer in de plugin of je **headers** kunt meegeven (voor `X-Stream-Secret`)
 
 #### JetFormBuilder
 
-JetFormBuilder heeft een ingebouwde **Call Webhook** post-submit actie. Je hebt alleen een klein stukje PHP nodig om de header `X-Stream-Secret` toe te voegen.
+**Aanbevolen: Call Hook** (geen `content_type_not_found`-fout). Veel gebruikers krijgen met **Call Webhook** de fout "Error code: content_type_not_found"; met **Call Hook** stuurt WordPress zelf de request en wordt het antwoord niet door de plugin geparsed.
 
-**In het formulier:** Post Submit Actions → New Action → **Call Webhook**. Vul de **Webhook URL** in (uit GrowSocial, Stap 1). De plugin stuurt formuliervelden als JSON; gebruik als veldnamen bijv. `company_name`, `contact_name`, `email`, `phone`, `message` (of pas de veldkoppeling van de kansenstroom in GrowSocial aan).
+**Stap 1 – In het formulier:** Post Submit Actions → New Action → **Call Hook**. **Hook Name:** bijv. `growsocial_send_opportunity`.
 
-**Secret header toevoegen** (in `functions.php` of een custom plugin; vervang het secret):
-
-```php
-add_filter('jet-form-builder/action/webhook/request-args', function ($args, $action) {
-    $webhook_secret = 'JOUW-X-STREAM-SECRET';
-    if (empty($args['headers'])) {
-        $args['headers'] = [];
-    }
-    $args['headers']['X-Stream-Secret'] = $webhook_secret;
-    $args['headers']['Content-Type']   = 'application/json';
-    return $args;
-}, 10, 2);
-```
-
-**Alternatief – Call Hook (volledige controle over de payload):** Post Submit Actions → **Call Hook**, Hook Name bijv. `growsocial_send_opportunity`. Dan in PHP (pas de keys aan op jouw veldnamen):
+**Stap 2 – In `functions.php`** (vervang URL en secret, pas de array-keys aan op jouw veldnamen):
 
 ```php
 add_action('jet-form-builder/custom-action/growsocial_send_opportunity', function ($request, $action_handler) {
@@ -99,6 +130,20 @@ add_action('jet-form-builder/custom-action/growsocial_send_opportunity', functio
     ]);
 }, 10, 2);
 ```
+
+**Optioneel – Call Webhook:** Als je toch **Call Webhook** wilt gebruiken: Post Submit Actions → **Call Webhook**, vul de Webhook URL in. Voeg in PHP de secret-header toe (anders krijg je 401):
+
+```php
+add_filter('jet-form-builder/action/webhook/request-args', function ($args, $action) {
+    $webhook_secret = 'JOUW-X-STREAM-SECRET';
+    if (empty($args['headers'])) $args['headers'] = [];
+    $args['headers']['X-Stream-Secret'] = $webhook_secret;
+    $args['headers']['Content-Type']   = 'application/json';
+    return $args;
+}, 10, 2);
+```
+
+Bij sommige hosts/instellingen geeft Call Webhook alsnog "content_type_not_found"; gebruik dan Call Hook.
 
 ### Optie B: Eigen code (theme of plugin)
 
@@ -174,7 +219,17 @@ Vervang `JOUW-STREAM-UUID` en `JOUW-X-STREAM-SECRET` door de waarden uit Stap 1.
 
 ## Troubleshooting
 
-- **"Internal error! Error code: content_type_not_found" (JetFormBuilder):** de Call Webhook-actie verwacht een `Content-Type`-header in het antwoord. De ingest-API stuurt die sinds een recente wijziging altijd mee. Als de fout blijft: gebruik de **Call Hook**-methode (zie [JetFormBuilder](#jetformbuilder)) in plaats van Call Webhook; dan doet WordPress zelf `wp_remote_post()` en wordt het antwoord niet door de plugin geparsed.
+- **"Internal error! Error code: content_type_not_found" (JetFormBuilder):** de fout komt door het **antwoord van WordPress** naar de browser na formulierverzending (niet door GrowSocial). Probeer het volgende:
+  1. **Extra snippet** – voeg in `functions.php` **boven** je Call Hook-snippet dit toe, zodat elke REST-response een JSON Content-Type krijgt (JetFormBuilder gebruikt soms de REST API):
+     ```php
+     add_filter('rest_post_dispatch', function ($response, $server, $request) {
+         if ($response instanceof \WP_HTTP_Response) {
+             $response->header('Content-Type', 'application/json; charset=' . get_option('blog_charset'));
+         }
+         return $response;
+     }, 10, 3);
+     ```
+  2. **Blijft de fout bestaan:** gebruik **Zapier** (zie [Via Zapier](#via-zapier-zoals-trustoo)): formulier → Call Webhook naar **Zapier Catch Hook-URL** → Zapier stuurt door naar GrowSocial. Dan is het antwoord dat het formulier ziet van Zapier, niet van WordPress.
 - **401 / Invalid X-Stream-Secret:** header `X-Stream-Secret` moet exact overeenkomen met het secret van de stroom (geen spaties).
 - **400 / Payload must map to...:** er is geen geldige mapping voor title, company_name of contact. Stuur minimaal één van: bedrijfsnaam, contactnaam of e-mail, en controleer de veldkoppeling in de stroom.
 - **Geen kans zichtbaar:** kijk in de Event logs van de stroom naar de foutmelding en de ontvangen payload; pas veldkoppeling of JSON-keys daarop aan.

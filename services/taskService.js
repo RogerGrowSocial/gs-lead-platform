@@ -96,6 +96,7 @@ class TaskService {
         due_at: taskData.due_at || null,
         created_by: actorId
       };
+      if (taskData.task_type != null) insertData.task_type = taskData.task_type;
       
       // Add recurrence fields if provided (only if table supports them)
       if (taskData.is_recurring) {

@@ -110,6 +110,9 @@
 .sales-status-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 12px 0 16px 0; font-size: 13px; color: #6b7280; }
 .btn-primary-sm { padding: 8px 16px; background: #ea5d0d; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
 .btn-primary-sm:hover { background: #d4500b; }
+.deal-linked-message, .deal-convert-message { margin: 0 0 12px 0; font-size: 14px; color: #374151; }
+.deal-meta { margin: 8px 0 0 0; font-size: 13px; color: #6b7280; }
+#deal-panel .btn-primary-sm { text-decoration: none; }
 
 .opportunity-detail-grid {
   display: grid;

@@ -22,6 +22,7 @@ const KvkApiService = require('../services/kvkApiService')
 const LeadAssignmentService = require('../services/leadAssignmentService')
 const StreamIngestService = require('../services/streamIngestService')
 const opportunityAssignmentService = require('../services/opportunityAssignmentService')
+const opportunityTaskService = require('../services/opportunityTaskService')
 
 // API routes voor gebruikers
 
@@ -9615,6 +9616,18 @@ router.put("/admin/opportunities/:id/sales-status", requireAuth, isEmployeeOrAdm
       changed_by: req.user.id
     });
 
+    if (updated.assigned_to) {
+      try {
+        if (sales_status === 'contacted') {
+          await opportunityTaskService.ensureOpportunityTask(opportunityId, updated.assigned_to, 'opportunity_next_step', req.user.id);
+        } else if (sales_status === 'appointment_set') {
+          await opportunityTaskService.ensureOpportunityTask(opportunityId, updated.assigned_to, 'opportunity_appointment', req.user.id);
+        }
+      } catch (taskErr) {
+        console.warn('Opportunity follow-up task creation failed:', taskErr.message);
+      }
+    }
+
     res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Error updating sales status:', error);
@@ -16724,7 +16737,8 @@ router.post('/admin/opportunities/streams/:id/test-event', requireAuth, isManage
     const { data: stream } = await supabaseAdmin.from('opportunity_streams').select('id').eq('id', streamId).single()
     if (!stream) return res.status(404).json({ error: 'Stream not found' })
     const headerSecret = req.body.secret || req.get('X-Stream-Secret')
-    const result = await StreamIngestService.ingest(streamId, rawBody, headerSecret, null)
+    // Admin test: skip secret verification (plain secret not stored; only hash)
+    const result = await StreamIngestService.ingest(streamId, rawBody, headerSecret, null, { skipVerification: true })
     res.status(result.status).json(
       result.success
         ? { success: true, opportunity_id: result.opportunityId, duplicate: result.duplicate }

@@ -1,0 +1,9 @@
+<%- include('../layouts/admin', {
+  title: deal.title || 'Deal',
+  activeMenu: 'opportunities',
+  activeSubmenu: 'deals',
+  user: user,
+  bodyPartial: 'admin/partials/deal-detail-body',
+  scripts: ['/js/admin/deal-detail.js'],
+  stylesheets: ['/css/opportunities.css', '/css/opportunity-detail.css', '/css/deals.css']
+}) %>

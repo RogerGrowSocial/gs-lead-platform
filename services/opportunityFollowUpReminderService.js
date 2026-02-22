@@ -34,14 +34,14 @@ async function isHandled(opportunityId, assigneeUserId) {
     .eq('id', opportunityId)
     .single()
   if (opp && opp.sales_status !== 'new') return true
-  const { data: task } = await supabaseAdmin
+  const { data: tasks } = await supabaseAdmin
     .from('employee_tasks')
     .select('id, status')
     .eq('opportunity_id', opportunityId)
     .eq('employee_id', assigneeUserId)
-    .limit(1)
-    .maybeSingle()
-  return task?.status === 'done'
+    .limit(10)
+  const anyDone = (tasks || []).some(t => t.status === 'done')
+  return anyDone
 }
 
 /**

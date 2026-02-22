@@ -3,7 +3,7 @@
 const crypto = require('crypto')
 const { supabaseAdmin } = require('../config/supabase')
 const NotificationService = require('./notificationService')
-const TaskService = require('./taskService')
+const opportunityTaskService = require('./opportunityTaskService')
 
 const notificationService = new NotificationService()
 
@@ -14,38 +14,20 @@ function assignmentHash(opportunityId, assigneeUserId) {
 }
 
 /**
- * Ensure exactly one follow-up task for (opportunity_id, assignee). Skip if open sales_followup already exists.
+ * Create initial opportunity tasks: Eerste contact (1h) + Status bijwerken (24h). Idempotent.
  */
-async function createFollowUpTaskIfNeeded(opportunityId, assigneeUserId, assignedByUserId, payload) {
-  const { data: existing } = await supabaseAdmin
-    .from('employee_tasks')
-    .select('id')
-    .eq('opportunity_id', opportunityId)
-    .eq('employee_id', assigneeUserId)
-    .in('status', ['open', 'in_progress', 'in_review'])
-    .limit(1)
-  if (existing && existing.length > 0) return existing[0].id
-
-  const dueAt = new Date(Date.now() + 60 * 60 * 1000)
-  const companyContact = [payload.company_name, payload.contact_name].filter(Boolean).join(' – ') || 'Onbekend'
-  const baseUrl = process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000'
-  const oppUrl = `${baseUrl.replace(/\/$/, '')}/admin/opportunities/${opportunityId}`
-
-  const task = await TaskService.createTask({
-    employee_id: assigneeUserId,
-    title: `Volg kans op: ${companyContact}`,
-    description: [
-      payload.message_summary ? `Bericht: ${payload.message_summary}` : null,
-      payload.phone ? `Tel: ${payload.phone}` : null,
-      payload.email ? `Email: ${payload.email}` : null,
-      `\nOpen kans: ${oppUrl}`
-    ].filter(Boolean).join('\n'),
-    priority: 'high',
-    due_at: dueAt.toISOString(),
-    opportunity_id: opportunityId
-  }, assignedByUserId || assigneeUserId)
-
-  return task?.id || null
+async function createFollowUpTasksIfNeeded(opportunityId, assigneeUserId, assignedByUserId, payload) {
+  const payloadWithContact = {
+    ...payload,
+    companyContact: [payload.company_name, payload.contact_name].filter(Boolean).join(' – ') || 'Onbekend'
+  }
+  const { contactTaskId, statusTaskId } = await opportunityTaskService.createInitialOpportunityTasks(
+    opportunityId,
+    assigneeUserId,
+    assignedByUserId,
+    payloadWithContact
+  )
+  return contactTaskId
 }
 
 /**
@@ -138,7 +120,7 @@ async function recordAssignmentAndNotify(opportunityId, assigneeUserId, assigned
   }
 
   const emailSent = await sendAssignmentEmail(assigneeUserId, opportunityId, payload)
-  const taskId = await createFollowUpTaskIfNeeded(opportunityId, assigneeUserId, assignedByUserId, payload)
+  const taskId = await createFollowUpTasksIfNeeded(opportunityId, assigneeUserId, assignedByUserId, payload)
 
   if (actionRow) {
     await supabaseAdmin
@@ -164,6 +146,6 @@ async function recordAssignmentAndNotify(opportunityId, assigneeUserId, assigned
 module.exports = {
   recordAssignmentAndNotify,
   assignmentHash,
-  createFollowUpTaskIfNeeded,
+  createFollowUpTasksIfNeeded,
   sendAssignmentEmail
 }
