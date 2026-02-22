@@ -264,15 +264,21 @@ router.get('/api/messages/users', requireAuth, async (req, res) => {
     if (!search || search.length < 2) {
       return res.json({ success: true, users: [] })
     }
-    const term = '%' + search.replace(/"/g, '') + '%'
-    const quoted = '"' + term + '"'
-    let q = supabaseAdmin
-      .from('profiles')
-      .select('id, first_name, last_name, email, avatar_url, role_id')
-      .neq('id', req.user.id)
-      .or('first_name.ilike.' + quoted + ',last_name.ilike.' + quoted + ',email.ilike.' + quoted + ',company_name.ilike.' + quoted)
-    const { data: profiles, error } = await q.limit(20)
-    if (error) throw error
+    const term = '%' + search + '%'
+    const r1 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('first_name', term).limit(15)
+    const r2 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('last_name', term).limit(15)
+    const r3 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('email', term).limit(15)
+    if (r1.error) throw r1.error
+    if (r2.error) throw r2.error
+    if (r3.error) throw r3.error
+    const seen = new Set()
+    const profiles = []
+    for (const p of [...(r1.data || []), ...(r2.data || []), ...(r3.data || [])]) {
+      if (seen.has(p.id)) continue
+      seen.add(p.id)
+      profiles.push(p)
+      if (profiles.length >= 20) break
+    }
     const roleIds = [...new Set((profiles || []).map((p) => p.role_id).filter(Boolean))]
     let roles = {}
     if (roleIds.length > 0) {

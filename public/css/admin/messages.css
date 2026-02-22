@@ -1,12 +1,10 @@
-/* Admin Messages (Chat) - GrowSocial branding */
+/* Admin Messages (Chat) - GrowSocial branding, clean flat layout */
 .messages-page {
   display: flex;
   height: calc(100vh - 63px - 16px);
   max-height: 720px;
   margin: 0 -24px;
   background: var(--bg-primary, #fff);
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1));
   overflow: hidden;
 }
 
@@ -16,7 +14,7 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-secondary, #f9fafb);
+  background: #fff;
 }
 
 .messages-sidebar-header {
@@ -47,7 +45,7 @@
   color: #fff;
   background: var(--primary-color, #ea5d0d);
   border: none;
-  border-radius: var(--radius-lg, 8px);
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
 }
@@ -75,7 +73,7 @@
   padding: 10px 12px 10px 40px;
   font-size: 14px;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: var(--radius-lg, 8px);
+  border-radius: 6px;
   background: #fff;
   transition: border-color 0.2s;
 }
@@ -100,7 +98,7 @@
   color: var(--text-secondary, #6b7280);
   background: transparent;
   border: none;
-  border-radius: var(--radius-md, 6px);
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
@@ -213,9 +211,9 @@
   color: var(--text-muted, #9ca3af);
 }
 
-.messages-placeholder-icon { margin-bottom: 16px; color: var(--border-dark, #d1d5db); }
-.messages-placeholder-title { font-size: 18px; font-weight: 600; color: var(--text-secondary, #6b7280); margin: 0 0 8px; }
-.messages-placeholder-text { font-size: 14px; margin: 0; }
+.messages-placeholder-icon { margin-bottom: 12px; color: var(--border-dark, #d1d5db); opacity: 0.7; }
+.messages-placeholder-title { font-size: 16px; font-weight: 600; color: var(--text-secondary, #6b7280); margin: 0 0 4px; }
+.messages-placeholder-text { font-size: 13px; margin: 0; color: var(--text-muted, #9ca3af); }
 
 .messages-thread-wrap {
   flex: 1;
@@ -349,8 +347,7 @@
   color: var(--primary-color, #ea5d0d);
   background: #fff;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 20px;
-  box-shadow: var(--shadow-md);
+  border-radius: 6px;
   cursor: pointer;
 }
 .messages-new-pill:hover { background: var(--bg-secondary, #f9fafb); }
@@ -372,7 +369,7 @@
   font-size: 14px;
   line-height: 1.5;
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: var(--radius-xl, 12px);
+  border-radius: 6px;
   resize: none;
   transition: border-color 0.2s;
   font-family: inherit;
@@ -405,7 +402,7 @@
   width: 280px;
   min-width: 240px;
   border-left: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-secondary, #f9fafb);
+  background: #fff;
   display: flex;
   flex-direction: column;
 }
@@ -474,8 +471,7 @@
   max-width: 420px;
   max-height: 80vh;
   background: #fff;
-  border-radius: var(--radius-xl, 12px);
-  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1));
+  border: 1px solid var(--border-color, #e5e7eb);
   display: flex;
   flex-direction: column;
 }
