@@ -316,7 +316,7 @@ async function getOrCreateDM(userId1, userId2) {
       type: 'dm',
       title: null,
       created_by: userId1,
-      dm_key,
+      dm_key: dmKey,
     })
     .select()
     .single();
