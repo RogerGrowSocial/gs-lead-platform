@@ -129,6 +129,21 @@ Webhooks receive events from external services (Mollie, etc.) and update the pla
 
 ---
 
+## Opportunity Ingest (Kansenstromen)
+
+### `POST /api/ingest/opportunities/:streamId`
+**Purpose:** Create opportunities from external sources (Trustoo, Zapier, WordPress forms, etc.)
+
+**Auth:** Public, secured by header `X-Stream-Secret` (per-stream secret configured in Sales → Kansenstromen)
+
+**Request:** `Content-Type: application/json`, body = JSON with e.g. `company_name`, `contact_name`, `email`, `phone`, `message`. Field mapping is configured per stream.
+
+**Docs:**
+- Trustoo via Zapier: `/docs/TRUSTOO-ZAPIER-KOPPELING.md`
+- WordPress formulieren: `/docs/WORDPRESS-FORMULIEREN-KOPPELING.md`
+
+---
+
 ## Related Documentation
 
 - **API Endpoints:** `/docs/02-api/endpoints.md`

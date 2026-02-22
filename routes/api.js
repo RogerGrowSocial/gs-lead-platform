@@ -16447,6 +16447,8 @@ router.delete('/admin/scraper/opportunities/:id', requireAuth, isManagerOrAdmin,
 // Public ingest endpoint (secured by stream secret). No auth; verification inside service.
 // Note: For HMAC (X-Signature) to work, this route should be mounted with express.raw() for application/json so raw body is available.
 router.post('/ingest/opportunities/:streamId', async (req, res) => {
+  // Explicit Content-Type so clients (e.g. JetFormBuilder Call Webhook) that require it don't throw content_type_not_found
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
   try {
     const { streamId } = req.params
     const rawBody = typeof req.rawBody === 'string' ? req.rawBody : (req.body ? JSON.stringify(req.body) : '{}')
