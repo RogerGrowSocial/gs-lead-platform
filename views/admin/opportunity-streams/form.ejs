@@ -20,7 +20,8 @@
 
     <div class="settings-card">
       <div class="settings-card-header">
-        <h2>Algemeen</h2>
+        <h2>${isEdit ? 'Bewerken' : 'Nieuwe stroom'}</h2>
+        <p class="settings-card-subtitle">${isEdit ? 'Wijzig gegevens en sla op.' : 'Vul naam en type in. Optioneel: secret voor beveiligde webhooks.'}</p>
       </div>
       <div class="settings-card-body">
         <form id="streamForm" ${stream ? `data-stream-id="${stream.id}"` : ''}>
@@ -39,76 +40,40 @@
           </div>
           <div class="form-group">
             <label><input type="checkbox" id="is_active" name="is_active" ${!stream || stream.is_active ? 'checked' : ''} /> Actief</label>
-            <p class="form-help">Inactieve stromen accepteren geen nieuwe events.</p>
           </div>
-
-          <div class="form-group" id="simpleMappingSection">
-            <h3 class="form-section-title" style="margin-top: 0;">Veldkoppeling</h3>
-            <p class="form-help" style="margin-bottom: 12px;">Geef de <strong>naam van het veld in de payload</strong> dat bij ons veld hoort. Laat leeg als de bron dat veld niet stuurt. Standaardwaarden (<code>company_name</code>, <code>email</code>, enz.) werken als de bron die namen gebruikt.</p>
-            <div class="stream-mapping-grid" style="display: grid; gap: 12px; max-width: 480px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="map_company_name">Bedrijfsnaam (payload-veld)</label>
-                <input type="text" id="map_company_name" class="form-control" placeholder="company_name" />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="map_contact_name">Contactnaam (payload-veld)</label>
-                <input type="text" id="map_contact_name" class="form-control" placeholder="contact_name" />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="map_email">E-mail (payload-veld)</label>
-                <input type="text" id="map_email" class="form-control" placeholder="email" />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="map_phone">Telefoon (payload-veld)</label>
-                <input type="text" id="map_phone" class="form-control" placeholder="phone" />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="map_message">Bericht / omschrijving (payload-veld)</label>
-                <input type="text" id="map_message" class="form-control" placeholder="message" />
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="default_status">Standaard status nieuwe kans</label>
-                <select id="default_status" class="form-control">
-                  <option value="open">Open</option>
-                  <option value="new">Nieuw</option>
-                  <option value="qualified">Gekwalificeerd</option>
-                </select>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="default_priority">Standaard prioriteit</label>
-                <select id="default_priority" class="form-control">
-                  <option value="medium">Gemiddeld</option>
-                  <option value="high">Hoog</option>
-                  <option value="low">Laag</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <button type="button" id="toggleAdvancedConfig" class="btn-outline" style="margin-bottom: 8px;">
-              <i class="fas fa-code"></i> Geavanceerd: JSON bewerken
-            </button>
-            <div id="advancedConfigBlock" style="display: none;">
-              <label for="config">Config (JSON)</label>
-              <textarea id="config" name="config" rows="12" class="form-control" style="font-family: monospace; font-size: 13px;">${configJson}</textarea>
-              <p class="form-help">Alleen aanpassen als je afwijkende veldnamen of geneste payloads hebt.</p>
-            </div>
-          </div>
-          ${!isEdit ? `
           <div class="form-group">
             <label for="secret">Secret (optioneel)</label>
-            <input type="password" id="secret" name="secret" placeholder="Laat leeg voor geen verificatie" class="form-control" autocomplete="new-password" />
-            <p class="form-help">Bij ingest moet header X-Stream-Secret deze waarde hebben. Toon en kopieer na opslaan; daarna niet meer zichtbaar.</p>
+            <input type="password" id="secret" name="secret" placeholder="Voor beveiligde webhook (X-Stream-Secret)" class="form-control" autocomplete="new-password" />
           </div>
-          ` : `
-          <div class="form-group">
-            <label>Secret</label>
-            <p class="form-help">Bestaand secret wijzigen: vul hieronder een nieuw secret in en sla op. Of gebruik "Rotate secret" op de detailpagina.</p>
-            <input type="password" id="secret" name="secret" placeholder="Nieuw secret (optioneel)" class="form-control" autocomplete="new-password" />
+
+          <div class="form-group" style="margin-top: 1.5rem;">
+            <button type="button" id="toggleMoreOptions" class="btn-outline">
+              <i class="fas fa-cog"></i> Meer opties (veldkoppeling, standaardwaarden, JSON)
+            </button>
+            <div id="moreOptionsBlock" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border, #e2e8f0);">
+              <div class="form-group" id="simpleMappingSection">
+                <h3 class="form-section-title" style="margin-top: 0; font-size: 1rem;">Veldkoppeling</h3>
+                <p class="form-help" style="margin-bottom: 12px;">Payload-veldnamen die naar onze velden mappen. Standaard: company_name, email, enz.</p>
+                <div class="stream-mapping-grid" style="display: grid; gap: 12px; max-width: 480px;">
+                  <div class="form-group" style="margin-bottom: 0;"><label for="map_company_name">Bedrijfsnaam</label><input type="text" id="map_company_name" class="form-control" placeholder="company_name" /></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="map_contact_name">Contactnaam</label><input type="text" id="map_contact_name" class="form-control" placeholder="contact_name" /></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="map_email">E-mail</label><input type="text" id="map_email" class="form-control" placeholder="email" /></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="map_phone">Telefoon</label><input type="text" id="map_phone" class="form-control" placeholder="phone" /></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="map_message">Bericht / omschrijving</label><input type="text" id="map_message" class="form-control" placeholder="message" /></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="default_status">Standaard status</label><select id="default_status" class="form-control"><option value="open">Open</option><option value="new">Nieuw</option><option value="qualified">Gekwalificeerd</option></select></div>
+                  <div class="form-group" style="margin-bottom: 0;"><label for="default_priority">Standaard prioriteit</label><select id="default_priority" class="form-control"><option value="medium">Gemiddeld</option><option value="high">Hoog</option><option value="low">Laag</option></select></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <button type="button" id="toggleAdvancedConfig" class="btn-outline" style="margin-bottom: 8px;"><i class="fas fa-code"></i> JSON bewerken</button>
+                <div id="advancedConfigBlock" style="display: none;">
+                  <textarea id="config" name="config" rows="10" class="form-control" style="font-family: monospace; font-size: 13px;">${configJson}</textarea>
+                </div>
+              </div>
+            </div>
           </div>
-          `}
-          <div class="form-actions">
+
+          <div class="form-actions" style="margin-top: 1.5rem;">
             <a href="/admin/opportunities/streams${isEdit ? '/' + stream.id : ''}" class="btn-outline">Annuleren</a>
             <button type="submit" class="btn-primary">${isEdit ? 'Opslaan' : 'Aanmaken'}</button>
           </div>

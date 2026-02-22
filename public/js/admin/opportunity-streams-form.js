@@ -98,13 +98,23 @@
     })
   }
 
+  var moreOptionsBlock = document.getElementById('moreOptionsBlock')
+  var toggleMoreBtn = document.getElementById('toggleMoreOptions')
+  if (toggleMoreBtn && moreOptionsBlock) {
+    toggleMoreBtn.addEventListener('click', function () {
+      var isHidden = moreOptionsBlock.style.display === 'none'
+      moreOptionsBlock.style.display = isHidden ? 'block' : 'none'
+      toggleMoreBtn.innerHTML = isHidden ? '<i class="fas fa-cog"></i> Verberg extra opties' : '<i class="fas fa-cog"></i> Meer opties (veldkoppeling, standaardwaarden, JSON)'
+    })
+  }
+
   var advancedBlock = document.getElementById('advancedConfigBlock')
   var toggleBtn = document.getElementById('toggleAdvancedConfig')
   if (toggleBtn && advancedBlock) {
     toggleBtn.addEventListener('click', function () {
       var isHidden = advancedBlock.style.display === 'none'
       advancedBlock.style.display = isHidden ? 'block' : 'none'
-      toggleBtn.innerHTML = isHidden ? '<i class="fas fa-code"></i> Verberg JSON' : '<i class="fas fa-code"></i> Geavanceerd: JSON bewerken'
+      toggleBtn.innerHTML = isHidden ? '<i class="fas fa-code"></i> Verberg JSON' : '<i class="fas fa-code"></i> JSON bewerken'
     })
   }
 
