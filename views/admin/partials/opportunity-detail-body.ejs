@@ -158,7 +158,7 @@
           <h3 class="card-title">Deal</h3>
           <% if (typeof linkedDeal !== 'undefined' && linkedDeal) { %>
             <p class="deal-linked-message">Deze kans is omgezet naar een deal.</p>
-            <a href="/admin/opportunities/deals" class="btn-primary-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+            <a href="/admin/opportunities/deals/<%= linkedDeal.id %>" class="btn-primary-sm" style="display: inline-flex; align-items: center; gap: 6px;">
               <i class="fas fa-external-link-alt"></i>
               Bekijk deal: <%= linkedDeal.title || 'Deal' %>
             </a>
