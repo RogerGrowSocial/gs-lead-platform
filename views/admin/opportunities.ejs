@@ -171,30 +171,41 @@
   <div class="opportunities-container">
     <!-- Page Header -->
     <div class="page-header">
-      <div>
+      <div class="page-header-title">
         <h1>Kansen</h1>
-        <p class="text-muted">Beheer en wijs kansen toe met AI-ondersteuning</p>
+        <p class="page-header-subtitle">Beheer en wijs kansen toe met AI-ondersteuning</p>
       </div>
       <div class="header-actions">
-        ${typeof showStreamsLink !== 'undefined' && showStreamsLink ? `
-        <a href="/admin/opportunities/streams" class="btn-outline" style="display: inline-flex; align-items: center; gap: 6px;">
-          <i class="fas fa-stream"></i> Kansenstromen beheren
-        </a>
-        ` : ''}
-        <button class="btn-secondary btn-sm ai-router-settings-btn" id="aiKansenRouterSettingsBtn" type="button" style="display: inline-flex; align-items: center; gap: 6px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 22v-2M12 4V2M4 12H2M22 12h-2M4.93 4.93l-1.41 1.41M18.48 18.48l-1.41 1.41M4.93 19.07l-1.41-1.41M18.48 5.52l-1.41-1.41"></path></svg>
-          <span class="ai-router-settings-text">AI Kansen Router instellingen</span>
-        </button>
-        <button id="newOpportunityBtn" class="btn-primary">
-          <i class="fas fa-plus"></i> Nieuwe kans
+        <div class="header-actions-secondary">
+          ${typeof showStreamsLink !== 'undefined' && showStreamsLink ? `
+          <a href="/admin/opportunities/streams" class="btn btn-outline header-action-btn">
+            <i class="fas fa-stream" aria-hidden="true"></i>
+            <span>Kansenstromen beheren</span>
+          </a>
+          ` : ''}
+          <button type="button" class="btn btn-ghost header-action-btn" id="aiKansenRouterSettingsBtn">
+            <svg class="header-action-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 22v-2M12 4V2M4 12H2M22 12h-2M4.93 4.93l-1.41 1.41M18.48 18.48l-1.41 1.41M4.93 19.07l-1.41-1.41M18.48 5.52l-1.41-1.41"></path></svg>
+            <span>AI Router instellingen</span>
+          </button>
+        </div>
+        <button type="button" id="newOpportunityBtn" class="btn btn-primary header-action-primary">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>Nieuwe kans</span>
         </button>
       </div>
     </div>
     ${typeof showStreamsEmptyCallout !== 'undefined' && showStreamsEmptyCallout ? `
-    <div class="settings-card" style="margin-bottom: 1.5rem; background: var(--color-surface-muted, #f8fafc); border: 1px solid var(--color-border, #e2e8f0);">
-      <div class="settings-card-body" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-        <p class="text-muted" style="margin: 0;">Nog geen kansenstromen ingesteld. Koppel Trustoo, webhook of website formulier.</p>
-        <a href="/admin/opportunities/streams" class="btn-primary">Kansenstromen instellen</a>
+    <div class="opportunities-streams-callout">
+      <div class="opportunities-streams-callout-icon" aria-hidden="true">
+        <i class="fas fa-plug"></i>
+      </div>
+      <div class="opportunities-streams-callout-content">
+        <h3 class="opportunities-streams-callout-title">Nog geen kansenstromen</h3>
+        <p class="opportunities-streams-callout-text">Koppel een bron zoals Trustoo, een webhook of een websiteformulier om kansen automatisch binnen te laten komen.</p>
+        <a href="/admin/opportunities/streams" class="btn btn-primary opportunities-streams-callout-cta">
+          <i class="fas fa-cog" aria-hidden="true"></i>
+          Kansenstromen instellen
+        </a>
       </div>
     </div>
     ` : ''}
