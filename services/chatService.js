@@ -186,7 +186,7 @@ async function getConversation(conversationId, userId) {
   if (userIds.length > 0) {
     const { data: profs } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, avatar_url, role_id')
+      .select('id, first_name, last_name, email')
       .in('id', userIds);
     profiles = profs || [];
   }
@@ -199,10 +199,10 @@ async function getConversation(conversationId, userId) {
       last_read_at: p.last_read_at,
       muted: p.muted,
       created_at: p.created_at,
-      first_name: profile?.first_name,
-      last_name: profile?.last_name,
-      email: profile?.email,
-      avatar_url: profile?.avatar_url,
+      first_name: profile?.first_name ?? null,
+      last_name: profile?.last_name ?? null,
+      email: profile?.email ?? null,
+      avatar_url: profile?.profile_picture || profile?.avatar_url || null,
     };
   });
 
@@ -246,9 +246,11 @@ async function getMessages(conversationId, userId, cursor = null, limit = MESSAG
   if (senderIds.length > 0) {
     const { data: profs } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, avatar_url')
+      .select('id, first_name, last_name, email')
       .in('id', senderIds);
-    for (const p of profs || []) senders[p.id] = p;
+    for (const p of profs || []) {
+      senders[p.id] = { ...p, avatar_url: p.profile_picture || p.avatar_url || null };
+    }
   }
 
   const messages = list.map((m) => ({

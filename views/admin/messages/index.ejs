@@ -55,10 +55,20 @@
         <header class="messages-thread-header">
           <div class="messages-thread-header-left">
             <button type="button" class="messages-back-btn" id="messagesBackBtn" aria-label="Terug">←</button>
-            <div class="messages-thread-avatars" id="messagesThreadAvatars"></div>
-            <div class="messages-thread-info">
-              <h3 class="messages-thread-title" id="messagesThreadTitle">—</h3>
-              <span class="messages-thread-meta" id="messagesThreadMeta">—</span>
+            <div class="messages-thread-skeleton" id="messagesThreadSkeleton" style="display:none;" aria-hidden="true">
+              <div class="messages-skeleton-avatar"></div>
+              <div class="messages-skeleton-avatar"></div>
+              <div class="messages-thread-skeleton-lines">
+                <div class="messages-skeleton-line messages-skeleton-title"></div>
+                <div class="messages-skeleton-line messages-skeleton-meta"></div>
+              </div>
+            </div>
+            <div class="messages-thread-header-info" id="messagesThreadInfo" style="display:flex;">
+              <div class="messages-thread-avatars" id="messagesThreadAvatars"></div>
+              <div class="messages-thread-info">
+                <h3 class="messages-thread-title" id="messagesThreadTitle">—</h3>
+                <span class="messages-thread-meta" id="messagesThreadMeta">—</span>
+              </div>
             </div>
           </div>
           <div class="messages-thread-header-right">
@@ -84,6 +94,11 @@
       <div class="messages-right-panel-header">
         <h4>Deelnemers</h4>
         <button type="button" class="messages-right-panel-close" id="messagesRightPanelClose" aria-label="Sluiten">×</button>
+      </div>
+      <div class="messages-participants-skeleton" id="messagesParticipantsSkeleton" style="display:none;" aria-hidden="true">
+        <div class="messages-skeleton-partipant"></div>
+        <div class="messages-skeleton-partipant"></div>
+        <div class="messages-skeleton-partipant"></div>
       </div>
       <div class="messages-right-panel-body" id="messagesRightPanelBody"></div>
     </aside>

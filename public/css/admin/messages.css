@@ -126,6 +126,66 @@
   100% { background-position: -200% 0; }
 }
 
+/* Thread header skeleton (when opening a conversation) */
+.messages-thread-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.messages-thread-skeleton .messages-skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: messages-skeleton 1.2s ease-in-out infinite;
+}
+.messages-thread-skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.messages-thread-skeleton .messages-skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: messages-skeleton 1.2s ease-in-out infinite;
+}
+.messages-thread-skeleton .messages-skeleton-title {
+  width: 160px;
+}
+.messages-thread-skeleton .messages-skeleton-meta {
+  width: 80px;
+}
+.messages-thread-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Participants panel skeleton */
+.messages-participants-skeleton {
+  padding: 12px;
+}
+.messages-skeleton-partipant {
+  height: 48px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: messages-skeleton 1.2s ease-in-out infinite;
+}
+.messages-skeleton-partipant:last-child {
+  margin-bottom: 0;
+}
+
 .messages-empty {
   padding: 24px 16px;
   text-align: center;

@@ -56,10 +56,16 @@
     return div.innerHTML;
   }
 
+  function participantDisplayName(p) {
+    if (!p) return '—';
+    const name = [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || (p.email || '').trim();
+    return name || '—';
+  }
+
   function avatarHtml(profile, sizeClass) {
-    const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.email || '?';
-    const initial = (name.charAt(0) || '?').toUpperCase();
-    const img = profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="">` : initial;
+    const name = participantDisplayName(profile);
+    const initial = (name !== '—' ? name.charAt(0) : '?').toUpperCase();
+    const img = profile && profile.avatar_url ? `<img src="${escapeHtml(profile.avatar_url)}" alt="">` : initial;
     return `<div class="messages-conv-avatar ${sizeClass || ''}">${img}</div>`;
   }
 
@@ -107,8 +113,9 @@
   }
 
   function conversationTitle(c) {
-    if (c.title) return c.title;
-    return 'Chat'; // DM title would need other participants from API
+    if (c && c.title && String(c.title).trim()) return c.title.trim();
+    const parts = (c && c.participants) ? (c.participants.map((p) => participantDisplayName(p)).filter((n) => n !== '—')) : [];
+    return parts.length ? parts.join(', ') : 'Chat';
   }
 
   function renderConversationList() {
@@ -137,6 +144,16 @@
     });
   }
 
+  function showThreadSkeleton(show) {
+    const sk = document.getElementById('messagesThreadSkeleton');
+    const info = document.getElementById('messagesThreadInfo');
+    const partSk = document.getElementById('messagesParticipantsSkeleton');
+    if (sk) sk.style.display = show ? 'block' : 'none';
+    if (info) info.style.display = show ? 'none' : 'flex';
+    if (partSk) partSk.style.display = show ? 'block' : 'none';
+    if (rightPanelBody) rightPanelBody.style.display = show ? 'none' : 'block';
+  }
+
   async function openConversation(id) {
     if (!id) return;
     currentConversationId = id;
@@ -145,27 +162,47 @@
     renderConversationList();
     mainPlaceholder.style.display = 'none';
     threadWrap.style.display = 'flex';
-    const data = await api('/admin/api/messages/conversations/' + id);
-    currentConversation = data.conversation;
-    if (!currentConversation) return;
-    threadTitle.textContent = currentConversation.title || currentConversation.participants?.map((p) => p.first_name + ' ' + p.last_name).filter(Boolean).join(', ') || 'Chat';
-    threadMeta.textContent = (currentConversation.participants || []).length + ' deelnemer(s)';
-    threadAvatars.innerHTML = (currentConversation.participants || []).slice(0, 3).map((p) => avatarHtml(p)).join('');
-    if (rightPanelBody && currentConversation.participants) {
-      rightPanelBody.innerHTML = currentConversation.participants.map((p) => {
-        const name = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.email || '—';
-        return `<div class="messages-partipant">${avatarHtml(p)}<span class="messages-partipant-name">${escapeHtml(name)}</span></div>`;
-      }).join('');
+    showThreadSkeleton(true);
+    threadTitle.textContent = '';
+    threadMeta.textContent = '';
+    threadAvatars.innerHTML = '';
+    if (rightPanelBody) rightPanelBody.innerHTML = '';
+    messagesInner.innerHTML = '';
+    try {
+      const data = await api('/admin/api/messages/conversations/' + id);
+      currentConversation = data.conversation;
+      if (!currentConversation) {
+        showThreadSkeleton(false);
+        threadTitle.textContent = 'Chat';
+        threadMeta.textContent = '0 deelnemer(s)';
+        return;
+      }
+      showThreadSkeleton(false);
+      threadTitle.textContent = conversationTitle(currentConversation);
+      const partCount = (currentConversation.participants || []).length;
+      threadMeta.textContent = partCount + ' deelnemer(s)';
+      threadAvatars.innerHTML = (currentConversation.participants || []).slice(0, 3).map((p) => avatarHtml(p)).join('');
+      if (rightPanelBody && currentConversation.participants) {
+        rightPanelBody.innerHTML = currentConversation.participants.map((p) => {
+          const name = participantDisplayName(p);
+          return `<div class="messages-partipant">${avatarHtml(p)}<span class="messages-partipant-name">${escapeHtml(name)}</span></div>`;
+        }).join('');
+      }
+      await api('/admin/api/messages/conversations/' + id + '/read', { method: 'POST' });
+      nextCursor = null;
+      messages = [];
+      await loadMessages();
+      if (scrollMessageId) {
+        const el = document.getElementById('msg-' + scrollMessageId);
+        if (el) el.scrollIntoView({ block: 'center' });
+      }
+      startPolling();
+    } catch (e) {
+      showThreadSkeleton(false);
+      threadTitle.textContent = 'Chat';
+      threadMeta.textContent = '—';
+      if (window.showNotification) window.showNotification('Kon conversatie niet laden: ' + e.message, 'error');
     }
-    await api('/admin/api/messages/conversations/' + id + '/read', { method: 'POST' });
-    nextCursor = null;
-    messages = [];
-    await loadMessages();
-    if (scrollMessageId) {
-      const el = document.getElementById('msg-' + scrollMessageId);
-      if (el) el.scrollIntoView({ block: 'center' });
-    }
-    startPolling();
   }
 
   async function loadMessages(append) {
@@ -197,7 +234,7 @@
         continue;
       }
       const own = m.sender_id === me;
-      const name = m.sender ? [m.sender.first_name, m.sender.last_name].filter(Boolean).join(' ') || m.sender.email || '—' : '—';
+      const name = participantDisplayName(m.sender);
       const bubble = escapeHtml(m.body).replace(/\n/g, '<br>');
       html += `<div class="messages-msg-wrap ${own ? 'own' : ''}" id="msg-${m.id}">
         <div class="messages-msg-avatar">${m.sender ? avatarHtml(m.sender) : '<div class="messages-conv-avatar">?</div>'}</div>
