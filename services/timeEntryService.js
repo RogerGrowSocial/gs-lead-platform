@@ -460,6 +460,7 @@ class TimeEntryService {
         ticket_task_id: entryData.ticket_task_id || null,
         meeting_type: entryData.meeting_type || null,
         participant_user_ids: Array.isArray(entryData.participant_user_ids) ? entryData.participant_user_ids : null,
+        team_id: entryData.team_id || null,
         ops_category: entryData.ops_category || null,
         ops_area: entryData.ops_area || null,
         ops_impact: entryData.ops_impact || null,
@@ -497,7 +498,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer, error: fetchError } = await supabaseAdmin
         .from('time_entries')
-        .select('id, start_at, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids, ops_category, ops_area, ops_impact')
+        .select('id, start_at, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids, team_id, ops_category, ops_area, ops_impact')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .single()
@@ -519,6 +520,7 @@ class TimeEntryService {
         ticket_task_id: updateData.ticket_task_id !== undefined ? updateData.ticket_task_id : activeTimer.ticket_task_id,
         meeting_type: updateData.meeting_type !== undefined ? updateData.meeting_type : activeTimer.meeting_type,
         participant_user_ids: updateData.participant_user_ids !== undefined ? updateData.participant_user_ids : activeTimer.participant_user_ids,
+        team_id: updateData.team_id !== undefined ? updateData.team_id : activeTimer.team_id,
         ops_category: updateData.ops_category !== undefined ? updateData.ops_category : activeTimer.ops_category,
         ops_area: updateData.ops_area !== undefined ? updateData.ops_area : activeTimer.ops_area,
         ops_impact: updateData.ops_impact !== undefined ? updateData.ops_impact : activeTimer.ops_impact
@@ -550,6 +552,7 @@ class TimeEntryService {
           ticket_task_id: merged.ticket_task_id || null,
           meeting_type: merged.meeting_type || null,
           participant_user_ids: merged.participant_user_ids != null ? merged.participant_user_ids : null,
+          team_id: merged.team_id || null,
           ops_category: merged.ops_category || null,
           ops_area: merged.ops_area || null,
           ops_impact: merged.ops_impact || null,
@@ -626,7 +629,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer } = await supabaseAdmin
         .from('time_entries')
-        .select('id, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids, ops_category, ops_area, ops_impact')
+        .select('id, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id, ticket_id, ticket_task_id, meeting_type, participant_user_ids, team_id, ops_category, ops_area, ops_impact')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -648,6 +651,7 @@ class TimeEntryService {
         ticket_task_id: updateData.ticket_task_id !== undefined ? updateData.ticket_task_id : activeTimer.ticket_task_id,
         meeting_type: updateData.meeting_type !== undefined ? updateData.meeting_type : activeTimer.meeting_type,
         participant_user_ids: updateData.participant_user_ids !== undefined ? updateData.participant_user_ids : activeTimer.participant_user_ids,
+        team_id: updateData.team_id !== undefined ? updateData.team_id : activeTimer.team_id,
         ops_category: updateData.ops_category !== undefined ? updateData.ops_category : activeTimer.ops_category,
         ops_area: updateData.ops_area !== undefined ? updateData.ops_area : activeTimer.ops_area,
         ops_impact: updateData.ops_impact !== undefined ? updateData.ops_impact : activeTimer.ops_impact
@@ -672,6 +676,7 @@ class TimeEntryService {
           ticket_task_id: merged.ticket_task_id || null,
           meeting_type: merged.meeting_type || null,
           participant_user_ids: merged.participant_user_ids != null ? merged.participant_user_ids : null,
+          team_id: merged.team_id || null,
           ops_category: merged.ops_category || null,
           ops_area: merged.ops_area || null,
           ops_impact: merged.ops_impact || null,
@@ -745,6 +750,7 @@ class TimeEntryService {
           ticket_task_id: newEntryData.ticket_task_id || null,
           meeting_type: newEntryData.meeting_type || null,
           participant_user_ids: Array.isArray(newEntryData.participant_user_ids) ? newEntryData.participant_user_ids : null,
+          team_id: newEntryData.team_id || null,
           ops_category: newEntryData.ops_category || null,
           ops_area: newEntryData.ops_area || null,
           ops_impact: newEntryData.ops_impact || null,

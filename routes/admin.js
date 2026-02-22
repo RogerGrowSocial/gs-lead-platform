@@ -12024,7 +12024,139 @@ router.delete('/api/contacts/:id/photo', requireAuth, isAdmin, async (req, res) 
   }
 })
 
+// ===== TEAMS (for Overleg / time tracker) =====
+// GET /admin/api/teams - List teams for dropdown
+router.get('/api/teams', requireAuth, async (req, res) => {
+  try {
+    const { data: teams, error } = await supabaseAdmin
+      .from('teams')
+      .select('id, name')
+      .order('name')
+    if (error) throw error
+    res.json({ ok: true, data: teams || [] })
+  } catch (err) {
+    console.error('Error listing teams:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// POST /admin/api/teams - Create team (admin/manager)
+router.post('/api/teams', requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { name } = req.body || {}
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ ok: false, error: 'Naam is verplicht' })
+    }
+    const { data: team, error } = await supabaseAdmin
+      .from('teams')
+      .insert({ name: String(name).trim() })
+      .select('id, name')
+      .single()
+    if (error) throw error
+    res.json({ ok: true, data: team })
+  } catch (err) {
+    console.error('Error creating team:', err)
+    res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+// ===== COLLEAGUES SEARCH (overleg deelnemers: werknemers, managers, admins) =====
+// GET /admin/api/profiles/search?q= - Search colleagues for time tracker Overleg participants
+router.get('/api/profiles/search', requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim()
+    if (q.length < 2) {
+      return res.json([])
+    }
+    const sanitized = q.replace(/[%_]/g, '\\$&')
+    const pattern = `%${sanitized}%`
+    const { data: profiles, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id, first_name, last_name, email, company_name')
+      .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},company_name.ilike.${pattern}`)
+      .order('first_name')
+      .limit(20)
+    if (error) throw error
+    const list = (profiles || []).map((p) => {
+      const fullName = [p.first_name, p.last_name].filter(Boolean).join(' ').trim()
+      const displayName = fullName || p.company_name || p.email || '—'
+      return {
+        id: p.id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        email: p.email,
+        full_name: fullName || null,
+        display_name: displayName
+      }
+    })
+    res.json(list)
+  } catch (err) {
+    console.error('Error colleagues search:', err)
+    res.status(500).json({ error: 'Fout bij zoeken' })
+  }
+})
+
 // ===== TICKET API ENDPOINTS =====
+// GET /admin/api/tickets/search - Ticket search for time tracker (Support). Admin: all; else: assigned only.
+router.get('/api/tickets/search', requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim().replace(/%/g, '\\%')
+    const limit = Math.min(parseInt(req.query.limit) || 15, 20)
+    const isAdmin = req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+
+    let query = supabaseAdmin
+      .from('tickets')
+      .select(`
+        id,
+        ticket_number,
+        subject,
+        status,
+        priority,
+        customer_id,
+        assignee_id,
+        customers:customer_id(id, name, company_name),
+        assignee:assignee_id(id, first_name, last_name)
+      `)
+      .order('last_activity_at', { ascending: false })
+      .limit(limit)
+
+    if (q.length >= 2) {
+      const pattern = `%${q}%`
+      query = query.or(`subject.ilike.${pattern},ticket_number.ilike.${pattern},description.ilike.${pattern}`)
+    }
+
+    if (!isAdmin) {
+      query = query.eq('assignee_id', req.user.id)
+    }
+
+    const { data: tickets, error } = await query
+
+    if (error) throw error
+
+    const results = (tickets || []).map((t) => {
+      const customerName = t.customers?.company_name || t.customers?.name || null
+      const assigneeName = t.assignee ? [t.assignee.first_name, t.assignee.last_name].filter(Boolean).join(' ') : null
+      const title = (t.ticket_number || '') + (t.subject ? ' – ' + t.subject : '')
+      const subtitle = [customerName, t.status, assigneeName].filter(Boolean).join(' · ')
+      return {
+        id: t.id,
+        title: title || 'Ticket',
+        subtitle: subtitle || undefined,
+        status: t.status,
+        priority: t.priority || null,
+        customerName: customerName || undefined,
+        assigneeName: assigneeName || undefined,
+        avatarUrl: null
+      }
+    })
+
+    res.json({ ok: true, data: results })
+  } catch (error) {
+    console.error('Error tickets search:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
 router.post('/api/tickets', requireAuth, isAdmin, async (req, res) => {
   try {
     const { subject, description, customer_id, mail_id, priority, category, assigned_to, due_date } = req.body

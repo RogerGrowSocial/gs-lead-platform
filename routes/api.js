@@ -14310,11 +14310,6 @@ router.post('/tasks', requireAuth, async (req, res) => {
     if (!employee_id || !title) {
       return res.status(400).json({ ok: false, error: 'Werknemer en titel zijn verplicht' });
     }
-    
-    // Validate: task must have customer_id OR contact_id
-    if (!customer_id && !contact_id) {
-      return res.status(400).json({ ok: false, error: 'Bij een taak moet je een bedrijf of contactpersoon selecteren' });
-    }
 
     // Check permissions: employees can only create tasks for themselves, managers+ can create for anyone
     if (!isAdmin) {
@@ -14818,12 +14813,155 @@ router.get('/time-entries/context-search', requireAuth, async (req, res) => {
     ;(contactsRes.data || []).forEach((c) => {
       const title = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.name || c.email || ''
       const subtitle = c.customers?.company_name || c.email || null
-      results.push({ type: 'contact', id: c.id, title: title || 'Contact', subtitle: subtitle || undefined, avatarUrl: c.photo_url || null })
+      results.push({ type: 'contact', id: c.id, title: title || 'Contact', subtitle: subtitle || undefined, avatarUrl: c.photo_url || null, customerId: c.customer_id || null })
     })
 
     res.json({ ok: true, data: results })
   } catch (error) {
     console.error('Error time-entries context-search:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
+// GET /api/tickets/search?q=
+// Ticket search for time tracker Support flow. Admin: all tickets; else: only assigned to current user.
+router.get('/tickets/search', requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim().replace(/%/g, '\\%')
+    const limit = Math.min(parseInt(req.query.limit) || 15, 20)
+    const isAdmin = req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+
+    let query = supabaseAdmin
+      .from('tickets')
+      .select(`
+        id,
+        ticket_number,
+        subject,
+        status,
+        priority,
+        customer_id,
+        assignee_id,
+        customers:customer_id(id, name, company_name),
+        assignee:assignee_id(id, first_name, last_name)
+      `)
+      .order('last_activity_at', { ascending: false })
+      .limit(limit)
+
+    if (q.length >= 2) {
+      const pattern = `%${q}%`
+      query = query.or(`subject.ilike.${pattern},ticket_number.ilike.${pattern},description.ilike.${pattern}`)
+    }
+
+    if (!isAdmin) {
+      query = query.eq('assignee_id', req.user.id)
+    }
+
+    const { data: tickets, error } = await query
+
+    if (error) throw error
+
+    const results = (tickets || []).map((t) => {
+      const customerName = t.customers?.company_name || t.customers?.name || null
+      const assigneeName = t.assignee ? [t.assignee.first_name, t.assignee.last_name].filter(Boolean).join(' ') : null
+      const title = (t.ticket_number || '') + (t.subject ? ' – ' + t.subject : '')
+      const subtitle = [customerName, t.status, assigneeName].filter(Boolean).join(' · ')
+      return {
+        id: t.id,
+        title: title || 'Ticket',
+        subtitle: subtitle || undefined,
+        status: t.status,
+        priority: t.priority || null,
+        customerName: customerName || undefined,
+        assigneeName: assigneeName || undefined,
+        avatarUrl: null
+      }
+    })
+
+    res.json({ ok: true, data: results })
+  } catch (error) {
+    console.error('Error tickets search:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
+// GET /api/tickets/:id/tasks
+// List tasks for a ticket (Support time tracker). Access: admin or assigned to ticket.
+router.get('/tickets/:id/tasks', requireAuth, async (req, res) => {
+  try {
+    const { id: ticketId } = req.params
+    const isAdmin = req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+
+    const { data: ticket, error: ticketErr } = await supabaseAdmin
+      .from('tickets')
+      .select('id, assignee_id')
+      .eq('id', ticketId)
+      .single()
+
+    if (ticketErr || !ticket) {
+      return res.status(404).json({ ok: false, error: 'Ticket niet gevonden' })
+    }
+    if (!isAdmin && ticket.assignee_id !== req.user.id) {
+      return res.status(403).json({ ok: false, error: 'Geen toegang tot dit ticket' })
+    }
+
+    const { data: tasks, error } = await supabaseAdmin
+      .from('ticket_tasks')
+      .select('id, title, description, status, created_at')
+      .eq('ticket_id', ticketId)
+      .order('created_at', { ascending: true })
+
+    if (error) throw error
+
+    res.json({ ok: true, data: tasks || [] })
+  } catch (error) {
+    console.error('Error listing ticket tasks:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
+// POST /api/tickets/:id/tasks
+// Create a task for a ticket. Access: admin or assigned to ticket.
+router.post('/tickets/:id/tasks', requireAuth, async (req, res) => {
+  try {
+    const { id: ticketId } = req.params
+    const { title, description } = req.body || {}
+    const isAdmin = req.user?.user_metadata?.is_admin === true || req.user?.is_admin === true
+
+    const { data: ticket, error: ticketErr } = await supabaseAdmin
+      .from('tickets')
+      .select('id, assignee_id')
+      .eq('id', ticketId)
+      .single()
+
+    if (ticketErr || !ticket) {
+      return res.status(404).json({ ok: false, error: 'Ticket niet gevonden' })
+    }
+    if (!isAdmin && ticket.assignee_id !== req.user.id) {
+      return res.status(403).json({ ok: false, error: 'Geen toegang tot dit ticket' })
+    }
+
+    const titleTrim = (title != null && title !== '') ? String(title).trim() : null
+    if (!titleTrim) {
+      return res.status(400).json({ ok: false, error: 'Titel is verplicht' })
+    }
+
+    const { data: task, error } = await supabaseAdmin
+      .from('ticket_tasks')
+      .insert({
+        ticket_id: ticketId,
+        title: titleTrim,
+        description: (description != null && description !== '') ? String(description).trim() : null,
+        status: 'open',
+        created_by: req.user.id
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({ ok: true, data: task })
+  } catch (error) {
+    console.error('Error creating ticket task:', error)
     res.status(500).json({ ok: false, error: error.message })
   }
 })

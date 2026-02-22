@@ -90,6 +90,7 @@
       this.overlegParticipantsSearchDebounce = null;
       this.switchOverlegParticipants = [];
       this.switchOverlegParticipantsSearchDebounce = null;
+      this.runningEditMode = false;
       this.init();
     }
 
@@ -317,13 +318,22 @@
               <input type="text" id="timeTrackerNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
-            <!-- Overleg: soort overleg, deelnemers, Koppel aan (alleen bij Overleg) -->
+            <!-- Overleg: soort overleg, team, deelnemers, Koppel aan (alleen bij Overleg) -->
             <div id="timeTrackerOverlegContainer" style="display: none; margin-bottom: 12px;">
               <div style="margin-bottom: 10px;">
                 <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">Soort overleg</label>
                 <select id="timeTrackerMeetingType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
                   ${OVERLEG_MEETING_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
                 </select>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Team (optioneel)</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <select id="timeTrackerTeamId" style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    <option value="">— Geen team —</option>
+                  </select>
+                  <button type="button" id="timeTrackerTeamAdd" style="padding: 8px 12px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap;">+ Nieuw</button>
+                </div>
               </div>
               <div style="margin-bottom: 10px;">
                 <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Deelnemers (optioneel)</label>
@@ -354,8 +364,6 @@
                 </select>
               </div>
               <div style="margin-bottom: 10px;">
-                <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Area / Project (optioneel)</label>
-                <input type="text" id="timeTrackerOpsArea" placeholder="Bijv. Platform, GrowSocial, CRM" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
               </div>
               <div style="margin-bottom: 10px;">
                 <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
@@ -471,6 +479,13 @@
               <select id="timeTrackerSwitchMeetingType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; margin-bottom: 8px;">
                 ${OVERLEG_MEETING_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
               </select>
+              <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Team (optioneel)</label>
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+                <select id="timeTrackerSwitchTeamId" style="flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                  <option value="">— Geen team —</option>
+                </select>
+                <button type="button" id="timeTrackerSwitchTeamAdd" style="padding: 8px 12px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap;">+ Nieuw</button>
+              </div>
               <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Deelnemers (optioneel)</label>
               <div style="position: relative; margin-bottom: 6px;">
                 <input type="text" id="timeTrackerSwitchParticipantsSearch" placeholder="Zoek collega..." autocomplete="off" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
@@ -493,8 +508,6 @@
               <select id="timeTrackerSwitchOpsCategory" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; margin-bottom: 8px;">
                 ${OPERATIONS_CATEGORIES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
               </select>
-              <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Area / Project (optioneel)</label>
-              <input type="text" id="timeTrackerSwitchOpsArea" placeholder="Bijv. Platform, GrowSocial" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; margin-bottom: 8px;">
               <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
               <div style="position: relative;">
                 <input type="text" id="timeTrackerSwitchOperationsContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
@@ -506,6 +519,14 @@
               <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-top: 8px; margin-bottom: 4px;">Impact (optioneel)</label>
               <select id="timeTrackerSwitchOpsImpact" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
                 ${OPERATIONS_IMPACT.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Sales (switch): activiteit type + koppel aan (context wrap is below) -->
+            <div id="timeTrackerSwitchSalesContainer" style="display: none; margin-bottom: 12px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">Activiteit type <span style="color: #ef4444;">*</span></label>
+              <select id="timeTrackerSwitchSalesActivityType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                ${SALES_ACTIVITY_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
               </select>
             </div>
 
@@ -699,6 +720,10 @@
       if (overlegContextClear) {
         overlegContextClear.addEventListener('click', () => this.clearContextSelection('overleg'));
       }
+      const teamAddBtn = this.popover.querySelector('#timeTrackerTeamAdd');
+      if (teamAddBtn) teamAddBtn.addEventListener('click', () => this.handleAddTeam('form'));
+      const switchTeamAddBtn = this.popover.querySelector('#timeTrackerSwitchTeamAdd');
+      if (switchTeamAddBtn) switchTeamAddBtn.addEventListener('click', () => this.handleAddTeam('switch'));
 
       // Operations: Koppel aan context search
       const operationsContextSearch = this.popover.querySelector('#timeTrackerOperationsContextSearch');
@@ -825,10 +850,18 @@
         startBtn.addEventListener('click', () => this.handleStart());
       }
 
-      // Wijzig details button
+      // Wijzig details button: first click enables editing, second click saves
       const updateDetailsBtn = this.popover.querySelector('#timeTrackerUpdateDetails');
       if (updateDetailsBtn) {
-        updateDetailsBtn.addEventListener('click', () => this.handleUpdateDetails());
+        updateDetailsBtn.addEventListener('click', () => {
+          if (this.runningEditMode) {
+            this.handleUpdateDetails();
+          } else {
+            this.runningEditMode = true;
+            this.setRunningFormReadonly(false);
+            updateDetailsBtn.textContent = 'Opslaan';
+          }
+        });
       }
 
       // Switch button
@@ -895,6 +928,7 @@
         if (kc) kc.style.display = 'none';
         if (overleg) overleg.style.display = 'block';
         if (operationsContainer) operationsContainer.style.display = 'none';
+        this.loadTeams();
         const noteEl = this.popover.querySelector('#timeTrackerNote');
         if (noteEl) noteEl.placeholder = 'Bijv. Weekstart / Klant call / 1:1 Servé';
       } else if (activity === 'operations') {
@@ -944,6 +978,7 @@
       const switchKlantContact = this.popover.querySelector('#timeTrackerSwitchKlantContactContainer');
       const switchOverleg = this.popover.querySelector('#timeTrackerSwitchOverlegContainer');
       const switchOperations = this.popover.querySelector('#timeTrackerSwitchOperationsContainer');
+      const switchSales = this.popover.querySelector('#timeTrackerSwitchSalesContainer');
 
       if (activity === 'support') {
         if (supportContainer) supportContainer.style.display = 'block';
@@ -951,6 +986,7 @@
         if (switchKlantContact) switchKlantContact.style.display = 'none';
         if (switchOverleg) switchOverleg.style.display = 'none';
         if (switchOperations) switchOperations.style.display = 'none';
+        if (switchSales) switchSales.style.display = 'none';
         this.clearSwitchTicketSelection();
       } else if (activity === 'overleg') {
         if (supportContainer) supportContainer.style.display = 'none';
@@ -958,20 +994,33 @@
         if (switchKlantContact) switchKlantContact.style.display = 'none';
         if (switchOverleg) switchOverleg.style.display = 'block';
         if (switchOperations) switchOperations.style.display = 'none';
+        if (switchSales) switchSales.style.display = 'none';
+        this.loadTeams();
       } else if (activity === 'operations') {
         if (supportContainer) supportContainer.style.display = 'none';
         taskContainer.style.display = 'none';
         if (switchKlantContact) switchKlantContact.style.display = 'none';
         if (switchOverleg) switchOverleg.style.display = 'none';
         if (switchOperations) switchOperations.style.display = 'block';
+        if (switchSales) switchSales.style.display = 'none';
       } else if (activity === 'klantenwerk') {
         if (supportContainer) supportContainer.style.display = 'none';
         taskContainer.style.display = 'block';
         if (switchKlantContact) switchKlantContact.style.display = 'block';
         if (switchOverleg) switchOverleg.style.display = 'none';
         if (switchOperations) switchOperations.style.display = 'none';
+        if (switchSales) switchSales.style.display = 'none';
         this.loadTasks();
         this.clearSwitchKlantContactSelection();
+        this.clearSwitchOverlegSelection();
+        this.clearSwitchOperationsSelection();
+      } else if (activity === 'sales') {
+        if (supportContainer) supportContainer.style.display = 'none';
+        taskContainer.style.display = 'none';
+        if (switchKlantContact) switchKlantContact.style.display = 'none';
+        if (switchOverleg) switchOverleg.style.display = 'none';
+        if (switchOperations) switchOperations.style.display = 'none';
+        if (switchSales) switchSales.style.display = 'block';
         this.clearSwitchOverlegSelection();
         this.clearSwitchOperationsSelection();
       } else {
@@ -980,6 +1029,7 @@
         if (switchKlantContact) switchKlantContact.style.display = 'none';
         if (switchOverleg) switchOverleg.style.display = 'none';
         if (switchOperations) switchOperations.style.display = 'none';
+        if (switchSales) switchSales.style.display = 'none';
         this.popover.querySelector('#timeTrackerSwitchTaskId').value = '';
         this.popover.querySelector('#timeTrackerSwitchTaskSearch').value = '';
         this.popover.querySelector('#timeTrackerSwitchCustomerId').value = '';
@@ -993,14 +1043,12 @@
 
     clearSwitchOperationsSelection() {
       const soc = this.popover.querySelector('#timeTrackerSwitchOpsCategory');
-      const soa = this.popover.querySelector('#timeTrackerSwitchOpsArea');
       const soimp = this.popover.querySelector('#timeTrackerSwitchOpsImpact');
       const soct = this.popover.querySelector('#timeTrackerSwitchOperationsContextType');
       const socid = this.popover.querySelector('#timeTrackerSwitchOperationsContextId');
       const sos = this.popover.querySelector('#timeTrackerSwitchOperationsContextSearch');
       const soclear = this.popover.querySelector('#timeTrackerSwitchOperationsContextClear');
       if (soc) soc.value = 'algemeen';
-      if (soa) soa.value = '';
       if (soimp) soimp.value = '';
       if (soct) soct.value = '';
       if (socid) socid.value = '';
@@ -1187,7 +1235,7 @@
       try {
         const params = new URLSearchParams({ limit: '15' });
         if (q.length >= 2) params.set('q', q);
-        const response = await fetch(`/api/tickets/search?${params}`, { credentials: 'include' });
+        const response = await fetch(`/admin/api/tickets/search?${params}`, { credentials: 'include' });
         const result = await response.json();
         const list = result.ok && result.data ? result.data : [];
         dropdown.innerHTML = '';
@@ -1270,6 +1318,56 @@
       }
     }
 
+    async loadTeams() {
+      const formSelect = this.popover.querySelector('#timeTrackerTeamId');
+      const switchSelect = this.popover.querySelector('#timeTrackerSwitchTeamId');
+      if (!formSelect && !switchSelect) return [];
+      try {
+        const response = await fetch('/admin/api/teams', { credentials: 'include' });
+        const result = await response.json();
+        const list = (result.ok && result.data) ? result.data : [];
+        const optionsHtml = '<option value="">— Geen team —</option>' + (list.map((t) => '<option value="' + (t.id || '') + '">' + (t.name || '').replace(/</g, '&lt;') + '</option>').join(''));
+        if (formSelect) {
+          const prev = formSelect.value;
+          formSelect.innerHTML = optionsHtml;
+          if (prev) formSelect.value = prev;
+        }
+        if (switchSelect) {
+          const prev = switchSelect.value;
+          switchSelect.innerHTML = optionsHtml;
+          if (prev) switchSelect.value = prev;
+        }
+        return list;
+      } catch (e) {
+        console.error('[TimeTracker] Error loading teams:', e);
+        return [];
+      }
+    }
+
+    async handleAddTeam(mode) {
+      const name = (typeof window.prompt === 'function' ? window.prompt('Naam van het team:', '') : '').trim();
+      if (!name) return;
+      try {
+        const response = await fetch('/admin/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name: name })
+        });
+        const result = await response.json();
+        if (!result.ok || !result.data) {
+          throw new Error(result.error || 'Fout bij aanmaken');
+        }
+        if (window.showNotification) window.showNotification('Team aangemaakt', 'success');
+        await this.loadTeams();
+        const selectEl = mode === 'switch' ? this.popover.querySelector('#timeTrackerSwitchTeamId') : this.popover.querySelector('#timeTrackerTeamId');
+        if (selectEl && result.data.id) selectEl.value = result.data.id;
+      } catch (e) {
+        console.error('[TimeTracker] Add team error:', e);
+        if (window.showNotification) window.showNotification(e.message || 'Fout bij aanmaken team', 'error');
+      }
+    }
+
     async loadCustomers() {
       try {
         // Load customers from API
@@ -1323,7 +1421,7 @@
       const self = this;
       this.overlegParticipantsSearchDebounce = setTimeout(async () => {
         try {
-          const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const response = await fetch(`/admin/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
           const list = await response.json();
           const users = Array.isArray(list) ? list : (list.data || list.ok ? (list.data || []) : []);
           if (!dropdown) return;
@@ -1394,7 +1492,7 @@
       const self = this;
       this.switchOverlegParticipantsSearchDebounce = setTimeout(async () => {
         try {
-          const response = await fetch(`/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const response = await fetch(`/admin/api/profiles/search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
           const list = await response.json();
           const users = Array.isArray(list) ? list : (list.data || list.ok ? (list.data || []) : []);
           if (!dropdown) return;
@@ -1606,7 +1704,7 @@
       try {
         const params = new URLSearchParams({ limit: '15' });
         if (q.length >= 2) params.set('q', q);
-        const response = await fetch(`/api/tickets/search?${params}`, { credentials: 'include' });
+        const response = await fetch(`/admin/api/tickets/search?${params}`, { credentials: 'include' });
         const result = await response.json();
         const list = result.ok && result.data ? result.data : [];
         dropdown.innerHTML = '';
@@ -1749,7 +1847,7 @@
             const title = (query || '').trim();
             this.closePopover();
             if (typeof window.openTaskDrawer === 'function') {
-              window.openTaskDrawer({ prefilledTitle: title });
+              window.openTaskDrawer({ prefilledTitle: title, openedFromTimeTracker: true });
             } else {
               const params = new URLSearchParams({ openTaskDrawer: '1', view: 'list' });
               if (title) params.set('title', title);
@@ -2047,11 +2145,16 @@
         form.style.display = 'none';
         running.style.display = 'block';
         
-        // Update current activity
-        const activityType = this.getActivityLabel(this.currentEntry.project_name || 'other');
+        // Update current activity (for Sales include activity_type label)
+        const pnForLabel = (this.currentEntry.project_name || '').toLowerCase();
+        let activityLabel = this.getActivityLabel(this.currentEntry.project_name || 'other');
+        if (pnForLabel === 'sales' && this.currentEntry.activity_type) {
+          const salesType = SALES_ACTIVITY_TYPES.find(t => t.value === this.currentEntry.activity_type);
+          if (salesType && salesType.label) activityLabel = activityLabel + ' – ' + salesType.label;
+        }
         const activityEl = this.popover.querySelector('#timeTrackerCurrentActivity');
         const noteEl = this.popover.querySelector('#timeTrackerCurrentNote');
-        if (activityEl) activityEl.textContent = activityType;
+        if (activityEl) activityEl.textContent = activityLabel;
         if (noteEl) {
           noteEl.textContent = this.currentEntry.note || '';
           noteEl.style.display = this.currentEntry.note ? 'block' : 'none';
@@ -2093,9 +2196,41 @@
           this.popover.querySelector('#timeTrackerSwitchKlantContactClear').style.display = 'block';
           this.renderSwitchKlantContactChips();
         }
+        // Prefill titel (note) and taak for running view (all activities)
+        const switchNoteEl = this.popover.querySelector('#timeTrackerSwitchNote');
+        if (switchNoteEl) switchNoteEl.value = this.currentEntry.note || '';
+        if (pn === 'klantenwerk') {
+          const taskIdEl = this.popover.querySelector('#timeTrackerSwitchTaskId');
+          const taskSearchEl = this.popover.querySelector('#timeTrackerSwitchTaskSearch');
+          const taskContainer = this.popover.querySelector('#timeTrackerSwitchTaskContainer');
+          const taskClearBtn = this.popover.querySelector('#timeTrackerSwitchTaskClear');
+          if (taskContainer) taskContainer.style.display = 'block';
+          if (this.currentEntry.task_id) {
+            if (taskIdEl) taskIdEl.value = this.currentEntry.task_id;
+            const taskTitle = (this.currentEntry.task && this.currentEntry.task.title) ? this.currentEntry.task.title : '';
+            if (taskSearchEl) taskSearchEl.value = taskTitle;
+            if (taskClearBtn) taskClearBtn.style.display = 'block';
+          } else {
+            if (taskIdEl) taskIdEl.value = '';
+            if (taskSearchEl) taskSearchEl.value = '';
+            if (taskClearBtn) taskClearBtn.style.display = 'none';
+          }
+        }
 
-        // Sales: show/hide context wrap and nudge; fill context from currentEntry
+        // Sales: show switch Sales container (activity type), context wrap and nudge; prefill from currentEntry
         const isSales = pn === 'sales';
+        const switchSalesContainer = this.popover.querySelector('#timeTrackerSwitchSalesContainer');
+        const switchSalesActivityType = this.popover.querySelector('#timeTrackerSwitchSalesActivityType');
+        if (isSales) {
+          if (switchSalesContainer) switchSalesContainer.style.display = 'block';
+          if (switchSalesActivityType) {
+            const at = (this.currentEntry.activity_type || '').trim();
+            if (SALES_ACTIVITY_TYPES.some(o => o.value === at)) switchSalesActivityType.value = at;
+            else switchSalesActivityType.value = '';
+          }
+        } else if (switchSalesContainer) {
+          switchSalesContainer.style.display = 'none';
+        }
         const nudgeEl = this.popover.querySelector('#timeTrackerSalesNudge');
         const contextWrap = this.popover.querySelector('#timeTrackerRunningContextWrap');
         if (nudgeEl) nudgeEl.style.display = 'none';
@@ -2126,6 +2261,10 @@
         if (pn === 'overleg') {
           const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
           if (switchMeetingType && this.currentEntry.meeting_type) switchMeetingType.value = this.currentEntry.meeting_type;
+          this.loadTeams().then(() => {
+            const switchTeamEl = this.popover.querySelector('#timeTrackerSwitchTeamId');
+            if (switchTeamEl && this.currentEntry.team_id) switchTeamEl.value = this.currentEntry.team_id;
+          });
           const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
           const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
           const sos = this.popover.querySelector('#timeTrackerSwitchOverlegContextSearch');
@@ -2148,10 +2287,8 @@
         // Operations: prefill switch ops fields from currentEntry
         if (pn === 'operations') {
           const swOpsCat = this.popover.querySelector('#timeTrackerSwitchOpsCategory');
-          const swOpsArea = this.popover.querySelector('#timeTrackerSwitchOpsArea');
           const swOpsImpact = this.popover.querySelector('#timeTrackerSwitchOpsImpact');
           if (swOpsCat && this.currentEntry.ops_category) swOpsCat.value = this.currentEntry.ops_category;
-          if (swOpsArea) swOpsArea.value = this.currentEntry.ops_area || '';
           if (swOpsImpact && this.currentEntry.ops_impact) swOpsImpact.value = this.currentEntry.ops_impact;
           const sopct = this.popover.querySelector('#timeTrackerSwitchOperationsContextType');
           const sopcid = this.popover.querySelector('#timeTrackerSwitchOperationsContextId');
@@ -2170,10 +2307,18 @@
           }
         }
 
+        // Running view: make form readonly until "Wijzig details" is clicked
+        this.setRunningFormReadonly(!this.runningEditMode);
+        const updateDetailsBtn = this.popover.querySelector('#timeTrackerUpdateDetails');
+        if (updateDetailsBtn) {
+          updateDetailsBtn.textContent = this.runningEditMode ? 'Opslaan' : 'Wijzig details';
+        }
+
         // Update elapsed time
         this.updateElapsedTime();
       } else {
         // Idle state
+        this.runningEditMode = false;
         this.clockButton.style.color = '#bdbec9';
         form.style.display = 'block';
         running.style.display = 'none';
@@ -2185,6 +2330,45 @@
       const key = (activityType || '').toLowerCase();
       const activity = ACTIVITY_TYPES.find(a => a.value === key);
       return activity ? activity.label : activityType || 'Overig';
+    }
+
+    setRunningFormReadonly(readonly) {
+      if (!this.popover) return;
+      const els = [
+        { id: 'timeTrackerSwitchActivity', type: 'select' },
+        { id: 'timeTrackerSwitchTaskSearch', type: 'input' },
+        { id: 'timeTrackerSwitchTaskClear', type: 'button' },
+        { id: 'timeTrackerSwitchTicketSearch', type: 'input' },
+        { id: 'timeTrackerSwitchTicketClear', type: 'button' },
+        { id: 'timeTrackerSwitchKlantContactSearch', type: 'input' },
+        { id: 'timeTrackerSwitchMeetingType', type: 'select' },
+        { id: 'timeTrackerSwitchTeamId', type: 'select' },
+        { id: 'timeTrackerSwitchParticipantsSearch', type: 'input' },
+        { id: 'timeTrackerSwitchOverlegContextSearch', type: 'input' },
+        { id: 'timeTrackerSwitchOverlegContextClear', type: 'button' },
+        { id: 'timeTrackerSwitchOpsCategory', type: 'select' },
+        { id: 'timeTrackerSwitchOperationsContextSearch', type: 'input' },
+        { id: 'timeTrackerSwitchOperationsContextClear', type: 'button' },
+        { id: 'timeTrackerSwitchOpsImpact', type: 'select' },
+        { id: 'timeTrackerSwitchSalesActivityType', type: 'select' },
+        { id: 'timeTrackerSwitchNote', type: 'input' },
+        { id: 'timeTrackerRunningContextSearch', type: 'input' },
+        { id: 'timeTrackerRunningContextClear', type: 'button' }
+      ];
+      els.forEach(({ id, type }) => {
+        const el = this.popover.querySelector('#' + id);
+        if (!el) return;
+        if (type === 'input') {
+          el.readOnly = readonly;
+          el.style.backgroundColor = readonly ? '#f9fafb' : '';
+        } else {
+          el.disabled = readonly;
+        }
+      });
+      const ticketTasksList = this.popover.querySelector('#timeTrackerSwitchTicketTasksList');
+      if (ticketTasksList) ticketTasksList.style.pointerEvents = readonly ? 'none' : '';
+      const switchKlantContactChips = this.popover.querySelector('#timeTrackerSwitchKlantContactChips');
+      if (switchKlantContactChips) switchKlantContactChips.style.pointerEvents = readonly ? 'none' : '';
     }
 
     updateElapsedTime() {
@@ -2273,16 +2457,10 @@
         }
       }
       if (activity === 'operations' && !note) {
-        const opsAreaEl = this.popover.querySelector('#timeTrackerOpsArea');
         const opsCatEl = this.popover.querySelector('#timeTrackerOpsCategory');
-        const area = (opsAreaEl && opsAreaEl.value) ? opsAreaEl.value.trim() : '';
-        if (area) {
-          note = 'Operations - ' + area;
-        } else {
-          const catVal = (opsCatEl && opsCatEl.value) ? opsCatEl.value : 'algemeen';
-          const catLabel = OPERATIONS_CATEGORIES.find((c) => c.value === catVal);
-          note = 'Operations - ' + (catLabel ? catLabel.label : 'Algemeen');
-        }
+        const catVal = (opsCatEl && opsCatEl.value) ? opsCatEl.value : 'algemeen';
+        const catLabel = OPERATIONS_CATEGORIES.find((c) => c.value === catVal);
+        note = 'Operations - ' + (catLabel ? catLabel.label : 'Algemeen');
       }
 
       if (activity === 'support') {
@@ -2328,10 +2506,9 @@
 
         if (activity === 'operations') {
           const opsCatEl = this.popover.querySelector('#timeTrackerOpsCategory');
-          const opsAreaEl = this.popover.querySelector('#timeTrackerOpsArea');
           const opsImpactEl = this.popover.querySelector('#timeTrackerOpsImpact');
           body.ops_category = (opsCatEl && opsCatEl.value) ? opsCatEl.value : 'algemeen';
-          body.ops_area = (opsAreaEl && opsAreaEl.value) ? opsAreaEl.value.trim() : null;
+          body.ops_area = null;
           body.ops_impact = (opsImpactEl && opsImpactEl.value) ? opsImpactEl.value : null;
           const oct = this.popover.querySelector('#timeTrackerOperationsContextType');
           const ocid = this.popover.querySelector('#timeTrackerOperationsContextId');
@@ -2341,8 +2518,10 @@
 
         if (activity === 'overleg') {
           const meetingTypeEl = this.popover.querySelector('#timeTrackerMeetingType');
+          const teamIdEl = this.popover.querySelector('#timeTrackerTeamId');
           body.meeting_type = (meetingTypeEl && meetingTypeEl.value) ? meetingTypeEl.value : 'intern';
           body.participant_user_ids = this.overlegParticipants.length ? this.overlegParticipants.map((p) => p.id) : [];
+          body.team_id = (teamIdEl && teamIdEl.value) ? teamIdEl.value : null;
           const oct = this.popover.querySelector('#timeTrackerOverlegContextType');
           const ocid = this.popover.querySelector('#timeTrackerOverlegContextId');
           if (oct && oct.value) body.context_type = oct.value;
@@ -2426,10 +2605,20 @@
           return;
         }
       }
+      if (activity === 'sales') {
+        const salesActivityTypeEl = this.popover.querySelector('#timeTrackerSwitchSalesActivityType');
+        const at = salesActivityTypeEl ? (salesActivityTypeEl.value || '').trim() : '';
+        if (!at) {
+          if (typeof window.showNotification === 'function') {
+            window.showNotification('Kies een activiteit type bij Sales', 'error');
+          }
+          return;
+        }
+      }
 
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'overleg' ? 'Overleg' : (activity === 'operations' ? 'Operations' : activity))),
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : (activity === 'overleg' ? 'Overleg' : (activity === 'operations' ? 'Operations' : activity)))),
           note: note || null
         };
         if (taskId) body.task_id = taskId;
@@ -2439,10 +2628,20 @@
           body.ticket_id = ticketId;
           if (ticketTaskId) body.ticket_task_id = ticketTaskId;
         }
+        if (activity === 'sales') {
+          const salesActivityTypeEl = this.popover.querySelector('#timeTrackerSwitchSalesActivityType');
+          const rType = this.popover.querySelector('#timeTrackerRunningContextType');
+          const rId = this.popover.querySelector('#timeTrackerRunningContextId');
+          if (salesActivityTypeEl && salesActivityTypeEl.value) body.activity_type = salesActivityTypeEl.value;
+          if (rType && rType.value) body.context_type = rType.value;
+          if (rId && rId.value) body.context_id = rId.value;
+        }
         if (activity === 'overleg') {
           const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+          const switchTeamIdEl = this.popover.querySelector('#timeTrackerSwitchTeamId');
           body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : 'intern';
           body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : [];
+          body.team_id = (switchTeamIdEl && switchTeamIdEl.value) ? switchTeamIdEl.value : null;
           const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
           const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
           if (soct && soct.value) body.context_type = soct.value;
@@ -2450,10 +2649,9 @@
         }
         if (activity === 'operations') {
           const swOpsCat = this.popover.querySelector('#timeTrackerSwitchOpsCategory');
-          const swOpsArea = this.popover.querySelector('#timeTrackerSwitchOpsArea');
           const swOpsImpact = this.popover.querySelector('#timeTrackerSwitchOpsImpact');
           body.ops_category = (swOpsCat && swOpsCat.value) ? swOpsCat.value : 'algemeen';
-          body.ops_area = (swOpsArea && swOpsArea.value) ? swOpsArea.value.trim() : null;
+          body.ops_area = null;
           body.ops_impact = (swOpsImpact && swOpsImpact.value) ? swOpsImpact.value : null;
           const sopct = this.popover.querySelector('#timeTrackerSwitchOperationsContextType');
           const sopcid = this.popover.querySelector('#timeTrackerSwitchOperationsContextId');
@@ -2507,16 +2705,19 @@
           contact_id: contactId || null
         };
         if (activity === 'sales') {
+          const salesActivityTypeEl = this.popover.querySelector('#timeTrackerSwitchSalesActivityType');
           const rType = this.popover.querySelector('#timeTrackerRunningContextType');
           const rId = this.popover.querySelector('#timeTrackerRunningContextId');
-          body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
+          body.activity_type = (salesActivityTypeEl && salesActivityTypeEl.value) ? salesActivityTypeEl.value : (this.currentEntry && this.currentEntry.activity_type) || null;
           body.context_type = (rType && rType.value) ? rType.value : (this.currentEntry && this.currentEntry.context_type) || null;
           body.context_id = (rId && rId.value) ? rId.value : (this.currentEntry && this.currentEntry.context_id) || null;
         }
         if (activity === 'overleg') {
           const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+          const switchTeamIdEl = this.popover.querySelector('#timeTrackerSwitchTeamId');
           body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : (this.currentEntry && this.currentEntry.meeting_type) || 'intern';
           body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : (this.currentEntry && this.currentEntry.participant_user_ids) || [];
+          body.team_id = (switchTeamIdEl && switchTeamIdEl.value) ? switchTeamIdEl.value : (this.currentEntry && this.currentEntry.team_id) || null;
           const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
           const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
           body.context_type = (soct && soct.value) ? soct.value : (this.currentEntry && this.currentEntry.context_type) || null;
@@ -2524,10 +2725,9 @@
         }
         if (activity === 'operations') {
           const swOpsCat = this.popover.querySelector('#timeTrackerSwitchOpsCategory');
-          const swOpsArea = this.popover.querySelector('#timeTrackerSwitchOpsArea');
           const swOpsImpact = this.popover.querySelector('#timeTrackerSwitchOpsImpact');
           body.ops_category = (swOpsCat && swOpsCat.value) ? swOpsCat.value : (this.currentEntry && this.currentEntry.ops_category) || 'algemeen';
-          body.ops_area = (swOpsArea && swOpsArea.value) ? swOpsArea.value.trim() : (this.currentEntry && this.currentEntry.ops_area) || null;
+          body.ops_area = null;
           body.ops_impact = (swOpsImpact && swOpsImpact.value) ? swOpsImpact.value : (this.currentEntry && this.currentEntry.ops_impact) || null;
           const sopct = this.popover.querySelector('#timeTrackerSwitchOperationsContextType');
           const sopcid = this.popover.querySelector('#timeTrackerSwitchOperationsContextId');
@@ -2543,6 +2743,10 @@
         const result = await response.json();
         if (result.ok) {
           this.currentEntry = result.data;
+          this.runningEditMode = false;
+          this.setRunningFormReadonly(true);
+          const updateBtn = this.popover.querySelector('#timeTrackerUpdateDetails');
+          if (updateBtn) updateBtn.textContent = 'Wijzig details';
           this.updateUI();
           if (typeof window.showNotification === 'function') {
             window.showNotification('Opgeslagen', 'success');
@@ -2587,16 +2791,19 @@
         contact_id: contactId || null
       };
       if ((activity === 'sales' || (this.currentEntry && (this.currentEntry.project_name || '').toLowerCase() === 'sales'))) {
+        const salesActivityTypeEl = this.popover.querySelector('#timeTrackerSwitchSalesActivityType');
         const rt = this.popover.querySelector('#timeTrackerRunningContextType');
         const rid = this.popover.querySelector('#timeTrackerRunningContextId');
-        body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
+        body.activity_type = (salesActivityTypeEl && salesActivityTypeEl.value) ? salesActivityTypeEl.value : (this.currentEntry && this.currentEntry.activity_type) || null;
         body.context_type = (rt && rt.value) ? rt.value : (this.currentEntry && this.currentEntry.context_type) || null;
         body.context_id = (rid && rid.value) ? rid.value : (this.currentEntry && this.currentEntry.context_id) || null;
       }
       if (activity === 'overleg' || (this.currentEntry && (this.currentEntry.project_name || '').toLowerCase() === 'overleg')) {
         const switchMeetingType = this.popover.querySelector('#timeTrackerSwitchMeetingType');
+        const switchTeamIdEl = this.popover.querySelector('#timeTrackerSwitchTeamId');
         body.meeting_type = (switchMeetingType && switchMeetingType.value) ? switchMeetingType.value : (this.currentEntry && this.currentEntry.meeting_type) || 'intern';
         body.participant_user_ids = this.switchOverlegParticipants.length ? this.switchOverlegParticipants.map((p) => p.id) : (this.currentEntry && this.currentEntry.participant_user_ids) || [];
+        body.team_id = (switchTeamIdEl && switchTeamIdEl.value) ? switchTeamIdEl.value : (this.currentEntry && this.currentEntry.team_id) || null;
         const soct = this.popover.querySelector('#timeTrackerSwitchOverlegContextType');
         const socid = this.popover.querySelector('#timeTrackerSwitchOverlegContextId');
         body.context_type = (soct && soct.value) ? soct.value : (this.currentEntry && this.currentEntry.context_type) || null;
@@ -2604,10 +2811,9 @@
       }
       if (activity === 'operations' || (this.currentEntry && (this.currentEntry.project_name || '').toLowerCase() === 'operations')) {
         const swOpsCat = this.popover.querySelector('#timeTrackerSwitchOpsCategory');
-        const swOpsArea = this.popover.querySelector('#timeTrackerSwitchOpsArea');
         const swOpsImpact = this.popover.querySelector('#timeTrackerSwitchOpsImpact');
         body.ops_category = (swOpsCat && swOpsCat.value) ? swOpsCat.value : (this.currentEntry && this.currentEntry.ops_category) || 'algemeen';
-        body.ops_area = (swOpsArea && swOpsArea.value) ? swOpsArea.value.trim() : (this.currentEntry && this.currentEntry.ops_area) || null;
+        body.ops_area = null;
         body.ops_impact = (swOpsImpact && swOpsImpact.value) ? swOpsImpact.value : (this.currentEntry && this.currentEntry.ops_impact) || null;
         const sopct = this.popover.querySelector('#timeTrackerSwitchOperationsContextType');
         const sopcid = this.popover.querySelector('#timeTrackerSwitchOperationsContextId');

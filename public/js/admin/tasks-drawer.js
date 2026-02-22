@@ -183,16 +183,6 @@
           empSel.appendChild(opt);
         });
       }
-      const custSel = qs('#taskCustomer');
-      if (custSel && custSel.tagName === 'SELECT') {
-        custSel.innerHTML = '<option value="">Selecteer bedrijf...</option>';
-        (data.customers || []).forEach(function(cust) {
-          const opt = document.createElement('option');
-          opt.value = cust.id;
-          opt.textContent = cust.company_name || cust.name || '';
-          custSel.appendChild(opt);
-        });
-      }
       if (!data.canViewAll) {
         const group = qs('#taskEmployeeGroup');
         if (group) group.style.display = 'none';
@@ -262,16 +252,30 @@
         throw new Error(result.error || 'Fout bij aanmaken taak');
       }
 
-      // Success - show notification and reload page
       if (window.showNotification) {
         window.showNotification('Taak succesvol aangemaakt', 'success');
       }
 
-      // Close drawer and reload page to show new task
       closeDrawer();
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+
+      // If drawer was opened from time tracker, reopen time tracker popover instead of reloading
+      if (lastOpenOpts && lastOpenOpts.openedFromTimeTracker && typeof window.timeTracker === 'object' && window.timeTracker.openPopover) {
+        lastOpenOpts = null;
+        setTimeout(function() {
+          window.timeTracker.openPopover();
+          if (window.timeTracker.loadTasks) {
+            window.timeTracker.loadTasks().then(function() {
+              if (window.timeTracker.handleActivityChange) {
+                window.timeTracker.handleActivityChange();
+              }
+            });
+          }
+        }, 150);
+      } else {
+        setTimeout(function() {
+          window.location.reload();
+        }, 500);
+      }
 
     } catch (error) {
       console.error('Error creating task:', error);
@@ -334,21 +338,7 @@
     // Get employee_id - if hidden field exists (for employees), use that, otherwise use select
     const employeeIdInput = qs('#taskEmployee[type="hidden"]');
     const employeeId = employeeIdInput ? employeeIdInput.value : String(fd.get('employee_id') || '').trim();
-    
-    // Get customer or contact (required)
-    const relationType = fd.get('taskRelationType') || 'customer';
-    const customerId = relationType === 'customer' ? (String(fd.get('customer_id') || '').trim() || null) : null;
-    const contactId = relationType === 'contact' ? (qs('#taskContactId') ? qs('#taskContactId').value : null) : null;
-    
-    if (!customerId && !contactId) {
-      const errorEl = qs('#taskCreateError');
-      if (errorEl) {
-        errorEl.textContent = 'Bij een taak moet je een bedrijf of contactpersoon selecteren';
-        errorEl.style.display = 'block';
-      }
-      return;
-    }
-    
+
     // Get recurrence data
     const isRecurring = fd.get('is_recurring') === 'on';
     const recurrenceFrequency = isRecurring ? (fd.get('recurrence_frequency') || null) : null;
@@ -362,8 +352,8 @@
     
     const payload = {
       employee_id: employeeId,
-      customer_id: customerId,
-      contact_id: contactId,
+      customer_id: null,
+      contact_id: null,
       title: String(fd.get('title') || '').trim(),
       description: String(fd.get('description') || '').trim() || null,
       priority: String(fd.get('priority') || 'medium').trim(),
@@ -390,28 +380,6 @@
   
   // Initialize task drawer functionality
   function initTaskDrawer() {
-    // Task relation type toggle
-    const taskRelationCustomer = qs('#taskRelationCustomer');
-    const taskRelationContact = qs('#taskRelationContact');
-    const taskCustomerContainer = qs('#taskCustomerContainer');
-    const taskContactContainer = qs('#taskContactContainer');
-    
-    if (taskRelationCustomer && taskRelationContact) {
-      taskRelationCustomer.addEventListener('change', function() {
-        if (this.checked) {
-          if (taskCustomerContainer) taskCustomerContainer.style.display = 'block';
-          if (taskContactContainer) taskContactContainer.style.display = 'none';
-        }
-      });
-      
-      taskRelationContact.addEventListener('change', function() {
-        if (this.checked) {
-          if (taskCustomerContainer) taskCustomerContainer.style.display = 'none';
-          if (taskContactContainer) taskContactContainer.style.display = 'block';
-        }
-      });
-    }
-    
     // Recurrence toggle
     const taskIsRecurring = qs('#taskIsRecurring');
     const taskRecurrenceOptions = qs('#taskRecurrenceOptions');
@@ -446,80 +414,6 @@
       });
     }
     
-    // Contact search for tasks
-    var taskContactSearchTimeout = null;
-    const taskContactSearch = qs('#taskContactSearch');
-    const taskContactSearchResults = qs('#taskContactSearchResults');
-    
-    if (taskContactSearch && taskContactSearchResults) {
-      taskContactSearch.addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        if (taskContactSearchTimeout) {
-          clearTimeout(taskContactSearchTimeout);
-        }
-        
-        if (query.length < 2) {
-          taskContactSearchResults.style.display = 'none';
-          return;
-        }
-        
-        taskContactSearchTimeout = setTimeout(function() {
-          fetch('/admin/api/contacts/search?q=' + encodeURIComponent(query))
-            .then(function(response) {
-              return response.json();
-            })
-            .then(function(data) {
-              if (data.success && data.contacts && data.contacts.length > 0) {
-                taskContactSearchResults.innerHTML = data.contacts.map(function(contact) {
-                  return '<div class="customer-result-item" data-id="' + contact.id + '" data-name="' + 
-                    (contact.name || '') + '">' +
-                    '<div class="customer-name">' + (contact.name || 'Onbekend') + '</div>' +
-                    (contact.email ? '<div class="customer-email">' + contact.email + '</div>' : '') +
-                    '</div>';
-                }).join('');
-                taskContactSearchResults.style.display = 'block';
-              } else {
-                taskContactSearchResults.innerHTML = '<div class="customer-result-item">Geen resultaten gevonden</div>';
-                taskContactSearchResults.style.display = 'block';
-              }
-            })
-            .catch(function(error) {
-              console.error('Error searching contacts:', error);
-            });
-        }, 300);
-      });
-      
-      // Handle contact selection
-      taskContactSearchResults.addEventListener('click', function(e) {
-        const resultItem = e.target.closest('.customer-result-item');
-        if (resultItem) {
-          const contactId = resultItem.getAttribute('data-id');
-          const contactName = resultItem.getAttribute('data-name');
-          
-          const taskContactId = qs('#taskContactId');
-          if (taskContactId) {
-            taskContactId.value = contactId;
-          }
-          if (taskContactSearch) {
-            taskContactSearch.value = contactName;
-          }
-          taskContactSearchResults.style.display = 'none';
-        }
-      });
-    }
-    
-    // Auto-fill customer if user belongs to a company
-    if (typeof window.userCustomerData !== 'undefined' && window.userCustomerData) {
-      const taskCustomerSelect = qs('#taskCustomer');
-      if (taskCustomerSelect && taskRelationCustomer) {
-        taskRelationCustomer.checked = true;
-        if (taskRelationCustomer.dispatchEvent) {
-          taskRelationCustomer.dispatchEvent(new Event('change'));
-        }
-        taskCustomerSelect.value = window.userCustomerData.id;
-      }
-    }
   }
 
   function init() {
@@ -535,7 +429,6 @@
     // AI suggestion handlers
     const titleInput = qs('#taskTitle');
     const descriptionInput = qs('#taskDescription');
-    const customerSelect = qs('#taskCustomer');
     const prioritySelect = qs('#taskPriority');
     const approveBtn = qs('#taskAiApproveBtn');
     const dismissBtn = qs('#taskAiDismissBtn');
@@ -547,19 +440,14 @@
 
     if (canViewAll && titleInput) {
       const triggerAiSuggestion = () => {
-        // Clear existing timeout
         if (aiSuggestionTimeout) {
           clearTimeout(aiSuggestionTimeout);
         }
-        
-        // Debounce: wait 800ms after user stops typing
         aiSuggestionTimeout = setTimeout(() => {
           const title = titleInput.value || '';
           const description = descriptionInput?.value || '';
-          const customer_id = customerSelect?.value || '';
           const priority = prioritySelect?.value || 'medium';
-          
-          fetchAiSuggestion(title, description, customer_id, priority);
+          fetchAiSuggestion(title, description, null, priority);
         }, 800);
       };
 
@@ -595,7 +483,10 @@
     initTaskDrawer();
   }
 
+  var lastOpenOpts = null;
+
   window.openTaskDrawer = function(opts) {
+    lastOpenOpts = opts || null;
     setOpen(true);
     const firstInput = qs('#taskTitle');
     if (firstInput) {

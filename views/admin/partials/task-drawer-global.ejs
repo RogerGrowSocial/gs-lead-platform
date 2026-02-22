@@ -4,7 +4,7 @@
   <div class="gs-drawer__header">
     <div>
       <h3 class="gs-drawer__title">Nieuwe taak</h3>
-      <p class="gs-drawer__subtitle">Maak een nieuwe taak aan en wijs deze toe aan een werknemer.</p>
+      <p class="gs-drawer__subtitle">Maak een nieuwe taak aan.</p>
     </div>
     <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">
       <i class="fas fa-times"></i>
@@ -52,7 +52,7 @@
       </div>
       <div id="taskEmployeeRow" class="gs-form-grid">
         <div class="gs-form-group" id="taskEmployeeGroup">
-          <label for="taskEmployee" class="gs-form-label">Werknemer <span style="color: #ef4444;">*</span></label>
+          <label for="taskEmployee" class="gs-form-label">Toegewezen aan <span style="color: #ef4444;">*</span></label>
           <select id="taskEmployee" name="employee_id" class="gs-form-input" required>
             <option value="">Selecteer werknemer...</option>
           </select>
@@ -68,29 +68,6 @@
         </div>
       </div>
       <div class="gs-form-group">
-        <label class="gs-form-label">Bedrijf of Contactpersoon <span style="color: #ef4444;">*</span></label>
-        <div style="display: flex; gap: 12px; margin-bottom: 8px;">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
-            <input type="radio" name="taskRelationType" value="customer" id="taskRelationCustomer" checked>
-            <span>Bedrijf</span>
-          </label>
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 500;">
-            <input type="radio" name="taskRelationType" value="contact" id="taskRelationContact">
-            <span>Contactpersoon</span>
-          </label>
-        </div>
-        <div id="taskCustomerContainer" style="position: relative;">
-          <select id="taskCustomer" name="customer_id" class="gs-form-input">
-            <option value="">Selecteer bedrijf...</option>
-          </select>
-        </div>
-        <div id="taskContactContainer" style="position: relative; display: none;">
-          <input type="text" id="taskContactSearch" class="gs-form-input" placeholder="Zoek contactpersoon..." autocomplete="off">
-          <input type="hidden" id="taskContactId" name="contact_id">
-          <div id="taskContactSearchResults" class="customer-search-results" style="display: none;"></div>
-        </div>
-      </div>
-      <div class="gs-form-group">
         <label for="taskDueDate" class="gs-form-label">Deadline</label>
         <input type="date" id="taskDueDate" name="due_at" class="gs-form-input">
       </div>
@@ -99,7 +76,7 @@
           <input type="checkbox" id="taskIsRecurring" name="is_recurring" class="form-checkbox">
           <label for="taskIsRecurring" style="margin: 0; font-weight: 500; cursor: pointer;">Terugkerend</label>
         </div>
-        <div id="taskRecurrenceOptions" style="display: none; padding-left: 24px;">
+        <div id="taskRecurrenceOptions" style="display: none;">
           <div class="gs-form-grid">
             <div class="gs-form-group">
               <label for="taskRecurrenceFrequency" class="gs-form-label">Frequentie</label>
