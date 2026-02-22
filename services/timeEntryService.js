@@ -441,6 +441,9 @@ class TimeEntryService {
         customer_id: entryData.customer_id || null,
         contact_id: entryData.contact_id || null,
         project_name: projectName,
+        activity_type: entryData.activity_type || null,
+        context_type: entryData.context_type || null,
+        context_id: entryData.context_id || null,
         start_at: new Date().toISOString(),
         end_at: null,
         duration_minutes: 0,
@@ -475,7 +478,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer, error: fetchError } = await supabaseAdmin
         .from('time_entries')
-        .select('id, start_at, project_name, task_id, customer_id, contact_id, note')
+        .select('id, start_at, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .single()
@@ -489,7 +492,10 @@ class TimeEntryService {
         task_id: updateData.task_id != null ? updateData.task_id : activeTimer.task_id,
         customer_id: updateData.customer_id != null ? updateData.customer_id : activeTimer.customer_id,
         contact_id: updateData.contact_id != null ? updateData.contact_id : activeTimer.contact_id,
-        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note)
+        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note),
+        activity_type: updateData.activity_type !== undefined ? updateData.activity_type : activeTimer.activity_type,
+        context_type: updateData.context_type !== undefined ? updateData.context_type : activeTimer.context_type,
+        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id
       }
       const { valid, missingFields } = validateEntry(merged, 'clock_out')
       if (!valid) {
@@ -511,6 +517,9 @@ class TimeEntryService {
           customer_id: merged.customer_id,
           contact_id: merged.contact_id,
           note: merged.note,
+          activity_type: merged.activity_type || null,
+          context_type: merged.context_type || null,
+          context_id: merged.context_id || null,
           updated_at: now.toISOString()
         })
         .eq('id', activeTimer.id)
@@ -577,7 +586,7 @@ class TimeEntryService {
     try {
       const { data: activeTimer } = await supabaseAdmin
         .from('time_entries')
-        .select('id, project_name, task_id, customer_id, contact_id, note')
+        .select('id, project_name, task_id, customer_id, contact_id, note, activity_type, context_type, context_id')
         .eq('employee_id', employeeId)
         .eq('is_active_timer', true)
         .maybeSingle()
@@ -591,7 +600,10 @@ class TimeEntryService {
         task_id: updateData.task_id != null ? updateData.task_id : activeTimer.task_id,
         customer_id: updateData.customer_id != null ? updateData.customer_id : activeTimer.customer_id,
         contact_id: updateData.contact_id != null ? updateData.contact_id : activeTimer.contact_id,
-        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note)
+        note: updateData.note != null ? updateData.note : (updateData.title != null ? updateData.title : activeTimer.note),
+        activity_type: updateData.activity_type !== undefined ? updateData.activity_type : activeTimer.activity_type,
+        context_type: updateData.context_type !== undefined ? updateData.context_type : activeTimer.context_type,
+        context_id: updateData.context_id !== undefined ? updateData.context_id : activeTimer.context_id
       }
       const { valid, missingFields } = validateEntry(merged, 'update')
       if (!valid) {
@@ -606,6 +618,9 @@ class TimeEntryService {
           customer_id: merged.customer_id,
           contact_id: merged.contact_id,
           note: merged.note,
+          activity_type: merged.activity_type || null,
+          context_type: merged.context_type || null,
+          context_id: merged.context_id || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', activeTimer.id)
@@ -660,7 +675,7 @@ class TimeEntryService {
           .eq('id', activeTimer.id)
       }
 
-      // Start new timer immediately
+      const note = newEntryData.note != null ? newEntryData.note : (newEntryData.title != null ? newEntryData.title : null)
       const { data, error } = await supabaseAdmin
         .from('time_entries')
         .insert({
@@ -669,10 +684,13 @@ class TimeEntryService {
           customer_id: newEntryData.customer_id || null,
           contact_id: newEntryData.contact_id || null,
           project_name: newEntryData.project_name || null,
+          activity_type: newEntryData.activity_type || null,
+          context_type: newEntryData.context_type || null,
+          context_id: newEntryData.context_id || null,
           start_at: now.toISOString(),
           end_at: null,
           duration_minutes: 0,
-          note: newEntryData.note || null,
+          note: note ? String(note).trim() : null,
           status: 'draft',
           is_active_timer: true
         })

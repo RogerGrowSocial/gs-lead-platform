@@ -911,6 +911,11 @@
       
       const meta = [];
       if (entry.project_name) meta.push(`<span class="entry-meta-item"><i class="fas fa-folder"></i> ${entry.project_name}</span>`);
+      if (entry.activity_type) {
+        const labels = { call: 'Telefoongesprek', meeting: 'Meeting / Demo', outreach: 'Outreach', offerte: 'Offerte', research: 'Research', admin: 'Admin' };
+        meta.push(`<span class="entry-meta-item">${labels[entry.activity_type] || entry.activity_type}</span>`);
+      }
+      if (entry.context_type) meta.push(`<span class="entry-meta-item"><i class="fas fa-link"></i> ${entry.context_type === 'deal' ? 'Deal' : entry.context_type === 'opportunity' ? 'Kans' : entry.context_type}</span>`);
       if (entry.customer?.company_name) meta.push(`<span class="entry-meta-item"><i class="fas fa-building"></i> ${entry.customer.company_name}</span>`);
       if (entry.task?.title) meta.push(`<span class="entry-meta-item"><i class="fas fa-tasks"></i> ${entry.task.title}</span>`);
 

@@ -14756,6 +14756,78 @@ router.post('/employees/:id/time-entries/submit-week', requireAuth, async (req, 
   }
 })
 
+// GET /api/time-entries/context-search?q=
+// Unified search for "Koppel aan" (Sales): deals, opportunities, customers, contacts
+router.get('/time-entries/context-search', requireAuth, async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim().replace(/%/g, '\\%')
+    const limitPerType = 6
+    const pattern = q.length >= 2 ? `%${q}%` : '%'
+
+    const [dealsRes, oppsRes, customersRes, contactsRes] = await Promise.all([
+      q.length < 2
+        ? Promise.resolve({ data: [] })
+        : supabaseAdmin
+            .from('deals')
+            .select('id, title, value_eur, stage, opportunity:opportunities(id, title, company_name)')
+            .or(`title.ilike.${pattern}`)
+            .limit(limitPerType)
+            .order('created_at', { ascending: false }),
+      q.length < 2
+        ? Promise.resolve({ data: [] })
+        : supabaseAdmin
+            .from('opportunities')
+            .select('id, title, company_name, contact_name, stage, value_eur')
+            .or(`title.ilike.${pattern},company_name.ilike.${pattern},contact_name.ilike.${pattern}`)
+            .limit(limitPerType)
+            .order('created_at', { ascending: false }),
+      q.length < 2
+        ? Promise.resolve({ data: [] })
+        : supabaseAdmin
+            .from('customers')
+            .select('id, name, company_name, email, logo_url')
+            .or(`name.ilike.${pattern},company_name.ilike.${pattern},email.ilike.${pattern}`)
+            .limit(limitPerType)
+            .order('company_name', { ascending: true }),
+      q.length < 2
+        ? Promise.resolve({ data: [] })
+        : supabaseAdmin
+            .from('contacts')
+            .select('id, first_name, last_name, name, email, customer_id, photo_url, customers:customer_id(company_name)')
+            .or(`name.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`)
+            .limit(limitPerType)
+            .order('name', { ascending: true })
+    ])
+
+    const results = []
+
+    ;(dealsRes.data || []).forEach((d) => {
+      const opp = d.opportunity
+      const subtitle = [opp?.company_name, d.value_eur != null ? `€ ${Number(d.value_eur).toLocaleString('nl-NL')}` : null, d.stage].filter(Boolean).join(' · ')
+      results.push({ type: 'deal', id: d.id, title: d.title || 'Deal', subtitle: subtitle || undefined, avatarUrl: null })
+    })
+    ;(oppsRes.data || []).forEach((o) => {
+      const subtitle = [o.company_name, o.contact_name, o.value_eur != null ? `€ ${Number(o.value_eur).toLocaleString('nl-NL')}` : null].filter(Boolean).join(' · ')
+      results.push({ type: 'opportunity', id: o.id, title: o.title || 'Kans', subtitle: subtitle || undefined, avatarUrl: null })
+    })
+    ;(customersRes.data || []).forEach((c) => {
+      const title = c.company_name || c.name || c.email || ''
+      const subtitle = c.email || null
+      results.push({ type: 'customer', id: c.id, title, subtitle: subtitle || undefined, avatarUrl: c.logo_url || null })
+    })
+    ;(contactsRes.data || []).forEach((c) => {
+      const title = [c.first_name, c.last_name].filter(Boolean).join(' ') || c.name || c.email || ''
+      const subtitle = c.customers?.company_name || c.email || null
+      results.push({ type: 'contact', id: c.id, title: title || 'Contact', subtitle: subtitle || undefined, avatarUrl: c.photo_url || null })
+    })
+
+    res.json({ ok: true, data: results })
+  } catch (error) {
+    console.error('Error time-entries context-search:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+})
+
 // GET /api/employees/:id/time-entries/active-timer
 // Get active timer for employee
 router.get('/employees/:id/time-entries/active-timer', requireAuth, async (req, res) => {

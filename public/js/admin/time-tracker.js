@@ -15,6 +15,17 @@
     { value: 'operations', label: 'Operations' }
   ];
 
+  // Sales activity type (for "Waar werk je aan?" = Sales)
+  const SALES_ACTIVITY_TYPES = [
+    { value: '', label: '—' },
+    { value: 'call', label: 'Telefoongesprek' },
+    { value: 'meeting', label: 'Meeting / Demo' },
+    { value: 'outreach', label: 'Outreach (DM/mail/LinkedIn)' },
+    { value: 'offerte', label: 'Offerte / Proposal' },
+    { value: 'research', label: 'Research / Voorbereiding' },
+    { value: 'admin', label: 'Admin / Intern' }
+  ];
+
   function avatarHtml(url, name, size) {
     size = size || 24;
     const initials = !name ? '?' : name.trim().split(/\s+/).length >= 2
@@ -260,6 +271,33 @@
               <input type="text" id="timeTrackerNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
+            <!-- Sales: extra options (only when "Sales" selected) -->
+            <div id="timeTrackerSalesOptions" style="display: none; margin-bottom: 12px;">
+              <button type="button" id="timeTrackerSalesOptionsToggle" style="width: 100%; padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 500; color: #6b7280; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+                Meer opties
+              </button>
+              <div id="timeTrackerSalesOptionsBody" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <div style="margin-bottom: 10px;">
+                  <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Activiteit type</label>
+                  <select id="timeTrackerActivityType" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    ${SALES_ACTIVITY_TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                  </select>
+                </div>
+                <div style="margin-bottom: 0;">
+                  <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan (optioneel)</label>
+                  <div style="position: relative;">
+                    <input type="text" id="timeTrackerContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                    <button type="button" id="timeTrackerContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                  <div id="timeTrackerContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+                  <input type="hidden" id="timeTrackerContextType" />
+                  <input type="hidden" id="timeTrackerContextId" />
+                </div>
+              </div>
+            </div>
+
             <div style="display: flex; gap: 8px; margin-top: 16px;">
               <button type="button" id="timeTrackerStart" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
                 Start
@@ -324,6 +362,25 @@
               <input type="text" id="timeTrackerSwitchNote" required placeholder="Bijv. Bugfix login pagina" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
 
+            <div id="timeTrackerSalesNudge" style="display: none; margin-bottom: 12px; padding: 10px 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; font-size: 13px;">
+              <div style="margin-bottom: 8px;">Wil je dit nog koppelen aan een deal of kans?</div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="timeTrackerSalesNudgeLink" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">Nu koppelen</button>
+                <button type="button" id="timeTrackerSalesNudgeSkip" style="padding: 6px 12px; background: #e5e7eb; color: #374151; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;">Overslaan</button>
+              </div>
+            </div>
+            <div id="timeTrackerRunningContextWrap" style="display: none; margin-bottom: 12px;">
+              <label style="display: block; font-size: 13px; font-weight: 500; color: #6b7280; margin-bottom: 4px;">Koppel aan</label>
+              <div style="position: relative;">
+                <input type="text" id="timeTrackerRunningContextSearch" placeholder="Zoek deal, kans, klant..." autocomplete="off" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <button type="button" id="timeTrackerRunningContextClear" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280;" aria-label="Wis koppeling">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <div id="timeTrackerRunningContextDropdown" style="display: none; position: absolute; width: 100%; max-width: 328px; max-height: 220px; overflow-y: auto; background: white; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); z-index: 1001;"></div>
+              <input type="hidden" id="timeTrackerRunningContextType" />
+              <input type="hidden" id="timeTrackerRunningContextId" />
+            </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button type="button" id="timeTrackerUpdateDetails" style="padding: 10px 14px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
                 Wijzig details
@@ -443,6 +500,47 @@
         contactSearch.addEventListener('input', (e) => this.handleContactSearch(e.target.value));
       }
 
+      // Sales: Meer opties toggle
+      const salesOptsToggle = this.popover.querySelector('#timeTrackerSalesOptionsToggle');
+      const salesOptsBody = this.popover.querySelector('#timeTrackerSalesOptionsBody');
+      if (salesOptsToggle && salesOptsBody) {
+        salesOptsToggle.addEventListener('click', () => {
+          const open = salesOptsBody.style.display !== 'none';
+          salesOptsBody.style.display = open ? 'none' : 'block';
+          salesOptsToggle.textContent = open ? 'Meer opties' : 'Minder opties';
+        });
+      }
+
+      // Sales: Context search (form)
+      const contextSearch = this.popover.querySelector('#timeTrackerContextSearch');
+      const contextClear = this.popover.querySelector('#timeTrackerContextClear');
+      const contextDropdown = this.popover.querySelector('#timeTrackerContextDropdown');
+      if (contextSearch) {
+        contextSearch.addEventListener('input', (e) => this.handleContextSearch(e.target.value, 'form'));
+        contextSearch.addEventListener('focus', () => { if (contextSearch.value.trim().length >= 2) this.handleContextSearch(contextSearch.value.trim(), 'form'); });
+        contextSearch.addEventListener('blur', () => setTimeout(() => { if (contextDropdown) contextDropdown.style.display = 'none'; }, 200));
+      }
+      if (contextClear) {
+        contextClear.addEventListener('click', () => this.clearContextSelection('form'));
+      }
+
+      // Sales: Running context search + nudge
+      const runningContextSearch = this.popover.querySelector('#timeTrackerRunningContextSearch');
+      const runningContextClear = this.popover.querySelector('#timeTrackerRunningContextClear');
+      const runningContextDropdown = this.popover.querySelector('#timeTrackerRunningContextDropdown');
+      if (runningContextSearch) {
+        runningContextSearch.addEventListener('input', (e) => this.handleContextSearch(e.target.value, 'running'));
+        runningContextSearch.addEventListener('focus', () => { if (runningContextSearch.value.trim().length >= 2) this.handleContextSearch(runningContextSearch.value.trim(), 'running'); });
+        runningContextSearch.addEventListener('blur', () => setTimeout(() => { if (runningContextDropdown) runningContextDropdown.style.display = 'none'; }, 200));
+      }
+      if (runningContextClear) {
+        runningContextClear.addEventListener('click', () => this.clearContextSelection('running'));
+      }
+      const nudgeLink = this.popover.querySelector('#timeTrackerSalesNudgeLink');
+      const nudgeSkip = this.popover.querySelector('#timeTrackerSalesNudgeSkip');
+      if (nudgeLink) nudgeLink.addEventListener('click', () => this.showSalesContextField());
+      if (nudgeSkip) nudgeSkip.addEventListener('click', () => this.doClockOut());
+
       // Switch activity change (when timer is running)
       const switchActivity = this.popover.querySelector('#timeTrackerSwitchActivity');
       if (switchActivity) {
@@ -543,6 +641,13 @@
       const taskContainer = this.popover.querySelector('#timeTrackerTaskContainer');
       const customerContainer = this.popover.querySelector('#timeTrackerCustomerContainer');
       const contactContainer = this.popover.querySelector('#timeTrackerContactContainer');
+      const salesOptions = this.popover.querySelector('#timeTrackerSalesOptions');
+
+      if (activity === 'sales') {
+        if (salesOptions) salesOptions.style.display = 'block';
+      } else {
+        if (salesOptions) salesOptions.style.display = 'none';
+      }
 
       if (activity === 'klantenwerk' || activity === 'support') {
         taskContainer.style.display = 'block';
@@ -1068,12 +1173,40 @@
         }
 
         // Sync switch activity dropdown and show task/customer when Klantenwerk or Support
+        const pn = (this.currentEntry.project_name || '').toLowerCase();
         const switchActivitySelect = this.popover.querySelector('#timeTrackerSwitchActivity');
         if (switchActivitySelect) {
-          const pn = (this.currentEntry.project_name || '').toLowerCase();
           const match = ACTIVITY_TYPES.find(a => a.value === pn);
           if (match) switchActivitySelect.value = match.value;
           this.handleSwitchActivityChange();
+        }
+
+        // Sales: show/hide context wrap and nudge; fill context from currentEntry
+        const isSales = pn === 'sales';
+        const nudgeEl = this.popover.querySelector('#timeTrackerSalesNudge');
+        const contextWrap = this.popover.querySelector('#timeTrackerRunningContextWrap');
+        if (nudgeEl) nudgeEl.style.display = 'none';
+        if (contextWrap) {
+          if (isSales) {
+            contextWrap.style.display = 'block';
+            const rType = this.popover.querySelector('#timeTrackerRunningContextType');
+            const rId = this.popover.querySelector('#timeTrackerRunningContextId');
+            const rSearch = this.popover.querySelector('#timeTrackerRunningContextSearch');
+            const rClear = this.popover.querySelector('#timeTrackerRunningContextClear');
+            if (this.currentEntry.context_type && this.currentEntry.context_id) {
+              if (rType) rType.value = this.currentEntry.context_type;
+              if (rId) rId.value = this.currentEntry.context_id;
+              if (rSearch) rSearch.value = 'Gekoppeld aan ' + (this.currentEntry.context_type === 'deal' ? 'deal' : this.currentEntry.context_type === 'opportunity' ? 'kans' : this.currentEntry.context_type);
+              if (rClear) rClear.style.display = 'block';
+            } else {
+              if (rType) rType.value = '';
+              if (rId) rId.value = '';
+              if (rSearch) rSearch.value = '';
+              if (rClear) rClear.style.display = 'none';
+            }
+          } else {
+            contextWrap.style.display = 'none';
+          }
         }
 
         // Update elapsed time
@@ -1181,13 +1314,22 @@
 
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : activity,
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
           note: note
         };
 
         if (taskId) body.task_id = taskId;
         if (customerId) body.customer_id = customerId;
         if (contactId) body.contact_id = contactId;
+
+        if (activity === 'sales') {
+          const at = this.popover.querySelector('#timeTrackerActivityType');
+          const ct = this.popover.querySelector('#timeTrackerContextType');
+          const cid = this.popover.querySelector('#timeTrackerContextId');
+          if (at && at.value) body.activity_type = at.value;
+          if (ct && ct.value) body.context_type = ct.value;
+          if (cid && cid.value) body.context_id = cid.value;
+        }
 
         const response = await fetch(`/api/employees/${this.userId}/time-entries/clock-in`, {
           method: 'POST',
@@ -1289,12 +1431,19 @@
       if (btn) btn.disabled = true;
       try {
         const body = {
-          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+          project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
           note: note || null,
           task_id: taskId || null,
           customer_id: customerId || null,
           contact_id: contactId || null
         };
+        if (activity === 'sales') {
+          const rType = this.popover.querySelector('#timeTrackerRunningContextType');
+          const rId = this.popover.querySelector('#timeTrackerRunningContextId');
+          body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
+          body.context_type = (rType && rType.value) ? rType.value : (this.currentEntry && this.currentEntry.context_type) || null;
+          body.context_id = (rId && rId.value) ? rId.value : (this.currentEntry && this.currentEntry.context_id) || null;
+        }
         const response = await fetch(`/api/employees/${this.userId}/time-entries/active-timer`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1322,23 +1471,45 @@
     }
 
     async handleStop() {
+      const project = (this.currentEntry && this.currentEntry.project_name) ? this.currentEntry.project_name : '';
+      const isSales = (project || '').toLowerCase() === 'sales';
+      const hasContext = !!(this.currentEntry && (this.currentEntry.context_type || this.popover.querySelector('#timeTrackerRunningContextType').value));
+
+      if (isSales && !hasContext) {
+        const nudge = this.popover.querySelector('#timeTrackerSalesNudge');
+        if (nudge) nudge.style.display = 'block';
+        return;
+      }
+      this.doClockOut();
+    }
+
+    async doClockOut() {
       const activity = this.popover.querySelector('#timeTrackerSwitchActivity').value;
       const note = (this.popover.querySelector('#timeTrackerSwitchNote') && this.popover.querySelector('#timeTrackerSwitchNote').value) ? this.popover.querySelector('#timeTrackerSwitchNote').value.trim() : '';
       const taskId = this.popover.querySelector('#timeTrackerSwitchTaskId') && this.popover.querySelector('#timeTrackerSwitchTaskId').value;
       const customerId = this.popover.querySelector('#timeTrackerSwitchCustomerId') && this.popover.querySelector('#timeTrackerSwitchCustomerId').value;
       const contactId = this.popover.querySelector('#timeTrackerSwitchContactId') && this.popover.querySelector('#timeTrackerSwitchContactId').value;
       const body = {
-        project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : activity),
+        project_name: activity === 'klantenwerk' ? 'Klantenwerk' : (activity === 'support' ? 'Support' : (activity === 'sales' ? 'Sales' : activity)),
         note: note || null,
         task_id: taskId || null,
         customer_id: customerId || null,
         contact_id: contactId || null
       };
+      if ((activity === 'sales' || (this.currentEntry && (this.currentEntry.project_name || '').toLowerCase() === 'sales'))) {
+        const rt = this.popover.querySelector('#timeTrackerRunningContextType');
+        const rid = this.popover.querySelector('#timeTrackerRunningContextId');
+        body.activity_type = this.currentEntry && this.currentEntry.activity_type ? this.currentEntry.activity_type : null;
+        body.context_type = (rt && rt.value) ? rt.value : (this.currentEntry && this.currentEntry.context_type) || null;
+        body.context_id = (rid && rid.value) ? rid.value : (this.currentEntry && this.currentEntry.context_id) || null;
+      }
       const errorEl = this.popover.querySelector('#timeTrackerClockOutError');
       if (errorEl) {
         errorEl.style.display = 'none';
         errorEl.textContent = '';
       }
+      const nudge = this.popover.querySelector('#timeTrackerSalesNudge');
+      if (nudge) nudge.style.display = 'none';
       const stopBtn = this.popover.querySelector('#timeTrackerStop');
       if (stopBtn) stopBtn.disabled = true;
       try {
@@ -1377,6 +1548,140 @@
         }
       } finally {
         if (stopBtn) stopBtn.disabled = false;
+      }
+    }
+
+    showSalesContextField() {
+      const nudge = this.popover.querySelector('#timeTrackerSalesNudge');
+      const wrap = this.popover.querySelector('#timeTrackerRunningContextWrap');
+      if (nudge) nudge.style.display = 'none';
+      if (wrap) {
+        wrap.style.display = 'block';
+        const input = this.popover.querySelector('#timeTrackerRunningContextSearch');
+        if (input) setTimeout(() => input.focus(), 50);
+      }
+    }
+
+    handleContextSearch(query, mode) {
+      if (this.contextSearchDebounceTimer) clearTimeout(this.contextSearchDebounceTimer);
+      const dropdown = mode === 'running' ? this.popover.querySelector('#timeTrackerRunningContextDropdown') : this.popover.querySelector('#timeTrackerContextDropdown');
+      const input = mode === 'running' ? this.popover.querySelector('#timeTrackerRunningContextSearch') : this.popover.querySelector('#timeTrackerContextSearch');
+      if (!dropdown || !input) return;
+      const q = (query || '').trim();
+      if (q.length < 2) {
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        return;
+      }
+      const self = this;
+      self.contextSearchDebounceTimer = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/time-entries/context-search?q=${encodeURIComponent(q)}`, { credentials: 'include' });
+          const result = await response.json();
+          if (result.ok && result.data) {
+            self.renderContextDropdown(mode, result.data, dropdown);
+            dropdown.style.display = 'block';
+          } else {
+            dropdown.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:13px;">Geen resultaten</div>';
+            dropdown.style.display = 'block';
+          }
+        } catch (e) {
+          console.error('[TimeTracker] Context search:', e);
+          dropdown.innerHTML = '<div style="padding:12px;color:#991b1b;font-size:13px;">Fout bij zoeken</div>';
+          dropdown.style.display = 'block';
+        }
+      }, 350);
+    }
+
+    renderContextDropdown(mode, results, dropdown) {
+      const typeLabels = { deal: 'Deals', opportunity: 'Kansen', customer: 'Klanten', contact: 'Contactpersonen' };
+      const byType = {};
+      results.forEach((r) => {
+        if (!byType[r.type]) byType[r.type] = [];
+        byType[r.type].push(r);
+      });
+      const order = ['deal', 'opportunity', 'customer', 'contact'];
+      let html = '';
+      order.forEach((type) => {
+        const list = byType[type] || [];
+        if (list.length === 0) return;
+        html += '<div style="padding:6px 10px 4px;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">' + (typeLabels[type] || type) + '</div>';
+        list.forEach((item) => {
+          const title = (item.title || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const subtitle = (item.subtitle || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const avatar = item.avatarUrl
+            ? '<img src="' + item.avatarUrl.replace(/"/g, '&quot;') + '" alt="" width="24" height="24" style="border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+            : '<span style="width:24px;height:24px;border-radius:50%;background:#e5e7eb;color:#6b7280;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + (type === 'deal' ? 'D' : type === 'opportunity' ? 'K' : type === 'customer' ? 'B' : 'C') + '</span>';
+          html += '<div class="time-tracker-context-option" style="padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid #f3f4f6;" data-type="' + (item.type || '') + '" data-id="' + (item.id || '') + '" data-title="' + title + '" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">' +
+            avatar +
+            '<div style="min-width:0;"><div style="font-size:14px;font-weight:500;color:#111827;">' + title + '</div>' +
+            (subtitle ? '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + subtitle + '</div>' : '') + '</div></div>';
+        });
+      });
+      dropdown.innerHTML = html || '<div style="padding:12px;color:#6b7280;font-size:13px;">Geen resultaten</div>';
+      dropdown.querySelectorAll('.time-tracker-context-option').forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          const type = el.getAttribute('data-type');
+          const id = el.getAttribute('data-id');
+          const title = el.getAttribute('data-title');
+          if (mode === 'form') {
+            this.popover.querySelector('#timeTrackerContextType').value = type || '';
+            this.popover.querySelector('#timeTrackerContextId').value = id || '';
+            this.popover.querySelector('#timeTrackerContextSearch').value = title || '';
+            this.popover.querySelector('#timeTrackerContextClear').style.display = (id ? 'block' : 'none');
+          } else {
+            this.popover.querySelector('#timeTrackerRunningContextType').value = type || '';
+            this.popover.querySelector('#timeTrackerRunningContextId').value = id || '';
+            this.popover.querySelector('#timeTrackerRunningContextSearch').value = title || '';
+            this.popover.querySelector('#timeTrackerRunningContextClear').style.display = (id ? 'block' : 'none');
+            dropdown.style.display = 'none';
+            this.updateActiveTimerContext(type, id);
+          }
+          dropdown.style.display = 'none';
+        });
+      });
+    }
+
+    async updateActiveTimerContext(contextType, contextId) {
+      if (!this.currentEntry || !contextType || !contextId) return;
+      try {
+        const body = {
+          context_type: contextType,
+          context_id: contextId,
+          note: this.currentEntry.note || this.popover.querySelector('#timeTrackerSwitchNote').value,
+          project_name: this.currentEntry.project_name,
+          task_id: this.currentEntry.task_id || null,
+          customer_id: this.currentEntry.customer_id || null,
+          contact_id: this.currentEntry.contact_id || null
+        };
+        const response = await fetch(`/api/employees/${this.userId}/time-entries/active-timer`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        const result = await response.json();
+        if (result.ok) {
+          this.currentEntry = result.data;
+          if (typeof window._broadcastTimerUpdated === 'function') window._broadcastTimerUpdated();
+        }
+      } catch (e) {
+        console.error('[TimeTracker] Update context:', e);
+      }
+    }
+
+    clearContextSelection(mode) {
+      if (mode === 'form') {
+        this.popover.querySelector('#timeTrackerContextType').value = '';
+        this.popover.querySelector('#timeTrackerContextId').value = '';
+        this.popover.querySelector('#timeTrackerContextSearch').value = '';
+        this.popover.querySelector('#timeTrackerContextClear').style.display = 'none';
+      } else {
+        this.popover.querySelector('#timeTrackerRunningContextType').value = '';
+        this.popover.querySelector('#timeTrackerRunningContextId').value = '';
+        this.popover.querySelector('#timeTrackerRunningContextSearch').value = '';
+        this.popover.querySelector('#timeTrackerRunningContextClear').style.display = 'none';
       }
     }
 
