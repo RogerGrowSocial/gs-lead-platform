@@ -38,6 +38,23 @@
       </div>
     </div>
 
+    ${stream.type === 'trustoo' ? `
+    <div class="settings-card" style="border-left: 4px solid var(--color-primary, #3b82f6);">
+      <div class="settings-card-header">
+        <h2><i class="fas fa-plug"></i> Trustoo via Zapier</h2>
+        <p class="settings-card-subtitle">Zo stuur je Trustoo-leads naar deze stroom.</p>
+      </div>
+      <div class="settings-card-body">
+        <ol style="margin: 0; padding-left: 1.25rem;">
+          <li><strong>Verbind Trustoo en Zapier</strong> via de link van Trustoo (bijv. zapier.com/developer/public-invite/...).</li>
+          <li><strong>Maak een Zap:</strong> Trigger = <em>Trustoo → New Lead</em>. Bij Sign in de code van Trustoo invullen.</li>
+          <li><strong>Action:</strong> App = <em>Webhooks by Zapier</em>, event = <em>POST</em>. URL = de Webhook URL hierboven. Payload Type = JSON. Body: koppel Trustoo-velden naar <code>company_name</code>, <code>contact_name</code>, <code>email</code>, <code>phone</code>, <code>message</code>. Header toevoegen: <code>X-Stream-Secret</code> = het secret van deze stroom.</li>
+        </ol>
+        <p style="margin-top: 12px; margin-bottom: 0;"><span class="text-muted">Volledige stappen staan in <code>docs/TRUSTOO-ZAPIER-KOPPELING.md</code> in de repository.</span></p>
+      </div>
+    </div>
+    ` : ''}
+
     <div class="settings-card">
       <div class="settings-card-header">
         <h2>Mapping (config)</h2>
