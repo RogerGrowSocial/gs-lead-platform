@@ -260,14 +260,18 @@ router.post('/api/messages/dm', requireAuth, async (req, res) => {
 
 router.get('/api/messages/users', requireAuth, async (req, res) => {
   try {
+    const currentUserId = req.user?.id
+    if (!currentUserId) return res.status(401).json({ success: false, error: 'Niet geauthenticeerd' })
     const search = (req.query.search || '').trim().slice(0, 100)
     if (!search || search.length < 2) {
       return res.json({ success: true, users: [] })
     }
     const term = '%' + search + '%'
-    const r1 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('first_name', term).limit(15)
-    const r2 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('last_name', term).limit(15)
-    const r3 = await supabaseAdmin.from('profiles').select('id, first_name, last_name, email, avatar_url, role_id').neq('id', req.user.id).ilike('email', term).limit(15)
+    // Select only columns that exist on profiles (no avatar_url/profile_picture to avoid schema errors)
+    const selectCols = 'id, first_name, last_name, email, role_id'
+    const r1 = await supabaseAdmin.from('profiles').select(selectCols).neq('id', currentUserId).ilike('first_name', term).limit(15)
+    const r2 = await supabaseAdmin.from('profiles').select(selectCols).neq('id', currentUserId).ilike('last_name', term).limit(15)
+    const r3 = await supabaseAdmin.from('profiles').select(selectCols).neq('id', currentUserId).ilike('email', term).limit(15)
     if (r1.error) throw r1.error
     if (r2.error) throw r2.error
     if (r3.error) throw r3.error
@@ -282,20 +286,20 @@ router.get('/api/messages/users', requireAuth, async (req, res) => {
     const roleIds = [...new Set((profiles || []).map((p) => p.role_id).filter(Boolean))]
     let roles = {}
     if (roleIds.length > 0) {
-      const { data: roleRows } = await supabaseAdmin.from('roles').select('id, name').in('id', roleIds)
-      for (const r of roleRows || []) roles[r.id] = r.name
+      const { data: roleRows, error: roleErr } = await supabaseAdmin.from('roles').select('id, name').in('id', roleIds)
+      if (!roleErr && roleRows) for (const r of roleRows) roles[r.id] = r.name
     }
     const users = (profiles || []).map((p) => ({
       id: p.id,
       first_name: p.first_name,
       last_name: p.last_name,
       email: p.email,
-      avatar_url: p.avatar_url,
+      avatar_url: p.profile_picture || null,
       role_name: roles[p.role_id] || null
     }))
     res.json({ success: true, users })
   } catch (err) {
-    console.error('Error searching users:', err)
+    logger.error('Error searching users for messages:', err)
     res.status(500).json({ success: false, error: err.message })
   }
 })
