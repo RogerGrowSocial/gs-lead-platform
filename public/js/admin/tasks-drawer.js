@@ -516,6 +516,19 @@
 
     document.addEventListener('click', onDocumentClick);
     document.addEventListener('keydown', onKeyDown);
+
+    // Open drawer from URL (e.g. time-tracker "Taak toevoegen")
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('openTaskDrawer') === '1') {
+      const title = params.get('title') || '';
+      openDrawer();
+      const titleEl = qs('#taskTitle');
+      if (titleEl) titleEl.value = title;
+      if (window.history && window.history.replaceState) {
+        const view = params.get('view') || 'board';
+        window.history.replaceState({}, '', window.location.pathname + '?view=' + view);
+      }
+    }
   }
 
   // Initialize on DOM ready

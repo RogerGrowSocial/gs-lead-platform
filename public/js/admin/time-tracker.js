@@ -648,7 +648,11 @@
         if (addTaskBtn) {
           addTaskBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.showAddTaskModal((query || '').trim());
+            const title = (query || '').trim();
+            const params = new URLSearchParams({ openTaskDrawer: '1', view: 'list' });
+            if (title) params.set('title', title);
+            this.closePopover();
+            window.location.href = '/admin/tasks?' + params.toString();
           });
         }
       } else {
