@@ -22,7 +22,7 @@ class TaskService {
 
       let query = supabaseAdmin
         .from('employee_tasks')
-        .select('id, title, status, customer_id, contact_id, created_at, updated_at, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email)', q ? undefined : { count: 'exact' })
+        .select('id, title, status, priority, due_at, customer_id, contact_id, created_at, updated_at, customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email), contact:contacts!employee_tasks_contact_id_fkey(id, first_name, last_name, email)', q ? undefined : { count: 'exact' })
         .eq('employee_id', employeeId)
 
       if (filters.status) {
@@ -55,6 +55,8 @@ class TaskService {
         id: t.id,
         title: t.title,
         status: t.status,
+        priority: t.priority || 'medium',
+        due_at: t.due_at || null,
         customer_id: t.customer_id,
         contact_id: t.contact_id,
         customer_name: t.customer ? (t.customer.company_name || [t.customer.first_name, t.customer.last_name].filter(Boolean).join(' ') || t.customer.email) : null,

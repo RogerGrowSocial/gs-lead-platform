@@ -663,13 +663,39 @@
         }
       } else {
         const statusLabels = { open: 'Open', in_progress: 'In uitvoering', in_review: 'In beoordeling', done: 'Voltooid', rejected: 'Afgewezen' };
-        dropdown.innerHTML = filtered.map(task => {
+        const priorityLabels = { urgent: 'Urgent', high: 'Hoog', medium: 'Normaal', low: 'Laag' };
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        const now = new Date();
+        const sorted = [...filtered].sort((a, b) => {
+          const aOverdue = a.due_at && new Date(a.due_at) < now;
+          const bOverdue = b.due_at && new Date(b.due_at) < now;
+          if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+          const aP = priorityOrder[a.priority] ?? 2;
+          const bP = priorityOrder[b.priority] ?? 2;
+          if (aP !== bP) return aP - bP;
+          if (a.due_at && b.due_at) return new Date(a.due_at) - new Date(b.due_at);
+          if (a.due_at) return -1;
+          if (b.due_at) return 1;
+          const statusOrder = { in_progress: 0, open: 1, in_review: 2 };
+          return (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
+        });
+        dropdown.innerHTML = sorted.map(task => {
           const custName = task.customer_name || (task.customer ? (task.customer.company_name || [task.customer.first_name, task.customer.last_name].filter(Boolean).join(' ')) : '');
           const statusLabel = statusLabels[task.status] || task.status || 'Open';
+          const priorityLabel = priorityLabels[task.priority] || task.priority || 'Normaal';
+          let deadlineText = '';
+          if (task.due_at) {
+            const d = new Date(task.due_at);
+            const isOverdue = d < now;
+            deadlineText = isOverdue
+              ? '<span style="color: #dc2626;">Deadline verstreken ' + d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) + '</span>'
+              : 'Deadline ' + d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+          }
+          const metaLine = [priorityLabel, statusLabel, deadlineText].filter(Boolean).join(' · ');
           return `<div class="task-option" style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" data-task-id="${task.id}" data-task-title="${(task.title || '').replace(/"/g, '&quot;')}" data-customer-id="${task.customer_id || ''}" data-customer-name="${(custName || '').replace(/"/g, '&quot;')}" data-contact-id="${task.contact_id || ''}">
             <div style="font-weight: 500; color: #111827; font-size: 14px;">${(task.title || 'Geen titel').replace(/</g, '&lt;')}</div>
             ${custName ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${String(custName).replace(/</g, '&lt;')}</div>` : ''}
-            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${statusLabel}</div>
+            <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${metaLine}</div>
           </div>`;
         }).join('');
 
