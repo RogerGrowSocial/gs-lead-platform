@@ -283,6 +283,16 @@
 .opportunity-card-meta {
   text-align: right;
 }
+.opportunity-card-router-log {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-primary, #6366f1);
+  text-decoration: none;
+}
+.opportunity-card-router-log:hover {
+  text-decoration: underline;
+}
 .opportunity-card-value {
   margin: 0 0 4px 0;
   font-size: 20px;

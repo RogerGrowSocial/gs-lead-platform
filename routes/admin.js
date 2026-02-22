@@ -29,6 +29,7 @@ const moment = require('moment')
 const logger = require('../utils/logger')
 const UserRiskAssessmentService = require('../services/userRiskAssessmentService')
 const aiCustomerSummaryService = require('../services/aiCustomerSummaryService')
+const opportunityAssignmentService = require('../services/opportunityAssignmentService')
 
 /**
  * Ensure a Supabase Storage bucket exists, create it if it doesn't
@@ -15101,8 +15102,8 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
       pagination: { page, perPage, totalPages, totalCount },
       showStreamsLink,
       showStreamsEmptyCallout,
-      scripts: ['/js/admin/opportunities.js'],
-      stylesheets: ['/css/opportunities.css']
+      scripts: ['/js/admin/opportunities.js', '/js/admin/ai-kansen-router.js'],
+      stylesheets: ['/css/opportunities.css', '/css/admin/ai-lead-router.css']
     });
   } catch (e) {
     res.status(500).render('error', { message: 'Kon kansen niet laden', error: {}, user: req.user });
@@ -15496,6 +15497,13 @@ router.post('/opportunities/:id/assign', requireAuth, isAdmin, async (req, res) 
       return res.json({ success: true, message: 'Toewijzing voltooid' });
     }
 
+    // Log manual override for router audit (mirror Leads)
+    try {
+      await opportunityAssignmentService.logManualOverride(id, rep_id, req.user?.id);
+    } catch (logErr) {
+      console.warn('Error logging manual override:', logErr.message);
+    }
+
     res.json({ success: true, opportunity: updated || { id, assigned_to: rep_id, assigned_to_name } });
   } catch (e) {
     console.error('Error in assign route:', e);
@@ -15639,130 +15647,14 @@ router.patch('/opportunities/:id', requireAuth, isAdmin, async (req, res) => {
   }
 });
 
-// Helper function to auto-assign opportunity to best matching sales rep
-async function autoAssignOpportunity(opportunityId) {
-  try {
-    // Get opportunity
-    const { data: opportunity, error: oppErr } = await supabaseAdmin
-      .from('opportunities')
-      .select('*')
-      .eq('id', opportunityId)
-      .single();
-    
-    if (oppErr || !opportunity) return null;
-    if (opportunity.assigned_to) return null; // Already assigned
-
-    // Get all sales reps
-    const { data: profiles } = await supabaseAdmin
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .order('first_name', { ascending: true });
-
-    const salesReps = (profiles || []).map(p => ({
-      id: p.id,
-      name: [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Onbekend'
-    }));
-
-    if (!salesReps || salesReps.length === 0) return null;
-
-    // Get historical deals for AI scoring
-    const { data: allDeals } = await supabaseAdmin
-      .from('deals')
-      .select('sales_rep_id, status, value_eur');
-
-    // Calculate rep stats
-    const repStats = {};
-    salesReps.forEach(rep => {
-      const repDeals = (allDeals || []).filter(d => d.sales_rep_id === rep.id);
-      const wonDeals = repDeals.filter(d => d.status === 'won');
-      const totalValue = repDeals.reduce((sum, d) => sum + (d.value_eur || 0), 0);
-      const successRate = repDeals.length > 0 ? Math.round((wonDeals.length / repDeals.length) * 100) : 50;
-
-      repStats[rep.id] = {
-        id: rep.id,
-        name: rep.name,
-        dealCount: repDeals.length,
-        wonCount: wonDeals.length,
-        successRate,
-        totalValue
-      };
-    });
-
-    // Score each rep for this opportunity
-    const scores = salesReps.map(rep => {
-      const stats = repStats[rep.id] || { successRate: 50, dealCount: 0, wonCount: 0 };
-      let score = 0;
-
-      // Factor 1: Success rate (0-50 points)
-      score += (stats.successRate / 100) * 50;
-
-      // Factor 2: Experience (0-30 points)
-      const experienceScore = Math.min(30, (stats.dealCount / 10) * 30);
-      score += experienceScore;
-
-      // Factor 3: Value match (0-20 points)
-      const oppValue = opportunity.value || opportunity.value_eur || 0;
-      if (stats.totalValue > 0 && stats.dealCount > 0) {
-        const avgDealValue = stats.totalValue / stats.dealCount;
-        const valueDiff = Math.abs(avgDealValue - oppValue);
-        const maxValue = Math.max(avgDealValue, oppValue);
-        if (maxValue > 0) {
-          score += (1 - (valueDiff / maxValue)) * 20;
-        }
-      }
-
-      return {
-        rep_id: rep.id,
-        rep_name: rep.name,
-        score: Math.round(score)
-      };
-    });
-
-    // Get top match
-    scores.sort((a, b) => b.score - a.score);
-    const topMatch = scores[0];
-
-    if (topMatch && topMatch.score > 0) {
-      // Get rep name for assignment
-      const { data: rep } = await supabaseAdmin
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('id', topMatch.rep_id)
-        .single();
-
-      if (rep) {
-        const assigned_to_name = [rep.first_name, rep.last_name].filter(Boolean).join(' ') || 'Onbekend';
-        
-        // Assign opportunity with explicit update data
-        const updateData = {
-          assigned_to: topMatch.rep_id,
-          assigned_to_name: assigned_to_name,
-          updated_at: new Date().toISOString()
-        };
-
-        const { data: updated, error: assignErr } = await supabaseAdmin
-          .from('opportunities')
-          .update(updateData)
-          .eq('id', opportunityId)
-          .select();
-
-        if (!assignErr && updated && updated.length > 0) {
-          return {
-            rep_id: topMatch.rep_id,
-            rep_name: assigned_to_name,
-            score: topMatch.score
-          };
-        } else if (assignErr) {
-          console.error('Error auto-assigning opportunity:', assignErr);
-        }
-      }
-    }
-
-    return null;
-  } catch (e) {
-    console.error('Error auto-assigning opportunity:', e);
-    return null;
-  }
+// Helper: auto-assign opportunity via AI Kansen Router (logs to opportunity_routing_decisions)
+async function autoAssignOpportunity(opportunityId, streamId = null) {
+  const result = await opportunityAssignmentService.assignOpportunity(opportunityId, {
+    assignedBy: 'auto',
+    streamId: streamId || null
+  });
+  if (!result) return null;
+  return { rep_id: result.rep_id, rep_name: result.rep_name, score: result.score };
 }
 
 // Create opportunity from a mail

@@ -86,7 +86,7 @@
   const contactPhone = opp.contact_phone || opp.phone || '-'
 %>
 
-<div class="opportunity-detail-page">
+<div class="opportunity-detail-page" data-opportunity-id="<%= opp.id %>">
   <header class="opportunity-detail-header">
     <div class="opportunity-detail-header-content">
       <a href="/admin/opportunities" class="back-link">
@@ -353,6 +353,17 @@
           </section>
         <% } %>
 
+        <!-- AI Router: last assignment + decision viewer -->
+        <section class="detail-card ai-router-detail-card" id="aiRouterDetailCard">
+          <h3 class="card-title-sm">AI Router</h3>
+          <div id="aiRouterSummaryContent">
+            <p class="text-muted" style="margin: 0 0 8px 0;">Laden...</p>
+          </div>
+          <button type="button" class="btn-outline-sm" id="openOpportunityRouterDrawerBtn" style="margin-top: 8px;">
+            Bekijk toewijzing
+          </button>
+        </section>
+
         <section class="detail-card">
           <h3 class="card-title-sm">Snelle informatie</h3>
           <div class="quick-info-list">
@@ -417,6 +428,47 @@
           </div>
         </section>
       </aside>
+    </div>
+  </div>
+</div>
+
+<!-- Decision Viewer Drawer (same pattern as Leads) -->
+<div class="drawer-overlay" id="opportunityRouterDrawer">
+  <div class="drawer-panel">
+    <div class="drawer-header">
+      <div>
+        <h3 class="drawer-title">Router toewijzing</h3>
+        <div class="drawer-subtitle" id="routerDrawerSubtitle">Kans</div>
+      </div>
+      <button class="drawer-close" type="button" id="closeOpportunityRouterDrawer" aria-label="Sluiten">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-card drawer-lead-info" id="routerDrawerSummaryCard">
+        <div class="drawer-card-title">Samenvatting</div>
+        <p id="routerDrawerSummary">-</p>
+      </div>
+      <div class="drawer-card">
+        <div class="drawer-card-title">Vertrouwen</div>
+        <div class="best-match-score"><div class="score-circle"><span class="score-value" id="routerDrawerConfidence">-</span></div></div>
+      </div>
+      <div class="drawer-card drawer-ai-explanation">
+        <div class="drawer-explanation-header"><span>Uitleg</span></div>
+        <p class="drawer-explanation-text" id="routerDrawerExplanation">-</p>
+      </div>
+      <div class="drawer-card">
+        <div class="drawer-card-title">Input (sanitized)</div>
+        <pre id="routerDrawerInputJson" class="router-json-block"></pre>
+      </div>
+      <div class="drawer-card">
+        <div class="drawer-card-title">Output</div>
+        <pre id="routerDrawerOutputJson" class="router-json-block"></pre>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-title">Tijdlijn beslissingen</div>
+        <div id="routerDrawerTimeline" class="router-timeline"></div>
+      </div>
     </div>
   </div>
 </div>

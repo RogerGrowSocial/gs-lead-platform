@@ -132,6 +132,7 @@
                 <div class="opportunity-card-meta">
                   <p class="opportunity-card-value">${valueDisplay}</p>
                   <p class="opportunity-card-time">${relativeTime}</p>
+                  <a href="/admin/opportunities/${opp.id}?open=router" class="opportunity-card-router-log" onclick="event.stopPropagation();" title="Router log bekijken">Router log</a>
                 </div>
               </div>
             </div>
@@ -180,6 +181,10 @@
           <i class="fas fa-stream"></i> Kansenstromen beheren
         </a>
         ` : ''}
+        <button class="btn-secondary btn-sm ai-router-settings-btn" id="aiKansenRouterSettingsBtn" type="button" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 22v-2M12 4V2M4 12H2M22 12h-2M4.93 4.93l-1.41 1.41M18.48 18.48l-1.41 1.41M4.93 19.07l-1.41-1.41M18.48 5.52l-1.41-1.41"></path></svg>
+          <span class="ai-router-settings-text">AI Kansen Router instellingen</span>
+        </button>
         <button id="newOpportunityBtn" class="btn-primary">
           <i class="fas fa-plus"></i> Nieuwe kans
         </button>
@@ -292,6 +297,81 @@
     </div>
     <!-- Modals placeholder -->
     <div id="opportunityModalRoot"></div>
+
+    <!-- AI Kansen Router Settings Modal (same layout as Lead Router) -->
+    <div class="modal ai-router-settings-modal" id="aiKansenRouterSettingsModal">
+      <div class="modal-content ai-router-modal-content">
+        <div class="ai-router-modal-header">
+          <div>
+            <h2 class="ai-router-modal-title">Instellingen Kansen Routing</h2>
+            <p class="ai-router-modal-description">Pas de weging aan voor de AI-gestuurde kans toewijzing.</p>
+          </div>
+          <button class="ai-router-modal-close" type="button" aria-label="Sluiten">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div class="ai-router-modal-body">
+          <div class="ai-settings-section">
+            <div class="ai-settings-label-row">
+              <label class="ai-settings-label" for="kansenRegionWeight">Belang regio</label>
+              <span class="ai-settings-value" id="kansenRegionWeightValue">40%</span>
+            </div>
+            <div class="ai-settings-slider-wrapper">
+              <input type="range" class="ai-settings-slider-new" id="kansenRegionWeight" min="0" max="100" value="40">
+              <div class="ai-settings-slider-track"><div class="ai-settings-slider-range" id="kansenRegionWeightRange"></div></div>
+              <div class="ai-settings-slider-thumb" id="kansenRegionWeightThumb"></div>
+            </div>
+            <p class="ai-settings-hint">Hoe belangrijk is regio bij het matchen van kansen?</p>
+          </div>
+          <div class="ai-settings-section">
+            <div class="ai-settings-label-row">
+              <label class="ai-settings-label" for="kansenPerformanceWeight">Prestaties</label>
+              <span class="ai-settings-value" id="kansenPerformanceWeightValue">50%</span>
+            </div>
+            <div class="ai-settings-slider-wrapper">
+              <input type="range" class="ai-settings-slider-new" id="kansenPerformanceWeight" min="0" max="100" value="50">
+              <div class="ai-settings-slider-track"><div class="ai-settings-slider-range" id="kansenPerformanceWeightRange"></div></div>
+              <div class="ai-settings-slider-thumb" id="kansenPerformanceWeightThumb"></div>
+            </div>
+            <p class="ai-settings-hint">Hoe sterk moeten prestaties meewegen?</p>
+          </div>
+          <div class="ai-settings-section">
+            <div class="ai-settings-label-row">
+              <label class="ai-settings-label" for="kansenFairnessWeight">Eerlijke verdeling</label>
+              <span class="ai-settings-value" id="kansenFairnessWeightValue">30%</span>
+            </div>
+            <div class="ai-settings-slider-wrapper">
+              <input type="range" class="ai-settings-slider-new" id="kansenFairnessWeight" min="0" max="100" value="30">
+              <div class="ai-settings-slider-track"><div class="ai-settings-slider-range" id="kansenFairnessWeightRange"></div></div>
+              <div class="ai-settings-slider-thumb" id="kansenFairnessWeightThumb"></div>
+            </div>
+            <p class="ai-settings-hint">Hoe belangrijk is eerlijke verdeling over sales reps?</p>
+          </div>
+          <div class="ai-settings-toggle-section">
+            <div class="ai-settings-toggle-content">
+              <label class="ai-settings-toggle-label" for="kansenAutoAssignToggle">Automatische toewijzing</label>
+              <p class="ai-settings-toggle-description">Wijs nieuwe kansen automatisch toe aan de beste match</p>
+            </div>
+            <label class="ai-settings-switch">
+              <input type="checkbox" id="kansenAutoAssignToggle" checked>
+              <span class="ai-settings-switch-slider"></span>
+            </label>
+          </div>
+          <div class="ai-settings-section">
+            <div class="ai-settings-label-row">
+              <label class="ai-settings-label" for="kansenAutoAssignThreshold">Minimum score (0–100)</label>
+              <span class="ai-settings-value" id="kansenAutoAssignThresholdValue">60</span>
+            </div>
+            <input type="number" id="kansenAutoAssignThreshold" min="0" max="100" value="60" class="ai-settings-input">
+            <p class="ai-settings-hint">Onder deze score wordt niet automatisch toegewezen.</p>
+          </div>
+        </div>
+        <div class="ai-router-modal-footer">
+          <button class="btn btn-outline ai-router-modal-cancel" type="button">Annuleren</button>
+          <button class="btn btn-primary" type="button" id="kansenRouterSaveBtn">Opslaan</button>
+        </div>
+      </div>
+    </div>
   </div>
   `,
   scripts: (scripts || []),

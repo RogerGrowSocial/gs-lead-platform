@@ -129,9 +129,108 @@ function setupTabs() {
   activateTab((buttons.find(btn => btn.classList.contains('active')) || buttons[0]).dataset.tab);
 }
 
+function getOpportunityId() {
+  const el = document.querySelector('[data-opportunity-id]');
+  return el ? el.getAttribute('data-opportunity-id') : null;
+}
+
+async function fetchRoutingDecisions(opportunityId) {
+  const res = await fetch(`/api/admin/opportunities/${opportunityId}/routing-decisions`, { credentials: 'include' });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return (json.success && json.data) ? json.data : [];
+}
+
+function formatRouterDate(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderRouterSummary(decisions) {
+  const container = document.getElementById('aiRouterSummaryContent');
+  if (!container) return;
+  if (!decisions.length) {
+    container.innerHTML = '<p class="text-muted" style="margin: 0;">Nog geen routerbeslissingen voor deze kans.</p>';
+    return;
+  }
+  const last = decisions[0];
+  const confidencePct = last.confidence != null ? Math.round(Number(last.confidence) * 100) : null;
+  const assignee = last.output_snapshot && last.output_snapshot.assignee_name ? last.output_snapshot.assignee_name : (last.applied_assignee_user_id ? 'Toegewezen' : '-');
+  container.innerHTML = `
+    <p style="margin: 0 0 4px 0;"><strong>Laatste:</strong> ${last.decision_summary || '-'}</p>
+    <p style="margin: 0 0 4px 0;">Toegewezen aan: ${assignee}</p>
+    ${confidencePct != null ? `<p style="margin: 0;"><span class="opportunity-badge opportunity-badge--match">${confidencePct}%</span></p>` : ''}
+    <p class="text-muted" style="margin: 4px 0 0 0; font-size: 12px;">${formatRouterDate(last.created_at)}</p>
+  `;
+}
+
+function openRouterDrawer(decisions, selectedDecision) {
+  const drawer = document.getElementById('opportunityRouterDrawer');
+  if (!drawer) return;
+  const decision = selectedDecision || (decisions && decisions[0]) || null;
+  if (decision) {
+    document.getElementById('routerDrawerSubtitle').textContent = decision.decision_summary || 'Toewijzing';
+    document.getElementById('routerDrawerSummary').textContent = decision.decision_summary || '-';
+    const conf = decision.confidence != null ? Math.round(Number(decision.confidence) * 100) : null;
+    document.getElementById('routerDrawerConfidence').textContent = conf != null ? conf + '%' : '-';
+    document.getElementById('routerDrawerExplanation').textContent = decision.explanation || '-';
+    document.getElementById('routerDrawerInputJson').textContent = JSON.stringify(decision.input_snapshot || {}, null, 2);
+    document.getElementById('routerDrawerOutputJson').textContent = JSON.stringify(decision.output_snapshot || {}, null, 2);
+    const timelineEl = document.getElementById('routerDrawerTimeline');
+    timelineEl.innerHTML = (decisions || []).map(d => `
+      <div class="router-timeline-item">
+        <div class="router-timeline-dot"></div>
+        <div class="router-timeline-content">
+          <p class="router-timeline-summary">${d.decision_summary || '-'}</p>
+          <p class="router-timeline-meta">${formatRouterDate(d.created_at)} ${d.is_manual_override ? '(handmatig)' : ''}</p>
+        </div>
+      </div>
+    `).join('') || '<p class="text-muted">Geen beslissingen.</p>';
+  }
+  drawer.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRouterDrawer() {
+  const drawer = document.getElementById('opportunityRouterDrawer');
+  if (drawer) {
+    drawer.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+function setupRouterDrawer() {
+  const oppId = getOpportunityId();
+  if (!oppId) return;
+  let decisionsCache = [];
+  fetchRoutingDecisions(oppId).then(decisions => {
+    decisionsCache = decisions;
+    renderRouterSummary(decisions);
+  });
+  const openBtn = document.getElementById('openOpportunityRouterDrawerBtn');
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      if (decisionsCache.length) openRouterDrawer(decisionsCache);
+      else fetchRoutingDecisions(oppId).then(ds => { decisionsCache = ds; openRouterDrawer(ds); });
+    });
+  }
+  const closeBtn = document.getElementById('closeOpportunityRouterDrawer');
+  if (closeBtn) closeBtn.addEventListener('click', closeRouterDrawer);
+  const overlay = document.getElementById('opportunityRouterDrawer');
+  if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) closeRouterDrawer(); });
+  if (typeof URLSearchParams !== 'undefined' && window.location.search.indexOf('open=router') !== -1) {
+    fetchRoutingDecisions(oppId).then(ds => {
+      decisionsCache = ds;
+      openRouterDrawer(ds);
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   setupEditableFields();
   setupTabs();
+  setupRouterDrawer();
 });
 
 function editOpportunity() {

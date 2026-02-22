@@ -931,3 +931,35 @@
     gap: 20px;
   }
 }
+
+/* AI Router drawer (decision viewer) */
+.router-json-block {
+  margin: 0;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 12px;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.router-timeline { padding: 0; list-style: none; }
+.router-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.router-timeline-item:last-child { border-bottom: none; }
+.router-timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6366f1;
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+.router-timeline-content { flex: 1; }
+.router-timeline-summary { margin: 0 0 2px 0; font-size: 14px; }
+.router-timeline-meta { margin: 0; font-size: 12px; color: #6b7280; }

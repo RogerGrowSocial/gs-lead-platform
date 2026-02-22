@@ -21,6 +21,7 @@ const UserRiskAssessmentService = require('../services/userRiskAssessmentService
 const KvkApiService = require('../services/kvkApiService')
 const LeadAssignmentService = require('../services/leadAssignmentService')
 const StreamIngestService = require('../services/streamIngestService')
+const opportunityAssignmentService = require('../services/opportunityAssignmentService')
 
 // API routes voor gebruikers
 
@@ -9443,6 +9444,113 @@ router.post("/admin/task-router/settings", requireAuth, isAdmin, async (req, res
       success: false,
       error: error.message || 'Er is een fout opgetreden bij het opslaan van instellingen'
     });
+  }
+});
+
+// =====================================================
+// AI KANSEN ROUTER (Opportunities) – settings + routing decisions
+// =====================================================
+
+// Get AI Kansen Router settings
+router.get("/admin/router/opportunities/settings", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const settings = await opportunityAssignmentService.getKansenSettings();
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('Error getting Kansen router settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Er is een fout opgetreden bij het ophalen van instellingen'
+    });
+  }
+});
+
+// Save AI Kansen Router settings
+router.put("/admin/router/opportunities/settings", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const { autoAssignEnabled, autoAssignThreshold, regionWeight, performanceWeight, fairnessWeight } = req.body;
+    const userId = req.user.id;
+    const threshold = Math.max(0, Math.min(100, parseInt(autoAssignThreshold ?? 60, 10)));
+    const enabled = autoAssignEnabled !== false;
+    const regionW = Math.max(0, Math.min(100, parseInt(regionWeight ?? 40, 10)));
+    const performanceW = Math.max(0, Math.min(100, parseInt(performanceWeight ?? 50, 10)));
+    const fairnessW = Math.max(0, Math.min(100, parseInt(fairnessWeight ?? 30, 10)));
+
+    const settingsToUpdate = [
+      { setting_key: 'kansen_auto_assign_enabled', setting_value: enabled.toString(), description: 'Automatisch toewijzen van nieuwe kansen', updated_by: userId },
+      { setting_key: 'kansen_auto_assign_threshold', setting_value: threshold.toString(), description: 'Minimum score (0-100)', updated_by: userId },
+      { setting_key: 'kansen_region_weight', setting_value: regionW.toString(), description: 'Belang regio (0-100)', updated_by: userId },
+      { setting_key: 'kansen_performance_weight', setting_value: performanceW.toString(), description: 'Belang prestaties (0-100)', updated_by: userId },
+      { setting_key: 'kansen_fairness_weight', setting_value: fairnessW.toString(), description: 'Belang eerlijke verdeling (0-100)', updated_by: userId }
+    ];
+
+    for (const s of settingsToUpdate) {
+      const { error: e } = await supabaseAdmin
+        .from('ai_router_settings')
+        .upsert({
+          setting_key: s.setting_key,
+          setting_value: s.setting_value,
+          description: s.description,
+          updated_by: s.updated_by,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'setting_key' });
+      if (e) throw new Error(`Error updating ${s.setting_key}: ${e.message}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Instellingen opgeslagen',
+      data: { autoAssignEnabled: enabled, autoAssignThreshold: threshold, regionWeight: regionW, performanceWeight: performanceW, fairnessWeight: fairnessW }
+    });
+  } catch (error) {
+    console.error('Error saving Kansen router settings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Er is een fout opgetreden bij het opslaan van instellingen'
+    });
+  }
+});
+
+// List routing decisions for an opportunity (newest first)
+router.get("/admin/opportunities/:id/routing-decisions", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const opportunityId = req.params.id;
+    const { data: opp } = await supabaseAdmin.from('opportunities').select('id').eq('id', opportunityId).single();
+    if (!opp) return res.status(404).json({ success: false, error: 'Opportunity niet gevonden' });
+
+    const { data: decisions, error } = await supabaseAdmin
+      .from('opportunity_routing_decisions')
+      .select('*')
+      .eq('opportunity_id', opportunityId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, data: decisions || [] });
+  } catch (error) {
+    console.error('Error listing routing decisions:', error);
+    res.status(500).json({ success: false, error: error.message || 'Fout bij ophalen toewijzingen' });
+  }
+});
+
+// Get single routing decision detail
+router.get("/admin/opportunities/:id/routing-decisions/:decisionId", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const { id: opportunityId, decisionId } = req.params;
+    const { data: decision, error } = await supabaseAdmin
+      .from('opportunity_routing_decisions')
+      .select('*')
+      .eq('id', decisionId)
+      .eq('opportunity_id', opportunityId)
+      .single();
+
+    if (error || !decision) return res.status(404).json({ success: false, error: 'Beslissing niet gevonden' });
+    res.json({ success: true, data: decision });
+  } catch (error) {
+    console.error('Error fetching routing decision:', error);
+    res.status(500).json({ success: false, error: error.message || 'Fout bij ophalen beslissing' });
   }
 });
 
