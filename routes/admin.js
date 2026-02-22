@@ -15347,9 +15347,10 @@ router.get('/opportunities', requireAuth, isEmployeeOrAdmin, async (req, res) =>
 router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, res) => {
   try {
     const statusFilter = req.query.status || 'all'
+    const viewMode = req.query.view || 'list' // list | kanban
     const { data: dealsRaw } = await supabaseAdmin
       .from('deals')
-      .select('*, opportunity:opportunities(id, title, company_name, contact_name)')
+      .select('*, opportunity:opportunities(id, title, company_name, contact_name, email, phone)')
       .order('created_at', { ascending: false })
 
     let deals = dealsRaw || []
@@ -15387,6 +15388,7 @@ router.get('/opportunities/deals', requireAuth, isEmployeeOrAdmin, async (req, r
       salesRepsMap,
       kpis,
       filterStatus: statusFilter,
+      viewMode,
       scripts: ['/js/admin/deals.js'],
       stylesheets: ['/css/opportunities.css', '/css/deals.css']
     })

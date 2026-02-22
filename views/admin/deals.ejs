@@ -18,7 +18,16 @@
     if (days < 7) return `${days} dagen geleden`
     return formatDate(iso)
   }
-  const stageLabels = { proposal: 'Offerte', negotiation: 'Onderhandeling', discovery: 'Discovery', qualified: 'Gekwalificeerd', closed_won: 'Gewonnen', closed_lost: 'Verloren' }
+  // Eenduidige deal-stages voor pipeline en data (list + Kanban)
+  const DEAL_STAGES = [
+    { key: 'discovery', label: 'Discovery' },
+    { key: 'qualified', label: 'Gekwalificeerd' },
+    { key: 'proposal', label: 'Offerte' },
+    { key: 'negotiation', label: 'Onderhandeling' },
+    { key: 'closed_won', label: 'Gewonnen' },
+    { key: 'closed_lost', label: 'Verloren' }
+  ]
+  const stageLabels = DEAL_STAGES.reduce((acc, s) => { acc[s.key] = s.label; return acc }, {})
   const getStageLabel = (s) => stageLabels[s] || s || 'Offerte'
   const getStageClass = (s) => {
     if (s === 'closed_won' || s === 'won') return 'deal-stage-won'
@@ -31,36 +40,55 @@
     return 'status-blue'
   }
   const getStatusLabel = (s) => (s === 'open' ? 'Open' : s === 'won' ? 'Gewonnen' : s === 'lost' ? 'Verloren' : s || 'Open')
-  const renderDealCard = (d) => {
-    const title = d.title || d.opportunity?.title || d.opportunity?.company_name || 'Deal'
-    const company = d.opportunity?.company_name || ''
-    const initials = (company || title).slice(0, 2).toUpperCase()
+  // Bepaal Kanban-kolom: won/lost gaan naar closed_*, anders stage (of proposal als default)
+  const getKanbanStage = (d) => {
+    if (d.status === 'won') return 'closed_won'
+    if (d.status === 'lost') return 'closed_lost'
+    const s = d.stage || 'proposal'
+    return DEAL_STAGES.some(x => x.key === s) ? s : 'proposal'
+  }
+  const opp = (d) => d.opportunity || {}
+  const renderDealCard = (d, forKanban = false) => {
+    const title = d.title || opp(d).title || opp(d).company_name || 'Deal'
+    const company = opp(d).company_name || ''
+    const hasDistinctTitle = Boolean(company && title && title !== company)
+    const initialsSource = company || title || '?'
+    const initials = initialsSource.slice(0, 2).toUpperCase()
     const repName = (typeof salesRepsMap !== 'undefined' && d.sales_rep_id && salesRepsMap[d.sales_rep_id]) ? salesRepsMap[d.sales_rep_id] : (d.sales_rep_id ? 'Rep' : '—')
     const valueDisplay = formatCurrency(d.value_eur)
     const stageLabel = getStageLabel(d.stage)
     const stageClass = getStageClass(d.stage)
     const statusClass = getStatusClass(d.status)
     const statusLabel = getStatusLabel(d.status)
+    const contactItems = []
+    if (opp(d).contact_name) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><span>${opp(d).contact_name}</span></div>`)
+    if (opp(d).email) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg><span>${opp(d).email}</span></div>`)
+    if (opp(d).phone) contactItems.push(`<div class="opportunity-card-contact-item"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg><span>${opp(d).phone}</span></div>`)
+    const contactRow = contactItems.length ? `<div class="opportunity-card-contact">${contactItems.join('')}</div>` : ''
+    const subtitleLine = hasDistinctTitle ? `<p class="opportunity-card-subtitle">${title}</p>` : (!company && title ? `<p class="opportunity-card-subtitle">${title}</p>` : '')
+    const companyDisplay = company || title || 'Onbekend'
+    const cardClasses = forKanban ? 'deal-kanban-card' : 'deal-list-card'
     return `
-      <a href="/admin/opportunities/deals/${d.id}" class="deal-card-entry">
-        <div class="deal-card">
-          <div class="deal-card-main">
-            <div class="deal-card-avatar">${initials}</div>
-            <div class="deal-card-body">
-              <div class="deal-card-header">
-                <div class="deal-card-heading">
-                  <h3 class="deal-card-title">${title}</h3>
-                  ${company ? `<p class="deal-card-company">${company}</p>` : ''}
+      <a href="/admin/opportunities/deals/${d.id}" class="opportunity-card-entry ${cardClasses}">
+        <div class="opportunity-card">
+          <div class="opportunity-card-main">
+            <div class="opportunity-card-avatar deal-avatar">${initials}</div>
+            <div class="opportunity-card-body">
+              <div class="opportunity-card-header">
+                <div class="opportunity-card-heading">
+                  <div class="opportunity-card-heading-row">
+                    <h3 class="opportunity-card-company">${companyDisplay}</h3>
+                    <span class="opportunity-badge ${statusClass}">${statusLabel}</span>
+                    <span class="opportunity-badge ${stageClass}">${stageLabel}</span>
+                    <span class="opportunity-badge status-gray">${repName}</span>
+                  </div>
+                  ${subtitleLine}
+                  ${contactRow}
                 </div>
-                <div class="deal-card-meta">
-                  <p class="deal-card-value">${valueDisplay}</p>
-                  <p class="deal-card-time">${formatRelativeTime(d.created_at)}</p>
+                <div class="opportunity-card-meta">
+                  <p class="opportunity-card-value">${valueDisplay}</p>
+                  <p class="opportunity-card-time">${formatRelativeTime(d.updated_at || d.created_at)}</p>
                 </div>
-              </div>
-              <div class="deal-card-badges">
-                <span class="deal-badge ${statusClass}">${statusLabel}</span>
-                <span class="deal-badge ${stageClass}">${stageLabel}</span>
-                <span class="deal-card-rep">${repName}</span>
               </div>
             </div>
           </div>
@@ -68,6 +96,13 @@
       </a>
     `
   }
+  const baseUrl = '/admin/opportunities/deals'
+  const dealsByStage = (deals || []).reduce((acc, d) => {
+    const col = getKanbanStage(d)
+    if (!acc[col]) acc[col] = []
+    acc[col].push(d)
+    return acc
+  }, {})
 %>
 <%- include('../layouts/admin', {
   title: 'Deals',
@@ -115,14 +150,36 @@
     <div class="deals-listing-container">
       <div class="deals-header-row">
         <div class="deals-filter-tabs">
-          <a href="/admin/opportunities/deals" class="deals-tab ${filterStatus === 'all' ? 'active' : ''}">Alle</a>
-          <a href="/admin/opportunities/deals?status=open" class="deals-tab ${filterStatus === 'open' ? 'active' : ''}">Open</a>
-          <a href="/admin/opportunities/deals?status=won" class="deals-tab ${filterStatus === 'won' ? 'active' : ''}">Gewonnen</a>
-          <a href="/admin/opportunities/deals?status=lost" class="deals-tab ${filterStatus === 'lost' ? 'active' : ''}">Verloren</a>
+          <a href="${baseUrl}${viewMode === 'kanban' ? '?view=kanban' : ''}" class="deals-tab ${filterStatus === 'all' ? 'active' : ''}">Alle</a>
+          <a href="${baseUrl}?status=open${viewMode === 'kanban' ? '&view=kanban' : ''}" class="deals-tab ${filterStatus === 'open' ? 'active' : ''}">Open</a>
+          <a href="${baseUrl}?status=won${viewMode === 'kanban' ? '&view=kanban' : ''}" class="deals-tab ${filterStatus === 'won' ? 'active' : ''}">Gewonnen</a>
+          <a href="${baseUrl}?status=lost${viewMode === 'kanban' ? '&view=kanban' : ''}" class="deals-tab ${filterStatus === 'lost' ? 'active' : ''}">Verloren</a>
+        </div>
+        <div class="deals-view-toggle">
+          <a href="${baseUrl}${filterStatus && filterStatus !== 'all' ? '?status=' + filterStatus : ''}" class="deals-view-btn ${viewMode !== 'kanban' ? 'active' : ''}" title="Lijstweergave">Lijst</a>
+          <a href="${baseUrl}?${filterStatus && filterStatus !== 'all' ? 'status=' + filterStatus + '&' : ''}view=kanban" class="deals-view-btn ${viewMode === 'kanban' ? 'active' : ''}" title="Kanban">Kanban</a>
         </div>
       </div>
-      <div class="deals-list" id="dealsList">
-        ${(deals || []).map(renderDealCard).join('')}
+      ${viewMode === 'kanban' ? `
+      <div class="deals-kanban" id="dealsKanban">
+        ${DEAL_STAGES.map(stage => {
+          const colDeals = dealsByStage[stage.key] || []
+          return `
+          <div class="deals-kanban-column" data-stage="${stage.key}">
+            <div class="deals-kanban-column-header">
+              <span class="deals-kanban-column-title">${stage.label}</span>
+              <span class="deals-kanban-column-count">${colDeals.length}</span>
+            </div>
+            <div class="deals-kanban-column-cards">
+              ${colDeals.map(d => renderDealCard(d, true)).join('')}
+            </div>
+          </div>
+          `
+        }).join('')}
+      </div>
+      ` : `
+      <div class="deals-list opportunities-list" id="dealsList">
+        ${(deals || []).map(d => renderDealCard(d, false)).join('')}
         ${(!deals || deals.length === 0) ? `
           <div class="deals-empty">
             <div class="deals-empty-icon"><i class="fas fa-handshake"></i></div>
@@ -132,6 +189,7 @@
           </div>
         ` : ''}
       </div>
+      `}
     </div>
   </div>
   `,
