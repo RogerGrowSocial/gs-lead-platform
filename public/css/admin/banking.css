@@ -1,0 +1,394 @@
+/* Banking (AI Bankier) page – two-panel + right drawer */
+@import url('../design-tokens.css');
+
+.banking-page {
+  padding: 0 16px 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.banking-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.banking-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.banking-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.banking-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.banking-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.banking-select,
+.banking-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  background: #fff;
+  color: #111827;
+}
+
+.banking-search {
+  min-width: 160px;
+}
+
+.banking-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.banking-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.banking-btn-primary {
+  background: var(--admin-accent, #ea5d0d);
+  color: #fff;
+}
+
+.banking-btn-primary:hover {
+  background: var(--admin-sidebar-active, #d44a0b);
+  transform: translateY(-1px);
+}
+
+/* Layout: list left, drawer right */
+.banking-layout {
+  display: flex;
+  position: relative;
+  gap: 0;
+}
+
+.banking-list-panel {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.banking-list-container {
+  min-height: 320px;
+  overflow-x: auto;
+}
+
+.banking-loading,
+.banking-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.banking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.banking-table th,
+.banking-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.banking-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.banking-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.banking-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.banking-th-amount {
+  text-align: right;
+}
+
+.banking-table td:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.banking-amount-in {
+  color: #059669;
+}
+
+.banking-amount-out {
+  color: #dc2626;
+}
+
+.banking-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.banking-status-new { background: #fef3c7; color: #92400e; }
+.banking-status-suggested { background: #dbeafe; color: #1e40af; }
+.banking-status-linked { background: #d1fae5; color: #065f46; }
+.banking-status-posted { background: #e5e7eb; color: #374151; }
+.banking-status-exception { background: #fee2e2; color: #991b1b; }
+
+.banking-confidence {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.banking-suggestion-text {
+  font-size: 12px;
+  color: #4b5563;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.banking-pagination {
+  padding: 12px 14px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Drawer – reuse employees-drawer pattern */
+.banking-drawer-overlay {
+  z-index: 9998;
+}
+
+.banking-drawer {
+  width: min(520px, 92vw);
+  z-index: 9999;
+}
+
+.banking-drawer-header {
+  flex-shrink: 0;
+}
+
+.banking-drawer-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.banking-drawer-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+
+.banking-tab {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.banking-tab:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.banking-tab.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.banking-tab-pane {
+  flex: 1;
+  overflow: auto;
+}
+
+.banking-suggestion-block {
+  background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.banking-suggestion-block h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e40af;
+  margin: 0 0 10px 0;
+}
+
+.banking-suggestion-reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #1d4ed8;
+  line-height: 1.6;
+}
+
+.banking-suggestion-reasons li {
+  padding: 2px 0;
+}
+
+.banking-approve-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.banking-approve-actions .gs-form-btn-primary,
+.banking-approve-actions .gs-form-btn-secondary {
+  flex: 1;
+}
+
+.banking-details-dl {
+  margin: 0;
+  font-size: 13px;
+}
+
+.banking-details-dl dt {
+  font-weight: 600;
+  color: #374151;
+  margin-top: 10px;
+}
+
+.banking-details-dl dd {
+  margin: 2px 0 0 0;
+  color: #6b7280;
+}
+
+.banking-raw-meta {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.banking-raw-meta summary {
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.banking-raw-meta pre {
+  margin: 8px 0 0 0;
+  padding: 10px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  overflow: auto;
+  max-height: 200px;
+  font-size: 11px;
+}
+
+.banking-audit-content {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+/* Modal */
+.banking-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.banking-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.banking-modal-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.banking-modal-content p {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.banking-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* Lock scroll when drawer open */
+html.banking-drawer-open,
+body.banking-drawer-open {
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .banking-filters {
+    width: 100%;
+  }
+  .banking-select,
+  .banking-input {
+    flex: 1;
+    min-width: 120px;
+  }
+}

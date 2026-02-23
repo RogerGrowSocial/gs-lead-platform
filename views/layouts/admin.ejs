@@ -725,8 +725,33 @@
       background: #f3f4f6;
     }
     
+    .user-avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
     .user-avatar {
       flex-shrink: 0;
+    }
+    .header-notifications-badge-on-toggle {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 18px;
+      text-align: center;
+      color: #fff;
+      background: #ea5d0d;
+      border-radius: 9px;
+      border: 2px solid var(--bg-primary, #fff);
+      display: none;
+      box-sizing: border-box;
+    }
+    .header-notifications-badge-on-toggle[data-count]:not([data-count="0"]) {
+      display: inline-block;
     }
     
     .user-avatar .avatar-placeholder {
@@ -1258,7 +1283,7 @@
         <% } %>
 
         <!-- 9. 💳 Facturatie (with submenu) -->
-        <a href="/admin/payments" class="menu-item has-submenu <%= (activeMenu === 'payments' && !locals.activeSubmenu) ? 'active' : '' %> <%= (activeMenu === 'payments' || locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates') ? 'expanded' : '' %>" data-submenu-toggle>
+        <a href="/admin/payments" class="menu-item has-submenu <%= (activeMenu === 'payments' && !locals.activeSubmenu) ? 'active' : '' %> <%= (activeMenu === 'payments' || locals.activeSubmenu === 'invoices' || locals.activeSubmenu === 'mandates' || locals.activeSubmenu === 'banking') ? 'expanded' : '' %>" data-submenu-toggle>
           <div class="icon-container">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect width="20" height="14" x="2" y="5" rx="2"></rect>
@@ -1288,6 +1313,14 @@
             Facturen
           </a>
           <% if (canAccessAllMenus) { %>
+          <a href="/admin/payments/banking" class="submenu-item <%= locals.activeSubmenu === 'banking' ? 'active' : '' %>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <path d="M12 8v8"></path>
+              <path d="M17 12H7"></path>
+            </svg>
+            Bankieren
+          </a>
           <a href="/admin/payments/mandates" class="submenu-item <%= locals.activeSubmenu === 'mandates' ? 'active' : '' %>">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 12h6M9 16h6M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2ZM6 8h12v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8Z"></path>
@@ -1384,14 +1417,17 @@
         <div class="main-header-right">
           <div class="user-dropdown" id="headerUserDropdown">
             <div class="user-dropdown-toggle">
-              <div class="user-avatar">
-                <% if (user && user.profile_picture) { %>
-                  <img src="<%= user.profile_picture %>" alt="Profile" width="32" height="32" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" loading="eager">
-                <% } else { %>
-                  <div class="avatar-placeholder">
-                    <i class="fas fa-user"></i>
-                  </div>
-                <% } %>
+              <div class="user-avatar-wrap">
+                <div class="user-avatar">
+                  <% if (user && user.profile_picture) { %>
+                    <img src="<%= user.profile_picture %>" alt="Profile" width="32" height="32" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" loading="eager">
+                  <% } else { %>
+                    <div class="avatar-placeholder">
+                      <i class="fas fa-user"></i>
+                    </div>
+                  <% } %>
+                </div>
+                <span class="header-notifications-badge-on-toggle" id="headerNotificationsBadgeOnToggle" data-count="0" aria-hidden="true">0</span>
               </div>
               <div class="user-info">
                 <div class="user-name">

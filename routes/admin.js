@@ -33,6 +33,7 @@ const opportunityAssignmentService = require('../services/opportunityAssignmentS
 const opportunityAssignmentFollowUpService = require('../services/opportunityAssignmentFollowUpService')
 const chatService = require('../services/chatService')
 const adminNotificationsService = require('../services/adminNotificationsService')
+const bankingRoutes = require('./banking')
 
 /**
  * Ensure a Supabase Storage bucket exists, create it if it doesn't
@@ -5513,6 +5514,25 @@ router.get("/payments/mandates", requireAuth, isManagerOrAdmin, async (req, res)
   })
 })
 
+// Banking (AI Bankier) - manager/admin only
+router.use("/api/banking", requireAuth, isManagerOrAdmin, bankingRoutes)
+
+router.get("/payments/banking", requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    res.render("admin/payments/banking", {
+      title: "Bankieren",
+      activeMenu: "payments",
+      activeSubmenu: "banking",
+      user: req.user,
+      stylesheets: ['/css/admin/adminPayments.css', '/css/admin/banking.css'],
+      scripts: ['/js/admin/banking.js']
+    })
+  } catch (e) {
+    logger.error('Error rendering banking page:', e)
+    res.status(500).render('error', { message: 'Pagina kon niet worden geladen', error: e?.message, user: req.user })
+  }
+})
+
 // Settings submenu routes
 router.get("/settings/billing", requireAuth, isAdmin, async (req, res) => {
   res.render("admin/settings/billing", {
@@ -10542,6 +10562,7 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
       tasksResult,
       timeEntriesResult,
       invoicesResult,
+      meetingsResult,
       userAccountResult,
       responsibleEmployeesResult,
       allProfilesResult,
@@ -10650,6 +10671,14 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
         .order('invoice_date', { ascending: false })
         .limit(50),
       
+      // Get meetings (with notes)
+      supabaseAdmin
+        .from('customer_meetings')
+        .select('id, meeting_date, title, notes, created_at, updated_at, created_by')
+        .eq('customer_id', id)
+        .order('meeting_date', { ascending: false })
+        .limit(50),
+      
       // Get user admin/manager status (needed early)
       supabase
         .from('profiles')
@@ -10703,6 +10732,7 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
     const { data: tasks } = tasksResult;
     const { data: timeEntries } = timeEntriesResult;
     const { data: invoices } = invoicesResult;
+    const { data: meetings } = meetingsResult;
     const { data: userProfile } = userProfileResult || userAccountResult; // Use userProfileResult if available, fallback to userAccountResult
     const { data: responsibleEmployees } = responsibleEmployeesResult;
     const { data: allProfiles, error: profilesError } = allProfilesResult;
@@ -10971,6 +11001,7 @@ router.get("/customers/:id", requireAuth, isEmployeeOrAdmin, async (req, res) =>
         responsibleEmployees: responsibleEmployees || [],
         allEmployees: allEmployees || [],
         invoices: invoices || [],
+        meetings: meetings || [],
         stats
       },
       scripts: ['/js/admin/customer.js'],
@@ -14922,6 +14953,92 @@ router.post('/api/customers/:id/invoices/import', requireAuth, isAdmin, async (r
   }
 });
 
+// ==== Customer Meetings API ====
+router.get('/api/customers/:id/meetings', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('customer_meetings')
+      .select('id, meeting_date, title, notes, created_at, updated_at, created_by')
+      .eq('customer_id', id)
+      .order('meeting_date', { ascending: false });
+    if (error) throw error;
+    res.json({ meetings: data || [] });
+  } catch (e) {
+    console.error('Error fetching meetings:', e);
+    res.status(500).json({ error: 'Fout bij ophalen meetings: ' + e.message });
+  }
+});
+
+router.post('/api/customers/:id/meetings', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { meeting_date, title, notes } = req.body;
+    if (!meeting_date) {
+      return res.status(400).json({ error: 'Meetingdatum is verplicht' });
+    }
+    const { data, error } = await supabaseAdmin
+      .from('customer_meetings')
+      .insert([{
+        customer_id: id,
+        meeting_date: meeting_date,
+        title: (title || '').trim(),
+        notes: (notes || '').trim(),
+        created_by: req.user.id
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, meeting: data });
+  } catch (e) {
+    console.error('Error creating meeting:', e);
+    res.status(500).json({ error: 'Fout bij aanmaken meeting: ' + e.message });
+  }
+});
+
+router.put('/api/customers/:id/meetings/:meetingId', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id, meetingId } = req.params;
+    const { meeting_date, title, notes } = req.body;
+    const updates = {};
+    if (meeting_date !== undefined) updates.meeting_date = meeting_date;
+    if (title !== undefined) updates.title = (title || '').trim();
+    if (notes !== undefined) updates.notes = (notes || '').trim();
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Geen velden om bij te werken' });
+    }
+    const { data, error } = await supabaseAdmin
+      .from('customer_meetings')
+      .update(updates)
+      .eq('id', meetingId)
+      .eq('customer_id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Meeting niet gevonden' });
+    res.json({ success: true, meeting: data });
+  } catch (e) {
+    console.error('Error updating meeting:', e);
+    res.status(500).json({ error: 'Fout bij bijwerken meeting: ' + e.message });
+  }
+});
+
+router.delete('/api/customers/:id/meetings/:meetingId', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id, meetingId } = req.params;
+    const { error } = await supabaseAdmin
+      .from('customer_meetings')
+      .delete()
+      .eq('id', meetingId)
+      .eq('customer_id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Error deleting meeting:', e);
+    res.status(500).json({ error: 'Fout bij verwijderen meeting: ' + e.message });
+  }
+});
+
 router.delete('/api/customers/:id', requireAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params
@@ -16244,6 +16361,30 @@ router.post('/api/opportunities/:id/convert-to-deal', requireAuth, isEmployeeOrA
     res.json({ success: true, deal: result.deal, alreadyConverted: result.alreadyConverted })
   } catch (e) {
     res.status(500).json({ success: false, error: e.message || 'Fout bij converteren naar deal' })
+  }
+})
+
+// Deal update (stage/status) – voor Kanban slepen
+const ALLOWED_DEAL_STAGES = ['discovery', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+router.patch('/api/deals/:id', requireAuth, isEmployeeOrAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { stage } = req.body || {}
+    if (!stage || !ALLOWED_DEAL_STAGES.includes(stage)) {
+      return res.status(400).json({ error: 'Ongeldige of ontbrekende stage' })
+    }
+    const status = stage === 'closed_won' ? 'won' : stage === 'closed_lost' ? 'lost' : 'open'
+    const { data, error } = await supabaseAdmin
+      .from('deals')
+      .update({ stage, status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('id, stage, status')
+      .single()
+    if (error) return res.status(500).json({ error: error.message })
+    if (!data) return res.status(404).json({ error: 'Deal niet gevonden' })
+    res.json({ success: true, deal: data })
+  } catch (e) {
+    res.status(500).json({ error: 'Fout bij bijwerken deal: ' + e.message })
   }
 })
 

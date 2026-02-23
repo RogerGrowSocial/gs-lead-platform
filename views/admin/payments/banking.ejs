@@ -1,0 +1,134 @@
+<%
+  const pageContent = `
+  <div class="banking-page main-container">
+    <header class="banking-header">
+      <div>
+        <h1 class="banking-title">Bankieren</h1>
+        <p class="banking-subtitle">AI Bankier – transacties koppelen en boeken</p>
+      </div>
+      <div class="banking-header-actions">
+        <div class="banking-filters">
+          <select id="bankingAccountSelect" class="banking-select" aria-label="Rekening">
+            <option value="">Alle rekeningen</option>
+          </select>
+          <input type="date" id="bankingFromDate" class="banking-input" aria-label="Van datum">
+          <input type="date" id="bankingToDate" class="banking-input" aria-label="Tot datum">
+          <select id="bankingStatusSelect" class="banking-select" aria-label="Status">
+            <option value="">Alle statussen</option>
+            <option value="new">Te verwerken</option>
+            <option value="suggested">Voorstel klaar</option>
+            <option value="linked">Gekoppeld</option>
+            <option value="posted">Afgehandeld</option>
+            <option value="exception">Uitzondering</option>
+          </select>
+          <input type="search" id="bankingSearch" class="banking-input banking-search" placeholder="Zoeken..." aria-label="Zoeken">
+        </div>
+        <div class="banking-buttons">
+          <button type="button" id="bankingImportBtn" class="banking-btn banking-btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Importeer bankbestand
+          </button>
+          <input type="file" id="bankingFileInput" accept=".csv,.sta,.mt940,.xml" style="display:none">
+        </div>
+      </div>
+    </header>
+
+    <div class="banking-layout">
+      <section class="banking-list-panel" aria-label="Transactielijst">
+        <div id="bankingListContainer" class="banking-list-container">
+          <div id="bankingListLoading" class="banking-loading" style="display:none">Laden...</div>
+          <div id="bankingListEmpty" class="banking-empty" style="display:none">
+            <p>Geen transacties. Importeer een CSV, MT940 of CAMT.053 bestand.</p>
+          </div>
+          <table class="banking-table" id="bankingTable" style="display:none">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="bankingSelectAll" aria-label="Alles selecteren"></th>
+                <th>Datum</th>
+                <th>Tegenrekening</th>
+                <th>Omschrijving</th>
+                <th class="banking-th-amount">Bedrag</th>
+                <th>Status</th>
+                <th>Voorstel</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="bankingTableBody"></tbody>
+          </table>
+        </div>
+        <div id="bankingPagination" class="banking-pagination"></div>
+      </section>
+
+      <!-- Right slide-in drawer -->
+      <div id="bankingDrawerOverlay" class="gs-drawer-overlay banking-drawer-overlay" aria-hidden="true"></div>
+      <aside id="bankingDrawer" class="gs-drawer banking-drawer" role="dialog" aria-label="Transactie details" aria-hidden="true">
+        <div class="gs-drawer__header banking-drawer-header">
+          <div>
+            <h2 class="gs-drawer__title" id="bankingDrawerTitle">Transactie</h2>
+            <p class="gs-drawer__subtitle" id="bankingDrawerSubtitle"></p>
+          </div>
+          <button type="button" class="gs-drawer__close" data-drawer-close aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="gs-drawer__body banking-drawer-body">
+          <div id="bankingDrawerTabs" class="banking-drawer-tabs">
+            <button type="button" class="banking-tab active" data-tab="voorstel">Voorstel</button>
+            <button type="button" class="banking-tab" data-tab="details">Details</button>
+            <button type="button" class="banking-tab" data-tab="audit">Audit</button>
+          </div>
+          <div id="bankingDrawerContent">
+            <div id="bankingTabVoorstel" class="banking-tab-pane" data-pane="voorstel">
+              <div id="bankingSuggestionBlock" class="banking-suggestion-block"></div>
+              <div id="bankingApproveActions" class="banking-approve-actions">
+                <button type="button" id="bankingApproveBtn" class="gs-form-btn-primary">Accepteren</button>
+                <button type="button" id="bankingAdjustBtn" class="gs-form-btn-secondary">Aanpassen</button>
+              </div>
+            </div>
+            <div id="bankingTabDetails" class="banking-tab-pane" data-pane="details" style="display:none">
+              <dl id="bankingDetailsList" class="banking-details-dl"></dl>
+              <details class="banking-raw-meta">
+                <summary>Raw metadata</summary>
+                <pre id="bankingRawJson"></pre>
+              </details>
+            </div>
+            <div id="bankingTabAudit" class="banking-tab-pane" data-pane="audit" style="display:none">
+              <div id="bankingAuditContent" class="banking-audit-content"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Import modal (minimal) -->
+    <div id="bankingImportModal" class="banking-modal" style="display:none" role="dialog" aria-label="Import">
+      <div class="banking-modal-content">
+        <h3>Importeer bankbestand</h3>
+        <p>Selecteer een rekening en een bestand (CSV, MT940 of CAMT.053).</p>
+        <form id="bankingImportForm">
+          <div class="gs-form-group">
+            <label class="gs-form-label" for="bankingImportAccount">Rekening</label>
+            <select id="bankingImportAccount" class="gs-form-input" required></select>
+          </div>
+          <div class="gs-form-group">
+            <label class="gs-form-label">Bestand</label>
+            <input type="file" id="bankingImportFile" accept=".csv,.sta,.mt940,.xml" required>
+          </div>
+          <div id="bankingImportError" class="gs-error" style="display:none"></div>
+          <div class="banking-modal-actions">
+            <button type="submit" class="gs-form-btn-primary">Importeren</button>
+            <button type="button" id="bankingImportCancel" class="gs-form-btn-secondary">Annuleren</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+`;
+%>
+<%- include('../../layouts/admin', {
+  title: title || 'Bankieren',
+  activeMenu: 'payments',
+  activeSubmenu: 'banking',
+  user: user,
+  body: pageContent,
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/admin/adminPayments.css', '/css/admin/banking.css'],
+  scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/banking.js']
+}) %>
