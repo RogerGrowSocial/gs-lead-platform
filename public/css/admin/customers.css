@@ -238,3 +238,118 @@
 
 /* Additional customer-specific styles if needed */
 
+/* =====================================================
+   Customer single page - Meetings & Notities
+   ===================================================== */
+
+.customer-meetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customer-meetings-list .meeting-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.customer-meetings-list .meeting-item:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.customer-meetings-list .meeting-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #3b82f620;
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customer-meetings-list .meeting-icon i {
+  font-size: 16px;
+}
+
+.customer-meetings-list .meeting-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.customer-meetings-list .meeting-notes-preview {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.customer-meetings-list .meeting-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.customer-meetings-list .meeting-item:hover .meeting-actions {
+  opacity: 1;
+}
+
+.customer-meetings-list .meeting-edit-btn,
+.customer-meetings-list .meeting-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6b7280;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.customer-meetings-list .meeting-edit-btn:hover {
+  color: #3b82f6;
+  background: #3b82f615;
+}
+
+.customer-meetings-list .meeting-delete-btn:hover {
+  color: #ef4444;
+  background: #ef444415;
+}
+
+.customer-meetings-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.customer-meetings-empty .user-empty-text {
+  margin-bottom: 1.5rem;
+  color: #6b7280;
+}
+
+.customer-meetings-empty .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 10px 20px;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+}
+

@@ -3264,3 +3264,193 @@
   };
 })();
 
+// Customer Meetings
+(function() {
+  'use strict';
+  const customerId = window.customerEmployeesData?.customerId || window.customerMeetingsData?.customerId;
+  if (!customerId) return;
+
+  const modal = document.getElementById('meetingModal');
+  const form = document.getElementById('meetingForm');
+  const meetingIdInput = document.getElementById('meetingId');
+  const meetingDateInput = document.getElementById('meetingDate');
+  const meetingTitleInput = document.getElementById('meetingTitle');
+  const meetingNotesInput = document.getElementById('meetingNotes');
+  const modalTitle = document.getElementById('meetingModalTitle');
+  const meetingsList = document.getElementById('meetingsList');
+
+  function formatDate(iso) {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function openMeetingModal(meeting = null) {
+    if (!modal || !form) return;
+    if (meeting) {
+      meetingIdInput.value = meeting.id;
+      meetingDateInput.value = meeting.meeting_date;
+      meetingTitleInput.value = meeting.title || '';
+      meetingNotesInput.value = meeting.notes || '';
+      modalTitle.textContent = 'Meeting bewerken';
+    } else {
+      meetingIdInput.value = '';
+      meetingDateInput.value = new Date().toISOString().slice(0, 10);
+      meetingTitleInput.value = '';
+      meetingNotesInput.value = '';
+      modalTitle.textContent = 'Nieuwe meeting';
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeMeetingModal() {
+    if (modal) modal.style.display = 'none';
+  }
+
+  window.gsOpenNewMeetingModal = function() { openMeetingModal(null); };
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function renderMeetings(meetings) {
+    if (!meetingsList) return;
+    if (!meetings || meetings.length === 0) {
+      meetingsList.innerHTML = `
+        <div class="customer-meetings-empty">
+          <p class="user-empty-text">Nog geen meetings.</p>
+          <button type="button" id="addMeetingBtnEmpty" class="btn-primary">
+            <i class="fas fa-plus"></i> Eerste meeting toevoegen
+          </button>
+        </div>
+      `;
+      document.getElementById('addMeetingBtnEmpty')?.addEventListener('click', () => openMeetingModal(null));
+      return;
+    }
+    meetingsList.innerHTML = meetings.map(m => {
+      const notesPreview = (m.notes || '').substring(0, 150);
+      const notesDisplay = notesPreview + ((m.notes || '').length > 150 ? '...' : '');
+      const safeTitle = escapeHtml(m.title || 'Meeting');
+      const safeNotes = escapeHtml(notesDisplay);
+      return `
+        <div class="user-activity-item meeting-item" data-meeting-id="${m.id}">
+          <div class="user-activity-icon meeting-icon"><i class="fas fa-calendar-alt"></i></div>
+          <div class="user-activity-content meeting-content">
+            <p class="user-activity-title">${safeTitle} – ${formatDate(m.meeting_date)}</p>
+            ${notesDisplay ? `<p class="user-activity-date meeting-notes-preview">${safeNotes}</p>` : ''}
+          </div>
+          <div class="meeting-actions">
+            <button type="button" class="meeting-edit-btn" data-meeting-id="${m.id}" title="Bewerken"><i class="fas fa-pencil-alt"></i></button>
+            <button type="button" class="meeting-delete-btn" data-meeting-id="${m.id}" title="Verwijderen"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    meetingsList.querySelectorAll('.meeting-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.meeting-edit-btn') || e.target.closest('.meeting-delete-btn')) return;
+        const id = el.getAttribute('data-meeting-id');
+        const m = (window.customerMeetingsData?.meetings || []).find(x => x.id === id);
+        if (m) openMeetingModal(m);
+      });
+    });
+    meetingsList.querySelectorAll('.meeting-edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-meeting-id');
+        const m = (window.customerMeetingsData?.meetings || []).find(x => x.id === id);
+        if (m) openMeetingModal(m);
+      });
+    });
+    meetingsList.querySelectorAll('.meeting-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Meeting verwijderen?')) return;
+        const id = btn.getAttribute('data-meeting-id');
+        try {
+          const res = await fetch(`/admin/api/customers/${customerId}/meetings/${id}`, { method: 'DELETE', credentials: 'include' });
+          const data = await res.json();
+          if (res.ok) {
+            window.customerMeetingsData.meetings = (window.customerMeetingsData?.meetings || []).filter(x => x.id !== id);
+            renderMeetings(window.customerMeetingsData.meetings);
+            window.showNotification?.('Meeting verwijderd', 'success');
+          } else {
+            window.showNotification?.(data.error || 'Fout bij verwijderen', 'error');
+          }
+        } catch (err) {
+          window.showNotification?.('Fout bij verwijderen meeting', 'error');
+        }
+      });
+    });
+  }
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const meetingId = meetingIdInput.value.trim();
+    const meeting_date = meetingDateInput.value;
+    const title = meetingTitleInput.value.trim();
+    const notes = meetingNotesInput.value.trim();
+    if (!meeting_date) {
+      window.showNotification?.('Datum is verplicht', 'error');
+      return;
+    }
+    const saveBtn = document.getElementById('saveMeetingBtn');
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      let res, data;
+      if (meetingId) {
+        res = await fetch(`/admin/api/customers/${customerId}/meetings/${meetingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meeting_date, title, notes }),
+          credentials: 'include'
+        });
+      } else {
+        res = await fetch(`/admin/api/customers/${customerId}/meetings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meeting_date, title, notes }),
+          credentials: 'include'
+        });
+      }
+      data = await res.json();
+      if (res.ok && data.meeting) {
+        if (meetingId) {
+          const idx = (window.customerMeetingsData?.meetings || []).findIndex(x => x.id === meetingId);
+          if (idx >= 0 && window.customerMeetingsData) {
+            window.customerMeetingsData.meetings[idx] = data.meeting;
+          }
+        } else {
+          if (!window.customerMeetingsData) window.customerMeetingsData = { customerId, meetings: [] };
+          window.customerMeetingsData.meetings = [data.meeting, ...(window.customerMeetingsData.meetings || [])];
+        }
+        renderMeetings(window.customerMeetingsData.meetings);
+        closeMeetingModal();
+        window.showNotification?.('Meeting opgeslagen', 'success');
+      } else {
+        window.showNotification?.(data.error || 'Fout bij opslaan', 'error');
+      }
+    } catch (err) {
+      window.showNotification?.('Fout bij opslaan meeting', 'error');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('closeMeetingModal')?.addEventListener('click', closeMeetingModal);
+  document.getElementById('cancelMeetingBtn')?.addEventListener('click', closeMeetingModal);
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeMeetingModal(); });
+
+  document.getElementById('addMeetingBtn')?.addEventListener('click', () => openMeetingModal(null));
+  document.getElementById('addMeetingBtnEmpty')?.addEventListener('click', () => openMeetingModal(null));
+
+  const initialMeetings = window.customerMeetingsData?.meetings || [];
+  renderMeetings(initialMeetings);
+})();
+

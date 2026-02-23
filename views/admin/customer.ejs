@@ -26,6 +26,16 @@
     return d.toLocaleString('nl-NL', options)
   }
 
+  var escapeHtml = function(s) {
+    if (!s) return ''
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
   var formatRelativeTime = function(iso) {
     if (!iso) return 'Nog nooit'
     var d = new Date(iso)
@@ -114,6 +124,7 @@
   var tasks = customer.tasks || []
   var timeEntries = customer.timeEntries || []
   var timeTotalsByEmployee = customer.timeTotalsByEmployee || {}
+  var meetings = customer.meetings || []
 
   // Check if AI summary exists
   var hasSummary = customer.aiSummary && customer.aiSummary.summary && customer.aiSummary.summary.length > 20
@@ -211,6 +222,15 @@
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
               Communicatie
+            </button>
+            <button class="customer-main-tab-btn" data-main-tab="meetings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Meetings
             </button>
           </div>
 
@@ -430,7 +450,7 @@
                     </svg>
                     E-mail sturen
                   </button>
-                  <button type="button" class="btn-primary" onclick="alert('Meeting plannen functionaliteit komt binnenkort')" style="padding: 12px 16px; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 12px; border: none; cursor: pointer; border-radius: 8px;">
+                  <button type="button" class="btn-primary" onclick="document.querySelector('[data-main-tab=meetings]').click(); window.gsOpenNewMeetingModal && window.gsOpenNewMeetingModal();" style="padding: 12px 16px; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 12px; border: none; cursor: pointer; border-radius: 8px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
                       <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -439,6 +459,29 @@
                     </svg>
                     Meeting plannen
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Meetings Tab Content -->
+          <div class="customer-main-tab-content" id="main-tab-meetings" style="display: none;">
+            <div class="user-card">
+              <div class="user-card-content">
+                <div class="user-card-header-with-action">
+                  <h3 class="user-card-title-small">Meetings & Notities</h3>
+                  <button type="button" id="addMeetingBtn" class="btn-primary" style="padding: 8px 16px; font-size: 14px; border: none; cursor: pointer; border-radius: 8px;">
+                    <i class="fas fa-plus"></i> Nieuwe meeting
+                  </button>
+                </div>
+                <div id="meetingsList" class="user-activity-list customer-meetings-list">
+                  ${(meetings.length > 0 ? meetings.map(function(m) {
+                    var notesPreview = (m.notes || '').substring(0, 150)
+                    if ((m.notes || '').length > 150) notesPreview += '...'
+                    var safeTitle = escapeHtml(m.title || 'Meeting')
+                    var safeNotes = notesPreview ? escapeHtml(notesPreview) : ''
+                    return '<div class="user-activity-item meeting-item" data-meeting-id="' + m.id + '"><div class="user-activity-icon meeting-icon"><i class="fas fa-calendar-alt"></i></div><div class="user-activity-content meeting-content"><p class="user-activity-title">' + safeTitle + ' – ' + formatDate(m.meeting_date) + '</p>' + (safeNotes ? '<p class="user-activity-date meeting-notes-preview">' + safeNotes + '</p>' : '') + '</div><div class="meeting-actions"><button type="button" class="meeting-edit-btn" data-meeting-id="' + m.id + '" title="Bewerken"><i class="fas fa-pencil-alt"></i></button><button type="button" class="meeting-delete-btn" data-meeting-id="' + m.id + '" title="Verwijderen"><i class="fas fa-trash"></i></button></div></div>'
+                  }).join('') : '<div class="customer-meetings-empty"><p class="user-empty-text">Nog geen meetings.</p><button type="button" id="addMeetingBtnEmpty" class="btn-primary"><i class="fas fa-plus"></i> Eerste meeting toevoegen</button></div>')}
                 </div>
               </div>
             </div>
@@ -676,6 +719,37 @@
     </div>
   </div>
 
+  <!-- Meeting Modal -->
+  <div id="meetingModal" class="modal" style="display: none; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); position: fixed; inset: 0; z-index: 9999;">
+    <div class="modal-content" style="max-width: 560px; width: 90%; padding: 0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border-radius: 12px; background: white;">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
+        <h3 id="meetingModalTitle" style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Nieuwe meeting</h3>
+        <button type="button" id="closeMeetingModal" aria-label="Sluiten" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; padding: 5px; line-height: 1;">&times;</button>
+      </div>
+      <form id="meetingForm">
+        <input type="hidden" id="meetingId" name="meeting_id" value="" />
+        <div class="modal-body" style="padding: 24px;">
+          <div class="gs-form-group" style="margin-bottom: 1rem;">
+            <label class="gs-form-label">Datum *</label>
+            <input type="date" id="meetingDate" name="meeting_date" class="gs-form-input" required />
+          </div>
+          <div class="gs-form-group" style="margin-bottom: 1rem;">
+            <label class="gs-form-label">Titel</label>
+            <input type="text" id="meetingTitle" name="title" class="gs-form-input" placeholder="Bijv. Kwartaaloverleg" />
+          </div>
+          <div class="gs-form-group">
+            <label class="gs-form-label">Notities</label>
+            <textarea id="meetingNotes" name="notes" class="gs-form-input" rows="12" placeholder="Notities van de meeting (Markdown ondersteund)..." style="resize: vertical; min-height: 200px; font-family: inherit;"></textarea>
+          </div>
+        </div>
+        <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" id="cancelMeetingBtn" class="btn-outline" style="padding: 10px 20px;">Annuleren</button>
+          <button type="submit" id="saveMeetingBtn" class="btn-primary" style="padding: 10px 20px;">Opslaan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Invoice Drawer Styles -->
   <link rel="stylesheet" href="/css/admin/employees-drawer.css">
   
@@ -848,6 +922,10 @@
     window.customerInvoicesData = {
       customerId: '${(customer && customer.id ? customer.id : '')}',
       invoices: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.invoices ? customerData.invoices : [])}
+    };
+    window.customerMeetingsData = {
+      customerId: '${(customer && customer.id ? customer.id : '')}',
+      meetings: ${JSON.stringify(typeof customerData !== 'undefined' && customerData.meetings ? customerData.meetings : [])}
     };
   </script>
   `;
