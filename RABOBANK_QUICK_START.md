@@ -8,7 +8,9 @@
    - Ga naar je applicatie in het [Rabobank Developer Portal](https://developer.rabobank.nl/)
    - Voeg toe in "OAuth redirection URI":
      - Development: `http://localhost:3000/auth/rabobank/callback`
+     - Development (Admin Bankieren): `http://localhost:3000/admin/payments/banking/rabobank/callback`
      - Production: `https://app.growsocialmedia.nl/auth/rabobank/callback`
+     - Production (Admin Bankieren): `https://app.growsocialmedia.nl/admin/payments/banking/rabobank/callback`
 
 2. **Client Secret ophalen:**
    - Ga naar "Credentials"

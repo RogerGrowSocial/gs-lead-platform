@@ -1,13 +1,14 @@
 <%
   const pageContent = `
   <div class="banking-page main-container">
+    <div id="bankingConnectBanner" class="banking-connect-banner" style="display:none"></div>
     <header class="banking-header">
       <div>
         <h1 class="banking-title">Bankieren</h1>
-        <p class="banking-subtitle">AI Bankier – transacties koppelen en boeken</p>
+        <p class="banking-subtitle" id="bankingSubtitle">AI Bankier – transacties koppelen en boeken</p>
       </div>
       <div class="banking-header-actions">
-        <div class="banking-filters">
+        <div class="banking-filters" id="bankingFiltersWrap">
           <select id="bankingAccountSelect" class="banking-select" aria-label="Rekening">
             <option value="">Alle rekeningen</option>
           </select>
@@ -24,21 +25,40 @@
           <input type="search" id="bankingSearch" class="banking-input banking-search" placeholder="Zoeken..." aria-label="Zoeken">
         </div>
         <div class="banking-buttons">
-          <button type="button" id="bankingImportBtn" class="banking-btn banking-btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Importeer bankbestand
+          <button type="button" id="bankingPrimaryBtn" class="banking-btn banking-btn-primary">
+            Koppel bankrekening
           </button>
-          <input type="file" id="bankingFileInput" accept=".csv,.sta,.mt940,.xml" style="display:none">
+          <div class="banking-more-wrap">
+            <button type="button" id="bankingMoreBtn" class="banking-btn banking-btn-secondary" aria-haspopup="true" aria-expanded="false" title="Meer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+            </button>
+            <div id="bankingMoreMenu" class="banking-more-menu" role="menu" style="display:none">
+              <a href="#" id="bankingImportFallback" class="banking-more-item" role="menuitem">Bankbestand importeren (fallback)</a>
+              <a href="/admin/payments/banking/connections" class="banking-more-item" role="menuitem">Beheer koppelingen</a>
+            </div>
+          </div>
         </div>
       </div>
     </header>
 
-    <div class="banking-layout">
+    <!-- Empty state: geen gekoppelde rekening -->
+    <div id="bankingEmptyConnect" class="banking-empty-connect" style="display:none">
+      <div class="banking-empty-card">
+        <h2>Koppel je bankrekening</h2>
+        <p>Koppel je bankrekening en wij halen transacties automatisch op. Geen handmatige export meer nodig.</p>
+        <div class="banking-empty-actions">
+          <a href="/admin/payments/banking/rabobank/connect" id="bankingConnectRabobank" class="banking-btn banking-btn-primary">Koppel Rabobank</a>
+          <button type="button" id="bankingManualImportLink" class="banking-btn banking-btn-secondary">Ik wil handmatig importeren</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="banking-layout" id="bankingMainLayout" style="display:none">
       <section class="banking-list-panel" aria-label="Transactielijst">
         <div id="bankingListContainer" class="banking-list-container">
           <div id="bankingListLoading" class="banking-loading" style="display:none">Laden...</div>
           <div id="bankingListEmpty" class="banking-empty" style="display:none">
-            <p>Geen transacties. Importeer een CSV, MT940 of CAMT.053 bestand.</p>
+            <p>Geen transacties. Klik op &quot;Sync nu&quot; om transacties op te halen, of importeer een bankbestand via Meer.</p>
           </div>
           <table class="banking-table" id="bankingTable" style="display:none">
             <thead>
@@ -98,11 +118,11 @@
       </aside>
     </div>
 
-    <!-- Import modal (minimal) -->
+    <!-- Import modal (fallback, via Meer) -->
     <div id="bankingImportModal" class="banking-modal" style="display:none" role="dialog" aria-label="Import">
       <div class="banking-modal-content">
         <h3>Importeer bankbestand</h3>
-        <p>Selecteer een rekening en een bestand (CSV, MT940 of CAMT.053).</p>
+        <p>Selecteer een rekening en een bestand (CSV, MT940 of CAMT.053). Fallback als automatische sync niet beschikbaar is.</p>
         <form id="bankingImportForm">
           <div class="gs-form-group">
             <label class="gs-form-label" for="bankingImportAccount">Rekening</label>

@@ -34,6 +34,8 @@ const opportunityAssignmentFollowUpService = require('../services/opportunityAss
 const chatService = require('../services/chatService')
 const adminNotificationsService = require('../services/adminNotificationsService')
 const bankingRoutes = require('./banking')
+const crypto = require('crypto')
+const RabobankApiService = require('../services/rabobankApiService')
 
 /**
  * Ensure a Supabase Storage bucket exists, create it if it doesn't
@@ -5529,6 +5531,108 @@ router.get("/payments/banking", requireAuth, requireManagerOrAdminPage, async (r
     })
   } catch (e) {
     logger.error('Error rendering banking page:', e)
+    res.status(500).render('error', { message: 'Pagina kon niet worden geladen', error: e?.message, user: req.user })
+  }
+})
+
+// Admin Rabobank connect (Bankieren): start OAuth, redirect to admin callback
+router.get("/payments/banking/rabobank/connect", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    if (!RabobankApiService.isAvailable()) {
+      return res.redirect('/admin/payments/banking?error=Rabobank API is niet geconfigureerd')
+    }
+    const state = crypto.randomBytes(32).toString('hex')
+    if (!req.session) req.session = {}
+    req.session.rabobank_oauth_admin_state = state
+    req.session.rabobank_oauth_admin_user_id = req.user?.id
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
+    const redirectUri = `${baseUrl}/admin/payments/banking/rabobank/callback`
+    const authUrl = RabobankApiService.getAuthorizationUrl(redirectUri, state, ['aisp'])
+    res.redirect(authUrl)
+  } catch (e) {
+    logger.error('Rabobank admin connect error:', e)
+    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(e.message || 'OAuth start mislukt'))
+  }
+})
+
+// Admin Rabobank callback: create org_bank_connection + bank_accounts, redirect to Bankieren
+router.get("/payments/banking/rabobank/callback", requireAuth, isManagerOrAdmin, async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query
+    if (error) {
+      return res.redirect('/admin/payments/banking?error=' + encodeURIComponent(error_description || error))
+    }
+    if (!req.session?.rabobank_oauth_admin_state || state !== req.session.rabobank_oauth_admin_state) {
+      return res.redirect('/admin/payments/banking?error=Ongeldige sessie. Probeer opnieuw.')
+    }
+    if (!code) return res.redirect('/admin/payments/banking?error=Geen autorisatiecode ontvangen')
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
+    const redirectUri = `${baseUrl}/admin/payments/banking/rabobank/callback`
+    const tokenData = await RabobankApiService.exchangeCodeForToken(code, redirectUri)
+    const expiresAt = new Date()
+    expiresAt.setSeconds(expiresAt.getSeconds() + (tokenData.expires_in || 3600))
+    const accountInfo = await RabobankApiService.getAccountInformation(tokenData.access_token)
+    const accountsList = accountInfo?.accounts || (accountInfo?.iban ? [accountInfo] : [])
+    const organizationId = null
+    const { data: conn, error: connErr } = await supabaseAdmin
+      .from('org_bank_connections')
+      .insert({
+        organization_id: organizationId,
+        provider: 'rabobank',
+        status: 'connected',
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token || null,
+        expires_at: expiresAt.toISOString(),
+        last_synced_at: null,
+      })
+      .select('id')
+      .single()
+    if (connErr || !conn) throw new Error(connErr?.message || 'Kon koppeling niet opslaan')
+    const bankingImportService = require('../services/bankingImportService')
+    for (const acc of accountsList) {
+      const iban = acc.iban || acc.accountId || acc.resourceId
+      const name = acc.name || acc.accountName || acc.product || 'Rabobank Rekening'
+      const providerAccountId = acc.resourceId || acc.accountId || acc.iban || iban
+      if (!iban) continue
+      await bankingImportService.ensureBankAccount({
+        name,
+        iban: iban.replace(/\s/g, ''),
+        currency: (acc.currency || 'EUR').toUpperCase(),
+        organization_id: organizationId,
+        provider: 'rabobank',
+        provider_account_id: providerAccountId,
+        connection_id: conn.id,
+        is_active: true,
+      })
+    }
+    if (req.session) {
+      delete req.session.rabobank_oauth_admin_state
+      delete req.session.rabobank_oauth_admin_user_id
+    }
+    res.redirect('/admin/payments/banking?success=Rabobank gekoppeld. We halen nu transacties op.')
+  } catch (e) {
+    logger.error('Rabobank admin callback error:', e)
+    if (req.session) {
+      delete req.session.rabobank_oauth_admin_state
+      delete req.session.rabobank_oauth_admin_user_id
+    }
+    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(e.message || 'Koppelen mislukt'))
+  }
+})
+
+// Beheer koppelingen pagina
+router.get("/payments/banking/connections", requireAuth, requireManagerOrAdminPage, async (req, res) => {
+  try {
+    res.render("admin/payments/banking-connections", {
+      title: "Beheer bankkoppelingen",
+      activeMenu: "payments",
+      activeSubmenu: "banking",
+      user: req.user,
+      stylesheets: ['/css/admin/adminPayments.css', '/css/admin/banking.css'],
+      scripts: ['/js/admin/banking-connections.js']
+    })
+  } catch (e) {
+    logger.error('Error rendering banking connections:', e)
     res.status(500).render('error', { message: 'Pagina kon niet worden geladen', error: e?.message, user: req.user })
   }
 })

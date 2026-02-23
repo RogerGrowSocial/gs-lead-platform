@@ -392,3 +392,61 @@ body.banking-drawer-open {
     min-width: 120px;
   }
 }
+
+.banking-empty-connect {
+  padding: 48px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+}
+
+.banking-empty-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+.banking-empty-card h2 { margin: 0 0 12px 0; font-size: 1.35rem; color: #111827; }
+.banking-empty-card p { margin: 0 0 24px 0; font-size: 15px; color: #6b7280; line-height: 1.5; }
+.banking-empty-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.banking-empty-actions .banking-btn { min-width: 160px; }
+.banking-more-wrap { position: relative; }
+.banking-btn-secondary { background: rgba(17, 24, 39, 0.06); color: #374151; }
+.banking-btn-secondary:hover { background: rgba(17, 24, 39, 0.1); }
+.banking-more-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  min-width: 220px;
+  z-index: 100;
+  padding: 6px 0;
+}
+.banking-more-item {
+  display: block;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #374151;
+  text-decoration: none;
+}
+.banking-more-item:hover { background: #f3f4f6; color: #111827; }
+
+.banking-back-link { display: inline-block; font-size: 14px; color: #6b7280; text-decoration: none; margin-bottom: 8px; }
+.banking-back-link:hover { color: #111827; }
+.banking-connection-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+.banking-conn-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.banking-conn-provider { font-weight: 600; color: #111827; }
+.banking-conn-sync { font-size: 13px; color: #6b7280; margin: 0 0 8px 0; }
+.banking-conn-error { font-size: 13px; color: #dc2626; margin: 0 0 8px 0; }
+.banking-conn-accounts { margin-bottom: 12px; }
+.banking-conn-account { display: inline-block; margin-right: 12px; font-size: 13px; color: #374151; }
+.banking-conn-actions { display: flex; gap: 10px; }

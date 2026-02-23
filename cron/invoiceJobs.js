@@ -48,6 +48,18 @@ cron.schedule('0 2 * * *', async () => {
     }
 });
 
+// Bank sync (org_bank_connections): every hour
+cron.schedule('0 * * * *', async () => {
+    try {
+        const bankingSyncService = require('../services/bankingSyncService');
+        const results = await bankingSyncService.syncAllConnections();
+        const total = results.reduce((s, r) => s + (r.newTransactions || 0), 0);
+        logger.info(`Bank sync completed: ${results.length} connection(s), ${total} new transactions`);
+    } catch (error) {
+        logger.error('Error in bank sync cron:', error);
+    }
+});
+
 // Log when cron jobs are initialized
 logger.info('Invoice, pause expiry, and partner stats cron jobs initialized');
 

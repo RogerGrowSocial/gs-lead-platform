@@ -250,14 +250,13 @@ async function importTransactions(bankAccountId, organizationId, rows) {
 
 /**
  * Create a bank account if not exists.
- * @param {object} params - { name, iban, currency?, organization_id?, provider?, provider_account_id? }
+ * @param {object} params - { name, iban, currency?, organization_id?, provider?, provider_account_id?, connection_id?, is_active? }
  */
 async function ensureBankAccount(params) {
-  const { data: existing } = await supabaseAdmin
-    .from('bank_accounts')
-    .select('id')
-    .eq('iban', params.iban.replace(/\s/g, ''))
-    .maybeSingle();
+  const ibanNorm = params.iban.replace(/\s/g, '');
+  const existing = params.connection_id && params.provider_account_id
+    ? (await supabaseAdmin.from('bank_accounts').select('id').eq('connection_id', params.connection_id).eq('provider_account_id', params.provider_account_id).maybeSingle()).data
+    : (await supabaseAdmin.from('bank_accounts').select('id').eq('iban', ibanNorm).maybeSingle()).data;
 
   if (existing) return existing.id;
 
@@ -265,11 +264,13 @@ async function ensureBankAccount(params) {
     .from('bank_accounts')
     .insert({
       name: params.name || 'Bankrekening',
-      iban: params.iban.replace(/\s/g, ''),
+      iban: ibanNorm,
       currency: params.currency || DEFAULT_CURRENCY,
       organization_id: params.organization_id || null,
       provider: params.provider || null,
       provider_account_id: params.provider_account_id || null,
+      connection_id: params.connection_id || null,
+      is_active: params.is_active !== false,
     })
     .select('id')
     .single();

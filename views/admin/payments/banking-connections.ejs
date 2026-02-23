@@ -1,0 +1,28 @@
+<%
+  const pageContent = `
+  <div class="banking-page main-container">
+    <header class="banking-header">
+      <div>
+        <a href="/admin/payments/banking" class="banking-back-link">← Bankieren</a>
+        <h1 class="banking-title">Beheer bankkoppelingen</h1>
+        <p class="banking-subtitle">Rabobank en andere koppelingen. Sync nu of vernieuw consent.</p>
+      </div>
+    </header>
+    <div id="bankingConnectionsList" class="banking-connections-list">
+      <div id="bankingConnectionsLoading" class="banking-loading">Laden…</div>
+      <div id="bankingConnectionsEmpty" class="banking-empty" style="display:none">
+        <p>Geen bankkoppelingen. <a href="/admin/payments/banking">Ga naar Bankieren</a> en koppel een rekening.</p>
+      </div>
+    </div>
+  </div>
+`;
+%>
+<%- include('../../layouts/admin', {
+  title: title || 'Beheer bankkoppelingen',
+  activeMenu: 'payments',
+  activeSubmenu: 'banking',
+  user: user,
+  body: pageContent,
+  stylesheets: typeof stylesheets !== 'undefined' ? stylesheets : ['/css/admin/adminPayments.css', '/css/admin/banking.css'],
+  scripts: typeof scripts !== 'undefined' ? scripts : ['/js/admin/banking-connections.js']
+}) %>

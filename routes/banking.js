@@ -8,17 +8,54 @@ const multer = require('multer');
 const { supabaseAdmin } = require('../config/supabase');
 const bankingImportService = require('../services/bankingImportService');
 const bankingSuggestionService = require('../services/bankingSuggestionService');
+const bankingSyncService = require('../services/bankingSyncService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// GET /admin/api/banking/accounts
+// GET /admin/api/banking/connections (org connections + linked accounts + status)
+router.get('/connections', async (req, res) => {
+  try {
+    const { data: connections, error } = await supabaseAdmin
+      .from('org_bank_connections')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const conns = connections || [];
+    const withAccounts = [];
+    for (const c of conns) {
+      const { data: accounts } = await supabaseAdmin
+        .from('bank_accounts')
+        .select('id, name, iban, currency, is_active, provider_account_id')
+        .eq('connection_id', c.id);
+      withAccounts.push({ ...c, accounts: accounts || [] });
+    }
+    res.json({ connections: withAccounts });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to fetch connections' });
+  }
+});
+
+// GET /admin/api/banking/accounts (all accounts; include connection status for linked)
 router.get('/accounts', async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.from('bank_accounts').select('*').order('name');
+    const { data: accounts, error } = await supabaseAdmin.from('bank_accounts').select('*').order('name');
     if (error) throw error;
-    res.json({ accounts: data || [] });
+    const list = accounts || [];
+    const connectionIds = [...new Set(list.map(a => a.connection_id).filter(Boolean))];
+    let connectionMap = {};
+    if (connectionIds.length) {
+      const { data: conns } = await supabaseAdmin.from('org_bank_connections').select('id, status, last_synced_at, last_error, provider').in('id', connectionIds);
+      (conns || []).forEach(c => { connectionMap[c.id] = c; });
+    }
+    const withConn = list.map(a => ({
+      ...a,
+      connection: a.connection_id ? connectionMap[a.connection_id] || null : null,
+      linked: !!a.connection_id,
+    }));
+    res.json({ accounts: withConn, linked: withConn.some(a => a.connection_id) });
   } catch (e) {
-    res.status(500).json({ error: e.message || 'Failed to fetch accounts' });
+    res.status(500).json({ error: e.message || 'Failed to fetch accounts', accounts: [], linked: false });
   }
 });
 
@@ -281,13 +318,33 @@ router.post('/transactions/:id/approve', async (req, res) => {
 // POST /admin/api/banking/accounts (create)
 router.post('/accounts', async (req, res) => {
   try {
-    const { name, iban, currency, organization_id } = req.body || {};
+    const { name, iban, currency, organization_id, connection_id } = req.body || {};
     if (!iban) return res.status(400).json({ error: 'iban required' });
-    const id = await bankingImportService.ensureBankAccount({ name, iban, currency, organization_id });
+    const id = await bankingImportService.ensureBankAccount({ name, iban, currency, organization_id, connection_id });
     const { data } = await supabaseAdmin.from('bank_accounts').select('*').eq('id', id).single();
     res.status(201).json({ account: data });
   } catch (e) {
     res.status(500).json({ error: e.message || 'Create account failed' });
+  }
+});
+
+// POST /admin/api/banking/sync (manual refresh: ?connection_id= or ?account_id=)
+router.post('/sync', async (req, res) => {
+  try {
+    const { connection_id, account_id } = req.query;
+    if (connection_id) {
+      const result = await bankingSyncService.syncConnection(connection_id);
+      return res.json({ success: true, newTransactions: result.newTransactions, error: result.error });
+    }
+    if (account_id) {
+      const { data: acc } = await supabaseAdmin.from('bank_accounts').select('connection_id').eq('id', account_id).single();
+      if (!acc?.connection_id) return res.status(400).json({ error: 'Account not linked to a connection' });
+      const result = await bankingSyncService.syncConnection(acc.connection_id);
+      return res.json({ success: true, newTransactions: result.newTransactions, error: result.error });
+    }
+    return res.status(400).json({ error: 'Provide connection_id or account_id' });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Sync failed' });
   }
 });
 

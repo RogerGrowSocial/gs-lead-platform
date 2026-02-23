@@ -3,6 +3,8 @@
 
   const API = '/admin/api/banking';
   let accounts = [];
+  let connections = [];
+  let hasLinkedAccounts = false;
   let transactions = [];
   let totalCount = 0;
   let currentPage = 1;
@@ -20,6 +22,18 @@
     try {
       return new Date(iso).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch (e) { return '—'; }
+  }
+
+  function formatTimeAgo(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (sec < 60) return 'zojuist';
+      if (sec < 3600) return Math.floor(sec / 60) + ' min geleden';
+      if (sec < 86400) return Math.floor(sec / 3600) + ' uur geleden';
+      return formatDate(iso);
+    } catch (e) { return ''; }
   }
 
   function formatAmount(cents, direction) {
@@ -48,10 +62,18 @@
     return 'Handmatig';
   }
 
+  async function fetchConnections() {
+    const res = await fetch(API + '/connections', { credentials: 'same-origin' });
+    const data = await res.json().catch(() => ({}));
+    connections = data.connections || [];
+    return connections;
+  }
+
   async function fetchAccounts() {
     const res = await fetch(API + '/accounts', { credentials: 'same-origin' });
     const data = await res.json().catch(() => ({}));
     accounts = data.accounts || [];
+    hasLinkedAccounts = !!data.linked;
     return accounts;
   }
 
@@ -91,7 +113,9 @@
     accounts.forEach(acc => {
       const opt = document.createElement('option');
       opt.value = acc.id;
-      opt.textContent = (acc.name || 'Rekening') + ' ' + maskIban(acc.iban);
+      const conn = acc.connection;
+      const status = conn?.last_synced_at ? ' · ' + formatTimeAgo(conn.last_synced_at) : '';
+      opt.textContent = (acc.name || 'Rekening') + ' ' + maskIban(acc.iban) + status;
       sel.appendChild(opt);
     });
     if (cur) sel.value = cur;
@@ -292,7 +316,8 @@
   }
 
   function setupImportModal() {
-    const btn = qs('#bankingImportBtn');
+    const fallbackLink = qs('#bankingImportFallback');
+    const manualImportLink = qs('#bankingManualImportLink');
     const modal = qs('#bankingImportModal');
     const form = qs('#bankingImportForm');
     const cancel = qs('#bankingImportCancel');
@@ -301,7 +326,7 @@
 
     if (!modal || !form) return;
 
-    btn.addEventListener('click', () => {
+    function openImportModal() {
       modal.style.display = 'flex';
       accountSelect.innerHTML = '<option value="">Kies rekening</option>';
       accounts.forEach(acc => {
@@ -311,7 +336,10 @@
         accountSelect.appendChild(opt);
       });
       if (accounts.length === 1) accountSelect.value = accounts[0].id;
-    });
+    }
+
+    if (fallbackLink) fallbackLink.addEventListener('click', (e) => { e.preventDefault(); openImportModal(); });
+    if (manualImportLink) manualImportLink.addEventListener('click', () => { qs('#bankingEmptyConnect').style.display = 'none'; qs('#bankingMainLayout').style.display = 'flex'; openImportModal(); });
 
     cancel.addEventListener('click', () => { modal.style.display = 'none'; });
 
@@ -344,8 +372,76 @@
     });
   }
 
+  function setupPrimaryButtonAndEmptyState() {
+    const primaryBtn = qs('#bankingPrimaryBtn');
+    const emptyConnect = qs('#bankingEmptyConnect');
+    const mainLayout = qs('#bankingMainLayout');
+    const subtitle = qs('#bankingSubtitle');
+    if (hasLinkedAccounts || accounts.length > 0) {
+      if (emptyConnect) emptyConnect.style.display = 'none';
+      if (mainLayout) mainLayout.style.display = 'flex';
+      if (primaryBtn) {
+        primaryBtn.style.display = '';
+        primaryBtn.textContent = hasLinkedAccounts ? 'Sync nu' : 'Koppel bankrekening';
+        primaryBtn.onclick = hasLinkedAccounts ? runSync : function () { window.location.href = '/admin/payments/banking/rabobank/connect'; };
+      }
+      const lastConn = connections.find(function (c) { return c.status === 'connected'; });
+      if (subtitle && lastConn && lastConn.last_synced_at) {
+        subtitle.textContent = 'Laatst gesynchroniseerd: ' + formatTimeAgo(lastConn.last_synced_at);
+      }
+    } else {
+      if (mainLayout) mainLayout.style.display = 'none';
+      if (emptyConnect) emptyConnect.style.display = 'block';
+      if (primaryBtn) primaryBtn.style.display = 'none';
+    }
+  }
+
+  async function runSync() {
+    const primaryBtn = qs('#bankingPrimaryBtn');
+    const connectionId = connections.length && connections[0].id ? connections[0].id : null;
+    if (!connectionId) return;
+    if (primaryBtn) { primaryBtn.disabled = true; primaryBtn.textContent = 'Bezig met synchroniseren…'; }
+    try {
+      const res = await fetch(API + '/sync?connection_id=' + encodeURIComponent(connectionId), { method: 'POST', credentials: 'same-origin' });
+      const data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.error || 'Sync mislukt');
+      const msg = (data.newTransactions || 0) > 0 ? data.newTransactions + ' nieuwe transacties opgehaald.' : 'Sync voltooid. Geen nieuwe transacties.';
+      if (typeof window.showNotification === 'function') window.showNotification(msg, 'success', 4000);
+      await fetchConnections();
+      await fetchAccounts();
+      renderAccountsSelect();
+      await loadTransactions();
+      renderTable();
+      renderPagination();
+      setupPrimaryButtonAndEmptyState();
+    } catch (e) {
+      if (typeof window.showNotification === 'function') window.showNotification(e.message || 'Sync mislukt', 'error', 5000);
+    } finally {
+      if (primaryBtn) { primaryBtn.disabled = false; primaryBtn.textContent = 'Sync nu'; }
+    }
+  }
+
+  function setupMoreMenu() {
+    const moreBtn = qs('#bankingMoreBtn');
+    const moreMenu = qs('#bankingMoreMenu');
+    if (!moreBtn || !moreMenu) return;
+    moreBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const open = moreMenu.style.display === 'block';
+      moreMenu.style.display = open ? 'none' : 'block';
+      moreBtn.setAttribute('aria-expanded', !open);
+    });
+    document.addEventListener('click', function () { moreMenu.style.display = 'none'; moreBtn.setAttribute('aria-expanded', 'false'); });
+    moreMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+  }
+
   function init() {
-    fetchAccounts().then(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success') && typeof window.showNotification === 'function') window.showNotification(decodeURIComponent(params.get('success')), 'success', 5000);
+    if (params.get('error') && typeof window.showNotification === 'function') window.showNotification(decodeURIComponent(params.get('error')), 'error', 6000);
+
+    Promise.all([fetchConnections(), fetchAccounts()]).then(() => {
+      setupPrimaryButtonAndEmptyState();
       renderAccountsSelect();
       const accountSel = qs('#bankingAccountSelect');
       const statusSel = qs('#bankingStatusSelect');
@@ -371,7 +467,7 @@
 
       const txFromUrl = new URLSearchParams(window.location.search).get('tx');
       if (txFromUrl) openDrawer(txFromUrl);
-      else loadTransactions();
+      else if (hasLinkedAccounts || accounts.length > 0) loadTransactions();
     });
 
     qs('#bankingTableBody')?.addEventListener('click', (e) => {
@@ -402,6 +498,7 @@
       if (e.target.id === 'bankingNextPage' && currentPage < Math.ceil(totalCount / perPage)) { currentPage++; loadTransactions(); renderTable(); renderPagination(); }
     });
 
+    setupMoreMenu();
     setupImportModal();
   }
 
