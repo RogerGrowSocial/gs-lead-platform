@@ -5539,7 +5539,8 @@ router.get("/payments/banking", requireAuth, requireManagerOrAdminPage, async (r
 router.get("/payments/banking/rabobank/connect", requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     if (!RabobankApiService.isAvailable()) {
-      return res.redirect('/admin/payments/banking?error=Rabobank API is niet geconfigureerd')
+      const detail = RabobankApiService.getConfigError()
+      return res.redirect('/admin/payments/banking?error=' + encodeURIComponent(detail || 'Rabobank API is niet geconfigureerd'))
     }
     const state = crypto.randomBytes(32).toString('hex')
     if (!req.session) req.session = {}
@@ -8120,13 +8121,14 @@ router.get("/tickets/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
     }
 
     // Get ticket with relations (customers: id, name, email only to avoid missing-column errors)
+    // Use profiles!created_by / profiles!assignee_id because tickets has multiple FKs to profiles
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
         customers:customer_id(id, name, email),
-        assignee:assignee_id(id, first_name, last_name, email),
-        creator:created_by(id, first_name, last_name, email)
+        assignee:profiles!assignee_id(id, first_name, last_name, email),
+        creator:profiles!created_by(id, first_name, last_name, email)
       `)
       .eq('id', id)
       .single()
@@ -13144,13 +13146,14 @@ router.get('/api/admin/tickets/:id', requireAuth, isEmployeeOrAdmin, async (req,
     }
 
     // Get ticket (customers: id, name, email only to avoid missing-column errors)
+    // Use profiles!created_by / profiles!assignee_id because tickets has multiple FKs to profiles
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
         customers:customer_id(id, name, email),
-        assignee:assignee_id(id, first_name, last_name, email),
-        creator:created_by(id, first_name, last_name, email)
+        assignee:profiles!assignee_id(id, first_name, last_name, email),
+        creator:profiles!created_by(id, first_name, last_name, email)
       `)
       .eq('id', id)
       .single()
