@@ -2,6 +2,8 @@ const express = require("express")
 const router = express.Router()
 const { supabase, supabaseAdmin } = require('../config/supabase')
 const { requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin } = require("../middleware/auth")
+const { buildAdminNav, resolvePageKeyAndRequireAccess } = require("../middleware/rbac")
+const platformSettingsService = require("../services/platformSettingsService")
 
 /** For GET requests to stream pages: render 403 page instead of JSON when user is not manager/admin */
 async function requireManagerOrAdminPage(req, res, next) {
@@ -103,6 +105,8 @@ async function ensureStorageBucket(bucketName, publicBucket = true) {
 
 // Admin middleware - controleer of gebruiker admin of werknemer is (niet klant)
 router.use(requireAuth, isEmployeeOrAdmin)
+router.use(buildAdminNav)
+router.use(resolvePageKeyAndRequireAccess)
 
 // ==== Notes API (must be before param routes like /api/mail/:id) ====
 router.get('/api/notes', requireAuth, isManagerOrAdmin, async (req, res) => {
@@ -3300,6 +3304,23 @@ router.get("/settings", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   } catch (err) {
     console.error("Fout bij laden instellingen:", err)
     res.status(500).send("Er is een fout opgetreden bij het laden van de instellingen")
+  }
+})
+
+// Platform Instellingen (admin-only) — RBAC & tabs
+router.get("/platform-settings", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const rbacMatrix = await platformSettingsService.getRbacMatrix(false)
+    res.render("admin/platform-settings/index", {
+      user: req.user,
+      activeMenu: "settings",
+      activeSubmenu: null,
+      rbacMatrix,
+      currentTab: "rbac"
+    })
+  } catch (err) {
+    console.error("Fout bij laden platform instellingen:", err)
+    res.status(500).render("errors/500", { layout: false })
   }
 })
 
@@ -8120,15 +8141,12 @@ router.get("/tickets/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
       })
     }
 
-    // Get ticket with relations (customers: id, name, email only to avoid missing-column errors)
-    // Use profiles!created_by / profiles!assignee_id because tickets has multiple FKs to profiles
+    // Get ticket with customer only (avoid profiles embed - schema cache may not have tickets→profiles)
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(id, name, email),
-        assignee:profiles!assignee_id(id, first_name, last_name, email),
-        creator:profiles!created_by(id, first_name, last_name, email)
+        customers:customer_id(id, name, email)
       `)
       .eq('id', id)
       .single()
@@ -8142,6 +8160,18 @@ router.get("/tickets/:id", requireAuth, isEmployeeOrAdmin, async (req, res) => {
         error: {},
         user: req.user
       })
+    }
+
+    // Load assignee and creator from profiles (avoids schema cache relationship issues)
+    const profileIds = [ticket.assignee_id, ticket.created_by].filter(Boolean)
+    if (profileIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', [...new Set(profileIds)])
+      const byId = Object.fromEntries((profiles || []).map(p => [p.id, p]))
+      if (ticket.assignee_id && byId[ticket.assignee_id]) ticket.assignee = byId[ticket.assignee_id]
+      if (ticket.created_by && byId[ticket.created_by]) ticket.creator = byId[ticket.created_by]
     }
     
     // Check permissions
@@ -13145,15 +13175,12 @@ router.get('/api/admin/tickets/:id', requireAuth, isEmployeeOrAdmin, async (req,
       return res.status(404).json({ error: 'Ticket niet gevonden' })
     }
 
-    // Get ticket (customers: id, name, email only to avoid missing-column errors)
-    // Use profiles!created_by / profiles!assignee_id because tickets has multiple FKs to profiles
+    // Get ticket with customer only (avoid profiles embed - schema cache may not have tickets→profiles)
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
       .select(`
         *,
-        customers:customer_id(id, name, email),
-        assignee:profiles!assignee_id(id, first_name, last_name, email),
-        creator:profiles!created_by(id, first_name, last_name, email)
+        customers:customer_id(id, name, email)
       `)
       .eq('id', id)
       .single()
@@ -13163,6 +13190,18 @@ router.get('/api/admin/tickets/:id', requireAuth, isEmployeeOrAdmin, async (req,
     }
     if (ticketError || !ticket) {
       return res.status(404).json({ error: 'Ticket niet gevonden' })
+    }
+
+    // Load assignee and creator from profiles (avoids schema cache relationship issues)
+    const profileIds = [ticket.assignee_id, ticket.created_by].filter(Boolean)
+    if (profileIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', [...new Set(profileIds)])
+      const byId = Object.fromEntries((profiles || []).map(p => [p.id, p]))
+      if (ticket.assignee_id && byId[ticket.assignee_id]) ticket.assignee = byId[ticket.assignee_id]
+      if (ticket.created_by && byId[ticket.created_by]) ticket.creator = byId[ticket.created_by]
     }
     
     // Check permissions (employee can only see if assigned or has support role)
