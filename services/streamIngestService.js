@@ -249,7 +249,6 @@ class StreamIngestService {
       }
     }
 
-    const config = stream.config || {}
     const mapped = this.mapPayloadToOpportunity(payload, config)
     const validation = this.validateMappedFields(mapped)
     if (!validation.valid) {
