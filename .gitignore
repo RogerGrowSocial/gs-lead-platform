@@ -6,6 +6,9 @@ node_modules/
 *.log
 logs/
 
+# Secrets and keys – never commit
+.secrets/
+
 # WordPress/PHP – niet van dit project
 public/img/*.php
 backups/

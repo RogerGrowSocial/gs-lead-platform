@@ -87,7 +87,51 @@ class StreamIngestService {
   }
 
   /**
-   * Map inbound payload to opportunity fields using stream.config.mapping and config.defaults
+   * Normalize a payload key for matching: lowercase, spaces/commas to underscore
+   */
+  static _normalizePayloadKey(key) {
+    if (typeof key !== 'string') return ''
+    return key.toLowerCase().replace(/[\s,-]+/g, '_').replace(/_+/g, '_')
+  }
+
+  /**
+   * Build a flat map from payload (first level + payload.data first level) with normalized keys
+   * so Zapier/webhook payloads with "Company Name" or "company_name" both match company_name.
+   */
+  static _payloadKeyValueMap(payload) {
+    const map = new Map()
+    if (!payload || typeof payload !== 'object') return map
+    const add = (obj) => {
+      if (!obj || typeof obj !== 'object') return
+      for (const [k, v] of Object.entries(obj)) {
+        if (v === undefined || v === null) continue
+        const n = this._normalizePayloadKey(k)
+        if (n && !map.has(n)) map.set(n, v)
+      }
+    }
+    add(payload)
+    if (payload.data && typeof payload.data === 'object') add(payload.data)
+    return map
+  }
+
+  /** Aliases for opportunity fields when falling back to raw payload (e.g. Zapier sends various key names) */
+  static _payloadFieldAliases() {
+    return {
+      title: ['title', 'subject', 'onderwerp'],
+      company_name: ['company_name', 'company', 'business_name', 'business', 'bedrijfsnaam', 'companyname'],
+      contact_name: ['contact_name', 'contact', 'name', 'full_name', 'your_name', 'naam'],
+      email: ['email', 'e_mail', 'e-mail', 'mail'],
+      phone: ['phone', 'telephone', 'tel', 'phone_number', 'telefoon'],
+      message: ['message', 'description', 'notes', 'body', 'comment', 'bericht', 'omschrijving'],
+      address: ['address', 'adres', 'street'],
+      city: ['city', 'plaats', 'woonplaats'],
+      postcode: ['postcode', 'zip', 'zipcode', 'postal_code']
+    }
+  }
+
+  /**
+   * Map inbound payload to opportunity fields using stream.config.mapping and config.defaults.
+   * If mapping leaves required fields empty, fill from payload using common key aliases (Zapier/webhook).
    * mapping: { opportunity_field: "payload.path.or.dot" } or { opportunity_field: "literal" }
    */
   static mapPayloadToOpportunity(payload, config) {
@@ -112,6 +156,20 @@ class StreamIngestService {
     for (const [key, val] of Object.entries(defaults)) {
       if (result[key] === undefined || result[key] === null || result[key] === '') {
         result[key] = val
+      }
+    }
+
+    // Fallback: fill empty fields from payload using common key names (Zapier, webhooks, forms)
+    const keyVal = this._payloadKeyValueMap(payload)
+    const aliases = this._payloadFieldAliases()
+    for (const [oppField, keys] of Object.entries(aliases)) {
+      if (result[oppField] !== undefined && result[oppField] !== null && String(result[oppField]).trim() !== '') continue
+      for (const key of keys) {
+        const v = keyVal.get(this._normalizePayloadKey(key))
+        if (v !== undefined && v !== null && (typeof v !== 'string' || v.trim() !== '')) {
+          result[oppField] = typeof v === 'string' ? v.trim() : v
+          break
+        }
       }
     }
 
@@ -163,13 +221,15 @@ class StreamIngestService {
       return { success: false, status: 403, error: 'Stream is inactive' }
     }
 
-    if (!options.skipVerification) {
+    const config = stream.config || {}
+    const requireSecret = config.require_secret !== false
+    if (!options.skipVerification && requireSecret) {
       const verification = await this.verifySecret(stream, rawBody, headerSecret, headerSignature)
       if (!verification.valid) {
         let errMsg = verification.error
         if (errMsg && errMsg.includes('Missing')) {
           console.warn('[ingest] Request without X-Stream-Secret rejected. StreamId=', streamId, 'Payload keys:', payload && typeof payload === 'object' ? Object.keys(payload) : 'n/a')
-          errMsg += ' Stuur de header X-Stream-Secret met het secret van deze stroom. Gebruik maar één bron: alleen Call Hook (snippet) of alleen Zapier.'
+          errMsg += ' Tip: header X-Stream-Secret meesturen; of zet in stream config: "require_secret": false.'
         }
         await logEvent(streamId, 'error', 401, null, payload, errMsg, null)
         return { success: false, status: 401, error: errMsg }

@@ -1,0 +1,12 @@
+<%
+  const currentTab = typeof currentTab !== 'undefined' ? currentTab : 'rbac'
+  const rbacMatrix = typeof rbacMatrix !== 'undefined' ? rbacMatrix : { roles: [], sections: [], bySection: {} }
+%>
+<%- include('../../layouts/admin', {
+  title: 'Platform Instellingen',
+  activeMenu: 'settings',
+  activeSubmenu: null,
+  bodyPartial: 'admin/platform-settings/body',
+  currentTab,
+  rbacMatrix
+}) %>

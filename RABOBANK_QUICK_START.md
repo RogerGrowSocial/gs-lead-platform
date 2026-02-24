@@ -78,3 +78,13 @@ supabase db push
 
 **Domein**: `app.growsocialmedia.nl`  
 **Laatste update**: January 2025
+
+---
+
+## ⚠️ "Rabobank API is niet geconfigureerd"
+
+Deze melding betekent dat de app **geen** `RABOBANK_CLIENT_ID` en/of `RABOBANK_CLIENT_SECRET` ziet.
+
+- **Lokaal:** Zet beide variabelen in `.env` en **herstart de server** (`npm run dev`).
+- **Productie (Vercel/hosting):** Voeg `RABOBANK_CLIENT_ID`, `RABOBANK_CLIENT_SECRET` en optioneel `RABOBANK_SANDBOX_MODE` toe aan de environment variables van je hosting en deploy opnieuw.
+- Na een wijziging in `.env` moet het Node-process opnieuw gestart worden; alleen de pagina verversen is niet voldoende.

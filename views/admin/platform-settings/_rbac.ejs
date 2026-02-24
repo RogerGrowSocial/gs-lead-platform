@@ -1,0 +1,87 @@
+<%
+  const matrix = typeof rbacMatrix !== 'undefined' ? rbacMatrix : { roles: [], sections: [], bySection: {} }
+  const roleLabels = { admin: 'Admin', manager: 'Manager', employee: 'Werknemer', partner: 'Partner' }
+  const selectedRole = typeof selectedRole !== 'undefined' ? selectedRole : 'admin'
+  function getRole(p, r) {
+    if (p.roles && p.roles[r]) return p.roles[r]
+    return { can_access: false, in_sidebar: false, sidebar_order: p.default_sidebar_order || 1000 }
+  }
+%>
+<script type="application/json" id="rbacMatrixData"><%= JSON.stringify(matrix) %></script>
+<div class="rbac-tab two-column-layout">
+  <div class="rbac-main">
+    <div class="rbac-toolbar">
+      <label class="rbac-role-label">Rol:</label>
+      <div class="rbac-role-tabs" role="tablist">
+        <% matrix.roles.forEach(function(roleKey) { %>
+          <button type="button" class="rbac-role-tab <%= roleKey === selectedRole ? 'active' : '' %>" data-role="<%= roleKey %>"><%= roleLabels[roleKey] || roleKey %></button>
+        <% }) %>
+      </div>
+      <div class="rbac-search-wrap">
+        <input type="text" class="rbac-search" placeholder="Filter pagina's…" id="rbacSearch" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="rbac-tables" id="rbacTables">
+      <% matrix.sections.forEach(function(section) { %>
+        <% const pages = matrix.bySection[section] || [] %>
+        <% if (pages.length === 0) return %>
+        <div class="rbac-section" data-section="<%= section %>">
+          <h3 class="rbac-section-title"><%= section %></h3>
+          <table class="rbac-table">
+            <thead>
+              <tr>
+                <th>Pagina</th>
+                <th class="col-access">Toegang</th>
+                <th class="col-sidebar">In sidebar</th>
+                <th class="col-order">Volgorde</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% pages.forEach(function(p) { %>
+                <% const r = getRole(p, selectedRole) %>
+                <tr class="rbac-row" data-page-key="<%= p.page_key %>" data-label="<%= (p.label || '').toLowerCase() %>" data-path="<%= (p.path || '').toLowerCase() %>">
+                  <td>
+                    <span class="rbac-page-label"><%= p.label %></span>
+                    <span class="rbac-page-path"><%= p.path %></span>
+                  </td>
+                  <td class="col-access">
+                    <label class="toggle-wrap">
+                      <input type="checkbox" class="rbac-toggle rbac-can-access" data-page-key="<%= p.page_key %>" <%= r.can_access ? 'checked' : '' %>>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </td>
+                  <td class="col-sidebar">
+                    <label class="toggle-wrap">
+                      <input type="checkbox" class="rbac-toggle rbac-in-sidebar" data-page-key="<%= p.page_key %>" <%= r.in_sidebar ? 'checked' : '' %>>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </td>
+                  <td class="col-order">
+                    <input type="number" class="rbac-order-input" data-page-key="<%= p.page_key %>" value="<%= r.sidebar_order %>" min="0" step="1">
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="rbac-actions">
+      <button type="button" class="btn btn-secondary rbac-reset" id="rbacReset">Reset naar standaard</button>
+      <button type="button" class="btn btn-primary rbac-save sticky-save" id="rbacSave">Opslaan</button>
+    </div>
+  </div>
+
+  <aside class="rbac-preview-panel" id="rbacPreviewPanel">
+    <h3 class="rbac-preview-title">Preview sidebar (als rol)</h3>
+    <div class="rbac-preview-list" id="rbacPreviewList">
+      <p class="rbac-preview-empty">Selecteer een rol en bekijk welke items in de sidebar zichtbaar zijn.</p>
+    </div>
+  </aside>
+</div>
+
+<div id="rbacToast" class="rbac-toast" aria-live="polite"></div>
+
+<input type="hidden" id="rbacCurrentRole" value="<%= selectedRole %>">

@@ -55,6 +55,9 @@ a.opportunity-card-entry {
 }
 
 .deals-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 13px;
@@ -62,6 +65,11 @@ a.opportunity-card-entry {
   color: #6b7280;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+.deals-view-btn i {
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 .deals-view-btn:hover {
@@ -161,6 +169,25 @@ a.opportunity-card-entry {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.deal-kanban-card-wrapper {
+  flex-shrink: 0;
+  cursor: grab;
+}
+
+.deal-kanban-card-wrapper:active {
+  cursor: grabbing;
+}
+
+.deal-kanban-card-wrapper.dragging {
+  opacity: 0.6;
+}
+
+.deals-kanban-column-cards.deals-drop-target {
+  background: #e0f2fe;
+  border-radius: 8px;
+  outline: 2px dashed #0ea5e9;
 }
 
 .deal-kanban-card {

@@ -47,6 +47,10 @@
             <input type="password" id="secret" name="secret" placeholder="Voor beveiligde webhook (X-Stream-Secret)" class="form-control" autocomplete="new-password" />
             <p class="form-help">Voor beveiligde webhook (X-Stream-Secret)</p>
           </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="require_secret" name="require_secret" ${stream && stream.config && stream.config.require_secret === false ? '' : 'checked'} /> Secret verplicht</label>
+            <p class="form-help">Uitvinken = requests zonder X-Stream-Secret accepteren (minder veilig; handig als integratie het secret niet kan meesturen).</p>
+          </div>
 
           <div class="form-group" style="margin-top: 1.5rem;">
             <button type="button" id="toggleMoreOptions" class="btn-outline">

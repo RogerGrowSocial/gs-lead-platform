@@ -80,7 +80,7 @@
     const truncatedDescription = descriptionText.length > 160 ? `${descriptionText.substring(0, 160)}…` : descriptionText
     const descriptionLine = truncatedDescription ? `<p class="opportunity-card-description">${truncatedDescription}</p>` : ''
     const cardClasses = forKanban ? 'deal-kanban-card' : ''
-    return `
+    const cardInner = `
       <a href="/admin/opportunities/deals/${d.id}" class="opportunity-card-entry ${cardClasses}">
         <div class="opportunity-card">
           <div class="opportunity-card-main">
@@ -108,6 +108,10 @@
         </div>
       </a>
     `
+    if (forKanban) {
+      return `<div class="deal-kanban-card-wrapper" draggable="true" data-deal-id="${d.id}">${cardInner}</div>`
+    }
+    return cardInner
   }
   const baseUrl = '/admin/opportunities/deals'
   const dealsByStage = (deals || []).reduce((acc, d) => {
@@ -169,8 +173,8 @@
           <a href="${baseUrl}?status=lost${viewMode === 'kanban' ? '&view=kanban' : ''}" class="deals-tab ${filterStatus === 'lost' ? 'active' : ''}">Verloren</a>
         </div>
         <div class="deals-view-toggle">
-          <a href="${baseUrl}${filterStatus && filterStatus !== 'all' ? '?status=' + filterStatus : ''}" class="deals-view-btn ${viewMode !== 'kanban' ? 'active' : ''}" title="Lijstweergave">Lijst</a>
-          <a href="${baseUrl}?${filterStatus && filterStatus !== 'all' ? 'status=' + filterStatus + '&' : ''}view=kanban" class="deals-view-btn ${viewMode === 'kanban' ? 'active' : ''}" title="Kanban">Kanban</a>
+          <a href="${baseUrl}${filterStatus && filterStatus !== 'all' ? '?status=' + filterStatus : ''}" class="deals-view-btn ${viewMode !== 'kanban' ? 'active' : ''}" title="Lijstweergave"><i class="fas fa-list" aria-hidden="true"></i><span>Lijst</span></a>
+          <a href="${baseUrl}?${filterStatus && filterStatus !== 'all' ? 'status=' + filterStatus + '&' : ''}view=kanban" class="deals-view-btn ${viewMode === 'kanban' ? 'active' : ''}" title="Kanban"><i class="fas fa-columns" aria-hidden="true"></i><span>Kanban</span></a>
         </div>
       </div>
       ${viewMode === 'kanban' ? `

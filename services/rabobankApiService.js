@@ -1,5 +1,7 @@
 'use strict'
 
+const https = require('https')
+
 /**
  * Rabobank API Service
  * 
@@ -45,6 +47,18 @@ class RabobankApiService {
    */
   static isAvailable() {
     return !!this.getCredentials()
+  }
+
+  /**
+   * Returns a short reason when not configured (for UI/redirect messages).
+   * @returns {string|null} null when configured, otherwise a message like "RABOBANK_CLIENT_ID ontbreekt"
+   */
+  static getConfigError() {
+    const clientId = process.env.RABOBANK_CLIENT_ID
+    const clientSecret = process.env.RABOBANK_CLIENT_SECRET
+    if (!clientId) return 'RABOBANK_CLIENT_ID ontbreekt in .env'
+    if (!clientSecret) return 'RABOBANK_CLIENT_SECRET ontbreekt in .env'
+    return null
   }
 
   /**
@@ -361,6 +375,81 @@ class RabobankApiService {
       console.error('[Rabobank API] Error fetching account transactions:', error)
       throw error
     }
+  }
+
+  /**
+   * Get mTLS credentials from environment (PEM strings).
+   * Env: RABOBANK_MTLS_CLIENT_KEY, RABOBANK_MTLS_FULLCHAIN (or RABOBANK_MTLS_CLIENT_CERT).
+   * @returns {{ key: string, cert: string } | null}
+   */
+  static getMtlsCredentials() {
+    const key = process.env.RABOBANK_MTLS_CLIENT_KEY
+    const cert = process.env.RABOBANK_MTLS_FULLCHAIN || process.env.RABOBANK_MTLS_CLIENT_CERT
+    if (!key || !cert) return null
+    return { key, cert }
+  }
+
+  /**
+   * Check if mTLS is configured (key + cert in env).
+   * @returns {boolean}
+   */
+  static isMtlsConfigured() {
+    return !!this.getMtlsCredentials()
+  }
+
+  /**
+   * Test mTLS connection: one GET to Rabobank API base URL with client cert.
+   * Use this to verify cert chain and key before enabling sync.
+   * @returns {Promise<{ ok: boolean, statusCode?: number, message?: string }>}
+   */
+  static testMtlsConnection() {
+    const creds = this.getMtlsCredentials()
+    if (!creds) {
+      return Promise.resolve({
+        ok: false,
+        message: 'mTLS not configured. Set RABOBANK_MTLS_CLIENT_KEY and RABOBANK_MTLS_FULLCHAIN.'
+      })
+    }
+
+    const baseUrl = this.getApiBaseUrl()
+    const url = new URL(baseUrl)
+    const agent = new https.Agent({
+      key: creds.key,
+      cert: creds.cert,
+      rejectUnauthorized: true
+    })
+
+    return new Promise((resolve) => {
+      const req = https.get(
+        {
+          hostname: url.hostname,
+          port: url.port || 443,
+          path: url.pathname || '/',
+          method: 'GET',
+          agent
+        },
+        (res) => {
+          agent.destroy()
+          resolve({
+            ok: true,
+            statusCode: res.statusCode,
+            message: `Connected (HTTP ${res.statusCode}). mTLS handshake succeeded.`
+          })
+        }
+      )
+      req.on('error', (err) => {
+        agent.destroy()
+        resolve({
+          ok: false,
+          message: err.message || 'Connection failed. Check cert chain, key match, SNI, and portal status.'
+        })
+      })
+      req.setTimeout(15000, () => {
+        req.destroy()
+        agent.destroy()
+        resolve({ ok: false, message: 'Request timeout' })
+      })
+    })
   }
 }
 

@@ -23,6 +23,8 @@ const LeadAssignmentService = require('../services/leadAssignmentService')
 const StreamIngestService = require('../services/streamIngestService')
 const opportunityAssignmentService = require('../services/opportunityAssignmentService')
 const opportunityTaskService = require('../services/opportunityTaskService')
+const platformSettingsService = require('../services/platformSettingsService')
+const pageRegistry = require('../config/pageRegistry')
 
 // API routes voor gebruikers
 
@@ -2672,6 +2674,58 @@ router.get("/admin/bootstrap", requireAuth, isAdmin, async (req, res) => {
     });
   }
 });
+
+// Platform Settings RBAC (admin-only)
+router.get("/admin/platform-settings/rbac", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const matrix = await platformSettingsService.getRbacMatrix(false)
+    res.json({ success: true, data: matrix })
+  } catch (err) {
+    console.error('GET /api/admin/platform-settings/rbac:', err)
+    res.status(500).json({ success: false, error: err.message || 'Fout bij ophalen RBAC matrix' })
+  }
+})
+
+router.post("/admin/platform-settings/rbac/:roleKey", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const roleKey = (req.params.roleKey || '').toLowerCase()
+    if (!pageRegistry.getRoleKeys().includes(roleKey)) {
+      return res.status(400).json({ success: false, error: 'Ongeldige rol' })
+    }
+    const updates = req.body?.updates
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({ success: false, error: 'Body moet { updates: [...] } bevatten' })
+    }
+    await platformSettingsService.saveRolePermissions(
+      roleKey,
+      updates,
+      req.user?.id,
+      { ip: req.ip, user_agent: req.get('User-Agent') }
+    )
+    res.json({ success: true, message: 'Opgeslagen' })
+  } catch (err) {
+    console.error('POST /api/admin/platform-settings/rbac/:roleKey:', err)
+    res.status(500).json({ success: false, error: err.message || 'Fout bij opslaan' })
+  }
+})
+
+router.post("/admin/platform-settings/rbac/:roleKey/reset", requireAuth, isAdmin, async (req, res) => {
+  try {
+    const roleKey = (req.params.roleKey || '').toLowerCase()
+    if (!pageRegistry.getRoleKeys().includes(roleKey)) {
+      return res.status(400).json({ success: false, error: 'Ongeldige rol' })
+    }
+    await platformSettingsService.resetRoleToDefaults(
+      roleKey,
+      req.user?.id,
+      { ip: req.ip, user_agent: req.get('User-Agent') }
+    )
+    res.json({ success: true, message: 'Teruggezet naar standaard' })
+  } catch (err) {
+    console.error('POST /api/admin/platform-settings/rbac/:roleKey/reset:', err)
+    res.status(500).json({ success: false, error: err.message || 'Fout bij reset' })
+  }
+})
 
 // Get user permissions (simplified version using is_admin)
 router.get("/permissions", requireAuth, async (req, res) => {

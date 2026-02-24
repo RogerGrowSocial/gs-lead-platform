@@ -2,7 +2,16 @@ const express = require("express")
 const router = express.Router()
 const { supabase, supabaseAdmin } = require('../config/supabase')
 const { requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin } = require("../middleware/auth")
-const { buildAdminNav, resolvePageKeyAndRequireAccess } = require("../middleware/rbac")
+let buildAdminNav, resolvePageKeyAndRequireAccess
+try {
+  const rbac = require("../middleware/rbac")
+  buildAdminNav = rbac.buildAdminNav
+  resolvePageKeyAndRequireAccess = rbac.resolvePageKeyAndRequireAccess
+} catch (e) {
+  console.warn('[admin] RBAC middleware not found (missing middleware/rbac.js?) – using passthrough:', e.message)
+  buildAdminNav = (req, res, next) => { res.locals.adminNav = { sections: [] }; res.locals.userRoleKey = 'partner'; next() }
+  resolvePageKeyAndRequireAccess = () => (req, res, next) => next()
+}
 const platformSettingsService = require("../services/platformSettingsService")
 
 /** For GET requests to stream pages: render 403 page instead of JSON when user is not manager/admin */
@@ -3311,12 +3320,16 @@ router.get("/settings", requireAuth, isEmployeeOrAdmin, async (req, res) => {
 router.get("/platform-settings", requireAuth, isAdmin, async (req, res) => {
   try {
     const rbacMatrix = await platformSettingsService.getRbacMatrix(false)
+    const currentTab = (req.query.tab || 'rbac').toLowerCase()
+    const validTabs = ['general', 'rbac', 'integrations', 'notifications']
+    const tab = validTabs.includes(currentTab) ? currentTab : 'rbac'
     res.render("admin/platform-settings/index", {
       user: req.user,
-      activeMenu: "settings",
+      activeMenu: "platform_settings",
       activeSubmenu: null,
       rbacMatrix,
-      currentTab: "rbac"
+      currentTab: tab,
+      selectedRole: 'admin'
     })
   } catch (err) {
     console.error("Fout bij laden platform instellingen:", err)

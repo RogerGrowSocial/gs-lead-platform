@@ -1519,8 +1519,9 @@ router.get('/rabobank/connect', requireAuth, async (req, res) => {
 
     // Check if Rabobank API is configured
     if (!RabobankApiService.isAvailable()) {
-      console.error('[Rabobank] API credentials not configured')
-      return res.redirect('/dashboard?error=Rabobank API is niet geconfigureerd')
+      const detail = RabobankApiService.getConfigError()
+      console.error('[Rabobank] API credentials not configured:', detail)
+      return res.redirect('/dashboard?error=' + encodeURIComponent(detail || 'Rabobank API is niet geconfigureerd'))
     }
 
     // Generate state for CSRF protection

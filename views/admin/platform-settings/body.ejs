@@ -1,0 +1,25 @@
+<div class="platform-settings-page">
+  <div class="page-header">
+    <h1 class="page-title">Platform Instellingen</h1>
+    <p class="page-subtitle">Algemene instellingen, toegang en navigatie per rol</p>
+  </div>
+
+  <%- include('./_tabs') %>
+
+  <div class="platform-settings-content">
+    <% if (currentTab === 'rbac') { %>
+      <%- include('./_rbac') %>
+    <% } else if (currentTab === 'general') { %>
+      <div class="settings-card"><p class="text-gray-500">Algemeen — binnenkort beschikbaar.</p></div>
+    <% } else if (currentTab === 'integrations') { %>
+      <div class="settings-card"><p class="text-gray-500">Integraties — binnenkort beschikbaar.</p></div>
+    <% } else if (currentTab === 'notifications') { %>
+      <div class="settings-card"><p class="text-gray-500">E-mail/Notificaties — binnenkort beschikbaar.</p></div>
+    <% } else { %>
+      <%- include('./_rbac') %>
+    <% } %>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/css/admin/platform-settings.css">
+<script src="/js/admin/platform-settings.js"></script>

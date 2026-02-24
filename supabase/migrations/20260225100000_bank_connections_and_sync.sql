@@ -39,8 +39,25 @@ CREATE INDEX IF NOT EXISTS idx_org_bank_connections_provider ON public.org_bank_
 COMMENT ON TABLE public.org_bank_connections IS 'Admin Bankieren: OAuth connections per organization (Rabobank). One connection can have multiple bank_accounts.';
 
 -- =====================================================
--- BANK_ACCOUNTS: add connection_id and is_active
+-- BANK_ACCOUNTS: create if missing, then add connection_id and is_active
+-- (bank_accounts is normally created in 20260224110000_banking_module.sql;
+--  if that migration was not run, we create it here so this migration can run standalone)
 -- =====================================================
+CREATE TABLE IF NOT EXISTS public.bank_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID,
+  name TEXT NOT NULL,
+  iban TEXT NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'EUR',
+  provider TEXT,
+  provider_account_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_organization ON public.bank_accounts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_iban ON public.bank_accounts(iban);
+
 ALTER TABLE public.bank_accounts
   ADD COLUMN IF NOT EXISTS connection_id UUID REFERENCES public.org_bank_connections(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;

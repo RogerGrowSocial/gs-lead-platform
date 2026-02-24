@@ -5,6 +5,7 @@
 (function () {
   const trigger = document.getElementById('headerNotificationsTrigger');
   const badge = document.getElementById('headerNotificationsBadge');
+  const badgeOnToggle = document.getElementById('headerNotificationsBadgeOnToggle');
   const popover = document.getElementById('headerNotificationsPopover');
   const listEl = document.getElementById('headerNotificationsList');
   const loadingEl = document.getElementById('headerNotificationsLoading');
@@ -18,10 +19,17 @@
   let lastUnreadCount = 0;
 
   function setBadge(count) {
-    if (!badge) return;
     const n = Number(count) || 0;
-    badge.setAttribute('data-count', n);
-    badge.textContent = n > 99 ? '99+' : String(n);
+    const text = n > 99 ? '99+' : String(n);
+    if (badge) {
+      badge.setAttribute('data-count', n);
+      badge.textContent = text;
+    }
+    if (badgeOnToggle) {
+      badgeOnToggle.setAttribute('data-count', n);
+      badgeOnToggle.textContent = text;
+      badgeOnToggle.setAttribute('aria-hidden', n === 0 ? 'true' : 'false');
+    }
   }
 
   async function fetchUnreadCount() {

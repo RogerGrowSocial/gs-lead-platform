@@ -148,6 +148,8 @@
       config = buildConfigFromSimpleFields()
       if (getConfigEl()) getConfigEl().value = JSON.stringify(config, null, 2)
     }
+    var requireSecretEl = document.getElementById('require_secret')
+    config.require_secret = requireSecretEl ? requireSecretEl.checked : true
     var secret = document.getElementById('secret').value
     var streamId = form.getAttribute('data-stream-id')
     var isEdit = !!streamId

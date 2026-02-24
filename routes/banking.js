@@ -9,8 +9,22 @@ const { supabaseAdmin } = require('../config/supabase');
 const bankingImportService = require('../services/bankingImportService');
 const bankingSuggestionService = require('../services/bankingSuggestionService');
 const bankingSyncService = require('../services/bankingSyncService');
+const RabobankApiService = require('../services/rabobankApiService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// GET /admin/api/banking/rabobank/test-mtls — test mTLS connection before enabling sync
+router.get('/rabobank/test-mtls', async (req, res) => {
+  try {
+    const result = await RabobankApiService.testMtlsConnection();
+    if (result.ok) {
+      return res.json({ success: true, message: result.message, statusCode: result.statusCode });
+    }
+    return res.status(502).json({ success: false, error: result.message });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message || 'mTLS test failed' });
+  }
+});
 
 // GET /admin/api/banking/connections (org connections + linked accounts + status)
 router.get('/connections', async (req, res) => {
