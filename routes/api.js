@@ -23,8 +23,6 @@ const LeadAssignmentService = require('../services/leadAssignmentService')
 const StreamIngestService = require('../services/streamIngestService')
 const opportunityAssignmentService = require('../services/opportunityAssignmentService')
 const opportunityTaskService = require('../services/opportunityTaskService')
-const platformSettingsService = require('../services/platformSettingsService')
-const pageRegistry = require('../config/pageRegistry')
 
 // API routes voor gebruikers
 
@@ -2675,9 +2673,10 @@ router.get("/admin/bootstrap", requireAuth, isAdmin, async (req, res) => {
   }
 });
 
-// Platform Settings RBAC (admin-only)
+// Platform Settings RBAC (admin-only) — lazy-load to avoid blocking server boot
 router.get("/admin/platform-settings/rbac", requireAuth, isAdmin, async (req, res) => {
   try {
+    const platformSettingsService = require('../services/platformSettingsService')
     await platformSettingsService.syncPagesRegistryToDb().catch(() => {})
     const matrix = await platformSettingsService.getRbacMatrix(false)
     res.json({ success: true, data: matrix })
@@ -2689,6 +2688,8 @@ router.get("/admin/platform-settings/rbac", requireAuth, isAdmin, async (req, re
 
 router.post("/admin/platform-settings/rbac/:roleKey", requireAuth, isAdmin, async (req, res) => {
   try {
+    const pageRegistry = require('../config/pageRegistry')
+    const platformSettingsService = require('../services/platformSettingsService')
     const roleKey = (req.params.roleKey || '').toLowerCase()
     if (!pageRegistry.getRoleKeys().includes(roleKey)) {
       return res.status(400).json({ success: false, error: 'Ongeldige rol' })
@@ -2712,6 +2713,8 @@ router.post("/admin/platform-settings/rbac/:roleKey", requireAuth, isAdmin, asyn
 
 router.post("/admin/platform-settings/rbac/:roleKey/reset", requireAuth, isAdmin, async (req, res) => {
   try {
+    const pageRegistry = require('../config/pageRegistry')
+    const platformSettingsService = require('../services/platformSettingsService')
     const roleKey = (req.params.roleKey || '').toLowerCase()
     if (!pageRegistry.getRoleKeys().includes(roleKey)) {
       return res.status(400).json({ success: false, error: 'Ongeldige rol' })
