@@ -16,33 +16,31 @@ function invalidateRbacCache () {
 }
 
 /**
- * Sync page registry to app_pages (upsert by page_key).
- * Call on server start or periodically.
+ * Sync page registry to app_pages (single bulk upsert).
+ * Only call from platform-settings page or RBAC API — do NOT call on every admin request (causes timeout on Vercel).
  */
 async function syncPagesRegistryToDb () {
   const pages = getAdminPages()
-  for (const p of pages) {
-    const row = {
-      page_key: p.key,
-      label: p.label,
-      path: p.path,
-      area: p.area,
-      section: p.section,
-      default_access_roles: p.defaultAccessRoles || [],
-      default_sidebar_roles: p.defaultSidebarRoles || [],
-      default_sidebar_order: p.defaultSidebarOrder ?? 1000,
-      updated_at: new Date().toISOString()
-    }
-    const { error } = await supabaseAdmin
-      .from('app_pages')
-      .upsert(row, { onConflict: 'page_key', ignoreDuplicates: false })
-    if (error) {
-      console.error('[platformSettingsService] syncPagesRegistryToDb upsert error:', p.key, error.message)
-      throw error
-    }
+  const rows = pages.map(p => ({
+    page_key: p.key,
+    label: p.label,
+    path: p.path,
+    area: p.area,
+    section: p.section,
+    default_access_roles: p.defaultAccessRoles || [],
+    default_sidebar_roles: p.defaultSidebarRoles || [],
+    default_sidebar_order: p.defaultSidebarOrder ?? 1000,
+    updated_at: new Date().toISOString()
+  }))
+  const { error } = await supabaseAdmin
+    .from('app_pages')
+    .upsert(rows, { onConflict: 'page_key', ignoreDuplicates: false })
+  if (error) {
+    console.error('[platformSettingsService] syncPagesRegistryToDb error:', error.message)
+    throw error
   }
   invalidateRbacCache()
-  return { synced: pages.length }
+  return { synced: rows.length }
 }
 
 /**
@@ -67,10 +65,10 @@ async function getRbacMatrix (useCache = true) {
     return rbacCache
   }
 
+  // Do NOT sync here — sync only when opening platform-settings (avoids timeout on every admin page load)
   let dbPages = null
   let perms = null
   try {
-    await syncPagesRegistryToDb()
     const [pagesRes, permsRes] = await Promise.all([
       supabaseAdmin.from('app_pages').select('*').order('section').order('default_sidebar_order'),
       supabaseAdmin.from('role_page_permissions').select('*')
@@ -79,8 +77,21 @@ async function getRbacMatrix (useCache = true) {
     if (permsRes.error) throw permsRes.error
     dbPages = pagesRes.data
     perms = permsRes.data
+    // If no pages in DB yet (e.g. first deploy), use registry so sidebar and access still work
+    if (!dbPages || dbPages.length === 0) {
+      dbPages = getAdminPages().map(p => ({
+        page_key: p.key,
+        label: p.label,
+        path: p.path,
+        section: p.section,
+        default_access_roles: p.defaultAccessRoles || [],
+        default_sidebar_roles: p.defaultSidebarRoles || [],
+        default_sidebar_order: p.defaultSidebarOrder ?? 1000
+      }))
+      perms = []
+    }
   } catch (err) {
-    console.warn('[platformSettingsService] getRbacMatrix DB/sync failed, using registry defaults:', err.message)
+    console.warn('[platformSettingsService] getRbacMatrix DB failed, using registry:', err.message)
     dbPages = getAdminPages().map(p => ({
       page_key: p.key,
       label: p.label,

@@ -2,17 +2,15 @@ const express = require("express")
 const router = express.Router()
 const { supabase, supabaseAdmin } = require('../config/supabase')
 const { requireAuth, isAdmin, isEmployeeOrAdmin, isManagerOrAdmin } = require("../middleware/auth")
-let buildAdminNav, resolvePageKeyAndRequireAccess
-try {
-  const rbac = require("../middleware/rbac")
-  buildAdminNav = rbac.buildAdminNav
-  resolvePageKeyAndRequireAccess = rbac.resolvePageKeyAndRequireAccess
-} catch (e) {
-  console.warn('[admin] RBAC middleware not found (missing middleware/rbac.js?) – using passthrough:', e.message)
-  buildAdminNav = (req, res, next) => { res.locals.adminNav = { sections: [] }; res.locals.userRoleKey = 'partner'; next() }
-  resolvePageKeyAndRequireAccess = () => (req, res, next) => next()
+// RBAC middleware disabled on admin router to prevent 504 timeouts (DB calls on every request).
+// Sidebar uses legacy hardcoded nav. Platform settings page and RBAC API still work when opened directly.
+const buildAdminNav = (req, res, next) => {
+  res.locals.adminNav = { sections: [] }
+  res.locals.userRoleKey = 'partner'
+  res.locals.currentPath = (req.baseUrl || '') + (req.path || '') || (req.originalUrl && req.originalUrl.split('?')[0]) || ''
+  next()
 }
-const platformSettingsService = require("../services/platformSettingsService")
+const resolvePageKeyAndRequireAccess = () => (req, res, next) => next()
 
 /** For GET requests to stream pages: render 403 page instead of JSON when user is not manager/admin */
 async function requireManagerOrAdminPage(req, res, next) {
@@ -3316,9 +3314,11 @@ router.get("/settings", requireAuth, isEmployeeOrAdmin, async (req, res) => {
   }
 })
 
-// Platform Instellingen (admin-only) — RBAC & tabs
+// Platform Instellingen (admin-only) — RBAC & tabs (lazy-load service to avoid slow admin boot)
 router.get("/platform-settings", requireAuth, isAdmin, async (req, res) => {
   try {
+    const platformSettingsService = require("../services/platformSettingsService")
+    await platformSettingsService.syncPagesRegistryToDb().catch(() => {})
     const rbacMatrix = await platformSettingsService.getRbacMatrix(false)
     const currentTab = (req.query.tab || 'rbac').toLowerCase()
     const validTabs = ['general', 'rbac', 'integrations', 'notifications']

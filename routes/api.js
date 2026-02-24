@@ -2678,6 +2678,7 @@ router.get("/admin/bootstrap", requireAuth, isAdmin, async (req, res) => {
 // Platform Settings RBAC (admin-only)
 router.get("/admin/platform-settings/rbac", requireAuth, isAdmin, async (req, res) => {
   try {
+    await platformSettingsService.syncPagesRegistryToDb().catch(() => {})
     const matrix = await platformSettingsService.getRbacMatrix(false)
     res.json({ success: true, data: matrix })
   } catch (err) {
