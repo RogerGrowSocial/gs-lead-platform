@@ -58,77 +58,70 @@ async function refreshIfNeeded(req, res, next) {
       return next();
     }
 
-    // Only create Supabase client if we have cookies
-    const base = createBaseClient();
-    const scoped = createRequestClient(req);
-    let { data: userData, error: userErr } = await scoped.auth.getUser();
-
-    if (!userErr && userData?.user) {
-      req.user = userData.user;
-      
-      // Log successful authentication (with rate limiting)
-      if (shouldLogAuth(userData.user.id, 'authenticated')) {
-        SystemLogService.logAuth(
-          userData.user.id,
-          'authenticated',
-          'Gebruiker succesvol geauthenticeerd',
-          req.ip,
-          req.get('User-Agent')
-        ).catch(err => console.log('Auth logging failed:', err));
-      }
-      
-      if (start && req.performanceTimings) {
-        const end = process.hrtime.bigint();
-        const time = Number(end - start) / 1000000;
-        req.performanceTimings.middleware['refreshIfNeeded'] = time;
-      }
-      return next();
-    }
-
-    // Try refresh if we have refresh token
-    if (refresh && userErr) {
-      const { data: refreshData, error: refreshErr } = await base.auth.refreshSession({
-        refresh_token: refresh
-      });
-
-      if (!refreshErr && refreshData?.session) {
-        // Set new cookies
-        res.cookie('sb-access-token', refreshData.session.access_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-        });
-        res.cookie('sb-refresh-token', refreshData.session.refresh_token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
-        });
-
-        req.user = refreshData.session.user;
-        
-        if (shouldLogAuth(refreshData.session.user.id, 'refreshed')) {
+    const runAuth = async () => {
+      const base = createBaseClient();
+      const scoped = createRequestClient(req);
+      const { data: userData, error: userErr } = await scoped.auth.getUser();
+      if (!userErr && userData?.user) {
+        req.user = userData.user;
+        if (shouldLogAuth(userData.user.id, 'authenticated')) {
           SystemLogService.logAuth(
-            refreshData.session.user.id,
-            'refreshed',
-            'Sessie vernieuwd',
+            userData.user.id,
+            'authenticated',
+            'Gebruiker succesvol geauthenticeerd',
             req.ip,
             req.get('User-Agent')
           ).catch(err => console.log('Auth logging failed:', err));
         }
-        
-        if (start && req.performanceTimings) {
-          const end = process.hrtime.bigint();
-          const time = Number(end - start) / 1000000;
-          req.performanceTimings.middleware['refreshIfNeeded'] = time;
-        }
-        
-        return next();
+        return;
       }
+      if (refresh && userErr) {
+        const { data: refreshData, error: refreshErr } = await base.auth.refreshSession({
+          refresh_token: refresh
+        });
+        if (!refreshErr && refreshData?.session) {
+          res.cookie('sb-access-token', refreshData.session.access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 1000 * 60 * 60 * 24 * 7
+          });
+          res.cookie('sb-refresh-token', refreshData.session.refresh_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 1000 * 60 * 60 * 24 * 30
+          });
+          req.user = refreshData.session.user;
+          if (shouldLogAuth(refreshData.session.user.id, 'refreshed')) {
+            SystemLogService.logAuth(
+              refreshData.session.user.id,
+              'refreshed',
+              'Sessie vernieuwd',
+              req.ip,
+              req.get('User-Agent')
+            ).catch(err => console.log('Auth logging failed:', err));
+          }
+        }
+      }
+    };
+
+    const authTimeoutMs = process.env.VERCEL ? 10000 : 0;
+    if (authTimeoutMs) {
+      try {
+        await Promise.race([
+          runAuth(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Auth timeout')), authTimeoutMs))
+        ]);
+      } catch (e) {
+        if (e.message === 'Auth timeout') {
+          console.warn('Auth timeout, proceeding unauthenticated');
+        }
+      }
+    } else {
+      await runAuth();
     }
 
-    // Fallthrough: no valid user
     if (start && req.performanceTimings) {
       const end = process.hrtime.bigint();
       const time = Number(end - start) / 1000000;
