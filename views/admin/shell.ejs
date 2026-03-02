@@ -18,18 +18,48 @@
   <script>
     window.__BOOTSTRAP_URL__ = '<%= typeof bootstrapUrl !== "undefined" && bootstrapUrl ? bootstrapUrl : "/api/admin/dashboard-bootstrap" %>';
     (function() {
+      var root = document.getElementById('shell-root');
       var url = window.__BOOTSTRAP_URL__;
-      fetch(url, { credentials: 'same-origin' })
-        .then(function(r) { return r.json(); })
+      var done = false;
+      function showFallback(msg) {
+        if (done) return;
+        done = true;
+        root.innerHTML = '<p class="text-gray-600">' + (msg || 'Admin laden...') + ' <a href="/admin?full=1" class="text-indigo-600 underline">Ga naar admin</a></p>';
+      }
+      function goFull() {
+        if (done) return;
+        done = true;
+        window.location.replace('/admin?full=1');
+      }
+      var t = setTimeout(function() {
+        showFallback('Laden duurt te lang.');
+        setTimeout(goFull, 1500);
+      }, 12000);
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 10000);
+      fetch(url, { credentials: 'same-origin', signal: controller.signal })
+        .then(function(r) {
+          clearTimeout(timeoutId);
+          if (!r.ok) {
+            showFallback(r.status === 401 ? 'Log in om door te gaan.' : 'Kon gegevens niet laden.');
+            return null;
+          }
+          return r.json();
+        })
         .then(function(data) {
+          clearTimeout(t);
+          if (done) return;
           if (data && data.success) {
+            done = true;
             window.location.replace('/admin?full=1');
           } else {
-            document.getElementById('shell-root').innerHTML = '<p class="text-gray-600">Dashboard geladen. <a href="/admin?full=1" class="text-indigo-600 underline">Ga naar admin</a></p>';
+            showFallback('Dashboard geladen.');
           }
         })
         .catch(function() {
-          document.getElementById('shell-root').innerHTML = '<p class="text-gray-600">Kon gegevens niet laden. <a href="/admin?full=1" class="text-indigo-600 underline">Probeer opnieuw</a></p>';
+          clearTimeout(t);
+          showFallback('Kon gegevens niet laden.');
+          setTimeout(goFull, 2000);
         });
     })();
   </script>
