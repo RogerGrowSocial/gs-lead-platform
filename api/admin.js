@@ -1,9 +1,15 @@
 /**
  * Admin serverless function entrypoint for Vercel
- * Handles /admin/* and admin-specific /api/* routes
+ * Handles /admin/* and admin-specific /api/* routes.
+ * Lazy-init: app is created on first request to avoid cold-start timeout.
  */
-const createApp = require('../lib/createApp')
+let _app
 
-const app = createApp({ area: 'admin' })
-
-module.exports = app
+module.exports = function adminHandler (req, res) {
+  if (!_app) {
+    console.log('[ADMIN] handler loaded')
+    const createApp = require('../lib/createApp')
+    _app = createApp({ area: 'admin' })
+  }
+  return _app(req, res)
+}

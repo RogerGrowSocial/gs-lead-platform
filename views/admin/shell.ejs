@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | GrowSocial</title>
+  <link rel="icon" type="image/webp" href="/img/favicon-growsocial.webp">
+  <link rel="stylesheet" href="/css/design-tokens.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/chart-theme.css">
+  <script src="https://cdn.tailwindcss.com" defer></script>
+</head>
+<body class="bg-gray-50">
+  <div id="shell-root" style="min-height: 60vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+    <p class="text-gray-600">Admin wordt geladen...</p>
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+  </div>
+  <script>
+    window.__BOOTSTRAP_URL__ = '<%= typeof bootstrapUrl !== "undefined" && bootstrapUrl ? bootstrapUrl : "/api/admin/dashboard-bootstrap" %>';
+    (function() {
+      var url = window.__BOOTSTRAP_URL__;
+      fetch(url, { credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.success) {
+            window.location.replace('/admin?full=1');
+          } else {
+            document.getElementById('shell-root').innerHTML = '<p class="text-gray-600">Dashboard geladen. <a href="/admin?full=1" class="text-indigo-600 underline">Ga naar admin</a></p>';
+          }
+        })
+        .catch(function() {
+          document.getElementById('shell-root').innerHTML = '<p class="text-gray-600">Kon gegevens niet laden. <a href="/admin?full=1" class="text-indigo-600 underline">Probeer opnieuw</a></p>';
+        });
+    })();
+  </script>
+</body>
+</html>
