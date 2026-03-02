@@ -49,7 +49,6 @@ async function refreshIfNeeded(req, res, next) {
     const refresh = req.cookies?.['sb-refresh-token'];
 
     if (!access && !refresh) {
-      // No cookies at all - skip all Supabase calls (fast path)
       if (start && req.performanceTimings) {
         const end = process.hrtime.bigint();
         const time = Number(end - start) / 1000000;
@@ -71,7 +70,7 @@ async function refreshIfNeeded(req, res, next) {
             'Gebruiker succesvol geauthenticeerd',
             req.ip,
             req.get('User-Agent')
-          ).catch(err => console.log('Auth logging failed:', err));
+          );
         }
         return;
       }
@@ -100,13 +99,14 @@ async function refreshIfNeeded(req, res, next) {
               'Sessie vernieuwd',
               req.ip,
               req.get('User-Agent')
-            ).catch(err => console.log('Auth logging failed:', err));
+            );
           }
         }
       }
     };
 
-    const authTimeoutMs = process.env.VERCEL ? 10000 : 0;
+    const authTimeoutMs = (process.env.VERCEL || process.env.NODE_ENV === 'production') ? 5000 : 0;
+    let authTimedOut = false;
     if (authTimeoutMs) {
       try {
         await Promise.race([
@@ -115,6 +115,7 @@ async function refreshIfNeeded(req, res, next) {
         ]);
       } catch (e) {
         if (e.message === 'Auth timeout') {
+          authTimedOut = true;
           console.warn('Auth timeout, proceeding unauthenticated');
         }
       }

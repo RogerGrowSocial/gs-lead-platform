@@ -1,24 +1,16 @@
 const { supabaseAdmin } = require('../config/supabase');
+const { runWithTimeout, LOG_TIMEOUT_MS } = require('../utils/safeLog');
 
 class SystemLogService {
     /**
-     * Log a system activity
-     * @param {Object} params - Log parameters
-     * @param {string} params.type - Log type (info, warning, error, success, critical)
-     * @param {string} params.category - Category (authentication, billing, user_management, system, payment, cron, api, database, security, admin)
-     * @param {string} params.title - Log title
-     * @param {string} params.message - Log message
-     * @param {string} params.details - Additional details (optional)
-     * @param {string} params.source - Source system (optional, defaults to 'System')
-     * @param {string} params.userId - User ID (optional)
-     * @param {string} params.adminId - Admin ID (optional)
-     * @param {string} params.ipAddress - IP address (optional)
-     * @param {string} params.userAgent - User agent (optional)
-     * @param {Object} params.metadata - Additional metadata (optional)
-     * @param {string} params.severity - Severity level (low, medium, high, critical, defaults to 'medium')
-     * @returns {Promise<string>} Log ID
+     * Log a system activity. Never blocks longer than LOG_TIMEOUT_MS (250ms).
+     * @returns {Promise<string|null>} Log ID or null on timeout/error
      */
-    static async log({
+    static async log(params) {
+        return runWithTimeout(this._logImpl(params));
+    }
+
+    static async _logImpl({
         type,
         category,
         title,
@@ -32,43 +24,36 @@ class SystemLogService {
         metadata = {},
         severity = 'medium'
     }) {
-        try {
+        if (process.env.NODE_ENV === 'production') {
+            // Minimal console in prod; DB write may still run inside runWithTimeout
+        } else {
             console.log(`📝 System Log: ${type} - ${title}`);
-            
-            // Enhance metadata with user information
-            const enhancedMetadata = await this.enhanceMetadataWithUserInfo({
-                userId,
-                adminId,
-                metadata,
-                source
-            });
-            
-            const { data, error } = await supabaseAdmin.rpc('log_system_activity', {
-                p_log_type: type,
-                p_category: category,
-                p_title: title,
-                p_message: message,
-                p_details: details,
-                p_source: source,
-                p_user_id: userId,
-                p_admin_id: adminId,
-                p_ip_address: ipAddress,
-                p_user_agent: userAgent,
-                p_metadata: enhancedMetadata,
-                p_severity: severity
-            });
-
-            if (error) {
-                console.error('Error logging system activity:', error);
-                throw new Error('Failed to log system activity');
-            }
-
-            console.log(`✅ System log created successfully: ${data}`);
-            return data;
-        } catch (error) {
-            console.error('SystemLogService.log error:', error);
-            throw error;
         }
+        const enhancedMetadata = await this.enhanceMetadataWithUserInfo({
+            userId,
+            adminId,
+            metadata,
+            source
+        });
+        const { data, error } = await supabaseAdmin.rpc('log_system_activity', {
+            p_log_type: type,
+            p_category: category,
+            p_title: title,
+            p_message: message,
+            p_details: details,
+            p_source: source,
+            p_user_id: userId,
+            p_admin_id: adminId,
+            p_ip_address: ipAddress,
+            p_user_agent: userAgent,
+            p_metadata: enhancedMetadata,
+            p_severity: severity
+        });
+        if (error) {
+            if (process.env.NODE_ENV !== 'production') console.error('Error logging system activity:', error);
+            throw new Error('Failed to log system activity');
+        }
+        return data;
     }
 
     /**
@@ -183,8 +168,9 @@ class SystemLogService {
     /**
      * Log user authentication events
      */
-    static async logAuth(userId, action, details = null, ipAddress = null, userAgent = null) {
-        return this.log({
+    /** Fire-and-forget; never blocks request (250ms cap). */
+    static logAuth(userId, action, details = null, ipAddress = null, userAgent = null) {
+        this.log({
             type: 'info',
             category: 'authentication',
             title: `User ${action}`,
@@ -195,7 +181,7 @@ class SystemLogService {
             ipAddress,
             userAgent,
             severity: 'medium'
-        });
+        }).catch(() => {});
     }
 
     /**

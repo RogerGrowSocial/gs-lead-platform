@@ -1692,122 +1692,29 @@ router.get("/money", requireAuth, isAdmin, async (req, res) => {
   }
 });
 
-// Admin dashboard - adaptive: company view (admin) or employee view (role + optional ?for=employeeId)
+// Admin dashboard - LIGHT SSR: shell only, data via /api/admin/dashboard-bootstrap (prevents 504)
 router.get("/", async (req, res) => {
+  const isUserAdmin = req.user?.is_admin === true || req.user?.user_metadata?.is_admin === true;
+  const userRole = (req.user?.role || '').toLowerCase() || null;
+  const profile = res.locals?.user || req.user;
+  const t0 = Date.now();
+  if (process.env.NODE_ENV === 'production') console.log('[admin] index_start', req.path);
+
   try {
-    // Get user role and admin status first
-    let userRole = null;
-    let isUserAdmin = req.user?.user_metadata?.is_admin === true;
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, is_admin, role_id, first_name, last_name, company_name, email')
-      .eq('id', req.user.id)
-      .single();
-
-    if (profile?.is_admin) isUserAdmin = true;
-    if (profile?.role_id) {
-      const { data: role } = await supabaseAdmin
-        .from('roles')
-        .select('id, name')
-        .eq('id', profile.role_id)
-        .maybeSingle();
-      if (role) userRole = role.name?.toLowerCase() || null;
-    }
-
-    // Dashboard mode: 'company' (bedrijfsdashboard) or 'employee' (werkdashboard voor één werknemer)
-    let dashboardMode = 'company';
-    let viewingEmployeeId = null;
-    let viewingEmployee = null; // { id, first_name, last_name, email }
-    let employees = []; // only for admin: list of werknemers for selector
-
-    if (isUserAdmin) {
-      // Admin: optional ?for=uuid to view as that employee
-      const { getRoleMap } = require('../utils/roleCache');
-      const { roleMap, roleDisplayMap } = await getRoleMap();
-
-      const { data: allProfiles } = await supabaseAdmin
-        .from('profiles')
-        .select('id, email, first_name, last_name, company_name, role_id, is_admin')
-        .order('first_name');
-
-      const employeeProfiles = (allProfiles || []).filter(p => {
-        if (p.is_admin === true) return true;
-        if (p.role_id) {
-          const r = (roleMap && roleMap[String(p.role_id)]) ? String(roleMap[String(p.role_id)]).toLowerCase() : '';
-          if (r === 'customer' || r === 'consumer' || r === 'klant') return false;
-        }
-        return true;
-      });
-
-      employees = employeeProfiles.map(p => {
-        const displayName = [p.first_name, p.last_name].filter(Boolean).join(' ') || p.company_name || p.email || p.id;
-        const roleDisplayName = (roleDisplayMap && p.role_id && roleDisplayMap[String(p.role_id)]) ? roleDisplayMap[String(p.role_id)].trim() : null;
-        return {
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          email: p.email,
-          displayName,
-          roleDisplayName: roleDisplayName || null
-        };
-      });
-
-      const forId = (req.query.for || '').trim();
-      if (forId && employees.some(e => e.id === forId)) {
-        dashboardMode = 'employee';
-        viewingEmployeeId = forId;
-        viewingEmployee = employees.find(e => e.id === forId) || { id: forId, first_name: 'Werknemer', last_name: '', displayName: 'Werknemer' };
-      }
-    } else {
-      // Non-admin: always employee view (own dashboard)
-      dashboardMode = 'employee';
-      viewingEmployeeId = req.user.id;
-      viewingEmployee = {
-        id: profile?.id || req.user.id,
-        first_name: profile?.first_name,
-        last_name: profile?.last_name,
-        email: profile?.email,
-        displayName: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.company_name || profile?.email || 'Mij'
-      };
-    }
-
-    // Company stats (only needed when showing company dashboard, but harmless to always fetch)
-    const stats = {
-      totalUsers: 0,
-      totalLeads: 0,
-      totalRevenue: 0,
-      pendingLeads: 0,
+    // Shell only: no DB on this request. Client fetches /api/admin/dashboard-bootstrap.
+    const dashboardMode = isUserAdmin ? 'company' : 'employee';
+    const viewingEmployeeId = isUserAdmin ? null : req.user?.id;
+    const viewingEmployee = isUserAdmin ? null : {
+      id: profile?.id || req.user?.id,
+      first_name: profile?.first_name,
+      last_name: profile?.last_name,
+      email: profile?.email,
+      displayName: [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.company_name || profile?.email || 'Mij'
     };
-
-    const { data: profiles } = await supabase.from('profiles').select('id', { count: 'exact' });
-    stats.totalUsers = profiles?.length ?? 0;
-
-    const { data: leads } = await supabase.from('leads').select('id', { count: 'exact' });
-    stats.totalLeads = leads?.length ?? 0;
-
-    const { data: payments } = await supabase.from('payments').select('amount').eq('status', 'paid');
-    stats.totalRevenue = (payments || []).reduce((sum, p) => sum + p.amount, 0);
-
-    const { data: pendingLeads } = await supabase.from('leads').select('id', { count: 'exact' }).eq('status', 'new');
-    stats.pendingLeads = pendingLeads?.length ?? 0;
-
-    const { data: recentUsers } = await supabase
-      .from('profiles')
-      .select('id, company_name, email, created_at, has_payment_method')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    const { data: recentLeads } = await supabase
-      .from('leads')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
     res.render("admin/index", {
-      stats,
-      recentUsers: recentUsers || [],
-      recentLeads: recentLeads || [],
+      stats: { totalUsers: 0, totalLeads: 0, totalRevenue: 0, pendingLeads: 0 },
+      recentUsers: [],
+      recentLeads: [],
       error: null,
       activeSubmenu: null,
       userRole,
@@ -1816,24 +1723,26 @@ router.get("/", async (req, res) => {
       dashboardMode,
       viewingEmployeeId,
       viewingEmployee,
-      employees,
+      employees: [],
+      bootstrapUrl: '/api/admin/dashboard-bootstrap',
     });
+    if (process.env.NODE_ENV === 'production') console.log('[admin] index_render', Date.now() - t0, 'ms');
   } catch (err) {
     console.error("Admin dashboard error:", err);
-    const isUserAdmin = req.user?.user_metadata?.is_admin === true;
-    res.render("admin/index", {
+    res.status(500).render("admin/index", {
       stats: { totalUsers: 0, totalLeads: 0, totalRevenue: 0, pendingLeads: 0 },
       recentUsers: [],
       recentLeads: [],
       error: "Er is een fout opgetreden bij het laden van het dashboard",
       activeSubmenu: null,
       userRole: null,
-      isUserAdmin,
+      isUserAdmin: req.user?.user_metadata?.is_admin === true,
       activeMenu: 'dashboard',
-      dashboardMode: isUserAdmin ? 'company' : 'employee',
-      viewingEmployeeId: isUserAdmin ? null : req.user?.id,
-      viewingEmployee: isUserAdmin ? null : { displayName: 'Mij' },
+      dashboardMode: 'company',
+      viewingEmployeeId: null,
+      viewingEmployee: null,
       employees: [],
+      bootstrapUrl: null,
     });
   }
 });

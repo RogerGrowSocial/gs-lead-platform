@@ -2103,33 +2103,55 @@
   // Initialize everything when DOM is ready
   console.log('🚀 [INIT] Starting initialization, readyState:', document.readyState);
   
-  if (document.readyState === 'loading') {
-    console.log('⏳ [INIT] DOM still loading, waiting for DOMContentLoaded...');
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('✅ [INIT] DOMContentLoaded fired, initializing...');
-      try {
-        initCharts();
-        initializeLeadsAnalyticsChart();
-        loadLeadsMonthlyGrowthData();
-        initKPILoading();
-        console.log('✅ [INIT] All functions called');
-      } catch (error) {
-        console.error('❌ [INIT] ERROR during initialization:', error);
-        console.error('❌ [INIT] Stack:', error.stack);
-      }
-    });
-  } else {
-    // DOM already loaded, run immediately
-    console.log('✅ [INIT] DOM already ready, initializing immediately...');
+  function applyBootstrap(data) {
+    if (!data || !data.success) return;
+    var s = data.stats || {};
+    var usersEl = document.getElementById('kpi-total-users');
+    var leadsEl = document.getElementById('kpi-total-leads');
+    var revenueEl = document.getElementById('kpi-total-revenue');
+    var pendingEl = document.getElementById('kpi-pending-leads');
+    if (usersEl) { usersEl.classList.remove('kpi-skeleton'); usersEl.textContent = Number(s.totalUsers || 0).toLocaleString('nl-NL'); }
+    if (leadsEl) { leadsEl.classList.remove('kpi-skeleton'); leadsEl.textContent = Number(s.totalLeads || 0).toLocaleString('nl-NL'); }
+    if (revenueEl) { revenueEl.classList.remove('kpi-skeleton'); revenueEl.textContent = typeof formatCurrency === 'function' ? formatCurrency(s.totalRevenue || 0) : ('€ ' + Number(s.totalRevenue || 0).toLocaleString('nl-NL')); }
+    if (pendingEl) { pendingEl.classList.remove('kpi-skeleton'); pendingEl.textContent = Number(s.pendingLeads || 0).toLocaleString('nl-NL'); }
+    var ru = document.getElementById('recentUsersContainer');
+    if (ru && data.recentUsers && data.recentUsers.length) {
+      ru.innerHTML = data.recentUsers.map(function(u) {
+        return '<div class="activity-table-row"><div class="activity-col"><div class="user-name">' + (escapeHtml ? escapeHtml(u.company_name || '-') : (u.company_name || '-')) + '</div></div><div class="activity-col"><div class="user-email">' + (escapeHtml ? escapeHtml(u.email || '-') : (u.email || '-')) + '</div></div><div class="activity-col"><div class="user-date">' + (typeof formatDate === 'function' ? formatDate(u.created_at) : u.created_at) + '</div></div><div class="activity-col">' + (typeof getStatusBadge === 'function' ? getStatusBadge(u.has_payment_method, 'user') : '') + '</div></div>';
+      }).join('');
+    }
+    var rl = document.getElementById('recentLeadsContainer');
+    if (rl && data.recentLeads && data.recentLeads.length) {
+      rl.innerHTML = data.recentLeads.map(function(lead) {
+        return '<div class="activity-table-row"><div class="activity-col"><div class="lead-name">' + (escapeHtml ? escapeHtml(lead.name || '-') : (lead.name || '-')) + '</div></div><div class="activity-col"><div class="lead-date">' + (typeof formatDate === 'function' ? formatDate(lead.created_at) : lead.created_at) + '</div></div><div class="activity-col">' + (typeof getStatusBadge === 'function' ? getStatusBadge(lead.status, 'lead') : '') + '</div></div>';
+      }).join('');
+    }
+    var sel = document.getElementById('dashboardViewSelect');
+    if (sel && data.employees && data.employees.length) {
+      sel.innerHTML = '<option value="">Heel bedrijf</option>' + data.employees.map(function(e) {
+        var label = (e.roleDisplayName && e.roleDisplayName.trim()) ? (e.roleDisplayName.trim() + ': ' + (e.displayName || e.first_name || e.email || e.id)) : (e.displayName || e.first_name || e.email || e.id);
+        return '<option value="' + (e.id || '') + '">' + (escapeHtml ? escapeHtml(label) : label) + '</option>';
+      }).join('');
+    }
+  }
+  function runInit() {
     try {
+      if (typeof bootstrapUrl !== 'undefined' && bootstrapUrl) {
+        fetch(bootstrapUrl, { credentials: 'same-origin' }).then(function(r) { return r.json(); }).then(applyBootstrap).catch(function() {});
+      }
       initCharts();
       initializeLeadsAnalyticsChart();
       loadLeadsMonthlyGrowthData();
       initKPILoading();
-      console.log('✅ [INIT] All functions called');
+      if (typeof loadRecentUsers === 'function') loadRecentUsers();
+      if (typeof loadRecentLeads === 'function') loadRecentLeads();
     } catch (error) {
       console.error('❌ [INIT] ERROR during initialization:', error);
-      console.error('❌ [INIT] Stack:', error.stack);
     }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runInit);
+  } else {
+    runInit();
   }
 </script>
