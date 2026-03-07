@@ -51,6 +51,20 @@
     pendingLeads: stats ? stats.pendingLeads : 0
   };
 
+  function applyBootstrapData(data) {
+    if (!data || !data.success || !data.stats) return;
+    var s = data.stats;
+    dashboardStats = s;
+    var u = document.getElementById('kpi-total-users');
+    var l = document.getElementById('kpi-total-leads');
+    var rev = document.getElementById('kpi-total-revenue');
+    var pend = document.getElementById('kpi-pending-leads');
+    if (u) u.textContent = s.totalUsers != null ? String(s.totalUsers) : '0';
+    if (l) l.textContent = s.totalLeads != null ? String(s.totalLeads) : '0';
+    if (rev) rev.textContent = (s.totalRevenue != null && s.totalRevenue > 0) ? new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(s.totalRevenue) : '€0';
+    if (pend) pend.textContent = s.pendingLeads != null ? String(s.pendingLeads) : '0';
+  }
+
   // Gebruik de echte data of voorbeelddata als er geen echte data is
   var displayRecentUsers = recentUsers && recentUsers.length > 0 ? recentUsers : [
     {
@@ -2103,25 +2117,11 @@
   // Initialize everything when DOM is ready
   console.log('🚀 [INIT] Starting initialization, readyState:', document.readyState);
   
-  if (document.readyState === 'loading') {
-    console.log('⏳ [INIT] DOM still loading, waiting for DOMContentLoaded...');
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('✅ [INIT] DOMContentLoaded fired, initializing...');
-      try {
-        initCharts();
-        initializeLeadsAnalyticsChart();
-        loadLeadsMonthlyGrowthData();
-        initKPILoading();
-        console.log('✅ [INIT] All functions called');
-      } catch (error) {
-        console.error('❌ [INIT] ERROR during initialization:', error);
-        console.error('❌ [INIT] Stack:', error.stack);
-      }
-    });
-  } else {
-    // DOM already loaded, run immediately
-    console.log('✅ [INIT] DOM already ready, initializing immediately...');
+  function runInit() {
     try {
+      if (typeof bootstrapUrl !== 'undefined' && bootstrapUrl) {
+        fetch(bootstrapUrl, { credentials: 'same-origin' }).then(function(r) { return r.json(); }).then(applyBootstrapData).catch(function() {});
+      }
       initCharts();
       initializeLeadsAnalyticsChart();
       loadLeadsMonthlyGrowthData();
@@ -2131,5 +2131,15 @@
       console.error('❌ [INIT] ERROR during initialization:', error);
       console.error('❌ [INIT] Stack:', error.stack);
     }
+  }
+  if (document.readyState === 'loading') {
+    console.log('⏳ [INIT] DOM still loading, waiting for DOMContentLoaded...');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ [INIT] DOMContentLoaded fired, initializing...');
+      runInit();
+    });
+  } else {
+    console.log('✅ [INIT] DOM already ready, initializing immediately...');
+    runInit();
   }
 </script>
