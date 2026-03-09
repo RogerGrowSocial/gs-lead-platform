@@ -48,6 +48,21 @@ class RabobankApiService {
   }
 
   /**
+   * Get a short message describing why the API is not configured (for redirect/UI).
+   * @returns {string}
+   */
+  static getConfigError() {
+    const creds = this.getCredentials()
+    if (creds) return ''
+    const hasId = !!process.env.RABOBANK_CLIENT_ID
+    const hasSecret = !!process.env.RABOBANK_CLIENT_SECRET
+    if (!hasId && !hasSecret) return 'RABOBANK_CLIENT_ID en RABOBANK_CLIENT_SECRET ontbreken'
+    if (!hasId) return 'RABOBANK_CLIENT_ID ontbreekt'
+    if (!hasSecret) return 'RABOBANK_CLIENT_SECRET ontbreekt'
+    return 'Rabobank API is niet geconfigureerd'
+  }
+
+  /**
    * Get fetch function (native fetch or node-fetch)
    * @returns {Function}
    */
