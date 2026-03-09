@@ -8121,7 +8121,7 @@ router.get("/tickets", requireAuth, isEmployeeOrAdmin, async (req, res) => {
         search: search || ''
       },
       scripts: ['/js/admin/tickets.js'],
-      stylesheets: ['/css/admin/adminPayments.css', '/css/admin/payments-table.css', '/css/admin/tickets.css']
+      stylesheets: ['/css/admin/adminPayments.css', '/css/admin/payments-table.css', '/css/admin/tickets.css', '/css/admin/employees-drawer.css']
     })
   } catch (err) {
     console.error('Admin tickets route error:', err)

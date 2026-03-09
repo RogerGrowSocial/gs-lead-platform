@@ -356,6 +356,95 @@
       </div>
     </div>
 
+    <!-- Ticket create drawer (slide-in from right) -->
+    <div id="ticketDrawerOverlay" class="gs-drawer-overlay" aria-hidden="true"></div>
+    <aside id="ticketDrawer" class="gs-drawer" aria-hidden="true" aria-label="Nieuw ticket">
+      <div class="gs-drawer__header">
+        <div>
+          <h3 class="gs-drawer__title">Nieuw ticket</h3>
+          <p class="gs-drawer__subtitle">Maak een nieuw supportticket aan.</p>
+        </div>
+        <button type="button" class="gs-drawer__close" id="ticketDrawerClose" aria-label="Sluiten">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="gs-drawer__body">
+        <form id="ticketCreateForm">
+          <div class="gs-form-group">
+            <label for="ticketSubject" class="gs-form-label">Onderwerp <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="ticketSubject" name="subject" class="gs-form-input" required placeholder="Korte omschrijving van het probleem of vraag" maxlength="255">
+          </div>
+          <div class="gs-form-group">
+            <label for="ticketDescription" class="gs-form-label">Beschrijving</label>
+            <textarea id="ticketDescription" name="description" class="gs-form-input" rows="4" placeholder="Optioneel: extra toelichting"></textarea>
+          </div>
+          <div class="gs-form-group" id="ticketDrawerCustomerGroup">
+            <label for="ticketDrawerCustomerSearch" class="gs-form-label">Klant</label>
+            <div id="ticketDrawerCustomerRoot" class="search-dropdown-root" style="position: relative;">
+              <input type="text" id="ticketDrawerCustomerSearch" class="gs-form-input" autocomplete="off" placeholder="Zoek klant…">
+              <input type="hidden" id="ticketDrawerCustomerId" name="customer_id" value="">
+              <div id="ticketDrawerCustomerDropdown" class="search-dropdown-results" style="display: none;"></div>
+            </div>
+          </div>
+          <div class="gs-form-group" id="ticketDrawerRequesterGroup">
+            <label class="gs-form-label">Aanvrager (als geen klant gekozen)</label>
+            <div class="gs-form-grid">
+              <div class="gs-form-group" style="margin-bottom: 0;">
+                <input type="text" id="ticketRequesterName" name="requester_name" class="gs-form-input" placeholder="Naam">
+              </div>
+              <div class="gs-form-group" style="margin-bottom: 0;">
+                <input type="email" id="ticketRequesterEmail" name="requester_email" class="gs-form-input" placeholder="E-mail">
+              </div>
+            </div>
+          </div>
+          <div class="gs-form-group">
+            <label for="ticketPriority" class="gs-form-label">Prioriteit</label>
+            <select id="ticketPriority" name="priority" class="gs-form-input">
+              <option value="low">Laag</option>
+              <option value="normal" selected>Normaal</option>
+              <option value="high">Hoog</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="gs-form-group">
+            <button type="button" id="ticketDrawerMoreOptionsToggle" class="gs-form-btn-secondary" style="width: 100%; font-size: 13px;">
+              <i class="fas fa-chevron-down" id="ticketDrawerMoreOptionsIcon"></i> Meer opties
+            </button>
+            <div id="ticketDrawerMoreOptions" style="display: none; margin-top: 12px;">
+              <div class="gs-form-group">
+                <label for="ticketCategory" class="gs-form-label">Categorie</label>
+                <select id="ticketCategory" name="category" class="gs-form-input">
+                  <option value="support" selected>Support</option>
+                  <option value="bug">Bug</option>
+                  <option value="vraag">Vraag</option>
+                </select>
+              </div>
+              <div class="gs-form-group">
+                <label for="ticketAssignee" class="gs-form-label">Toegewezen aan</label>
+                <select id="ticketAssignee" name="assignee_id" class="gs-form-input">
+                  <option value="">Niet toegewezen</option>
+                  ${(admins || []).map(a => `
+                    <option value="${a.id}">${[a.first_name, a.last_name].filter(Boolean).join(' ') || a.email || a.id}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div class="gs-form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="ticketIsInternal" name="is_internal_only" value="1" class="form-checkbox">
+                  <span>Alleen intern</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div id="ticketCreateError" style="display: none; padding: 12px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; margin-bottom: 16px; font-size: 14px;"></div>
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="button" class="gs-form-btn-secondary" id="ticketDrawerCancel" style="flex: 1;">Annuleren</button>
+            <button type="submit" id="ticketCreateSubmit" class="gs-form-btn-primary" style="flex: 1;">Aanmaken</button>
+          </div>
+        </form>
+      </div>
+    </aside>
+
     <!-- Actions Menu -->
     <div id="ticketActionsMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 200px; padding: 8px 0;">
       <button class="mail-action-item" data-action="view" style="width: 100%; text-align: left; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;">

@@ -71,13 +71,16 @@ async function initializeTicketsPage() {
     });
   });
 
-  // Create ticket button
+  // Create ticket button → open drawer
   if (createTicketBtn) {
-    createTicketBtn.addEventListener('click', () => {
-      if (window.showNotification) {
-        window.showNotification('Ticket aanmaken komt binnenkort beschikbaar', 'info', 3000);
-      }
-    });
+    createTicketBtn.addEventListener('click', () => openTicketDrawer());
+  }
+
+  setupTicketDrawer();
+  const urlParams = new URLSearchParams(window.location.search);
+  const prefillCustomerId = urlParams.get('customer_id');
+  if (prefillCustomerId) {
+    openTicketDrawer(prefillCustomerId);
   }
 
   // Delegated row click: navigate to ticket detail (works for server-rendered and API-rendered rows)
@@ -385,6 +388,209 @@ function debounce(func, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+// --- Ticket create drawer ---
+let ticketDrawerCustomerDropdownInstance = null;
+
+function openTicketDrawer(prefillCustomerId) {
+  const overlay = document.getElementById('ticketDrawerOverlay');
+  const drawer = document.getElementById('ticketDrawer');
+  if (!overlay || !drawer) return;
+  overlay.classList.add('is-open');
+  overlay.setAttribute('aria-hidden', 'false');
+  drawer.classList.add('is-open');
+  drawer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('drawer-open');
+  if (prefillCustomerId) {
+    prefillTicketDrawerCustomer(prefillCustomerId);
+  }
+}
+
+function closeTicketDrawer() {
+  const overlay = document.getElementById('ticketDrawerOverlay');
+  const drawer = document.getElementById('ticketDrawer');
+  if (!overlay || !drawer) return;
+  overlay.classList.remove('is-open');
+  overlay.setAttribute('aria-hidden', 'true');
+  drawer.classList.remove('is-open');
+  drawer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('drawer-open');
+  resetTicketForm();
+}
+
+function resetTicketForm() {
+  const form = document.getElementById('ticketCreateForm');
+  if (form) form.reset();
+  const customerIdEl = document.getElementById('ticketDrawerCustomerId');
+  const customerSearchEl = document.getElementById('ticketDrawerCustomerSearch');
+  if (customerIdEl) customerIdEl.value = '';
+  if (customerSearchEl) customerSearchEl.value = '';
+  const prioritySelect = document.getElementById('ticketPriority');
+  if (prioritySelect) prioritySelect.value = 'normal';
+  const categorySelect = document.getElementById('ticketCategory');
+  if (categorySelect) categorySelect.value = 'support';
+  const assigneeSelect = document.getElementById('ticketAssignee');
+  if (assigneeSelect) assigneeSelect.value = '';
+  const internalCheck = document.getElementById('ticketIsInternal');
+  if (internalCheck) internalCheck.checked = false;
+  const moreOptions = document.getElementById('ticketDrawerMoreOptions');
+  const moreOptionsIcon = document.getElementById('ticketDrawerMoreOptionsIcon');
+  if (moreOptions) moreOptions.style.display = 'none';
+  if (moreOptionsIcon) {
+    moreOptionsIcon.className = 'fas fa-chevron-down';
+  }
+  const errEl = document.getElementById('ticketCreateError');
+  if (errEl) {
+    errEl.style.display = 'none';
+    errEl.textContent = '';
+  }
+}
+
+function prefillTicketDrawerCustomer(customerId) {
+  const customerIdEl = document.getElementById('ticketDrawerCustomerId');
+  const customerSearchEl = document.getElementById('ticketDrawerCustomerSearch');
+  if (!customerIdEl || !customerSearchEl) return;
+  customerIdEl.value = customerId;
+  fetch('/admin/api/customers/search?q=', { credentials: 'same-origin' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.customers && data.customers.length) {
+        const c = data.customers.find(x => x.id === customerId);
+        if (c) {
+          const name = c.company_name || c.name || (c.first_name && c.last_name ? c.first_name + ' ' + c.last_name : '') || c.email || '';
+          customerSearchEl.value = name;
+        }
+      }
+    })
+    .catch(() => {});
+}
+
+function setupTicketDrawer() {
+  const overlay = document.getElementById('ticketDrawerOverlay');
+  const drawer = document.getElementById('ticketDrawer');
+  const closeBtn = document.getElementById('ticketDrawerClose');
+  const cancelBtn = document.getElementById('ticketDrawerCancel');
+  const form = document.getElementById('ticketCreateForm');
+  const moreOptionsToggle = document.getElementById('ticketDrawerMoreOptionsToggle');
+  const moreOptions = document.getElementById('ticketDrawerMoreOptions');
+  const moreOptionsIcon = document.getElementById('ticketDrawerMoreOptionsIcon');
+
+  if (overlay) {
+    overlay.addEventListener('click', () => closeTicketDrawer());
+  }
+  if (closeBtn) closeBtn.addEventListener('click', () => closeTicketDrawer());
+  if (cancelBtn) cancelBtn.addEventListener('click', () => closeTicketDrawer());
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && drawer && drawer.classList.contains('is-open')) {
+      closeTicketDrawer();
+    }
+  });
+
+  if (moreOptionsToggle && moreOptions && moreOptionsIcon) {
+    moreOptionsToggle.addEventListener('click', () => {
+      const isOpen = moreOptions.style.display !== 'none';
+      moreOptions.style.display = isOpen ? 'none' : 'block';
+      moreOptionsIcon.className = isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('ticketCreateError');
+      const submitBtn = document.getElementById('ticketCreateSubmit');
+      const subject = (document.getElementById('ticketSubject') || {}).value;
+      if (!subject || !subject.trim()) {
+        if (errEl) {
+          errEl.textContent = 'Vul een onderwerp in.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+      if (errEl) {
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+      }
+      if (submitBtn) submitBtn.disabled = true;
+      const customerIdEl = document.getElementById('ticketDrawerCustomerId');
+      const body = {
+        subject: subject.trim(),
+        description: (document.getElementById('ticketDescription') || {}).value || null,
+        customer_id: (customerIdEl && customerIdEl.value) || null,
+        requester_name: (document.getElementById('ticketRequesterName') || {}).value || null,
+        requester_email: (document.getElementById('ticketRequesterEmail') || {}).value || null,
+        priority: (document.getElementById('ticketPriority') || {}).value || 'normal',
+        category: (document.getElementById('ticketCategory') || {}).value || 'support',
+        assignee_id: (document.getElementById('ticketAssignee') || {}).value || null,
+        is_internal_only: (document.getElementById('ticketIsInternal') || {}).checked || false
+      };
+      if (!body.customer_id) {
+        if (body.requester_name) body.requester_name = body.requester_name.trim() || null;
+        if (body.requester_email) body.requester_email = body.requester_email.trim() || null;
+      }
+      try {
+        const res = await fetch('/admin/api/admin/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || 'Fout bij aanmaken ticket');
+        }
+        if (window.showNotification) {
+          window.showNotification('Ticket aangemaakt', 'success', 3000);
+        }
+        closeTicketDrawer();
+        await loadTickets();
+      } catch (err) {
+        if (errEl) {
+          errEl.textContent = err.message || 'Er ging iets mis. Probeer het opnieuw.';
+          errEl.style.display = 'block';
+        }
+        if (window.showNotification) {
+          window.showNotification(err.message || 'Fout bij aanmaken ticket', 'error', 5000);
+        }
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  }
+
+  const customerRoot = document.getElementById('ticketDrawerCustomerRoot');
+  const customerInput = document.getElementById('ticketDrawerCustomerSearch');
+  const customerResults = document.getElementById('ticketDrawerCustomerDropdown');
+  const customerIdEl = document.getElementById('ticketDrawerCustomerId');
+  if (typeof SearchDropdown !== 'undefined' && SearchDropdown.create && customerRoot && customerInput && customerResults && customerIdEl) {
+    ticketDrawerCustomerDropdownInstance = SearchDropdown.create({
+      rootEl: customerRoot,
+      inputEl: customerInput,
+      resultsEl: customerResults,
+      placeholder: 'Zoek klant…',
+      minChars: 0,
+      debounceMs: 280,
+      emptyStateText: 'Geen klanten gevonden',
+      fetchResults: async function (q) {
+        try {
+          const res = await fetch('/admin/api/customers/search?q=' + encodeURIComponent(q || ''), { credentials: 'same-origin' });
+          const data = await res.json();
+          if (!data.success || !data.customers) return [];
+          return data.customers.map(function (c) {
+            const name = c.company_name || c.name || (c.first_name && c.last_name ? c.first_name + ' ' + c.last_name : '') || c.email || '';
+            return { id: c.id, name: name, avatar_url: c.avatar_url, subtitle: c.email };
+          });
+        } catch (e) {
+          return [];
+        }
+      },
+      onSelect: function (item) {
+        customerIdEl.value = item.id;
+        customerInput.value = item.name;
+      }
+    });
+  }
 }
 
 let currentTicketId = null;
