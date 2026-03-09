@@ -46,6 +46,27 @@ APP_URL=http://localhost:3000
 
 ---
 
+## 🌐 OAuth vs API URLs (belangrijk)
+
+OAuth (authorize + token) moet altijd via **oauth.rabobank.nl** lopen, niet via api-sandbox.rabobank.nl. Anders krijg je "Access Denied" en een client certificate prompt in de browser. De resource API (rekeningen, transacties) blijft via api-sandbox of api.rabobank.nl.
+
+Optioneel kun je de URLs overschrijven:
+
+```env
+# OAuth endpoints (standaard: oauth.rabobank.nl – geen override nodig)
+RABOBANK_OAUTH_AUTHORIZE_URL=https://oauth.rabobank.nl/openapi/oauth2/authorize
+RABOBANK_OAUTH_TOKEN_URL=https://oauth.rabobank.nl/openapi/oauth2/token
+
+# Resource API base (standaard afhankelijk van RABOBANK_SANDBOX_MODE)
+RABOBANK_API_BASE_URL=https://api-sandbox.rabobank.nl
+# of productie: https://api.rabobank.nl
+```
+
+- **Authorize/Token**: altijd oauth.rabobank.nl (browser redirect + server-side token exchange).
+- **API base**: api-sandbox.rabobank.nl of api.rabobank.nl; mTLS alleen server-side indien vereist.
+
+---
+
 ## ⚙️ Optionele Variabelen (Configuration)
 
 Deze zijn optioneel maar kunnen handig zijn:
@@ -204,9 +225,10 @@ if (RabobankApiService.isAvailable()) {
 const sandboxMode = process.env.RABOBANK_SANDBOX_MODE === 'true'
 console.log(`✅ Environment: ${sandboxMode ? 'SANDBOX' : 'PRODUCTION'}`)
 
-// Check API URLs
+// Check URLs (OAuth = oauth.rabobank.nl, API = api-sandbox / api.rabobank.nl)
 console.log(`✅ API Base URL: ${RabobankApiService.getApiBaseUrl()}`)
-console.log(`✅ Auth Base URL: ${RabobankApiService.getAuthBaseUrl()}`)
+console.log(`✅ OAuth Authorize: ${RabobankApiService.getOAuthAuthorizeUrl()}`)
+console.log(`✅ OAuth Token: ${RabobankApiService.getOAuthTokenUrl()}`)
 
 // Check APP_URL
 const appUrl = process.env.APP_URL

@@ -5556,7 +5556,7 @@ router.get("/payments/banking", requireAuth, requireManagerOrAdminPage, async (r
   }
 })
 
-// Admin Rabobank connect (Bankieren): start OAuth, redirect to admin callback
+// Admin Rabobank connect (Bankieren): start OAuth via oauth.rabobank.nl (never api-sandbox in browser)
 router.get("/payments/banking/rabobank/connect", requireAuth, isManagerOrAdmin, async (req, res) => {
   try {
     if (!RabobankApiService.isAvailable()) {
@@ -5570,10 +5570,11 @@ router.get("/payments/banking/rabobank/connect", requireAuth, isManagerOrAdmin, 
     const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`
     const redirectUri = `${baseUrl}/admin/payments/banking/rabobank/callback`
     const authUrl = RabobankApiService.getAuthorizationUrl(redirectUri, state, ['aisp'])
+    logger.info('Rabobank admin connect: redirecting to OAuth authorize', { host: require('url').parse(authUrl).host })
     res.redirect(authUrl)
   } catch (e) {
     logger.error('Rabobank admin connect error:', e)
-    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(e.message || 'OAuth start mislukt'))
+    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(e?.message || 'OAuth start mislukt'))
   }
 })
 
@@ -5638,7 +5639,8 @@ router.get("/payments/banking/rabobank/callback", requireAuth, isManagerOrAdmin,
       delete req.session.rabobank_oauth_admin_state
       delete req.session.rabobank_oauth_admin_user_id
     }
-    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(e.message || 'Koppelen mislukt'))
+    const msg = (e?.message || 'Koppelen mislukt').replace(/^Rabobank API:?\s*/i, '')
+    res.redirect('/admin/payments/banking?error=' + encodeURIComponent(msg || 'Koppelen mislukt'))
   }
 })
 

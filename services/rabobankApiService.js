@@ -2,26 +2,52 @@
 
 /**
  * Rabobank API Service
- * 
- * Handles interactions with the Rabobank PSD2 API for account information and payment initiation.
- * Implements OAuth 2.0 authorization code flow for secure access to banking data.
- * 
+ *
+ * OAuth 2.0 (authorize + token) MUST use oauth.rabobank.nl to avoid browser certificate
+ * prompts and "Access Denied". Resource API (accounts, transactions) uses api-sandbox
+ * or api.rabobank.nl; mTLS only server-side when required.
+ *
  * Documentation: https://developer.rabobank.nl/
  */
+
+const DEFAULT_OAUTH_AUTHORIZE_URL = 'https://oauth.rabobank.nl/openapi/oauth2/authorize'
+const DEFAULT_OAUTH_TOKEN_URL = 'https://oauth.rabobank.nl/openapi/oauth2/token'
+
 class RabobankApiService {
-  // API Configuration
+  /**
+   * API base URL for resource calls (accounts, transactions). Used server-side only.
+   * Not used for OAuth authorize/token (those use OAuth URLs).
+   */
   static getApiBaseUrl() {
+    if (process.env.RABOBANK_API_BASE_URL) {
+      const base = process.env.RABOBANK_API_BASE_URL.replace(/\/$/, '')
+      return base.endsWith('/openapi') ? base : `${base}/openapi`
+    }
     const sandboxMode = process.env.RABOBANK_SANDBOX_MODE === 'true'
     return sandboxMode
-      ? 'https://api-sandbox.rabobank.nl/openapi' // Sandbox environment
-      : 'https://api.rabobank.nl/openapi' // Production environment
+      ? 'https://api-sandbox.rabobank.nl/openapi'
+      : 'https://api.rabobank.nl/openapi'
   }
 
+  /**
+   * OAuth authorize URL. Must be oauth.rabobank.nl (not api-sandbox) to avoid
+   * Access Denied and client certificate prompts in the browser.
+   */
+  static getOAuthAuthorizeUrl() {
+    return process.env.RABOBANK_OAUTH_AUTHORIZE_URL || DEFAULT_OAUTH_AUTHORIZE_URL
+  }
+
+  /**
+   * OAuth token endpoint. Must be oauth.rabobank.nl (server-side only).
+   */
+  static getOAuthTokenUrl() {
+    return process.env.RABOBANK_OAUTH_TOKEN_URL || DEFAULT_OAUTH_TOKEN_URL
+  }
+
+  /** @deprecated Use getOAuthAuthorizeUrl/getOAuthTokenUrl. Kept for compatibility. */
   static getAuthBaseUrl() {
-    const sandboxMode = process.env.RABOBANK_SANDBOX_MODE === 'true'
-    return sandboxMode
-      ? 'https://api-sandbox.rabobank.nl/oauth' // Sandbox OAuth
-      : 'https://api.rabobank.nl/oauth' // Production OAuth
+    const auth = this.getOAuthAuthorizeUrl()
+    return auth.replace(/\/openapi\/oauth2\/authorize$/, '').replace(/\/authorize$/, '') || auth
   }
 
   /**
@@ -78,11 +104,11 @@ class RabobankApiService {
   }
 
   /**
-   * Generate OAuth 2.0 authorization URL
+   * Generate OAuth 2.0 authorization URL (oauth.rabobank.nl, not api-sandbox).
    * @param {string} redirectUri - Callback URL after authorization
    * @param {string} state - State parameter for CSRF protection
    * @param {string[]} scopes - Requested scopes (default: account information)
-   * @returns {string} Authorization URL
+   * @returns {string} Full authorization URL
    */
   static getAuthorizationUrl(redirectUri, state, scopes = ['aisp']) {
     const credentials = this.getCredentials()
@@ -90,7 +116,7 @@ class RabobankApiService {
       throw new Error('Rabobank API credentials not configured. Set RABOBANK_CLIENT_ID and RABOBANK_CLIENT_SECRET environment variables.')
     }
 
-    const authBaseUrl = this.getAuthBaseUrl()
+    const baseUrl = this.getOAuthAuthorizeUrl()
     const params = new URLSearchParams({
       client_id: credentials.clientId,
       redirect_uri: redirectUri,
@@ -98,8 +124,9 @@ class RabobankApiService {
       scope: scopes.join(' '),
       state: state
     })
-
-    return `${authBaseUrl}/authorize?${params.toString()}`
+    const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${params.toString()}`
+    console.log(`[Rabobank API] Redirecting to OAuth authorize (host only): ${require('url').parse(url).host}`)
+    return url
   }
 
   /**
@@ -114,9 +141,7 @@ class RabobankApiService {
       throw new Error('Rabobank API credentials not configured')
     }
 
-    const authBaseUrl = this.getAuthBaseUrl()
-    const tokenUrl = `${authBaseUrl}/token`
-
+    const tokenUrl = this.getOAuthTokenUrl()
     const fetchFunction = this.getFetchFunction()
 
     // Basic Auth header (client_id:client_secret base64 encoded)
@@ -141,8 +166,8 @@ class RabobankApiService {
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error')
         const status = response.status
-
-        console.error(`[Rabobank API] Token exchange failed: ${status} - ${errorText}`)
+        const safeBody = (errorText || '').slice(0, 200).replace(/\s+/g, ' ')
+        console.error(`[Rabobank API] Token exchange failed: status=${status} body=${safeBody}`)
 
         if (status === 401) {
           throw new Error('Rabobank API: Invalid credentials')
@@ -184,9 +209,7 @@ class RabobankApiService {
       throw new Error('Rabobank API credentials not configured')
     }
 
-    const authBaseUrl = this.getAuthBaseUrl()
-    const tokenUrl = `${authBaseUrl}/token`
-
+    const tokenUrl = this.getOAuthTokenUrl()
     const fetchFunction = this.getFetchFunction()
     const basicAuth = Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64')
 
@@ -209,7 +232,8 @@ class RabobankApiService {
         const errorText = await response.text().catch(() => 'Unknown error')
         const status = response.status
 
-        console.error(`[Rabobank API] Token refresh failed: ${status} - ${errorText}`)
+        const safeBody = (errorText || '').slice(0, 200).replace(/\s+/g, ' ')
+        console.error(`[Rabobank API] Token refresh failed: status=${status} body=${safeBody}`)
 
         if (status === 401) {
           throw new Error('Rabobank API: Invalid refresh token')

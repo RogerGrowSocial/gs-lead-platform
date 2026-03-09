@@ -37,6 +37,8 @@ RABOBANK_SANDBOX_MODE=false
 APP_URL=https://app.growsocialmedia.nl
 ```
 
+OAuth (inloggen bij Rabobank) gaat automatisch via **oauth.rabobank.nl**; je hoeft geen extra URLs in te stellen. Alleen bij "Access Denied" of certificate-prompt kun je optioneel `RABOBANK_OAUTH_AUTHORIZE_URL` en `RABOBANK_OAUTH_TOKEN_URL` in [RABOBANK_ENV_VARIABLES.md](RABOBANK_ENV_VARIABLES.md) controleren.
+
 ### Stap 3: Database Migratie
 
 ```bash
