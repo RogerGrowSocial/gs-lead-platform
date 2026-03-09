@@ -8096,11 +8096,13 @@ router.get("/tickets", requireAuth, isEmployeeOrAdmin, async (req, res) => {
       .select('id', { count: 'exact', head: true })
       .eq('priority', 'urgent')
     
-    // Get all admins for assignment dropdown
+    // Get all assignable users for "Toegewezen aan" dropdown: admins + active/paused employees
     const { data: admins } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, email')
-      .eq('is_admin', true)
+      .or('is_admin.eq.true,employee_status.eq.active,employee_status.eq.paused')
+      .order('first_name')
+      .order('last_name')
     
     res.render('admin/tickets', {
       title: 'Tickets',
