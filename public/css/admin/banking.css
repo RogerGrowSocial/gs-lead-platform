@@ -399,6 +399,8 @@ body.banking-drawer-open {
   align-items: center;
   justify-content: center;
   min-height: 360px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .banking-empty-card {
