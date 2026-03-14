@@ -8640,18 +8640,19 @@ router.get('/tasks/:id', requireAuth, async (req, res) => {
     const isAdmin = req.user?.user_metadata?.is_admin || false;
     const currentUserId = req.user?.id;
 
-    // Get task with relations
+    // Get task with relations (profiles has no domain column; customer is a profile)
     const { data: task, error } = await supabaseAdmin
       .from('employee_tasks')
       .select(`
         *,
         employee:profiles!employee_tasks_employee_id_fkey(id, first_name, last_name, email),
-        customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email, domain)
+        customer:profiles!employee_tasks_customer_id_fkey(id, first_name, last_name, company_name, email)
       `)
       .eq('id', id)
       .single();
 
     if (error || !task) {
+      console.error('Admin task by id Supabase error:', error?.message, { id });
       return res.status(404).render('error', {
         message: 'Taak niet gevonden',
         error: {},
